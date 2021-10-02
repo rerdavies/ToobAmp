@@ -1,0 +1,17 @@
+#include "DownsamplingLowPassFilter.h"
+
+using namespace TwoPlay;
+
+
+
+static double B[] = { 0.000738812224299,-0.000128675492836,0.001248472493246,0.000149406563547,0.001248472493246,-0.000128675492836,0.0007388122224299};
+static double A[] = { 1, -4.844411361576588,10.306880296619187,-12.248035497183094,8.548113528382725,-3.317953212642473,0.559744671020652};
+
+static FilterCoefficients downsamplingCoefficients(7,B,A
+        );
+
+DownsamplingLowPassFilter::DownsamplingLowPassFilter()
+:AudioFilter(7)
+{
+    this->zTransformCoefficients = downsamplingCoefficients;
+}

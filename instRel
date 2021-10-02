@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cmake --build /home/patch/src/ToobAmp/build --config RelWithDebInfo --target install -- -j 6
+
+
