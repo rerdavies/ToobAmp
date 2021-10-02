@@ -4,3 +4,4 @@
 /build
 /t.txt
 /tmp.txt
+*.backup
