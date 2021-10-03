@@ -1,4 +1,4 @@
-# ToobAmp LV2 Guitar Amp Plugins 0.0.1 (Alpha)
+# ToobAmp LV2 Guitar Amp Plugins (v0.0.1 Alpha)
 
 The ToobAmp LV2 are a port of a set of experimental Guitar Amp plugins that were originally written for Native Instruments Reaktor that have been ported to LV2 plugins. They currently have user interfaces for MODP, and for Pipedal only.
 
