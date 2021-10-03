@@ -10,7 +10,13 @@ Distortion and overdrive effects in the plugs are based on super-sampled arctan 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 1 Input Stage user interface in MODP
 
-The ToobAmp Input Stage provides for trimming and shaping your guitar input signal.  A trim control to boost levels up to optimum level; low- and high-cut filters can be used to clean up input signals; a shelving filter can be used to emulate bright inputs; and a noise gate, and a boost waveshaper emulate overdriving of pre-amp input stages. 
+The ToobAmp Input Stage provides for trimming and shaping your guitar input signal.  The Input Stage provides:
+
+* A trim control to boost input levels up to optimum level.
+* Low- and high-cut filters to clean up input signals,
+* A shelving filter to emulate bright input.
+* A noise gate.
+* a boost waveshaper to emulate overdriving of the pre-amp input buffer stage. 
 
 ## The ToobAmp Tone Stack
 
