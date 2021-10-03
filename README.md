@@ -24,7 +24,7 @@ The ToobAmp Tone Stack stage provides accurate emulation of either Fender Bassma
 
 ![](src/ToobAmp.lv2/modgui/screenshot-toob-power-stage.png)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 3 Tone Stack user interface in MODP
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 3 Power Stage user interface in MODP
 
 
 The ToobAmp Power Amp stage provides three consecutive super-sampled arctan waveshapers to provide anything from clean warm guitar tones to blistering overdrive. Use the trim controls to boost input signals to each stage to something close to 0dB as indicated on the VU meters beside each drive stage. The SAG and SAGD controls provde emulation of transformer sag, based on advanced analysis of Fender Bassman circuitry. SAG controls how much sag occurs on the input signal level. SAGD controls how much sag occurs on the output signal. Both controls will provide compression; but judicious use of the SAG control will cause a more gentle breakup of guitar signals that makes the amp feel more "forgiving".; the SAGD provides some amount of compression on the output signal. Use both controls judiciously, as high settings of either control will produce a sound that sounds noticeably compressed. 
