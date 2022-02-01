@@ -23,16 +23,24 @@
 
 #pragma once
 #include <vector>
+#include <cstddef>
 
 namespace TwoPlay {
     class Polynomial {
+    private:
+        std::vector<double> values;
+
     public:
         static const Polynomial ONE;
         static const Polynomial ZERO;
 
-        std::vector<double> values;
 
         Polynomial() {
+
+        }
+        Polynomial(std::initializer_list<double> initializerList)
+        :values(initializerList)
+        {
 
         }
         Polynomial(int length, double*values)
@@ -63,7 +71,7 @@ namespace TwoPlay {
             return values.at(index);
         }
 
-        void Resize(size_t size) { values.resize(size);}
+        void Resize(std::size_t size) { values.resize(size);}
 
         Polynomial operator+(const Polynomial & other);
         Polynomial operator-(const Polynomial & other);

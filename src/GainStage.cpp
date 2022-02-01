@@ -25,6 +25,8 @@
 
 #include "GainStage.h"
 #include <cmath>
+#include "db.h"
+
 
 
 using namespace TwoPlay;
@@ -43,122 +45,94 @@ void GainStage::SetSampleRate(double rate)
 }
 
 
-// Atan approximating valid in range -1 to 1.
-static inline double AtanApprox(double x)
-{
-    double x2 = x*x;
-
-    return ((((((((0.00286623*x2-0.0161657)
-                *x2+0.0429096)
-                *x2-0.0752896)
-                *x2+0.106563)
-                *x2-0.142089)
-                *x2+0.199936)
-                *x2-0.333331)
-                *x2+1)*x;
-
-};
-
-static inline double Atan(double value)
-{
-    if (value > 1)
-    {
-        return (M_PI/2)- AtanApprox(1/value);
-    } else if (value < -1)
-    {
-        return (-M_PI/2)-AtanApprox(1/value);
-    }
-    else {
-        return AtanApprox(value);
-    }
-}
-
-static inline double TubeAFn(double value)
-{
-    if (value >= 1) return 1;
-    double t = 1-value;
-    return 1-t*std::sqrt(t);
-}
 
 static inline double TubeFn(double value)
 {
-    if (value > 0) 
-    {
-        return TubeAFn(value);
-    } else {
-        return -TubeAFn(-value);
-    }
+    return -LsNumerics::gTubeStageApproximation.At(value);
 }
 
-inline double GainStage::GainFn(double value)
+
+double GainStage::GainFn(double value)
 {
     if (shape == EShape::ATAN)
-        return Atan(value*gain)*gainScale;
+        return (Atan(value*effectiveGain-bias)+postAdd)*gainScale;
     else 
-        return TubeFn(value*tubeMIn+tubeCIn)*tubeMOut + tubeCOut;
+        return (TubeFn(value*effectiveGain-bias)+postAdd)*gainScale;
 }
 
 void GainStage::SetShape(GainStage::EShape shape)
 {
     this->shape = shape;
-    SetGain(this->lastGainIn);
+    UpdateShape();
+}
+void GainStage::SetBias(float bias)
+{
+    this->bias = bias;
+    UpdateShape();
 }
 void GainStage::SetGain(float value)
 {
-    lastGainIn = value;
+    gain  = value;
+    UpdateShape();
+}
+
+static inline float Blend(float value,float min, float max)
+{
+    return min + value*(max-min);
+}
+void GainStage::UpdateShape()
+{
     switch (this->shape)
     {
         case EShape::ATAN:
-            value = value*value;
-            value = value*value*1000;
+        {
+            double value = db2a(Blend(gain,-20,50));
+            // (Atan((value*gain-bias)+postAdd)*gainScale;
             if (value < 1E-7f)
             {
                 value = 1E-7F;
             }
-            this->gain = value;
-            this->gainScale = 1.0/Atan(gain);
-            break;
-        case EShape::TUBE_CLASSA:
-            SetClassAGain(value);
-            break;
-        case EShape::TUBE_CLASSB:
-            SetClassBGain(value);
+            this->effectiveGain = value;
+
+            double yZero = Atan(-bias);
+            double yMax = Atan(1*effectiveGain-bias);
+            double yMin = Atan(-1*effectiveGain-bias);
+
+            postAdd = -yZero; 
+            double max = std::max( yMax+postAdd, -(yMin+postAdd));
+
+            this->gainScale = 1.0/max;
+        }
+        break;
+        case EShape::TUBE:
+            SetTubeGain(gain);
             break;
     }
 
 }
 
 
-void GainStage::SetClassAGain(float value)
+void GainStage::SetTubeGain(float value)
 {
+    value = db2a(Blend(value,-20,20));
+    // (TubeFn((value*gain-bias)+postAdd)*gainScale;
     if (value < 1E-7f)
     {
         value = 1E-7F;
     }
-    this->tubeMIn = value*0.5;
-    this->tubeCIn = 0.5;
-    double minOut = TubeAFn(-1*tubeMIn+tubeCIn);
-    double zOut = TubeAFn(0*tubeMIn+tubeCIn);
-    double maxOut = TubeAFn(1*tubeMIn+tubeCIn);
-    this->tubeMOut = 1/(minOut-zOut);
-    this->tubeCOut = -zOut*this->tubeMOut;
-}
-void GainStage::SetClassBGain(float value)
-{
-    value = value*value;
-    value = value*value;
-    if (value < 1E-7f)
-    {
-        value = 1E-7F;
-    }
-    this->tubeMIn = value;
-    this->tubeCIn = 0;
-    this->tubeMOut = 1/(TubeAFn(value));
-    this->tubeCOut = 0;
+    this->effectiveGain = value;
+
+    double yZero = TubeFn(-bias);
+    double yMax = TubeFn(1*effectiveGain-bias);
+    double yMin = TubeFn(-1*effectiveGain-bias);
+
+    postAdd = -yZero; 
+    double max = std::max( yMax+postAdd, -(yMin+postAdd));
+
+    this->gainScale = 1.0/max;
 }
 
-
-float GainStage::Tick(float value)
+float GainStage::TickSupersampled(float value)
 {
     double x0 = upsamplingFilter.Tick(value);
     double x1 = upsamplingFilter.Tick(value);

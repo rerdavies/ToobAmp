@@ -21,41 +21,9 @@
  *   SOFTWARE.
  */
 
-#pragma once
+#include "LsChebyshevPolynomial.hpp"
 
-#include "std.h"
-#include <cmath>
+using namespace LsNumerics;
 
-namespace TwoPlay {
-
-
-	namespace MathInternal {
-		const float log10 = 2.302585093f; //std::log(10);
-	};
-	const double MIN_DB = -192;
-
-	inline static float Af2Db(float value)
-	{
-		if (value == 0) return MIN_DB;
-		return 20.0f*std::log10(value);
-	}
-	inline float Db2Af(float value)
-	{
-		if (value < MIN_DB) return 0;
-		return std::exp(value*(MathInternal::log10*0.05f));
-	}
-
-	uint32_t NextPowerOfTwo(uint32_t value);
-
-	inline double Undenormalize(double value)
-	{
-		return 1E-18 +value+ 1E-18;
-	}
-	inline float Undenormalize(float value)
-	{
-		return 1E-6f +value+ 1E-6f;
-	}
-
-
-
-};
+const Polynomial ChebyshevPolynomial::T0 = Polynomial(1);
+const Polynomial ChebyshevPolynomial::T1 { 0,1 };

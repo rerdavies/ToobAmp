@@ -22,60 +22,21 @@
  */
 
 #pragma once
-
-#include "Filters/LowPassFilter.h"
-#include "Filters/DownsamplingLowPassFilter.h"
-#include "WaveShapes.h"
-#include "LsNumerics/TubeStageApproximation.hpp"
-
-#define OLD_GAIN_FILTER 0
-
+#include "../iir/ChebyshevI.h"
 namespace TwoPlay {
-    class GainStage {
-    public:
-        enum class EShape {
-            ATAN = 0,
-            TUBE,
-        };
+
+    class ChebyshevDownsamplingFilter {
     private:
-        LowPassFilter upsamplingFilter;
-        #if OLD_GAIN_FILTER
-            LowPassFilter downsamplingFilter;
-        #else
-            DownsamplingLowPassFilter downsamplingFilter;
-        #endif
-
-        double gain = 1;
-        double effectiveGain = 1;
-        double bias = 0;
-        double postAdd = 0;
-        double gainScale = 1;
-
-
-        EShape shape = EShape::ATAN;
-
-        void SetTubeGain(float value);
-        void UpdateShape();
+        Iir::ChebyshevI::LowPass<20> filter;
     public:
-        void SetShape(EShape shape);
-        void SetBias(float value);
+        /// Design the Chebyshev filter of minimum order than can attenuate bandstopDb at bandstopFrequency
+        void Design(double samplingFrequency, 
+            double dbRipple, double cutoffFrequency,
+            double bandstopDb, double bandstopFrequency);
 
-        void Reset() 
+        double Tick(double input)
         {
-            upsamplingFilter.Reset();
-            downsamplingFilter.Reset();
-        }
-        void SetGain(float value);
-
-        void SetSampleRate(double rate);
-        float TickSupersampled(float value);
-
-        double GainFn(double value);
-
-        float Tick(float value)
-        {
-            // invert phase (useful for chaining)
-            return -GainFn(value);
+            return filter.filter(input);
         }
     };
 }

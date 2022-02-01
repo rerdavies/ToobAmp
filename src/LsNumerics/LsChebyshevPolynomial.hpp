@@ -23,39 +23,38 @@
 
 #pragma once
 
-#include "std.h"
-#include <cmath>
+#include "LsPolynomial.hpp"
 
-namespace TwoPlay {
+namespace LsNumerics
+{
+    class ChebyshevPolynomial
+    {
+    private:
+        static const Polynomial T0;
+        static const Polynomial T1;
 
+        /// <summary>
+        /// Create a Chebyshev polynomial of the 1st kind.
+        /// </summary>
+        /// <param name="n">Order</param>
+        /// <returns>Chebyshev polynomial of order N</returns>
+    public:
+        static Polynomial Tn(int n)
+        {
+            if (n == 0) return T0;
+            if (n == 1) return T1;
+            Polynomial nMinus1 = T0;
+            Polynomial result = T1;
+            Polynomial scale{ 0,2 }; // 2x
 
-	namespace MathInternal {
-		const float log10 = 2.302585093f; //std::log(10);
-	};
-	const double MIN_DB = -192;
+            for (int i = 2; i <= n; ++i)
+            {
+                auto t = scale * result - nMinus1;
+                nMinus1 = result;
+                result = t;
+            }
+            return result;
+        }
 
-	inline static float Af2Db(float value)
-	{
-		if (value == 0) return MIN_DB;
-		return 20.0f*std::log10(value);
-	}
-	inline float Db2Af(float value)
-	{
-		if (value < MIN_DB) return 0;
-		return std::exp(value*(MathInternal::log10*0.05f));
-	}
-
-	uint32_t NextPowerOfTwo(uint32_t value);
-
-	inline double Undenormalize(double value)
-	{
-		return 1E-18 +value+ 1E-18;
-	}
-	inline float Undenormalize(float value)
-	{
-		return 1E-6f +value+ 1E-6f;
-	}
-
-
-
+    };
 };

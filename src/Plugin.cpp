@@ -28,6 +28,7 @@
 
 #include "InputStage.h"
 #include "PowerStage.h"
+#include "PowerStage2.h"
 #include "CabSim.h"
 #include "ToneStack.h"
 #include "Lv2Plugin.h"
@@ -41,6 +42,7 @@ using namespace TwoPlay;
 std::vector<Lv2PluginFactory> factories = {
     { InputStage::URI, InputStage::Create},
     { PowerStage::URI, PowerStage::Create},
+    { PowerStage2::URI, PowerStage2::Create},
     { CabSim::URI, CabSim::Create},
     { ToneStack::URI, ToneStack::Create},
 };

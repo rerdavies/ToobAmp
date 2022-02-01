@@ -17,13 +17,13 @@
 
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
-@prefix plug: <http://two-play.com/plugins/toob-power-stage#> .
+@prefix plug: <http://two-play.com/plugins/toob-power-stage-2#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix modgui: <http://moddevices.com/ns/modgui#> .
-@prefix pstage: <http://two-play.com/plugins/toob-power-stage#> .
+@prefix pstage: <http://two-play.com/plugins/toob-power-stage-2#> .
 
 
 pstage:stage1
@@ -46,7 +46,7 @@ pstage:stage3
     lv2:symbol "stage3" .
 
 
-<http://two-play.com/plugins/toob-power-stage#uiState>
+<http://two-play.com/plugins/toob-power-stage-2#uiState>
         a lv2:Parameter ;
         rdfs:label "uiState" ;
         rdfs:range atom:Vector .
@@ -58,24 +58,24 @@ pstage:stage3
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <http://two-play.com/> .
 
-<http://two-play.com/plugins/toob-power-stage>
+<http://two-play.com/plugins/toob-power-stage-2>
         a lv2:Plugin ,
                 lv2:SimulatorPlugin ;
 
-        doap:name "TooB Power Stage";
+        doap:name "TooB2 Power Stage";
 
         doap:license <https://two-play.com/TooB/licenses/isc> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
          lv2:minorVersion 0 ;
-        lv2:microVersion 15 ;
+        lv2:microVersion 1 ;
 
         mod:brand "TooB";
-        mod:label "Power Stage";
+        mod:label "Power Stage 2.0";
         lv2:requiredFeature urid:map ;
         lv2:optionalFeature lv2:hardRTCapable;
         lv2:extensionData state:interface;
         patch:readable 
-                <http://two-play.com/plugins/toob-power-stage#uiState>;
+                <http://two-play.com/plugins/toob-power-stage-2#uiState>;
 
 rdfs:comment """
 The TooB Power Stage provides flexible and nuanced emulations of guitar amp power stages. 
@@ -149,42 +149,54 @@ use the following plugins in the following order.
                 lv2:minimum -20.0 ;
                 lv2:maximum 20.0 ;    
                 units:unit units:db ;
-                lv2:scalePoint [
-                        rdfs:label "+20" ;
-                        rdf:value 20.0
-                ] , [
-                        rdfs:label "+10" ;
-                        rdf:value 10.0
-                ] , [
-                        rdfs:label "0" ;
-                        rdf:value 0.0
-                ] , [
-                        rdfs:label "-10" ;
-                        rdf:value -10.0
-                ], [
-                        rdfs:label "-20" ;
-                        rdf:value -20.0
-                ];
                 rdfs:comment "Trim input level (stage 1)" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index  1 ;
+                pg:group pstage:stage1 ;
+                lv2:symbol "locut1" ;
+                lv2:name "Lo Cut";
+                lv2:default 30.0 ;
+                lv2:minimum 30.0 ;
+                lv2:maximum 300.0 ;    
+                units:unit units:hz;
+                lv2:designation param:cutoffFrequency ;
+
+                lv2:scalePoint [
+                        rdfs:label "OFF" ;
+                        rdf:value 30.0
+                ];
+                rdfs:comment "Low frequency cutoff (stage 1). Set to minimum to disable." ;
+
         ],  [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 1 ;
+                lv2:index 2 ;
                 pg:group pstage:stage1 ;
-                lv2:symbol "gain1" ;
-                lv2:name "Gain";
-                lv2:default 0.0 ;
-                lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;    
-                rdfs:comment "Gain (stage 1)" 
-        ], 
+                lv2:symbol "hicut1" ;
+                lv2:name "Hi Cut";
+                lv2:default 19000.0 ;
+                lv2:minimum 1000.0 ;
+                lv2:maximum 19000.0;    
+                units:unit units:hz;
+                lv2:designation param:cutoffFrequency ;
+                lv2:scalePoint [
+                        rdfs:label "OFF" ;
+                        rdf:value 19000.0
+                ];
+                rdfs:comment "High cutoff frequency (stage 1). Set to maximum to disable." ;
+
+        ],          
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
                 pg:group pstage:stage1 ;
 
-                lv2:index 2 ;
+                lv2:index 3 ;
                 lv2:symbol "shape1" ;
                 lv2:name "Shape1";
                 lv2:default 0.0 ;
@@ -206,9 +218,22 @@ use the following plugins in the following order.
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
+
+                lv2:index 4 ;
+                pg:group pstage:stage1 ;
+                lv2:symbol "gain1" ;
+                lv2:name "Gain";
+                lv2:default 0.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0 ;    
+                rdfs:comment "Gain (stage 1)" 
+        ], 
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
                 pg:group pstage:stage1 ;
 
-                lv2:index 3 ;
+                lv2:index 5 ;
                 lv2:symbol "bias1" ;
                 lv2:name "Bias1";
                 lv2:default 0.0 ;
@@ -216,13 +241,29 @@ use the following plugins in the following order.
                 lv2:maximum 2.0;
         ],  
 
+        
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 4 ;
-                pg:group pstage:stage1 ;
-                lv2:symbol "locut1" ;
+                lv2:index 6 ;
+                pg:group pstage:stage2 ;
+                lv2:symbol "trim2" ;
+                lv2:name "Trim";
+                lv2:default 0.0 ;
+                lv2:minimum -20.0 ;
+                lv2:maximum 20.0 ;    
+                units:unit units:db ;
+                rdfs:comment "Trim input (stage 2)" ;
+        ],  
+        
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 7 ;
+                pg:group pstage:stage2 ;
+                lv2:symbol "locut2" ;
                 lv2:name "Lo Cut";
                 lv2:default 30.0 ;
                 lv2:minimum 30.0 ;
@@ -233,16 +274,18 @@ use the following plugins in the following order.
                 lv2:scalePoint [
                         rdfs:label "OFF" ;
                         rdf:value 30.0
-                ];
-                rdfs:comment "Low frequency cutoff (stage 1). Set to minimum to disable." ;
+                ]
+                 ;
+                rdfs:comment "Low frequency cutoff (stage 2). Set to minimum to disable." ;
 
-        ],  [
+        ],  
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 5 ;
-                pg:group pstage:stage1 ;
-                lv2:symbol "hicut1" ;
+                lv2:index 8 ;
+                pg:group pstage:stage2 ;
+                lv2:symbol "hicut2" ;
                 lv2:name "Hi Cut";
                 lv2:default 19000.0 ;
                 lv2:minimum 1000.0 ;
@@ -253,66 +296,11 @@ use the following plugins in the following order.
                         rdfs:label "OFF" ;
                         rdf:value 19000.0
                 ];
-                rdfs:comment "High cutoff frequency (stage 1). Set to maximum to disable." ;
+                rdfs:comment "High cutoff frequency (stage 2). Set to maximum to disable." ;
 
-        ],  [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 6 ;
-                pg:group pstage:stage2 ;
-                lv2:symbol "gain2_enable" ;
-                lv2:name "Enable2";
-                lv2:default 1 ;
-                lv2:minimum 0 ;
-                lv2:maximum 1;    
-                lv2:portProperty lv2:toggled ;
-                rdfs:comment "Enable gain stage 2" ;
-        ],          
-        
-        [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 7 ;
-                pg:group pstage:stage2 ;
-                lv2:symbol "trim2" ;
-                lv2:name "Trim";
-                lv2:default 0.0 ;
-                lv2:minimum -20.0 ;
-                lv2:maximum 20.0 ;    
-                units:unit units:db ;
-                lv2:scalePoint [
-                        rdfs:label "+20" ;
-                        rdf:value 20.0
-                ] , [
-                        rdfs:label "+10" ;
-                        rdf:value 10.0
-                ] , [
-                        rdfs:label "0" ;
-                        rdf:value 0.0
-                ] , [
-                        rdfs:label "-10" ;
-                        rdf:value -10.0
-                ], [
-                        rdfs:label "-20" ;
-                        rdf:value -20.0
-                ];
-                rdfs:comment "Trim input (stage 2)" ;
-        ],  [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 8 ;
-                pg:group pstage:stage2 ;
-                lv2:symbol "gain2" ;
-                lv2:name "Gain";
-                lv2:default 0.0 ;
-                lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;    
-                rdfs:comment "Gain (stage 2)" 
         ],  
-                [
+
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
                 pg:group pstage:stage2 ;
@@ -339,23 +327,65 @@ use the following plugins in the following order.
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
-                pg:group pstage:stage2 ;
 
                 lv2:index 10 ;
+                pg:group pstage:stage2 ;
+                lv2:symbol "gain2" ;
+                lv2:name "Gain";
+                lv2:default 0.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0 ;    
+                rdfs:comment "Gain (stage 2)" 
+        ],  
+
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+                pg:group pstage:stage2 ;
+
+                lv2:index 11 ;
                 lv2:symbol "bias2" ;
                 lv2:name "Bias2";
                 lv2:default 0.0 ;
                 lv2:minimum -2.0 ;
                 lv2:maximum 2.0;
         ],  
-
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 11 ;
+                lv2:index 12 ;
                 pg:group pstage:stage2 ;
-                lv2:symbol "locut2" ;
+                lv2:symbol "gain2_enable" ;
+                lv2:name "Enable2";
+                lv2:default 1 ;
+                lv2:minimum 0 ;
+                lv2:maximum 1;    
+                lv2:portProperty lv2:toggled ;
+                rdfs:comment "Enable gain stage 2" ;
+        ],          
+        
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 13 ;
+                pg:group pstage:stage3 ;
+                lv2:symbol "trim3" ;
+                lv2:name "Trim";
+                lv2:default 0.0 ;
+                lv2:minimum -20.0 ;
+                lv2:maximum 20.0 ;    
+                units:unit units:db ;
+                rdfs:comment "Trim input level (stage 3)." ;
+        ],  
+                [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 14 ;
+                pg:group pstage:stage3 ;
+                lv2:symbol "locut3" ;
                 lv2:name "Lo Cut";
                 lv2:default 30.0 ;
                 lv2:minimum 30.0 ;
@@ -366,17 +396,17 @@ use the following plugins in the following order.
                 lv2:scalePoint [
                         rdfs:label "OFF" ;
                         rdf:value 30.0
-                ]
-                 ;
-                rdfs:comment "Low frequency cutoff (stage 2). Set to minimum to disable." ;
+                ];
+                rdfs:comment "Low frequency cutoff (stage 3). Set to minimum to disable." ;
 
-        ],  [
+        ],  
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 12 ;
-                pg:group pstage:stage2 ;
-                lv2:symbol "hicut2" ;
+                lv2:index 15 ;
+                pg:group pstage:stage3 ;
+                lv2:symbol "hicut3" ;
                 lv2:name "Hi Cut";
                 lv2:default 19000.0 ;
                 lv2:minimum 1000.0 ;
@@ -385,69 +415,12 @@ use the following plugins in the following order.
                 lv2:designation param:cutoffFrequency ;
                 lv2:scalePoint [
                         rdfs:label "OFF" ;
-                        rdf:value 19000.0
+                        rdf:value 19000
                 ];
-                rdfs:comment "High cutoff frequency (stage 2). Set to maximum to disable." ;
+                rdfs:comment "High cutoff frequency (stage 3). Set to minimum to disable." ;
 
-        ],  [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 13 ;
-                pg:group pstage:stage3 ;
-                lv2:symbol "gain3_enable" ;
-                lv2:name "Enable3";
-                lv2:default 1 ;
-                lv2:minimum 0 ;
-                lv2:maximum 1;    
-                lv2:portProperty lv2:toggled ;
-                rdfs:comment "Enable gain stage 3" ;
-        ],          
-        
-        
-        [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 14 ;
-                pg:group pstage:stage3 ;
-                lv2:symbol "trim3" ;
-                lv2:name "Trim";
-                lv2:default 0.0 ;
-                lv2:minimum -20.0 ;
-                lv2:maximum 20.0 ;    
-                units:unit units:db ;
-                lv2:scalePoint [
-                        rdfs:label "+20" ;
-                        rdf:value 20.0
-                ] , [
-                        rdfs:label "+10" ;
-                        rdf:value 10.0
-                ] , [
-                        rdfs:label "0" ;
-                        rdf:value 0.0
-                ] , [
-                        rdfs:label "-10" ;
-                        rdf:value -10.0
-                ], [
-                        rdfs:label "-20" ;
-                        rdf:value -20.0
-                ];
-                rdfs:comment "Trim input level (stage 3)." ;
-        ],  [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 15 ;
-                pg:group pstage:stage3 ;
-                lv2:symbol "gain3" ;
-                lv2:name "Gain";
-                lv2:default 0.0 ;
-                lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;    
-                rdfs:comment "Gain (stage 3)." 
         ],  
-                [
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
                 pg:group pstage:stage3 ;
@@ -471,12 +444,27 @@ use the following plugins in the following order.
                         rdf:value 1.0
                 ]
         ],  
+
+        
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 17 ;
+                pg:group pstage:stage3 ;
+                lv2:symbol "gain3" ;
+                lv2:name "Gain";
+                lv2:default 0.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0 ;    
+                rdfs:comment "Gain (stage 3)." 
+        ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
                 pg:group pstage:stage3 ;
 
-                lv2:index 17 ;
+                lv2:index 18 ;
                 lv2:symbol "bias3" ;
                 lv2:name "Bias3";
                 lv2:default 0.0 ;
@@ -490,49 +478,24 @@ use the following plugins in the following order.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 18 ;
-                pg:group pstage:stage3 ;
-                lv2:symbol "locut3" ;
-                lv2:name "Lo Cut";
-                lv2:default 30.0 ;
-                lv2:minimum 30.0 ;
-                lv2:maximum 300.0 ;    
-                units:unit units:hz;
-                lv2:designation param:cutoffFrequency ;
-
-                lv2:scalePoint [
-                        rdfs:label "OFF" ;
-                        rdf:value 30.0
-                ];
-                rdfs:comment "Low frequency cutoff (stage 3). Set to minimum to disable." ;
-
-        ],  [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
                 lv2:index 19 ;
                 pg:group pstage:stage3 ;
-                lv2:symbol "hicut3" ;
-                lv2:name "Hi Cut";
-                lv2:default 19000.0 ;
-                lv2:minimum 1000.0 ;
-                lv2:maximum 19000.0;    
-                units:unit units:hz;
-                lv2:designation param:cutoffFrequency ;
-                lv2:scalePoint [
-                        rdfs:label "OFF" ;
-                        rdf:value 19000
-                ];
-                rdfs:comment "High cutoff frequency (stage 3). Set to minimum to disable." ;
+                lv2:symbol "gain3_enable" ;
+                lv2:name "Enable3";
+                lv2:default 1 ;
+                lv2:minimum 0 ;
+                lv2:maximum 1;    
+                lv2:portProperty lv2:toggled ;
+                rdfs:comment "Enable gain stage 3" ;
+        ],          
 
-        ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 20 ;
                 lv2:symbol "sag" ;
-                lv2:name "Sag";
+                lv2:name "Sag Vol";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
                 lv2:maximum 1.0;    
@@ -544,7 +507,7 @@ use the following plugins in the following order.
 
                 lv2:index 21 ;
                 lv2:symbol "sagd" ;
-                lv2:name "Sag D";
+                lv2:name "Sag Dist";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
                 lv2:maximum 1.0;    

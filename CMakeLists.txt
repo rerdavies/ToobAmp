@@ -16,7 +16,7 @@ endif()
 
 if (MSVC)
 else()
-    # lots of warnings and all warnings as errors
+    
     add_compile_options("-std=c++17")
 endif()
 

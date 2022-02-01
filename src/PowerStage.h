@@ -62,34 +62,39 @@ namespace TwoPlay {
 		enum class PortId {
 			TRIM1 = 0,
 			GAIN1,
+			SHAPE1,
+			BIAS1,
 			LOCUT1,
 			HICUT1,
 
-			GAIN2_ENABLE,
+			GAIN2_ENABLE, //4
 			TRIM2,
 			GAIN2,
+			SHAPE2,
+			BIAS2,
+
 			LOCUT2,
 			HICUT2,
 
-			GAIN3_ENABLE,
+			GAIN3_ENABLE, //9
 			TRIM3,
 			GAIN3,
+			SHAPE3,
+			BIAS3,
 			LOCUT3,
 			HICUT3,
 
-			SAG,
+			SAG,   //14
 			SAGD,
 			MASTER,
 
-			AUDIO_IN,
+			AUDIO_IN, //17
 			AUDIO_OUT,
 			CONTROL_IN,
 			NOTIFY_OUT,
 
 			// Non-gui controls
-			SAGF,
-			SHAPE1,SHAPE2,
-			SHAPE3,
+			SAGF,    //21
 		};
 
 		double rate;

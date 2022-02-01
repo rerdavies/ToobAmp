@@ -21,10 +21,8 @@
  *   SOFTWARE.
  */
 
-// PowerStage.cpp : Defines the entry point for the application.
-//
 
-#include "PowerStage.h"
+#include "PowerStage2.h"
 
 #include "lv2/atom/atom.h"
 #include "lv2/atom/util.h"
@@ -52,12 +50,13 @@ using namespace TwoPlay;
 
 
 const int MAX_UPDATES_PER_SECOND = 10;
+const int UPSAMPLING_BUFFER_SIZE = 128;
 
-const char* PowerStage::URI= "http://two-play.com/plugins/toob-power-stage";
+const char* PowerStage2::URI= POWER_STAGE_2_URI;
 
 
 
-PowerStage::PowerStage(double _rate,
+PowerStage2::PowerStage2(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
@@ -65,25 +64,44 @@ PowerStage::PowerStage(double _rate,
 	rate(_rate),
 	bundle_path(_bundle_path)
 {
-	LogTrace("PowerStage: Loading");
+	LogTrace("PowerStage2: Loading");
 
 	uris.Map(this);
+	gain1.InitUris(this);
+	gain2.InitUris(this);
+	gain3.InitUris(this);
 	lv2_atom_forge_init(&forge, map);
-	LogTrace("PowerStage: Loadedx");
-	this->gain1.SetSampleRate(_rate);
-	this->gain2.SetSampleRate(_rate);
-	this->gain3.SetSampleRate(_rate);
-	this->masterVolumeDezipped.SetSampleRate(_rate);
+	LogTrace("PowerStage2: Loadedx");
+
+	double downsamplingCutoff = 18000;
+	if (rate < 48000)
+	{
+		downsamplingCutoff = rate*18000/48000;
+	}
+	double downsamplingBandStop = (rate-downsamplingCutoff);
+	const double BANDSTOP_DB = -80;
+
+	double supersampledRate = _rate*4;
+
+	upsamplingFilter.Design(supersampledRate,0.5,downsamplingCutoff,BANDSTOP_DB,downsamplingBandStop);
+	downsamplingFilter.Design(supersampledRate,0.5,downsamplingCutoff,BANDSTOP_DB,downsamplingBandStop);
+
+
+	this->gain1.SetSampleRate(supersampledRate);
+	this->gain2.SetSampleRate(supersampledRate);
+	this->gain3.SetSampleRate(supersampledRate);
+	this->masterVolumeDezipped.SetSampleRate(supersampledRate);
+	this->sagProcessor.SetSampleRate(supersampledRate);
+
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND) + 40;
-	this->sagProcessor.SetSampleRate(_rate);
 }
 
-PowerStage::~PowerStage()
+PowerStage2::~PowerStage2()
 {
 
 }
 
-void PowerStage::ConnectPort(uint32_t port, void* data)
+void PowerStage2::ConnectPort(uint32_t port, void* data)
 {
 	switch ((PortId)port) {
 
@@ -103,8 +121,9 @@ void PowerStage::ConnectPort(uint32_t port, void* data)
 		this->gain1.Shape.SetData(data);
 		break;
 	case PortId::BIAS1:
-	this->gain1.Bias.SetData(data);
+		this->gain1.Bias.SetData(data);
 		break;
+
 
 	case PortId::GAIN2_ENABLE:
 		this->gain2_enable.SetData(data);
@@ -125,7 +144,7 @@ void PowerStage::ConnectPort(uint32_t port, void* data)
 		this->gain2.Shape.SetData(data);
 		break;
 	case PortId::BIAS2:
-	this->gain2.Bias.SetData(data);
+		this->gain2.Bias.SetData(data);
 		break;
 
 	case PortId::GAIN3_ENABLE:
@@ -178,9 +197,9 @@ void PowerStage::ConnectPort(uint32_t port, void* data)
 	}
 }
 
-void PowerStage::Activate()
+void PowerStage2::Activate()
 {
-	LogTrace("PowerStage activated.");
+	LogTrace("PowerStage2 activated.");
 	
 	peakDelay = 0;
 	frameTime = 0;
@@ -190,12 +209,12 @@ void PowerStage::Activate()
 	this->sagProcessor.Reset();
 	this->masterVolumeDezipped.Reset();
 }
-void PowerStage::Deactivate()
+void PowerStage2::Deactivate()
 {
-	LogTrace("PowerStage deactivated.");
+	LogTrace("PowerStage2 deactivated.");
 }
 
-void PowerStage::Run(uint32_t n_samples)
+void PowerStage2::Run(uint32_t n_samples)
 {
 	// prepare forge to write to notify output port.
 	// Set up forge to write directly to notify output port.
@@ -208,7 +227,6 @@ void PowerStage::Run(uint32_t n_samples)
 
 	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
 
-
 	this->gain2.Enable = this->gain2_enable.GetValue() > 0.5f;
 	this->gain3.Enable = this->gain3_enable.GetValue() > 0.5f;
 
@@ -217,30 +235,57 @@ void PowerStage::Run(uint32_t n_samples)
 	gain3.UpdateControls();
 	sagProcessor.UpdateControls();
 
+    this->HandleEvents(this->controlIn);
+
+
 	if (master.HasChanged())
 	{
 		this->masterVolumeDezipped.SetTarget(master.GetDb());
 	}
 
-	for (uint32_t i = 0; i < n_samples; ++i)
+
+	float *upsampledInputBuffer = this->upsampledInputBuffer;
+	float *upsampledOutputBuffer = this->upsampledOutputBuffer;
+
+	uint32_t ix = 0;
+	float lastValue = this->lastvalue;
+	while (ix < n_samples)
 	{
+		float input = this->input[ix];
 
-		float x1 = gain1.TickSupersampled(
-					input[i]*sagProcessor.GetSagValue()/sagProcessor.GetSagDValue()
-						);
-		float x2 = gain2.TickSupersampled(x1);
-		float x3 = gain3.TickSupersampled(x2);
-		float x4 = sagProcessor.TickOutput(x3);
-		float xOut = masterVolumeDezipped.Tick()*x4;
+		double dx = (input-lastValue)*0.25;
 
-		float absX = std::abs(xOut);
-		
-		if (absX > this->peakValue)
+		double lastOutput = 0;
+		for (int i = 0; i < 4; ++i)
 		{
-			this->peakValue = absX;
+			lastValue += dx;
+			float x = (float)(this->upsamplingFilter.Tick(lastValue));
+			//=========
+			float x1 = gain1.Tick(
+						x*sagProcessor.GetSagValue()/sagProcessor.GetSagDValue()
+							);
+			float x2 = gain2.Tick(x1);
+			float x3 = gain3.Tick(x2);
+			float x4 = sagProcessor.TickOutput(x3);
+			float xOut = masterVolumeDezipped.Tick()*x4;
+
+			float absX = std::abs(xOut);
+			
+			if (absX > this->peakValue)
+			{
+				this->peakValue = absX;
+			}
+
+			//=========
+
+			lastOutput = this->downsamplingFilter.Tick(xOut);
 		}
-		output[i] = Undenormalize(xOut);
-	}
+		this->output[ix] = Undenormalize(lastOutput);
+		lastValue = input;
+		++ix;
+	}	
+	this->lastvalue = lastValue;
+	
 	frameTime += n_samples;
 
 	this->peakDelay -= n_samples;
@@ -252,34 +297,71 @@ void PowerStage::Run(uint32_t n_samples)
 	}
 	lv2_atom_forge_pop(&forge, &out_frame);
 }
-
-
-void PowerStage::WriteUiState()
+LV2_Atom_Forge_Ref PowerStage2::WriteWaveShape(LV2_URID propertyUrid,GainSection *pGain)
 {
+
+	const int NUMBER_OF_POINTS = 101;
+
 	lv2_atom_forge_frame_time(&forge, frameTime);
 
 	LV2_Atom_Forge_Frame objectFrame;
-
-	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+	LV2_Atom_Forge_Ref   set =
+		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
 
     lv2_atom_forge_key(&forge, uris.patch_property);		
-	lv2_atom_forge_urid(&forge, uris.param_uiState);
+	lv2_atom_forge_urid(&forge, propertyUrid);
 	lv2_atom_forge_key(&forge, uris.patch_value);
 
 	LV2_Atom_Forge_Frame vectorFrame;
 	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
 
+	
+	for (int i = 0; i < NUMBER_OF_POINTS; ++i)
+	{
+		float x = (float)(i-NUMBER_OF_POINTS) / (NUMBER_OF_POINTS/2);
+		float y = pGain->Tick(x);
+		lv2_atom_forge_float(&forge,y);
+	}
+	lv2_atom_forge_pop(&forge, &vectorFrame);
 
-	lv2_atom_forge_float(&forge,this->gain1.GetPeakMax());
+	lv2_atom_forge_pop(&forge, &objectFrame);
+	return set;
+}
+
+
+
+void PowerStage2::WriteUiState()
+{
+	lv2_atom_forge_frame_time(&forge, frameTime);
+
+	LV2_Atom_Forge_Frame objectFrame;
+
+	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.param_uiState);
+
+    lv2_atom_forge_key(&forge, uris.param_uiData);		
+
+	LV2_Atom_Forge_Frame vectorFrame;
+	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+
+
 	lv2_atom_forge_float(&forge,this->gain1.GetPeakMin());
-	lv2_atom_forge_float(&forge,this->gain2.GetPeakMax());
+	lv2_atom_forge_float(&forge,this->gain1.GetPeakMax());
+	lv2_atom_forge_float(&forge,this->gain1.GetPeakOutMin());
+	lv2_atom_forge_float(&forge,this->gain1.GetPeakOutMax());
 	lv2_atom_forge_float(&forge,this->gain2.GetPeakMin());
-	lv2_atom_forge_float(&forge,this->gain3.GetPeakMax());
+	lv2_atom_forge_float(&forge,this->gain2.GetPeakMax());
+	lv2_atom_forge_float(&forge,this->gain2.GetPeakOutMin());
+	lv2_atom_forge_float(&forge,this->gain2.GetPeakOutMax());
 	lv2_atom_forge_float(&forge,this->gain3.GetPeakMin());
-	lv2_atom_forge_float(&forge,this->peakValue);
+	lv2_atom_forge_float(&forge,this->gain3.GetPeakMax());
+	lv2_atom_forge_float(&forge,this->gain3.GetPeakOutMin());
+	lv2_atom_forge_float(&forge,this->gain3.GetPeakOutMax());
 	lv2_atom_forge_float(&forge,sagProcessor.GetSagValue());
 	lv2_atom_forge_float(&forge,sagProcessor.GetSagDValue());
 
+	this->gain1.ResetPeak();
+	this->gain2.ResetPeak();
+	this->gain3.ResetPeak();
 
 	lv2_atom_forge_pop(&forge, &vectorFrame);
 
@@ -287,3 +369,54 @@ void PowerStage::WriteUiState()
 
 }
 
+
+void PowerStage2::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
+{
+	UNUSED(object);
+	if (propertyUrid == uris.waveShapeRequest1)
+	{
+		gain1.WriteShapeCurve(&(this->forge), uris.waveShapeRequest1);
+	}
+	if (propertyUrid == uris.waveShapeRequest2)
+	{
+		gain2.WriteShapeCurve(&this->forge, uris.waveShapeRequest2);
+	}
+	if (propertyUrid == uris.waveShapeRequest3)
+	{
+		gain3.WriteShapeCurve(&this->forge, uris.waveShapeRequest3);
+	}
+}
+
+#ifdef JUNK
+void PowerStage2::HandleEvent(LV2_Atom_Event* event)
+{
+	const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&event->body;
+	if (lv2_atom_forge_is_object_type(&forge, event->body.type)) {
+		if (obj->body.otype == uris.patch_Set) {
+		}
+		else if (obj->body.otype == uris.patch_Get)
+		{
+			const LV2_Atom_URID* accept = NULL;
+			const LV2_Atom_Float* value = NULL;
+
+			// clang-format off
+			lv2_atom_object_get_typed(
+				obj,
+				uris.patch_accept, &accept, uris.atom_URID,
+				uris.waveShapeRequest1, &value, uris.atom_float,
+				0);
+			if (accept) {
+				if (accept->body == uris.waveShapeRequest1) {
+					WriteWaveShape(uris.waveShapeRequest1,&(this->gain1));
+				} else if (accept->body == uris.waveShapeRequest2) {
+					WriteWaveShape(uris.waveShapeRequest2,&(this->gain2));
+				} else if (accept->body == uris.waveShapeRequest2) {
+					WriteWaveShape(uris.waveShapeRequest3,&(this->gain3));
+				}
+
+			}
+		}
+	}
+
+}
+#endif

@@ -27,7 +27,7 @@
 using namespace TwoPlay;
 
 
-float MathInternal::log10 = std::log(10.0f);
+// float MathInternal::log10 = std::log(10.0f);
 
 uint32_t TwoPlay::NextPowerOfTwo(uint32_t value)
 {

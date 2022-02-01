@@ -22,13 +22,31 @@
  */
 
 #pragma once
+
 #include "InputPort.h"
 #include "GainStage.h"
 #include "DbDezipper.h"
 #include "Filters/LowPassFilter.h"
 #include "Filters/AudioFilter2.h"
+#include "lv2/core/lv2.h"
+#include "lv2/log/logger.h"
+#include "lv2/uri-map/uri-map.h"
+#include "lv2/atom/atom.h"
+#include "lv2/atom/forge.h"
+#include "lv2/worker/worker.h"
+#include "lv2/patch/patch.h"
+#include "lv2/parameters/parameters.h"
+#include "lv2/units/units.h"
+#include "FilterResponse.h"
+#include <string>
+
+#include "Lv2Plugin.h"
 
 #include <cmath>
+
+#define RESPONSE_CURVE_URI "http://two-play.com/ToobAmp/ResponseCurve"
+#define RESPONSE_CURVE__instanceId_URI RESPONSE_CURVE_URI "#instanceId"
+#define RESPONSE_CURVE__data_URI RESPONSE_CURVE_URI "#data"
 
 namespace TwoPlay 
 {
@@ -41,35 +59,110 @@ namespace TwoPlay
             LowPassFilter lpFilter;
             AudioFilter2 hpFilter;
             DbDezipper trimVolume;
-            float peak;
+            float peakMax;
+            float peakMin;
+            struct  GainStageUris {
+                void Map(Lv2Plugin* plugin)
+			    {
+				    ResponseCurve = plugin->MapURI(RESPONSE_CURVE_URI);
+                    responseCurve_instanceId = plugin->MapURI(RESPONSE_CURVE__instanceId_URI);
+                    responseCurve_data = plugin->MapURI(RESPONSE_CURVE__data_URI);
+                    atom_Float = plugin->MapURI(LV2_ATOM__Float);
+                    patch_Set = plugin->MapURI(LV2_PATCH__Set);
+                    atom_float = plugin->MapURI(LV2_ATOM__Float);
+                    patch_value = plugin->MapURI(LV2_PATCH__value);
+                    patch_property = plugin->MapURI(LV2_PATCH__property);
+                }
 
+                LV2_URID ResponseCurve;
+                LV2_URID responseCurve_instanceId;
+                LV2_URID responseCurve_data;
+                LV2_URID atom_Float;
+                LV2_URID patch_Set;
+                LV2_URID atom_float;
+                LV2_URID patch_value;
+                LV2_URID patch_property;
+
+
+            };
+            GainStageUris gainStageUris;
+            void UpdateShape();
         public:
             GainSection();
+
+            void WriteShapeCurve(
+                LV2_Atom_Forge       *forge,
+                LV2_URID              properyUri
+            );
+
             bool Enable = true;
             RangedDbInputPort Trim = RangedDbInputPort(-20.0f, 20.0f);
             RangedInputPort Gain = RangedInputPort(0.0f,1.0f);
             RangedInputPort LoCut = RangedInputPort(30.0f, 300.0f);
-            RangedInputPort HiCut = RangedInputPort(1000.0f, 11000.0f);
+            RangedInputPort HiCut = RangedInputPort(1000.0f, 19000.0f);
+            RangedInputPort Bias = RangedInputPort(-2,2);
             SteppedInputPort Shape = SteppedInputPort(0,2);
+            
+            void InitUris(Lv2Plugin*pPlugin) {
+                gainStageUris.Map(pPlugin);
+            }
 
             void SetSampleRate(double rate);
             void Reset();
-            void UpdateControls();
-
+            void UpdateControls(
+                );
 
             float GetVu() {
-                float t = peak;
-                peak = 0;
-                return t;
+                float tMin = peakMin;
+                float tMax = peakMax;
+                peakMin = 0;
+                peakMax = 0;
+                return std::max(tMax,-tMin);
+            }
+            float GetPeakMax()
+            {
+                float tMax = peakMax;
+                return tMax;
+            }
+            float GetPeakMin()
+            {
+                float tMin = peakMin;
+                return tMin;
+            }
+            float GetPeakOutMax()
+            {
+                return this->gain.GainFn(peakMax);
+            }
+            float GetPeakOutMin()
+            {
+                return this->gain.GainFn(peakMin);
             }
 
-            inline float Tick(float value) { 
+            void ResetPeak()
+            {
+                peakMin = 0;
+                peakMax = 0;
+            }
+
+            inline float TickSupersampled(float value) { 
+                if (!Enable) return value;
                 value *= trimVolume.Tick();
-                float absX = fabs(value);
-                if (absX > peak)
-                {
-                    peak = absX;
-                }
+                if (value > peakMax) peakMax = value;
+                if (value < peakMin) peakMin = value;
+                float x = 
+                    gain.TickSupersampled( 
+                        lpFilter.Tick(
+                            hpFilter.Tick(
+                                value
+                            )));
+                return Undenormalize(x);
+            }
+            inline float Tick(float value) { 
+                if (!Enable) return value;
+                value *= trimVolume.Tick();
+                if (value > peakMax) peakMax = value;
+                if (value < peakMin) peakMin = value;
+
                 float x = 
                     gain.Tick( 
                         lpFilter.Tick(
@@ -78,6 +171,6 @@ namespace TwoPlay
                             )));
                 return Undenormalize(x);
             }
-                
+
     };
 }
