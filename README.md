@@ -1,4 +1,4 @@
-# ToobAmp LV2 Guitar Amp Plugins
+# ToobAmp LV2 Guitar Amp Plugins (v0.0.1 Alpha)
 
 The ToobAmp LV2 are a port of a set of experimental Guitar Amp plugins that were originally written for Native Instruments Reaktor that have been ported to LV2 plugins. They currently have user interfaces for MODP, and for Pipedal only.
 
@@ -10,7 +10,13 @@ Distortion and overdrive effects in the plugs are based on super-sampled arctan 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 1 Input Stage user interface in MODP
 
-The ToobAmp Input Stage provides for trimming and shaping your guitar input signal.  A trim control to boost levels up to optimum level; low- and high-cut filters can be used to clean up input signals; a shelving filter can be used to emulate bright inputs; and a noise gate, and a boost waveshaper emulate overdriving of pre-amp input stages. 
+The ToobAmp Input Stage provides for trimming and shaping your guitar input signal.  The Input Stage provides:
+
+* A trim control to boost input levels up to optimum level.
+* Low- and high-cut filters to clean up input signals,
+* A shelving filter to emulate bright input.
+* A noise gate.
+* a boost waveshaper to emulate overdriving of the pre-amp input buffer stage. 
 
 ## The ToobAmp Tone Stack
 
@@ -24,7 +30,7 @@ The ToobAmp Tone Stack stage provides accurate emulation of either Fender Bassma
 
 ![](src/ToobAmp.lv2/modgui/screenshot-toob-power-stage.png)
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 3 Tone Stack user interface in MODP
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 3 Power Stage user interface in MODP
 
 
 The ToobAmp Power Amp stage provides three consecutive super-sampled arctan waveshapers to provide anything from clean warm guitar tones to blistering overdrive. Use the trim controls to boost input signals to each stage to something close to 0dB as indicated on the VU meters beside each drive stage. The SAG and SAGD controls provde emulation of transformer sag, based on advanced analysis of Fender Bassman circuitry. SAG controls how much sag occurs on the input signal level. SAGD controls how much sag occurs on the output signal. Both controls will provide compression; but judicious use of the SAG control will cause a more gentle breakup of guitar signals that makes the amp feel more "forgiving".; the SAGD provides some amount of compression on the output signal. Use both controls judiciously, as high settings of either control will produce a sound that sounds noticeably compressed. 
