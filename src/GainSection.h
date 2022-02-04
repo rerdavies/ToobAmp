@@ -147,28 +147,24 @@ namespace TwoPlay
             inline float TickSupersampled(float value) { 
                 if (!Enable) return value;
                 value *= trimVolume.Tick();
+
+                value = lpFilter.Tick(hpFilter.Tick(value));
                 if (value > peakMax) peakMax = value;
                 if (value < peakMin) peakMin = value;
                 float x = 
-                    gain.TickSupersampled( 
-                        lpFilter.Tick(
-                            hpFilter.Tick(
-                                value
-                            )));
+                    gain.TickSupersampled(value);
                 return Undenormalize(x);
             }
             inline float Tick(float value) { 
                 if (!Enable) return value;
                 value *= trimVolume.Tick();
+
+                value = lpFilter.Tick(hpFilter.Tick(value));
                 if (value > peakMax) peakMax = value;
                 if (value < peakMin) peakMin = value;
 
                 float x = 
-                    gain.Tick( 
-                        lpFilter.Tick(
-                            hpFilter.Tick(
-                                value
-                            )));
+                    gain.Tick( value);
                 return Undenormalize(x);
             }
 
