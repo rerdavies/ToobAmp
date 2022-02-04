@@ -24,14 +24,19 @@
 #include <cmath>
 
 namespace TwoPlay {
+    constexpr float _MIN_DB = -200;
+    constexpr float MIN_AMPLITUDE = 1.0e-10f;
+
     inline float a2db(double value)
     {
+        if (value < MIN_AMPLITUDE) return _MIN_DB;
         return std::log10(value)*20;
 
     }
 
     inline float db2a(float value)
     {
+        if (value <= _MIN_DB) return 0;
         return std::pow(10,value*0.05);
     }
 }; // namespace.

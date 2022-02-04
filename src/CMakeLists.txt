@@ -24,6 +24,7 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          GainStage.cpp GainStage.h
          WaveShapes.cpp WaveShapes.h
          PowerStage2.h PowerStage2.cpp
+         SpectrumAnalyzer.h SpectrumAnalyzer.cpp
          db.h
          Filters/FilterCoefficients.cpp Filters/FilterCoefficients.h
          Filters/ToneStackFilter.cpp Filters/ToneStackFilter.h
@@ -65,8 +66,14 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
         LsNumerics/TubeStageApproximation.hpp
         LsNumerics/PiecewiseChebyshevApproximation.cpp
         LsNumerics/LsPolynomial.cpp
+        LsNumerics/dft.h
 
          )
+
+
+add_executable(FftTest LsNumerics/dftTest.cpp LsNumerics/dft.h)
+
+add_test(FftTest COMMAND FftTest)
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 

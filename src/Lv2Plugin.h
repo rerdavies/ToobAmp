@@ -22,6 +22,7 @@
  */
 
 #pragma once
+#include <cassert>
 #include "lv2/core/lv2.h"
 #include "lv2/state/state.h"
 #include "lv2/worker/worker.h"
@@ -31,6 +32,7 @@
 #include "lv2/urid/urid.h"
 #include "lv2/patch/patch.h"
 #include <vector>
+#include <functional>
 
 
 #pragma GCC diagnostic push
@@ -44,7 +46,6 @@ namespace TwoPlay {
 	typedef Lv2Plugin* (*PFN_CREATE_PLUGIN)(double _rate,
 		const char* _bundle_path,
 		const LV2_Feature* const* features);
-
 
 	class Lv2PluginFactory {
 	public:
@@ -91,6 +92,13 @@ namespace TwoPlay {
 		virtual void Deactivate() = 0;
 		virtual ~Lv2Plugin() { }
 
+		template <typename INPUT, typename OUTPUT>
+		void DoInBackground(
+			INPUT input,
+			std::function<OUTPUT (INPUT)> action,
+			std::function<void (OUTPUT)> onComplete
+		);
+
 	public:
 		// Map functions.
 		LV2_URID MapURI(const char* uri);
@@ -136,17 +144,80 @@ namespace TwoPlay {
 
 		// Schedule extension callbacks.
 
-		virtual LV2_Worker_Status OnWork(
+protected:
+		class WorkerActionBase {
+		private:
+			WorkerActionBase *pThis;
+			Lv2Plugin *pPlugin;
+		protected:
+			WorkerActionBase(Lv2Plugin *pPlugin)
+			{
+				pThis = this;
+				this->pPlugin = pPlugin;
+			}
+		public:
+			void Request() {
+				pPlugin->schedule->schedule_work(
+					pPlugin->schedule->handle,
+					sizeof(pThis),&pThis); // must be POD!
+			}
+			void Work(LV2_Worker_Respond_Function respond,LV2_Worker_Respond_Handle   handle)
+			{
+				OnWork();
+				void* p = (void*)&pThis;
+				respond(handle,sizeof(pThis),p);
+			}
+			void Response()
+			{
+				OnResponse();
+			}
+		protected:
+			virtual void OnWork() = 0;
+			virtual void OnResponse() = 0;
+		};
+
+		template<typename INPUT, typename OUTPUT>
+		class WorkerAction: protected WorkerActionBase {
+		public:
+
+			void Request(INPUT input)
+			{
+				this->input = input;
+				WorkerActionBase::Request();
+			}
+			INPUT input;
+			OUTPUT output;
+		private:
+			virtual void OnWork() {
+				output = Work(input);
+			}
+			virtual void OnResponse()
+			{
+				OnResponse(output);
+			}
+		protected:
+			virtual OUTPUT OnWork(INPUT input) = 0;
+			virtual void OnResponse(OUTPUT output) = 0;
+
+		};
+	private:
+		LV2_Worker_Status OnWork(
 			LV2_Worker_Respond_Function respond,
 			LV2_Worker_Respond_Handle   handle,
 			uint32_t                    size,
 			const void* data) 
 		{
+			assert(size == sizeof(WorkerActionBase*));
+			WorkerActionBase*pWorker = *(WorkerActionBase**)data;
+			pWorker->Work(respond,handle);
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
-		virtual LV2_Worker_Status OnWorkResponse(uint32_t size, const void* data)
+		LV2_Worker_Status OnWorkResponse(uint32_t size, const void* data)
 		{
+			assert(size == sizeof(WorkerActionBase*));
+			WorkerActionBase*worker = *(WorkerActionBase**)data;
+			worker->Response();
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
@@ -215,7 +286,17 @@ namespace TwoPlay {
 
 	};
 
+	template <typename INPUT, typename OUTPUT>
+	void Lv2Plugin::DoInBackground(
+		INPUT input,
+		std::function<OUTPUT (INPUT)> action,
+		std::function<void (OUTPUT)> onComplete
+	) {
 
-}
+	}
+
+
+};
+
 
 #pragma GCC diagnostic pop

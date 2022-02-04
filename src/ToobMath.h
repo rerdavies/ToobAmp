@@ -32,11 +32,12 @@ namespace TwoPlay {
 	namespace MathInternal {
 		const float log10 = 2.302585093f; //std::log(10);
 	};
-	const double MIN_DB = -192;
+	const float MIN_DB = -200;
+	const float  MIN_DB_AMPLITUDE = 1e-10f;
 
 	inline static float Af2Db(float value)
 	{
-		if (value == 0) return MIN_DB;
+		if (value < MIN_DB_AMPLITUDE) return MIN_DB;
 		return 20.0f*std::log10(value);
 	}
 	inline float Db2Af(float value)

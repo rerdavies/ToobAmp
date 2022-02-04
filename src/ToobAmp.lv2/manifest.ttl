@@ -25,6 +25,10 @@
      lv2:binary <ToobAmp.so> ;
      rdfs:seeAlso <CabSim.ttl> .
 
+<http://two-play.com/plugins/toob-spectrum> a lv2:Plugin ;
+     lv2:binary <ToobAmp.so> ;
+     rdfs:seeAlso <SpectrumAnalyzer.ttl> .
+
 
 <http://two-play.com/plugins/toob-power-stage>
     modgui:gui [
