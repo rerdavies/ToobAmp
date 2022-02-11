@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json.schemastore.org/tsconfig",
+
+    "include": ["src/**/*"],
+    
+
+    "display": "PiPedal exports",
+    "compilerOptions": {
+        "outDir": "../build/pipedal",
+        "sourceMap": true,
+
+
+      "target": "esnext",
+      "module": "commonjs",
+      "lib": [
+        "es2017"
+      ],
+      "allowJs": true,
+      "jsx": "react-native",
+      "noEmit": false,
+      "isolatedModules": true,
+      "composite": true,
+      "declaration": true,
+      "declarationDir": "../build/pipedal",
+      "strict": true,
+      "moduleResolution": "node",
+      "resolveJsonModule": true,
+      "allowSyntheticDefaultImports": true,
+      "esModuleInterop": true,
+      "skipLibCheck": false
+    },
+    "exclude": [
+      "node_modules",
+      "babel.config.js",
+      "metro.config.js",
+      "jest.config.js"
+    ]
+    
+}

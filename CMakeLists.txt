@@ -23,6 +23,7 @@ endif()
 
 # Include sub-projects.
 add_subdirectory ("src")
+add_subdirectory ("react")
 if (WIN32)
 #	add_subdirectory ("Test")
 endif()

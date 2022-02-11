@@ -1,0 +1,5 @@
+sudo apt install node-typescript
+npm install
+
+cd ../PiPedalPlugin
+npm install

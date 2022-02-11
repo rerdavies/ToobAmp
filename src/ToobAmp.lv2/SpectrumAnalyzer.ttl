@@ -32,7 +32,7 @@
 
 <http://two-play.com/plugins/toob-spectrum>
         a lv2:Plugin ,
-                lv2:SimulatorPlugin ;
+                lv2:AnalyserPlugin ;
         doap:name "TooB Spectrum Analyzer" ,
                 "TooB Spectrum Analyzer"@en-gb 
                 ;
