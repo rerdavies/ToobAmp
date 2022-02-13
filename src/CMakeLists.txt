@@ -26,6 +26,9 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          PowerStage2.h PowerStage2.cpp
          SpectrumAnalyzer.h SpectrumAnalyzer.cpp
          db.h
+         NeuralModel.h NeuralModel.cpp
+         ToobML.h ToobML.cpp
+         json.hpp json.cpp
          Filters/FilterCoefficients.cpp Filters/FilterCoefficients.h
          Filters/ToneStackFilter.cpp Filters/ToneStackFilter.h
          Filters/Polynomial.cpp Filters/Polynomial.h
@@ -86,6 +89,7 @@ set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 set_target_properties(ToobAmp PROPERTIES PREFIX "")
+set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 17)
 
 include(GNUInstallDirs)
 
