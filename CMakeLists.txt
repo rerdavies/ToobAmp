@@ -20,6 +20,8 @@ else()
     add_compile_options("-std=c++17")
 endif()
 
+# Include submodules
+add_subdirectory("modules")
 
 # Include sub-projects.
 add_subdirectory ("src")

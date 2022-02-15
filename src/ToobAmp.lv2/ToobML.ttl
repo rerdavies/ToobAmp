@@ -65,7 +65,7 @@ You may want to precede this plugin with a a Tone Stack plugin, and follow it wi
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index  ;
+                lv2:index  0;
                 lv2:symbol "trim" ;
                 lv2:name "Trim";
                 lv2:default 0.0 ;
@@ -74,7 +74,6 @@ You may want to precede this plugin with a a Tone Stack plugin, and follow it wi
                 units:unit units:db ;
                 rdf:comment "Input volume trim (pre-model)";
         ],  
-        lv2:port
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -110,7 +109,6 @@ You may want to precede this plugin with a a Tone Stack plugin, and follow it wi
                 lv2:maximum 1.0;    
                 rdf:comment "Treble eq (pre-model)";
         ],  
-        lv2:port
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -266,8 +264,6 @@ You may want to precede this plugin with a a Tone Stack plugin, and follow it wi
                 rdf:value 32.0
                 ];
         ] ,
-
-        lv2:port
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;

@@ -36,6 +36,7 @@
 #include "lv2/state/state.h"
 #include <vector>
 #include "SpectrumAnalyzer.h"
+#include "ToobML.h"
 
 using namespace TwoPlay;
 
@@ -47,6 +48,7 @@ std::vector<Lv2PluginFactory> factories = {
     { CabSim::URI, CabSim::Create},
     { ToneStack::URI, ToneStack::Create},
     { SpectrumAnalyzer::URI, SpectrumAnalyzer::Create},
+    { ToobML::URI, ToobML::Create},
 };
 
 static const LV2_Descriptor*const* descriptors;

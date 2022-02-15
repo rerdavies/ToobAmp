@@ -27,6 +27,7 @@
 #include <vector>
 
 #include "json.hpp"
+#include "RTNeural/RTNeural.h"
 
 namespace TwoPlay {
 
@@ -41,19 +42,36 @@ private:
     size_t hidden_size_;
     bool bias_fl_;
 public:
+    const std::string&model() const { return model_; }
+    size_t input_size() const { return input_size_; }
+    size_t skip() const { return skip_; }
+    size_t output_size() const { return output_size_; }
+    const std::string& unit_type() const { return unit_type_; }
+    size_t hidden_size() const { return hidden_size_; }
+    bool bias_fl() const { return bias_fl_; }
+
     DECLARE_JSON_MAP(ModelData);
 
 };
 
 class StateDict {
 private:
-    std::vector<std::vector<double> > rec__weight_ih_l0_;
-    std::vector<std::vector<double> > rec__weight_hh_l0_;
-    std::vector<double> rec__bias_ih_l0_;
-    std::vector<double> rec__bias_hh_l0_;
-    std::vector<std::vector<double> > lin__weight_;
-    std::vector<double> lin__bias_;
+    std::vector<std::vector<float> > rec__weight_ih_l0_;
+    std::vector<std::vector<float> > rec__weight_hh_l0_;
+    std::vector<float> rec__bias_ih_l0_;
+    std::vector<float> rec__bias_hh_l0_;
+    std::vector<std::vector<float> > lin__weight_;
+    std::vector<float> lin__bias_;
 public:
+    const std::vector<std::vector<float> > &rec__weight_ih_l0() const {return rec__weight_ih_l0_; }
+    const std::vector<std::vector<float> > &rec__weight_hh_l0() const {return rec__weight_hh_l0_; };
+    const std::vector<float> &rec__bias_ih_l0() const { return rec__bias_ih_l0_; }
+    const std::vector<float> &rec__bias_hh_l0() const { return rec__bias_hh_l0_; }
+    const std::vector<std::vector<float> > &lin__weight() const { return lin__weight_; }
+    const std::vector<float> &lin__bias() const { return lin__bias_; }
+
+
+
     DECLARE_JSON_MAP(StateDict);
 
 };
@@ -63,10 +81,12 @@ private:
     ModelData model_data_;
     StateDict state_dict_;
 public:
-    DECLARE_JSON_MAP(NeuralModel);
+    const ModelData&model_data() const { return model_data_; }
+    const StateDict&state_dict() const { return state_dict_; }
 
     void Load(const std::string&fileName);
 
+    DECLARE_JSON_MAP(NeuralModel);
 };
 
 }//namespace

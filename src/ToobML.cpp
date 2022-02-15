@@ -21,8 +21,6 @@
  *   SOFTWARE.
  */
 
-// ToobML.cpp : Defines the entry point for the application.
-//
 
 #include "ToobML.h"
 
@@ -35,25 +33,166 @@
 #include "lv2/midi/midi.h"
 #include "lv2/urid/urid.h"
 
+#include <exception>
+#include <fstream>
 #include <stdbool.h>
+#include <filesystem>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef WIN32
+#include <dlfcn.h>
+#endif
 
 using namespace std;
 using namespace TwoPlay;
 
-#ifndef _MSC_VER
-#include <unistd.h>
-#include <signal.h>
-#include <csignal>
-#endif
+#include "NeuralModel.h"
 
 
+constexpr float MODEL_FADE_RATE = 0.3f; // seconds.
+constexpr float MASTER_DEZIP_RATE = 0.1f; // seconds.
 const int MAX_UPDATES_PER_SECOND = 10;
 
 const char* ToobML::URI= TOOB_ML_URI;
+
+#include <limits>
+#include "RTNeural/RTNeural.h"
+
+
+namespace TwoPlay {
+
+
+class MLException: public std::exception {
+	std::string message;
+public:
+	MLException(const std::string&message)
+	{
+		this->message = message;
+	}
+	const char*what() const noexcept {
+		return this->message.c_str();
+	}
+};
+class ToobMlModel {
+protected:
+	ToobMlModel() { };
+public:
+	virtual ~ToobMlModel() {}
+	static ToobMlModel*  Load(const std::string&fileName);
+	virtual void Reset() = 0;
+	virtual void Process(int numSamples,const float*input, float*output,float param, float param2) = 0;
+	virtual float Process(float input, float param, float param2) = 0;
+	
+};
+
+static std::vector<std::vector<float> > transpose(const std::vector<std::vector<float> > &value)
+{
+	size_t r = value.size();
+	size_t c = value[0].size();
+
+	std::vector<std::vector<float> > result;
+	result.resize(c);
+	for (size_t i = 0; i < c; ++i)
+	{
+		result[i].resize(c);
+	}
+	for (size_t ir = 0; ir < r; ++ir)
+	{
+		for (size_t ic = 0; ic < c; ++ic)
+		{
+			result[ic][ir] = value[ir][ic];
+		}
+	}
+
+	return result;
+}
+template <int N_INPUTS>
+class MlModelInstance: public ToobMlModel
+{
+private:
+    RTNeural::ModelT<float, N_INPUTS, 1,
+        RTNeural::LSTMLayerT<float, N_INPUTS, 20>,
+        RTNeural::DenseT<float, 20, 1>> model;
+
+	using Vec2d = std::vector<std::vector<float> >;
+	float inData[3];
+public:
+
+	MlModelInstance(const NeuralModel &jsonModel)
+	{
+		const auto& data = jsonModel.state_dict();
+    	auto& lstm = (model).template get<0>();
+    	auto& dense = (model).template get<1>();
+
+		const Vec2d& lstm_weights_ih = data.rec__weight_ih_l0();
+		lstm.setWVals(transpose(lstm_weights_ih));
+
+		const Vec2d& lstm_weights_hh = data.rec__weight_hh_l0(); 
+		lstm.setUVals(transpose(lstm_weights_hh));
+
+		std::vector<float> lstm_bias_ih = data.rec__bias_ih_l0();
+		std::vector<float> lstm_bias_hh = data.rec__bias_hh_l0();
+		for (int i = 0; i < 80; ++i) // WHAT IS THIS CONSTANT?!!?
+			lstm_bias_hh[i] += lstm_bias_ih[i];
+		lstm.setBVals(lstm_bias_hh);
+
+		const Vec2d& dense_weights = data.lin__weight();
+		dense.setWeights(dense_weights);
+
+		std::vector<float> dense_bias = data.lin__bias();
+		dense.setBias(dense_bias.data());
+	}
+	virtual void Reset() {
+		model.reset();	
+	}
+
+	virtual float Process(float input, float param, float param2) 
+	{
+		inData[0] = input;
+		inData[1] = param;
+		inData[2] = param2;
+		return model.forward(inData) + input;
+	}
+
+	virtual void Process(int numSamples,const float*input, float*output,float param, float param2) {
+		inData[1] = param;
+		inData[2] = param;
+    	for (int i = 0; i < numSamples; ++i)
+		{
+			inData[0] = inData[i];
+        	output[i] = model.forward(inData) + input[i];
+		}
+
+	}
+
+};
+
+
+ToobMlModel* ToobMlModel::Load(const std::string&fileName)
+{
+	NeuralModel jsonModel;
+	jsonModel.Load(fileName);
+	switch (jsonModel.model_data().input_size())
+	{
+	case 1:
+		return new MlModelInstance<1>(jsonModel);
+	case 2:
+		return new MlModelInstance<2>(jsonModel);
+	case 3:
+		return new MlModelInstance<3>(jsonModel);
+
+	default:
+		throw MLException("Invalid model");
+		break;
+	}
+
+}
+
+
+}// namespace.
+
 
 
 
@@ -65,6 +204,8 @@ ToobML::ToobML(double _rate,
 	const LV2_Feature* const* features)
 	: 
 	Lv2Plugin(features),
+	loadWorker(this),
+	deleteWorker(this),
 	rate(_rate),
 	filterResponse(),
 	bundle_path(_bundle_path),
@@ -72,7 +213,9 @@ ToobML::ToobML(double _rate,
 {
 	uris.Map(this);
 	lv2_atom_forge_init(&forge, map);
-	this->toneStackFilter.SetSampleRate(_rate);
+	this->masterDezipper.SetSampleRate(_rate);
+	this->trimDezipper.SetSampleRate(_rate);
+	this->gainDezipper.SetSampleRate(_rate);
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
@@ -80,30 +223,34 @@ ToobML::ToobML(double _rate,
 
 ToobML::~ToobML()
 {
-
+	delete pCurrentModel;
+	delete pPendingLoad;
 }
 
 void ToobML::ConnectPort(uint32_t port, void* data)
 {
 	switch ((PortId)port) {
+	case PortId::BASS:
+		this->bassData  = (const float*)data;
+		break;
+	case PortId::MID:
+		this->midData  = (const float*)data;
+		break;
+	case PortId::TREBLE:
+		this->trebleData  = (const float*)data;
+		break;
 
 	case PortId::TRIM:
 		this->trimData  = (const float*)data;
 		break;
-	case PortId::MASTER:
-		this->masterData = (const float*)data;
-		break;
-	case PortId::BASS:
-		toneStackFilter.Bass.SetData(data);
-		break;
-	case PortId::MID:
-		toneStackFilter.Mid.SetData(data);
-		break;
-	case PortId::TREBLE:
-		toneStackFilter.Treble.SetData(data);
+	case PortId::GAIN:
+		this->gainData = (const float*)data;
 		break;
 	case PortId::AMP_MODEL:
-		toneStackFilter.AmpModel.SetData(data);
+		this->modelData = (const float*)data;
+		break;
+	case PortId::MASTER:
+		this->masterData = (const float*)data;
 		break;
 	case PortId::AUDIO_IN:
 		this->input = (const float*)data;
@@ -126,97 +273,112 @@ void ToobML::Activate()
 	
 	responseChanged = true;
 	frameTime = 0;
-	this->toneStackFilter.Reset();
+	this->lowShelfFilter.Reset();
+	this->highShelfFilter.Reset();
+
+	delete pCurrentModel;
+	pCurrentModel = nullptr;
+
+	modelValue = *(modelData);
+	LoadModelIndex();
+
+	pCurrentModel = LoadModel((size_t)(modelValue));
+
+
+
+	// fade the new model in gradually.
+	masterDb = *masterData;
+	master = Db2Af(masterDb);
+	masterDezipper.To(0,0);
+	masterDezipper.To(master,MODEL_FADE_RATE);
+
+	trimDb = *trimData;
+	trim = Db2Af(trimDb);
+	trimDezipper.To(trim,0);
+
+	gainValue = *gainData;
+	gain = gainValue * 0.1f;
+	gainDezipper.To(gain,0);
+
+
+	bassValue = *bassData;
+	midValue = *midData;
+	trebleValue = *trebleData;
+	UpdateFilter();
+
+	asyncState = AsyncState::Idle;
+
+}
+
+static std::filesystem::path MyDirectory()
+{
+	#ifdef WIN32
+	  #error FIXME!
+	#else
+		Dl_info dl_info;
+		dladdr((void*)MyDirectory,&dl_info);
+		return dl_info.dli_fname;
+	#endif
+}
+
+
+void ToobML::LoadModelIndex()
+{
+    auto filePath = MyDirectory().parent_path();
+	filePath = filePath / "models" / "tones";
+
+    auto indexFile = filePath / "model.index";
+
+	std::vector<string> index;
+
+    if (std::filesystem::exists(indexFile))
+    {
+        // format is one filename per line (relative to parent directory).
+        // which yeilds a fixed order for files.
+		std::ifstream f(indexFile);
+
+		for (std::string line; std::getline(f,line); /**/)
+		{
+			index.push_back((filePath / line).string());
+		}
+		this->modelFiles = std::move(index);
+    } else {
+		this->LogError("ToobML: Can't locate model resource files.");
+	}
+}
+
+ToobMlModel* ToobML::LoadModel(size_t index)
+{
+	if (modelFiles.size() == 0) 
+	{
+		return nullptr;
+	}
+	if (index >= modelFiles.size())
+	{
+		index = modelFiles.size()-1;
+	}
+	const std::string &fileName = modelFiles[index];
+	ToobMlModel *result = ToobMlModel::Load(fileName);
+	try {
+		result->Load(fileName);
+	} catch (std::exception &error)
+	{
+		delete result;
+		this->LogError("TooblML: Failed to load model file (%s).",fileName.c_str());
+		return nullptr;
+	}
+	return result;
+
 }
 void ToobML::Deactivate()
 {
 }
 
-void ToobML::Run(uint32_t n_samples)
-{
-	// prepare forge to write to notify output port.
-	// Set up forge to write directly to notify output port.
-	const uint32_t notify_capacity = this->notifyOut->atom.size;
-	lv2_atom_forge_set_buffer(
-		&(this->forge), (uint8_t*)(this->notifyOut), notify_capacity);
-
-	// Start a sequence in the notify output port.
-	LV2_Atom_Forge_Frame out_frame;
-
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
-
-
-	HandleEvents(this->controlIn);
-
-	if (toneStackFilter.UpdateControls())
-	{
-		this->responseChanged = true;
-	}
-
-	if (*trimData != trimDb)
-	{
-		trimDb = *trimData;
-		trim = Db2Af(trimDb);
-	}
-	if (*masterData != masterDb)
-	{
-		masterDb = *masterData;
-		master = Db2Af(masterDb);
-	}
-
-
-	for (uint32_t i = 0; i < n_samples; ++i)
-	{
-		float in = trim*input[i];
-		float val = Undenormalize((float)toneStackFilter.Tick(in));
-		output[i] = val*master;
-	}
-	frameTime += n_samples;
-
-
-	if (responseChanged)
-	{
-		responseChanged = false;
-		// delay by samples or ms, depending on whether we're connected.
-		if (n_samples == 0)
-		{
-			updateMs = timeMs() + this->updateMsDelay;
-		} else {
-			this->updateSamples = this->updateSampleDelay;
-		}
-	}
-    if (this->patchGet)
-    {
-        this->patchGet = false;
-        this->updateSampleDelay = 0;
-        this->updateMs = 0;
-        WriteFrequencyResponse();
-    }
-	if (this->updateSamples != 0)
-	{
-		this->updateSamples -= n_samples;
-		if (this->updateSamples <= 0 || n_samples == 0)
-		{
-			this->updateSamples = 0;
-			WriteFrequencyResponse();
-		}
-	}
-	if (this->updateMs != 0)
-	{
-		uint64_t ctime = timeMs();
-		if (ctime > this->updateMs || n_samples != 0)
-		{
-			this->updateMs = 0;
-			WriteFrequencyResponse();
-		}
-	}
-	lv2_atom_forge_pop(&forge, &out_frame);
-}
 
 
 float ToobML::CalculateFrequencyResponse(float f)
 {
-	return toneStackFilter.GetFrequencyResponse(f);
+	return lowShelfFilter.GetFrequencyResponse(f)*highShelfFilter.GetFrequencyResponse(f)*midGain;
 }
 
 
@@ -276,3 +438,185 @@ void ToobML::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
 	}
 
 }
+
+void ToobML::AsyncLoad(size_t model)
+{
+	if (asyncState == AsyncState::Idle)
+	{
+		asyncState == AsyncState::Loading;
+		loadWorker.Request(model);
+	}
+}
+
+void ToobML::AsyncLoadComplete(size_t modelIndex, ToobMlModel *pNewModel)
+{
+	asyncState == AsyncState::Loaded;
+	this->pendingModelIndex = modelIndex;
+	this->pPendingLoad = pNewModel;
+}
+
+inline void ToobML::HandleAsyncLoad()
+{
+	if (asyncState == AsyncState::Loaded)
+	{
+		if (masterDezipper.IsComplete())
+		{
+			ToobMlModel *oldModel = this->pCurrentModel;
+			this->pCurrentModel = this->pPendingLoad;
+			this->pPendingLoad = nullptr;
+			AsyncDelete(oldModel);
+			if (this->pendingModelIndex == this->modelValue)
+			{
+				masterDezipper.To(this->master,MODEL_FADE_RATE);
+			} else {
+				// Run the model, but don't ramp up the volume. We'll fix this mess 
+				// once the delete request completes.
+			}
+		}
+	}
+}
+
+
+void ToobML::AsyncDelete(ToobMlModel*pOldModel)
+{
+	this->asyncState = AsyncState::Deleting;
+	deleteWorker.Request(pOldModel);
+}
+void ToobML::AsyncDeleteComplete()
+{
+	this->asyncState = AsyncState::Idle;
+	if (this->pendingModelIndex != this->modelValue)
+	{
+		// We've had (one or more) model requests since the start of the last load.
+		// Restart the load.
+		AsyncLoad((size_t)this->modelValue);
+	}
+}
+
+
+ToobML::LoadWorker::~LoadWorker()
+{
+	delete pModelResult;
+}
+ToobML::DeleteWorker::~DeleteWorker()
+{
+	delete pModel;
+}
+
+void ToobML::DeleteWorker::OnWork() {
+	delete pModel;
+	pModel = nullptr;
+}
+
+
+inline void ToobML::UpdateFilter()
+{
+	lowShelfFilter.Design(400,bassValue-midValue,rate);
+	highShelfFilter.Design(800,trebleValue-midValue,rate);
+	midGain = Db2Af(midValue);
+}
+void ToobML::Run(uint32_t n_samples)
+{
+	// prepare forge to write to notify output port.
+	// Set up forge to write directly to notify output port.
+	const uint32_t notify_capacity = this->notifyOut->atom.size;
+	lv2_atom_forge_set_buffer(
+		&(this->forge), (uint8_t*)(this->notifyOut), notify_capacity);
+
+	// Start a sequence in the notify output port.
+	LV2_Atom_Forge_Frame out_frame;
+
+	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
+
+
+	HandleEvents(this->controlIn);
+
+
+	if (*trimData != trimDb)
+	{
+		trimDb = *trimData;
+		trim = Db2Af(trimDb);
+		trimDezipper.To(trim,MASTER_DEZIP_RATE);
+	}
+	if (*masterData != masterDb)
+	{
+		masterDb = *masterData;
+		master = Db2Af(masterDb);
+		masterDezipper.To(master,MASTER_DEZIP_RATE);
+	}
+	if (*gainData != gainValue)
+	{
+		gainValue = *gainData;
+		gain = gainValue * 0.1f;
+		gainDezipper.To(gain,MASTER_DEZIP_RATE);
+
+	}
+	if (*bassData != bassValue || *midData != midValue || *trebleData != trebleValue)
+	{
+		bassValue = *bassData; midValue = *midData; trebleValue = *trebleData;
+		UpdateFilter();
+		this->responseChanged = true;
+
+	}
+	if (*modelData != modelValue)
+	{
+		modelValue = *modelData;
+		AsyncLoad((size_t)modelValue);
+		masterDezipper.To(0,MODEL_FADE_RATE);
+	}
+	HandleAsyncLoad(); // trasnfer in a freshly loaded model if one is ready.
+
+	for (uint32_t i = 0; i < n_samples; ++i)
+	{
+		float in = trimDezipper.Tick()*input[i];
+
+		float val = (float)(lowShelfFilter.Tick(highShelfFilter.Tick(in))*midGain);
+
+		if (this->pCurrentModel != nullptr)
+		{
+			val = this->pCurrentModel->Process(val,gainDezipper.Tick(),0);
+		}
+		output[i] = val*masterDezipper.Tick();
+	}
+	frameTime += n_samples;
+
+
+	if (responseChanged)
+	{
+		responseChanged = false;
+		// delay by samples or ms, depending on whether we're connected.
+		if (n_samples == 0)
+		{
+			updateMs = timeMs() + this->updateMsDelay;
+		} else {
+			this->updateSamples = this->updateSampleDelay;
+		}
+	}
+    if (this->patchGet)
+    {
+        this->patchGet = false;
+        this->updateSampleDelay = 0;
+        this->updateMs = 0;
+        WriteFrequencyResponse();
+    }
+	if (this->updateSamples != 0)
+	{
+		this->updateSamples -= n_samples;
+		if (this->updateSamples <= 0 || n_samples == 0)
+		{
+			this->updateSamples = 0;
+			WriteFrequencyResponse();
+		}
+	}
+	if (this->updateMs != 0)
+	{
+		uint64_t ctime = timeMs();
+		if (ctime > this->updateMs || n_samples != 0)
+		{
+			this->updateMs = 0;
+			WriteFrequencyResponse();
+		}
+	}
+	lv2_atom_forge_pop(&forge, &out_frame);
+}
+

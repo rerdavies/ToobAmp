@@ -7,6 +7,12 @@
      lv2:binary <ToobAmp.so> ;
      rdfs:seeAlso <ToneStack.ttl> .
 
+<http://two-play.com/plugins/toob-ml> a lv2:Plugin ;
+     lv2:binary <ToobAmp.so> ;
+     rdfs:seeAlso <ToobML.ttl> .
+
+
+
 
 
 <http://two-play.com/plugins/toob-power-stage> a lv2:Plugin ;

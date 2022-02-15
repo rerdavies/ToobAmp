@@ -13,7 +13,6 @@ add_custom_target(copy-files ALL
 
 
 
-
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
         InputPort.h ToobMath.h ToobMath.cpp CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
@@ -73,6 +72,10 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
 
          )
 
+target_link_libraries(ToobAmp RTNeural)
+target_include_directories(ToobAmp PRIVATE
+    ../modules/RTNeural
+)
 
 add_executable(FftTest LsNumerics/dftTest.cpp LsNumerics/dft.h)
 

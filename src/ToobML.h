@@ -22,6 +22,8 @@
 #include "InputPort.h"
 #include "OutputPort.h"
 #include "Filters/ToneStackFilter.h"
+#include "ControlDezipper.h"
+#include "Filters/ZolzerShelvingFilters.h"
 
 
 
@@ -31,7 +33,11 @@
 #endif
 
 
+
 namespace TwoPlay {
+
+	class ToobMlModel;
+
 	class ToobML : public Lv2Plugin {
 	private:
 		enum class PortId {
@@ -39,6 +45,7 @@ namespace TwoPlay {
 			BASS,
 			MID,
 			TREBLE,
+			GAIN,
 			AMP_MODEL,
 			MASTER,
 			AUDIO_IN,
@@ -50,23 +57,44 @@ namespace TwoPlay {
 		double rate;
 		std::string bundle_path;
 
-		const float* input = NULL;
-		const float* trimData = NULL;
-		const float* masterData = NULL;
+		const float* input = nullptr;
+		const float* trimData = nullptr;
+		const float* gainData = nullptr;
+		const float* masterData = nullptr;
+		const float* modelData = nullptr;
+		const float* bassData = nullptr;
+		const float* midData = nullptr;
+		const float* trebleData = nullptr;
 
+		
+		float modelValue;
+		float gainValue = 0;
 		float trimDb = 0;
 		float masterDb = 0;
+		float bassValue = 0;
+		float midValue = 0;
+		float trebleValue = 0;
+
 		float trim = 1;
 		float master = 1;
+		float gain = 0;
 
+		ZolzerLowShelfFilter lowShelfFilter;
+		ZolzerHighShelfFilter highShelfFilter;
+		double midGain;
+		void UpdateFilter();
+		ToobMlModel *pCurrentModel = nullptr;
+		std::vector<std::string> modelFiles;
 
-		float* output = NULL;;
+		void LoadModelIndex();
+		ToobMlModel *LoadModel(size_t index);
 
-		LV2_Atom_Sequence* controlIn = NULL;
-		LV2_Atom_Sequence* notifyOut = NULL;
+		float* output = nullptr;
+
+		LV2_Atom_Sequence* controlIn = nullptr;
+		LV2_Atom_Sequence* notifyOut = nullptr;
 		uint64_t frameTime = 0;
 
-		ToneStackFilter toneStackFilter;
 
 		bool responseChanged = true;
         bool patchGet = false;
@@ -139,7 +167,95 @@ namespace TwoPlay {
 		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object);
 
 	private:
+		ControlDezipper trimDezipper;
+		ControlDezipper gainDezipper;
+		ControlDezipper masterDezipper;
+
+		enum class AsyncState {
+			Idle,
+			Loading,
+			Loaded,
+			Deleting,
+		};
+		AsyncState asyncState = AsyncState::Idle;
+
+		size_t pendingModelIndex = (size_t)-1;
+		ToobMlModel *pPendingLoad = nullptr;
+
+
+		class LoadWorker: public WorkerActionBase
+		{
+		private: 
+			ToobML*pThis;
+			size_t modelIndex;
+			ToobMlModel*pModelResult = nullptr;
+		public:
+			LoadWorker(ToobML *pThis)
+			:	WorkerActionBase(pThis),
+				pThis(pThis)
+			{
+			}
+			virtual ~LoadWorker();
+
+			void Request(size_t modelIndex)
+			{
+				this->modelIndex = modelIndex;
+				this->WorkerActionBase::Request();
+			}
+		protected:
+			void OnWork() {
+				this->pModelResult = pThis->LoadModel(this->modelIndex);
+			}
+			void OnResponse()
+			{
+				pThis->AsyncLoadComplete(modelIndex,pModelResult);
+				pModelResult = nullptr;
+			}
+		};
+
+		LoadWorker loadWorker;
+
+		class DeleteWorker: public WorkerActionBase
+		{
+		private: 
+			ToobML*pThis;
+			ToobMlModel*pModel = nullptr;
+		public:
+			DeleteWorker(ToobML *pThis)
+			:	WorkerActionBase(pThis),
+				pThis(pThis)
+			{
+			}
+			virtual ~DeleteWorker();
+
+			void Request(ToobMlModel *pModel)
+			{
+				this->pModel = pModel;
+				this->WorkerActionBase::Request();
+			}
+		protected:
+			void OnWork();
+
+			void OnResponse()
+			{
+				pThis->AsyncDeleteComplete();
+			}
+		};
+
+		DeleteWorker deleteWorker;
+
+		
+
+		void AsyncLoad(size_t modelIndex);
+		void AsyncLoadComplete(size_t modelIndex, ToobMlModel *pNewModel);
+		void HandleAsyncLoad();
+		void AsyncDelete(ToobMlModel*pNewModel);
+		void AsyncDeleteComplete();
+
+
 		float CalculateFrequencyResponse(float f);
+
+		
 
 		void SetProgram(uint8_t programNumber);
 		LV2_Atom_Forge_Ref WriteFrequencyResponse();
