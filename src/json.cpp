@@ -438,6 +438,9 @@ void json_reader::skip_property()
     int c = is_.peek();
     switch (c)
     {
+    case -1:
+        throw_format_error("Premature end of file.");
+
     case '[':
         skip_array();
         break;
@@ -464,7 +467,11 @@ void json_reader::skip_string()
     consume('"');
     while (true)
     {
-        char c;
+        int c;
+        if (c == -1)
+        {
+            throw_format_error("Premature end of file.");
+        }
         c = get();
         if (c == '\"')
         {
@@ -485,26 +492,52 @@ void json_reader::skip_string()
 void json_reader::skip_number()
 {
     skip_whitespace();
-    char c;
-    while (true)
+    int c;
+    if (is_.peek() == '-')
     {
-        int ic = is_.peek();
-        if (ic == -1)
-            break;
-        if (is_whitespace((char)ic))
+        get();
+    }
+    if (!std::isdigit(is_.peek()))
+    {
+        throw_format_error("Expecting a number.");
+    }
+    while (std::isdigit(is_.peek()))
+    {
+        get();
+    }
+    if (is_.peek() == '.')
+    {
+        get();
+    }
+    while (std::isdigit(is_.peek()))
+    {
+        get();
+    }
+    c = is_.peek();
+    if (c == 'e' || c == 'E')
+    {
+        get();
+        c = is_.peek();
+        if (c == '+' || c == 'i')
         {
-            break;
+            get();
         }
-        c = get();
+        while (std::isdigit(is_.peek()))
+        {
+            get();
+        }
+
     }
 }
 void json_reader::skip_array()
 {
-    char c;
+    int  c;
     consume('[');
 
     while (true)
     {
+        c = peek();
+        if (peek() == -1) throw_format_error("Premature end of file reading json.");
         if (peek() == ']')
         {
             c = get();
@@ -521,11 +554,14 @@ void json_reader::skip_array()
 
 void json_reader::skip_object()
 {
-    char c;
+    int c;
     consume('{');
     while (true)
     {
-        if (peek() == '}')
+        c = peek();
+        if (c == -1) 
+            throw_format_error("Premature end of file.");
+        if (c  == '}')
         {
             c = get();
             break;

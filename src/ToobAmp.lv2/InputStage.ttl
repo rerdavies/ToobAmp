@@ -46,7 +46,7 @@
 inputStage:filterGroup
     a param:ControlGroup ,
         pg:InputGroup ;
-    lv2:name "Filter" ;
+    lv2:name "EQ" ;
     lv2:symbol "filter" .
 
 

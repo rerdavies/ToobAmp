@@ -96,7 +96,7 @@ static std::vector<std::vector<float> > transpose(const std::vector<std::vector<
 	result.resize(c);
 	for (size_t i = 0; i < c; ++i)
 	{
-		result[i].resize(c);
+		result[i].resize(r);
 	}
 	for (size_t ir = 0; ir < r; ++ir)
 	{
@@ -134,7 +134,11 @@ public:
 
 		std::vector<float> lstm_bias_ih = data.rec__bias_ih_l0();
 		std::vector<float> lstm_bias_hh = data.rec__bias_hh_l0();
-		for (int i = 0; i < 80; ++i) // WHAT IS THIS CONSTANT?!!?
+		if (lstm_bias_ih.size() != lstm_bias_hh.size())
+		{
+			throw MLException("Invalid model.");
+		}
+		for (size_t i = 0; i < lstm_bias_ih.size(); ++i) 
 			lstm_bias_hh[i] += lstm_bias_ih[i];
 		lstm.setBVals(lstm_bias_hh);
 
@@ -358,17 +362,14 @@ ToobMlModel* ToobML::LoadModel(size_t index)
 		index = modelFiles.size()-1;
 	}
 	const std::string &fileName = modelFiles[index];
-	ToobMlModel *result = ToobMlModel::Load(fileName);
 	try {
-		result->Load(fileName);
+		ToobMlModel *result = ToobMlModel::Load(fileName);
+		return result;
 	} catch (std::exception &error)
 	{
-		delete result;
 		this->LogError("TooblML: Failed to load model file (%s).",fileName.c_str());
 		return nullptr;
 	}
-	return result;
-
 }
 void ToobML::Deactivate()
 {
@@ -443,14 +444,14 @@ void ToobML::AsyncLoad(size_t model)
 {
 	if (asyncState == AsyncState::Idle)
 	{
-		asyncState == AsyncState::Loading;
+		asyncState = AsyncState::Loading;
 		loadWorker.Request(model);
 	}
 }
 
 void ToobML::AsyncLoadComplete(size_t modelIndex, ToobMlModel *pNewModel)
 {
-	asyncState == AsyncState::Loaded;
+	asyncState = AsyncState::Loaded;
 	this->pendingModelIndex = modelIndex;
 	this->pPendingLoad = pNewModel;
 }
@@ -511,8 +512,8 @@ void ToobML::DeleteWorker::OnWork() {
 
 inline void ToobML::UpdateFilter()
 {
-	lowShelfFilter.Design(400,bassValue-midValue,rate);
-	highShelfFilter.Design(800,trebleValue-midValue,rate);
+	lowShelfFilter.Design(50,bassValue-midValue,rate);
+	highShelfFilter.Design(4000,trebleValue-midValue,rate);
 	midGain = Db2Af(midValue);
 }
 void ToobML::Run(uint32_t n_samples)
