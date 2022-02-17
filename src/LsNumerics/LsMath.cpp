@@ -21,38 +21,21 @@
  *   SOFTWARE.
  */
 
-#pragma once
-
-#include "../std.h"
-#include "AudioFilter3.h"
-
-namespace TwoPlay {
-
-    class ToneStackFilter : public AudioFilter3 {
-
-    private:
-        void UpdateFilter();
-        void BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result);
-    public:
-        RangedInputPort Bass =RangedInputPort(0,1);
-		RangedInputPort Mid =RangedInputPort(0,1);
-		RangedInputPort Treble =RangedInputPort(0,1);
-		RangedInputPort AmpModel =RangedInputPort(0,1);
-
-    public:
-        bool UpdateControls()
-        {
-            if (Bass.HasChanged() || Mid.HasChanged() || Treble.HasChanged() || AmpModel.HasChanged())
-            {
-                UpdateFilter();
-                return true;
-            }
-            return false;
-        }
+#include "LsMath.hpp"
 
 
+using namespace LsNumerics;
 
 
-    };
+// float MathInternal::log10 = std::log(10.0f);
 
+uint32_t LsNumerics::NextPowerOfTwo(uint32_t value)
+{
+    value--;
+    value |= value >> 1;
+    value |= value >> 2;
+    value |= value >> 4;
+    value |= value >> 8;
+    value |= value >> 16;
+    return value+1;
 }

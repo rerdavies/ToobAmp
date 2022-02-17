@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cassert>
+#include "LsMath.hpp"
 
 /*
  *   Copyright (c) 2021 Robin E. R. Davies
@@ -45,7 +46,6 @@ namespace LsNumerics
         backward = -1
     };
 
-    constexpr double Pi = 3.141592653589793238462643383279502884;
 
 
     template <typename T>

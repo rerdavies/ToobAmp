@@ -1,9 +1,11 @@
 #pragma once
 #include "AudioFilter2.h"
-#include "../ToobMath.h"
+#include "../LsNumerics/LsMath.hpp"
 #include <cmath>
 
 namespace TwoPlay {
+    using namespace LsNumerics;
+
     class ShelvingLowCutFilter2: public AudioFilter2 {
     private:
 

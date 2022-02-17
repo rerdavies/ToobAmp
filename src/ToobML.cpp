@@ -220,6 +220,7 @@ ToobML::ToobML(double _rate,
 	this->masterDezipper.SetSampleRate(_rate);
 	this->trimDezipper.SetSampleRate(_rate);
 	this->gainDezipper.SetSampleRate(_rate);
+	this->baxandallToneStack.SetSampleRate(_rate);
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
@@ -277,8 +278,7 @@ void ToobML::Activate()
 	
 	responseChanged = true;
 	frameTime = 0;
-	this->lowShelfFilter.Reset();
-	this->highShelfFilter.Reset();
+	this->baxandallToneStack.Reset();
 
 	delete pCurrentModel;
 	pCurrentModel = nullptr;
@@ -379,7 +379,8 @@ void ToobML::Deactivate()
 
 float ToobML::CalculateFrequencyResponse(float f)
 {
-	return lowShelfFilter.GetFrequencyResponse(f)*highShelfFilter.GetFrequencyResponse(f)*midGain;
+	if (bypassToneFilter) return 1;
+	return baxandallToneStack.GetFrequencyResponse(f);
 }
 
 
@@ -510,11 +511,18 @@ void ToobML::DeleteWorker::OnWork() {
 }
 
 
+static inline double clampValue(double value)
+{
+	if (value < 0) return 0;
+	if (value > 1) return 1;
+	return value;
+}
+
 inline void ToobML::UpdateFilter()
 {
-	lowShelfFilter.Design(50,bassValue-midValue,rate);
-	highShelfFilter.Design(4000,trebleValue-midValue,rate);
-	midGain = Db2Af(midValue);
+	baxandallToneStack.Design(bassValue,midValue,trebleValue);
+
+	bypassToneFilter = bassValue == 0.5 && midValue == 0.5 && trebleValue == 0.5;
 }
 void ToobML::Run(uint32_t n_samples)
 {
@@ -569,9 +577,12 @@ void ToobML::Run(uint32_t n_samples)
 
 	for (uint32_t i = 0; i < n_samples; ++i)
 	{
-		float in = trimDezipper.Tick()*input[i];
+		float val = trimDezipper.Tick()*input[i];
 
-		float val = (float)(lowShelfFilter.Tick(highShelfFilter.Tick(in))*midGain);
+		if (!bypassToneFilter)
+		{
+			val = baxandallToneStack.Tick(val);
+		}
 
 		if (this->pCurrentModel != nullptr)
 		{

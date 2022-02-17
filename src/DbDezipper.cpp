@@ -61,7 +61,7 @@ void DbDezipper::NextSegment()
             currentDb = targetDb;
         }
     }
-    this->targetX = TwoPlay::Db2Af(currentDb);
+    this->targetX = LsNumerics::Db2Af(currentDb);
     this->dx = (targetX-x)/SEGMENT_SIZE;
     this->count = SEGMENT_SIZE;
 

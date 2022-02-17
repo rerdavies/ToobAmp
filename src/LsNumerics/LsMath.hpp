@@ -21,39 +21,56 @@
  *   SOFTWARE.
  */
 
-#include "std.h"
-#include "NoiseGate.h"
-#include "LsNumerics/LsMath.hpp"
+#pragma once
+
+#include <cmath>
+#include <cstdint>
+
+namespace LsNumerics {
+
+    constexpr double Pi = 3.141592653589793238462643383279502884;
+
+
+	namespace MathInternal {
+		const float log10 = 2.302585093f; //std::log(10);
+	};
+
+	// inputValue: a value between zero and one.
+	// Returns:
+	//    a logarithmically tapered value between 0.01 and 1, having a 
+	//    value of 0.1 for an input of 0.5. A common taper curve used by most amp
+	//    manufacturers (except for Fender).
+
+	inline double AudioTaper(double inputValue)
+	{
+		return std::exp(MathInternal::log10*(inputValue-1)*2);
+	}
+	const float MIN_DB = -200;
+	const float  MIN_DB_AMPLITUDE = 1e-10f;
+
+	inline float Af2Db(float value)
+	{
+		if (value < MIN_DB_AMPLITUDE) return MIN_DB;
+		return 20.0f*std::log10(value);
+	}
+
+	inline float Db2Af(float value)
+	{
+		if (value < MIN_DB) return 0;
+		return std::exp(value*(MathInternal::log10*0.05f));
+	}
+
+	uint32_t NextPowerOfTwo(uint32_t value);
+
+	inline double Undenormalize(double value)
+	{
+		return 1E-18 +value+ 1E-18;
+	}
+	inline float Undenormalize(float value)
+	{
+		return 1E-6f +value+ 1E-6f;
+	}
 
 
 
-using namespace TwoPlay;
-using namespace LsNumerics;
-
-static const double ATTACK_SECONDS = 0.001;
-static const double RELEASE_SECONDS = 0.3;
-static const double HOLD_SECONDS = 0.2;
-
-
-int32_t NoiseGate::SecondsToSamples(double seconds)
-{
-    return (int32_t)sampleRate*seconds;
-}
-
-void NoiseGate::SetGateThreshold(float decibels)
-{
-     this->afAttackThreshold = LsNumerics::Db2Af(decibels);
-    this->afReleaseThreshold = this->afAttackThreshold*0.25f;
-}
-double NoiseGate::SecondsToRate(double seconds)
-{
-    return 1/(seconds*sampleRate);
-}
-
-void NoiseGate::SetSampleRate(double sampleRate)
-{
-    this->sampleRate = sampleRate;
-    this->attackRate = SecondsToRate(ATTACK_SECONDS);
-    this->releaseRate = SecondsToRate(RELEASE_SECONDS);
-    this->holdSampleDelay = SecondsToSamples(HOLD_SECONDS);
-}
+};

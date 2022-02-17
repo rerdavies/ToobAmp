@@ -40,10 +40,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <sstream>
 #include <iomanip>
-#include "ToobMath.h"
+#include "LsNumerics/LsMath.hpp"
 
 using namespace std;
 using namespace TwoPlay;
+using namespace LsNumerics;
 
 #ifndef _MSC_VER
 #include <unistd.h>

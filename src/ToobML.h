@@ -21,9 +21,8 @@
 #include "MidiProcessor.h"
 #include "InputPort.h"
 #include "OutputPort.h"
-#include "Filters/ToneStackFilter.h"
 #include "ControlDezipper.h"
-#include "Filters/ZolzerShelvingFilters.h"
+#include "LsNumerics/BaxandallToneStack.hpp"
 
 
 
@@ -79,9 +78,8 @@ namespace TwoPlay {
 		float master = 1;
 		float gain = 0;
 
-		ZolzerLowShelfFilter lowShelfFilter;
-		ZolzerHighShelfFilter highShelfFilter;
-		double midGain;
+		LsNumerics::BaxandallToneStack baxandallToneStack;
+		bool bypassToneFilter = false;
 		void UpdateFilter();
 		ToobMlModel *pCurrentModel = nullptr;
 		std::vector<std::string> modelFiles;

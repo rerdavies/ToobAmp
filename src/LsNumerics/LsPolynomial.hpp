@@ -38,11 +38,8 @@ namespace LsNumerics
         {
         }
         Polynomial(double v)
+        :values({v})
         {
-            if (v != 0)
-            {
-                values.push_back(v);
-            }
         }
         Polynomial(std::initializer_list<double> initializer)
             :values(initializer)
@@ -50,7 +47,7 @@ namespace LsNumerics
 
         }
         Polynomial(Polynomial&& other) noexcept
-            :values(std::move(other.values))
+            :values(std::forward<std::vector<double>>(other.values))
         {
 
         }
@@ -59,7 +56,7 @@ namespace LsNumerics
         {
         }
         Polynomial(std::vector<double>&& values) noexcept
-            :values(std::move(values))
+            :values(std::forward<std::vector<double> >(values))
         {
 
         }
@@ -83,6 +80,13 @@ namespace LsNumerics
 
         size_t Size() const {
             return values.size();
+        }
+
+        bool IsZero() const {
+            return Size() == 0;
+        }
+        bool IsOne() const {
+            return Size() == 1 && values[0] == 1;
         }
 
         static Polynomial Add(const Polynomial &left, double right)

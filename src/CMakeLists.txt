@@ -15,7 +15,7 @@ add_custom_target(copy-files ALL
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
-        InputPort.h ToobMath.h ToobMath.cpp CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
+        InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h
          ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h PowerStage.cpp PowerStage.h IDelay.h SagProcessor.h
@@ -24,12 +24,10 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          WaveShapes.cpp WaveShapes.h
          PowerStage2.h PowerStage2.cpp
          SpectrumAnalyzer.h SpectrumAnalyzer.cpp
-         db.h
          NeuralModel.h NeuralModel.cpp
          ToobML.h ToobML.cpp
          json.hpp json.cpp
          Filters/FilterCoefficients.cpp Filters/FilterCoefficients.h
-         Filters/ToneStackFilter.cpp Filters/ToneStackFilter.h
          Filters/Polynomial.cpp Filters/Polynomial.h
          Filters/DownsamplingLowpassFilter.cpp Filters/DownsamplingLowPassFilter.h
          Filters/AudioFilter3.cpp Filters/AudioFilter3.h
@@ -59,17 +57,25 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          iir/Custom.h
          iir/ChebyshevII.cpp
          
-         LsNumerics/PiecewiseChebyshevApproximation.hpp
-        LsNumerics/LsChebyshevApproximation.hpp
-        LsNumerics/LsPolynomial.hpp
-        LsNumerics/LsChebyshevPolynomial.cpp
-        LsNumerics/LsChebyshevPolynomial.hpp
-        LsNumerics/TubeStageApproximation.cpp
-        LsNumerics/TubeStageApproximation.hpp
-        LsNumerics/PiecewiseChebyshevApproximation.cpp
-        LsNumerics/LsPolynomial.cpp
-        LsNumerics/dft.h
 
+         LsNumerics/ToneStackFilter.cpp LsNumerics/ToneStackFilter.h
+         LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
+         LsNumerics/PiecewiseChebyshevApproximation.hpp
+         LsNumerics/LsChebyshevApproximation.hpp
+         LsNumerics/LsPolynomial.hpp
+         LsNumerics/InPlaceBilinearFilter.h
+         LsNumerics/BaxandallToneStack.hpp
+         LsNumerics/LsChebyshevPolynomial.cpp
+         LsNumerics/dft.h
+         LsNumerics/LsChebyshevPolynomial.hpp
+         LsNumerics/LsRationalPolynomial.cpp
+         LsNumerics/TubeStageApproximation.cpp
+         LsNumerics/PiecewiseChebyshevApproximation.cpp
+         LsNumerics/BaxandallToneStack.cpp
+         LsNumerics/TubeStageApproximation.hpp
+         LsNumerics/LsRationalPolynomial.hpp
+         LsNumerics/LsPolynomial.cpp
+         
          )
 
 target_link_libraries(ToobAmp RTNeural)
@@ -80,6 +86,15 @@ target_include_directories(ToobAmp PRIVATE
 add_executable(FftTest LsNumerics/dftTest.cpp LsNumerics/dft.h)
 
 add_test(FftTest COMMAND FftTest)
+
+add_executable(BaxandallToneStackTest 
+    LsNumerics/BaxandallToneStackTest.cpp 
+    LsNumerics/BaxandallToneStack.cpp LsNumerics/BaxandallToneStack.hpp
+    LsNumerics/LsPolynomial.cpp LsNumerics/LsPolynomial.hpp
+    )
+
+add_test(BaxandallToneStackTest COMMAND BaxandallToneStackTest)
+
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 

@@ -28,6 +28,7 @@
 
 
 namespace TwoPlay {
+	using namespace ::LsNumerics;
 
 	class AudioFilter2 {
 	protected:
@@ -107,7 +108,7 @@ namespace TwoPlay {
 			double y1 = y[0];
 			double y2 = y[1];
 
-			double y0 = Undenormalize(x0 * (zTransformCoefficients.b[0])
+			double y0 = LsNumerics::Undenormalize(x0 * (zTransformCoefficients.b[0])
 				+ x1 * zTransformCoefficients.b[1]
 				+ x2 * zTransformCoefficients.b[2]
 				- (

@@ -1,7 +1,8 @@
 #include "ToneStackFilter.h"
 #include <cmath>
+#include "LsMath.hpp"
 
-using namespace TwoPlay;
+using namespace LsNumerics;
 
 class AmpComponents 
 {
@@ -176,7 +177,7 @@ static double AudioTaperA(double value)
 }
 void ToneStackFilter::BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result)
 {
-	double w0 = frequency *(2*M_PI);
+	double w0 = frequency *(2*Pi);
 	double k = w0 / std::tan(w0 * T * 0.5);
 	double k2 = k * k;
 	double k3 = k2*k;
@@ -210,12 +211,12 @@ void ToneStackFilter::BilinearTransform(float frequency, const FilterCoefficient
 }
 
 
-void ToneStackFilter::UpdateFilter()
+void ToneStackFilter::UpdateFilter(AmpModel model,float bass_, float mid_, float treble_)
 {
-    float l = Bass.GetValue();
-    float m = Mid.GetValue();
-    float h = Treble.GetValue();
-    bool isBassman = AmpModel.GetValue() < 0.5f;
+    float l = bass_;
+    float m = mid_;
+    float h = treble_;
+    bool isBassman = model == AmpModel::Bassman;
     AmpComponents *c;
     if (isBassman) {
         l = AudioTaperB(l);
@@ -233,6 +234,6 @@ void ToneStackFilter::UpdateFilter()
     prototype.a[2] = c->a2(l,m,h);
     prototype.a[3] = c->a3(l,m,h);
 
-    BilinearTransform(1000.0,prototype,&this->zTransformCoefficients);
+    BilinearTransform(300.0,prototype,&this->zTransformCoefficients);
 
 }

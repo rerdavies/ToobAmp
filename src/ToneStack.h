@@ -14,6 +14,7 @@
 #include "lv2/parameters/parameters.h"
 #include "lv2/units/units.h"
 #include "FilterResponse.h"
+#include "LsNumerics/BaxandallToneStack.hpp"
 #include <string>
 
 #include "Lv2Plugin.h"
@@ -21,7 +22,7 @@
 #include "MidiProcessor.h"
 #include "InputPort.h"
 #include "OutputPort.h"
-#include "Filters/ToneStackFilter.h"
+#include "LsNumerics/ToneStackFilter.h"
 
 
 
@@ -32,6 +33,8 @@
 
 
 namespace TwoPlay {
+	using namespace LsNumerics;
+	
 	class ToneStack : public Lv2Plugin {
 	private:
 		enum class PortId {
@@ -49,6 +52,7 @@ namespace TwoPlay {
 		std::string bundle_path;
 
 		ToneStackFilter toneStackFilter;
+		BaxandallToneStack baxandallToneStack;
 
 		const float* input = NULL;;
 		float* output = NULL;;
@@ -128,6 +132,14 @@ namespace TwoPlay {
 		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object);
 
 	private:
+        RangedInputPort Bass =RangedInputPort(0,1);
+		RangedInputPort Mid =RangedInputPort(0,1);
+		RangedInputPort Treble =RangedInputPort(0,1);
+		RangedInputPort AmpModel =RangedInputPort(0,2);
+		bool useBaxandall = false;
+
+		bool UpdateControls();
+
 		float CalculateFrequencyResponse(float f);
 
 		void SetProgram(uint8_t programNumber);

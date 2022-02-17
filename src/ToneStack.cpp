@@ -43,6 +43,7 @@
 
 using namespace std;
 using namespace TwoPlay;
+using namespace LsNumerics;
 
 #ifndef _MSC_VER
 #include <unistd.h>
@@ -70,19 +71,10 @@ ToneStack::ToneStack(double _rate,
 	bundle_path(_bundle_path),
 	programNumber(0)
 {
-	LogTrace("ToneStack: Loading");
-#ifdef JUNK
-
-	for (int i = 0; i < 200;++i) // repeat for 20 seconds.
-	{
-		usleep(100000);  // sleep for 0.1 seconds
-	}
-
-#endif
 	uris.Map(this);
 	lv2_atom_forge_init(&forge, map);
-	LogTrace("ToneStack: Loadedx");
 	this->toneStackFilter.SetSampleRate(_rate);
+	this->baxandallToneStack.SetSampleRate(_rate);
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
@@ -98,16 +90,16 @@ void ToneStack::ConnectPort(uint32_t port, void* data)
 	switch ((PortId)port) {
 
 	case PortId::BASS:
-		toneStackFilter.Bass.SetData(data);
+		Bass.SetData(data);
 		break;
 	case PortId::MID:
-		toneStackFilter.Mid.SetData(data);
+		Mid.SetData(data);
 		break;
 	case PortId::TREBLE:
-		toneStackFilter.Treble.SetData(data);
+		Treble.SetData(data);
 		break;
 	case PortId::AMP_MODEL:
-		toneStackFilter.AmpModel.SetData(data);
+		AmpModel.SetData(data);
 		break;
 	case PortId::AUDIO_IN:
 		this->input = (const float*)data;
@@ -127,15 +119,14 @@ void ToneStack::ConnectPort(uint32_t port, void* data)
 
 void ToneStack::Activate()
 {
-	LogTrace("ToneStack activated.");
 	
 	responseChanged = true;
 	frameTime = 0;
 	this->toneStackFilter.Reset();
+	this->baxandallToneStack.Reset();
 }
 void ToneStack::Deactivate()
 {
-	LogTrace("ToneStack deactivated.");
 }
 
 void ToneStack::Run(uint32_t n_samples)
@@ -154,14 +145,22 @@ void ToneStack::Run(uint32_t n_samples)
 
 	HandleEvents(this->controlIn);
 
-	if (toneStackFilter.UpdateControls())
+	if (UpdateControls())
 	{
 		this->responseChanged = true;
 	}
 
-	for (uint32_t i = 0; i < n_samples; ++i)
+	if (useBaxandall)
 	{
-		output[i] = Undenormalize((float)toneStackFilter.Tick(input[i]));
+		for (uint32_t i = 0; i < n_samples; ++i)
+		{
+			output[i] = Undenormalize((float)baxandallToneStack.Tick(input[i]));
+		}
+	} else {
+		for (uint32_t i = 0; i < n_samples; ++i)
+		{
+			output[i] = Undenormalize((float)toneStackFilter.Tick(input[i]));
+		}
 	}
 	frameTime += n_samples;
 
@@ -205,10 +204,48 @@ void ToneStack::Run(uint32_t n_samples)
 	lv2_atom_forge_pop(&forge, &out_frame);
 }
 
+bool ToneStack::UpdateControls()
+{
+	bool ampModelChanged = AmpModel.HasChanged();
+	if (Bass.HasChanged() || Mid.HasChanged() || Treble.HasChanged() || ampModelChanged)
+	{
+		double b = Bass.GetValue();
+		double m = Mid.GetValue();
+		double t = Treble.GetValue();
+		int model = (int)AmpModel.GetValue();
+
+		if (model == 2)
+		{
+			this->baxandallToneStack.Design(b,m,t);
+			useBaxandall = true;
+			if (ampModelChanged)
+			{
+				this->baxandallToneStack.Reset();
+			}
+
+		} else {
+			this->toneStackFilter.UpdateFilter(
+				model == 0 ? ToneStackFilter::AmpModel::Bassman: ToneStackFilter::AmpModel::JCM800,
+				b,m,t);
+			useBaxandall = false;
+			if (ampModelChanged)
+			{
+				this->toneStackFilter.Reset();
+			}
+		}
+		return true;
+	}
+	return false;
+}
 
 float ToneStack::CalculateFrequencyResponse(float f)
 {
-	return toneStackFilter.GetFrequencyResponse(f);
+	if (useBaxandall)
+	{
+		return baxandallToneStack.GetFrequencyResponse(f);
+	} else {
+		return toneStackFilter.GetFrequencyResponse(f);
+	}
 }
 
 

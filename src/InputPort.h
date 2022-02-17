@@ -24,9 +24,11 @@
 #pragma once
 
 #include <limits>
-#include "ToobMath.h"
+#include "LsNumerics/LsMath.hpp"
 
 namespace TwoPlay {
+	using namespace ::LsNumerics;
+
 	class InputPort {
 	private:
 		const float* pData = NULL;

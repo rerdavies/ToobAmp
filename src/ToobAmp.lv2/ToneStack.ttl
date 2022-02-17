@@ -111,10 +111,10 @@ use the following plugins in the following order.
 
                 lv2:index 3 ;
                 lv2:symbol "ampmodel" ;
-                lv2:name "Amp Model";
+                lv2:name "Model";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 1.0; 
+                lv2:maximum 2.0; 
                 lv2:portProperty lv2:enumeration ;
 
                  lv2:scalePoint [
@@ -123,6 +123,9 @@ use the following plugins in the following order.
                 ] , [
                         rdfs:label "JCM8000" ;
                         rdf:value 1.0
+                ], [
+                        rdfs:label "Baxandall" ;
+                        rdf:value 2.0
                 ];   
         ],
         [

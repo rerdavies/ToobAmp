@@ -25,9 +25,11 @@
 #include "Filters/LowPassFilter.h"
 #include "InputPort.h"
 #include <cmath>
-#include "ToobMath.h"
+#include "LsNumerics/LsMath.hpp"
 
 namespace TwoPlay{
+    using namespace LsNumerics;
+
     class SagProcessor {
     private:
         LowPassFilter powerFilter;

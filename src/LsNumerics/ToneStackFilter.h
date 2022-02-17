@@ -21,39 +21,23 @@
  *   SOFTWARE.
  */
 
-#include "std.h"
-#include "NoiseGate.h"
-#include "LsNumerics/LsMath.hpp"
+#pragma once
 
+#include "../std.h"
+#include "../Filters/AudioFilter3.h"
 
+namespace LsNumerics {
 
-using namespace TwoPlay;
-using namespace LsNumerics;
+    class ToneStackFilter : public TwoPlay::AudioFilter3 {
+        using FilterCoefficients3 = TwoPlay::FilterCoefficients3;
+    public:
+        enum class AmpModel { Bassman, JCM800};
+    private:
+        void BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result);
+        AmpModel ampModel = AmpModel::Bassman;
+    public:
+        void UpdateFilter(AmpModel model,float bass_, float mid_, float treble_);
 
-static const double ATTACK_SECONDS = 0.001;
-static const double RELEASE_SECONDS = 0.3;
-static const double HOLD_SECONDS = 0.2;
+    };
 
-
-int32_t NoiseGate::SecondsToSamples(double seconds)
-{
-    return (int32_t)sampleRate*seconds;
-}
-
-void NoiseGate::SetGateThreshold(float decibels)
-{
-     this->afAttackThreshold = LsNumerics::Db2Af(decibels);
-    this->afReleaseThreshold = this->afAttackThreshold*0.25f;
-}
-double NoiseGate::SecondsToRate(double seconds)
-{
-    return 1/(seconds*sampleRate);
-}
-
-void NoiseGate::SetSampleRate(double sampleRate)
-{
-    this->sampleRate = sampleRate;
-    this->attackRate = SecondsToRate(ATTACK_SECONDS);
-    this->releaseRate = SecondsToRate(RELEASE_SECONDS);
-    this->holdSampleDelay = SecondsToSamples(HOLD_SECONDS);
 }

@@ -25,9 +25,12 @@
 
 #include "std.h"
 #include <memory.h>
-#include "ToobMath.h"
+#include "LsNumerics/LsMath.hpp"
+
 
 namespace TwoPlay {
+    using namespace LsNumerics;
+
     class IDelay {
     private:
         float*buffer = NULL;

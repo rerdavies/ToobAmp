@@ -24,7 +24,7 @@
 #pragma once
 
 #include "std.h"
-#include "ToobMath.h"
+#include "LsNumerics/LsMath.hpp"
 
 namespace TwoPlay {
     class DbDezipper {
