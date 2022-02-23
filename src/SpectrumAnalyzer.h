@@ -35,6 +35,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lv2/units/units.h"
 #include "FilterResponse.h"
 #include <string>
+#include <complex>
 
 #include "Lv2Plugin.h"
 
@@ -46,7 +47,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "CombFilter.h"
 #include "NoiseGate.h"
 #include "GainStage.h"
-#include "LsNumerics/dft.h"
+#include "LsNumerics/Fft.hpp"
 
 
 
@@ -133,7 +134,9 @@ namespace TwoPlay {
 
 		static constexpr  int MAX_FFT_SIZE = 8192;
 
-		LsNumerics::Dft<double> fft {4};
+		LsNumerics::Fft<double> fft {4};
+		std::vector<std::complex<double> > fftResult;
+		std::vector<float> fftWindow;
 
 		std::vector<float> svgBins;
 

@@ -14,7 +14,10 @@ add_custom_target(copy-files ALL
 
 
 # Add source to this project's executable.
-add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
+add_library(ToobAmp  SHARED 
+        CircularBuffer.h
+        ToobTuner.cpp ToobTuner.h
+        InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h
@@ -66,7 +69,8 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          LsNumerics/InPlaceBilinearFilter.h
          LsNumerics/BaxandallToneStack.hpp
          LsNumerics/LsChebyshevPolynomial.cpp
-         LsNumerics/dft.h
+         LsNumerics/Fft.hpp
+         LsNumerics/Window.hpp
          LsNumerics/LsChebyshevPolynomial.hpp
          LsNumerics/LsRationalPolynomial.cpp
          LsNumerics/TubeStageApproximation.cpp
@@ -75,6 +79,8 @@ add_library(ToobAmp  SHARED InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h M
          LsNumerics/TubeStageApproximation.hpp
          LsNumerics/LsRationalPolynomial.hpp
          LsNumerics/LsPolynomial.cpp
+         LsNumerics/PitchDetector.hpp
+         LsNumerics/PitchDetector.cpp
          
          )
 
@@ -83,7 +89,9 @@ target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural
 )
 
-add_executable(FftTest LsNumerics/dftTest.cpp LsNumerics/dft.h)
+
+# Tests.
+add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp)
 
 add_test(FftTest COMMAND FftTest)
 
@@ -94,6 +102,16 @@ add_executable(BaxandallToneStackTest
     )
 
 add_test(BaxandallToneStackTest COMMAND BaxandallToneStackTest)
+
+add_executable(PitchDetectorTest 
+    LsNumerics/Fft.hpp LsNumerics/Window.hpp 
+    LsNumerics/PitchDetector.cpp LsNumerics/PitchDetector.hpp
+    LsNumerics/PitchDetectorTest.cpp 
+    LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
+)
+add_test(PitchDetectorTest COMMAND PitchDetectorTest)
+
+add_test(FftTest COMMAND FftTest)
 
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")

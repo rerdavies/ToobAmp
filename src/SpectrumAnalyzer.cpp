@@ -41,6 +41,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sstream>
 #include <iomanip>
 #include "LsNumerics/LsMath.hpp"
+#include "LsNumerics/Window.hpp"
 
 using namespace std;
 using namespace TwoPlay;
@@ -267,7 +268,12 @@ std::string SpectrumAnalyzer::GetSvgPath(int blockSize,float minF, float maxF)
 	std::stringstream s;
 	s << std::setprecision(4); 
 	fft.SetSize(blockSize);
-	const auto & fftResult = fft.forwardWindowed(this->captureBuffer);
+	fftResult.resize(blockSize);
+	if (fftWindow.size() != blockSize)
+	{
+		fftWindow = LsNumerics::Window::ExactBlackman<float>(blockSize);
+	}
+	fft.forwardWindowed(this->fftWindow,this->captureBuffer,fftResult);
 
 	float norm = 2/std::sqrt(fftResult.size());
 	int lastX = 0;

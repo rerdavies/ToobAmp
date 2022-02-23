@@ -71,6 +71,13 @@ namespace LsNumerics {
 		return 1E-6f +value+ 1E-6f;
 	}
 
+	constexpr int MIDI_A440_NOTE = 69;
+
+	inline double FrequencyToMidiNote(double frequency, double aReference = 440.0)
+	{
+		return 12*std::log2(frequency/aReference) + MIDI_A440_NOTE;
+	}
+
 
 
 };

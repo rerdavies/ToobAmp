@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cassert>
 #include "LsMath.hpp"
+#include "Window.hpp"
 
 /*
  *   Copyright (c) 2021 Robin E. R. Davies
@@ -49,14 +50,12 @@ namespace LsNumerics
 
 
     template <typename T>
-    class Dft
+    class Fft
     {
     private:
 
         std::vector<int> bitReverse;
-        std::vector<std::complex<T> > result;
-        std::vector<T> window;
-        std::vector<T> windowedData;
+        std::vector<std::complex<T>> windowedData;
         T norm;
         int log2N;
         int N = -1;
@@ -97,23 +96,26 @@ namespace LsNumerics
 
 
     public:
-        Dft(int size)
+        Fft() { }
+        Fft(int size)
         {
             SetSize(size);
         }
+        int GetSize() const { return N; }
         void SetSize(int size)
         {
+
             if (this->N == size) 
             {
                 return;
             }
+            assert((size & (size-1)) == 0); // must be power of 2!
+
+
             this->N = size;
             bitReverse.resize(N);
-            result.resize(N);
-            window.resize(N);
             windowedData.resize(N);
             
-            assert((N & (N-1)) == 0); // must be power of 2!
 
             log2N = log2(N);
 
@@ -123,59 +125,18 @@ namespace LsNumerics
             }
             norm = T(1) / std::sqrt(T(N));
 
-            // Exact Blackman window. See https://en.wikipedia.org/wiki/Window_function#Blackman_window
-            double a0 =  7938.0/18608.0;
-            double a1 = 9240.0/18608.0;
-            double a2 = 1430.0/18608.0;
-            for (size_t i = 0; i < N; ++i)
-            {
-                window[i] = a0 - a1*std::cos(2*Pi/N*i)+a2*std::cos(4*Pi/N*i);
-            }
         }
 
-        const std::vector<std::complex<T> >& compute(const std::vector<std::complex<T> > &input, const fft_dir &dir)
+
+        void compute(const std::vector<std::complex<T> > &input,std::vector<std::complex<T> > &output, fft_dir dir)
         {
-            assert(input.size() == N);
-
-            std::vector<std::complex<T> >& result = this->result;
-
-            // pre-process the input data
-            for (int j = 0; j < N; ++j)
-                result[j] = norm * input[bitReverse[j]];
-
-            // fft passes
-            for (int i = 1; i <= log2N; ++i)
-            {
-                int m = 1 << i;    
-                int m2 = m >> 1;   
-                std::complex<T> wj(1,0);
-                std::complex<T> wInc = std::exp(std::complex<T>(0,-Pi/m2*T(dir)));
-                // fft butterflies
-                for (int j = 0; j < m2; ++j)
-                {
-                    for (int k = j; k < N; k += m)
-                    {
-                        std::complex<T> t = wj*result[k+m2];
-                        std::complex<T> u = result[k];
-                        result[k] = u+t;
-                        result[k+m2] = u-t;
-                    }
-                    wj *= wInc;
-                }
-            }
-
-            return result;
-        }
-        const std::vector<std::complex<T> >& compute(const std::vector<T> &input, const fft_dir &dir)
-        {
-            assert(input.size() == N);
+            assert(input.size() >= N);
+            assert(output.size() >= N);
             int cnt = N;
-
-            std::vector<std::complex<T> >& xo = this->result;
 
             // pre-process the input data
             for (int j = 0; j < cnt; ++j)
-                xo[j] = norm * input[bitReverse[j]];
+                output[j] = norm * input[bitReverse[j]];
 
             // fft passes
             for (int i = 1; i <= log2N; ++i)
@@ -189,44 +150,56 @@ namespace LsNumerics
                 {
                     for (int k = j; k < N; k += m)
                     {
-                        std::complex<T> t = wj*xo[k+m2];
-                        std::complex<T> u = xo[k];
-                        xo[k] = u+t;
-                        xo[k+m2] = u-t;
+                        std::complex<T> t = wj*output[k+m2];
+                        std::complex<T> u = output[k];
+                        output[k] = u+t;
+                        output[k+m2] = u-t;
                     }
                     wj *= wInc;
                 }
             }
 
-            return xo;
         }
-        const std::vector<std::complex<T> >& forward(const std::vector<std::complex<T> > &input)
+
+
+        void forward(const std::vector<std::complex<T> > &input, std::vector<std::complex<T> > &output)
         {
-            return compute(input,fft_dir::forward);
+            compute(input,output,fft_dir::forward);
         }
-        const std::vector<std::complex<T> >& backward(const std::vector<std::complex<T> > &input)
+        void backward(const std::vector<std::complex<T> > &input, std::vector<std::complex<T> > &output)
         {
-            return compute(input,fft_dir::backward);
+            compute(input,output,fft_dir::backward);
         }
-        const std::vector<std::complex<T> >& forward(const std::vector<T> &input)
-        {
-            return compute(input,fft_dir::forward);
-        }
-        const std::vector<std::complex<T> >& forwardWindowed(const std::vector<float> &input)
-        {
-            for (int i = 0; i < N; ++i)
-            {
-                windowedData[i] = window[i]*input[i];
-            }
-            return compute(windowedData,fft_dir::forward);
-        }
-        const std::vector<std::complex<T> >& forwardWindowed(const std::vector<double> &input)
+
+        template <typename U> 
+        void forward(const std::vector<U> &input, std::vector<std::complex<T> > &output)
         {
             for (int i = 0; i < N; ++i)
             {
-                windowedData[i] = window[i]*input[i];
+                windowedData[i] = (T)(input[i]);
             }
-            return compute(windowedData,fft_dir::forward);
+            compute(windowedData,input,fft_dir::forward);
+
+        }
+        template <typename U> 
+        void backward(const std::vector<U> &input, std::vector<std::complex<T> > &output)
+        {
+            for (int i = 0; i < N; ++i)
+            {
+                windowedData[i] = input[i];
+            }
+            compute(windowedData,input,fft_dir::backward);
+
+        }
+
+        template <typename U> 
+        void forwardWindowed(const std::vector<U> &window,const std::vector<U> &input,std::vector<std::complex<T> > &output)
+        {
+            for (int i = 0; i < N; ++i)
+            {
+                windowedData[i] = (T)(window[i]*input[i]);
+            }
+            return compute(windowedData,output,fft_dir::forward);
         }
     };
 

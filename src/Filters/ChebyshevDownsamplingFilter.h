@@ -34,6 +34,10 @@ namespace TwoPlay {
             double dbRipple, double cutoffFrequency,
             double bandstopDb, double bandstopFrequency);
 
+        void Reset()
+        {
+            filter.reset();
+        }
         double Tick(double input)
         {
             return filter.filter(input);
