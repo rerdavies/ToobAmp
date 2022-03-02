@@ -1,5 +1,5 @@
 ﻿/*
- *   Copyright (c) 2021 Robin E. R. Davies
+ *   Copyright (c) 2022 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -222,7 +222,7 @@ void ToobTuner::UpdateControls()
 void ToobTuner::OnPitchReceived(float value) {
 	this->Freq.SetValue(value);
 	pitchValue = value;
-	this->requestState == RequestState::Idle;
+	this->requestState = RequestState::Idle;
 	if (this->updateFrameIndex == 0)
 	{
 		// we underran. Restart the tuner request with a delay.

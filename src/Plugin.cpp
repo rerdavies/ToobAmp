@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2021 Robin E. R. Davies
+ *   Copyright (c) 2022 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -37,6 +37,7 @@
 #include <vector>
 #include "SpectrumAnalyzer.h"
 #include "ToobML.h"
+#include "ToobTuner.h"
 
 using namespace TwoPlay;
 
@@ -49,6 +50,7 @@ std::vector<Lv2PluginFactory> factories = {
     { ToneStack::URI, ToneStack::Create},
     { SpectrumAnalyzer::URI, SpectrumAnalyzer::Create},
     { ToobML::URI, ToobML::Create},
+    { ToobTuner::URI, ToobTuner::Create},
 };
 
 static const LV2_Descriptor*const* descriptors;

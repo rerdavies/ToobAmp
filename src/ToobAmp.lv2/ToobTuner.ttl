@@ -23,6 +23,7 @@
 
 
 
+
 <http://two-play.com/rerdavies#me>
 	a foaf:Person ;
 	foaf:name "Robin Davies" ;
@@ -31,10 +32,8 @@
 
 <http://two-play.com/plugins/toob-tuner>
         a lv2:Plugin ,
-                lv2:AmplifierPlugin ;
-                doap:name "TooB ML Amplifier" ,
-                "TooB ML Amplifier"@en-gb 
-                ;
+                lv2:AnalyserPlugin ;
+        doap:name "TooB Tuner";
         doap:license <https://two-play.com/TooB/licenses/isc> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
          lv2:minorVersion 0 ;
@@ -43,8 +42,6 @@
 A chromatic guitar tuner.
 """ ;
 
-        mod:brand "TooB";
-        mod:label "Tuner";
         lv2:requiredFeature urid:map, work:schedule ;
         lv2:optionalFeature lv2:hardRTCapable;
         lv2:extensionData state:interface, work:interface;
@@ -55,7 +52,7 @@ A chromatic guitar tuner.
                 lv2:ControlPort ;
 
                 lv2:index  0;
-                lv2:symbol "reffreq" ;
+                lv2:symbol "REFFREQ" ;
                 lv2:name "RefFreq";
                 lv2:default 440 ;
                 lv2:minimum 425;
@@ -68,11 +65,11 @@ A chromatic guitar tuner.
                 lv2:ControlPort ;
 
                 lv2:index 1 ;
-                lv2:symbol "threshold" ;
+                lv2:symbol "THRESHOLD" ;
                 lv2:name "Threshold";
 
 
-                lv2:default -50 ;
+                lv2:default -37 ;
                 lv2:minimum -60 ;
                 lv2:maximum 0 ;
                 units:unit units:db ;
@@ -84,7 +81,7 @@ A chromatic guitar tuner.
                 lv2:portProperty lv2:integer;
 
                 lv2:index 2 ;
-                lv2:symbol "mute" ;
+                lv2:symbol "MUTE" ;
                 lv2:name "Mute";
 
                 lv2:default 0.0 ;

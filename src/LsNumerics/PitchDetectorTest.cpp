@@ -15,7 +15,7 @@ std::uniform_real_distribution<float> randDist(-1.0f, 1.0f);
 
 static void testPitchDetection()
 {
-    std::vector<double> sampleRates{{22050, 24000, 44100,48000}};
+    std::vector<double> sampleRates{{24000, 22050, 44100,48000}};
 
     std::vector<float> buffer;
 
@@ -32,7 +32,7 @@ static void testPitchDetection()
         double maxError = -std::numeric_limits<double>::max();
 
 
-        for (double f = 100; f < 1200; f += 1.100432)
+        for (double f = 80; f < 1200; f += 2)
         {
 
             double phase = randDist(randEngine)*Pi;
@@ -40,14 +40,23 @@ static void testPitchDetection()
             for (size_t i = 0; i < buffer.size(); ++i)
             {
                 buffer[i] = 
-                    (float)std::cos(2 * Pi * f * i / sampleRate + phase)
-                    + 0.5*(float)std::cos(4 * Pi * f * i / sampleRate + phase);
+                    (float)std::sin(2 * Pi * f * i / sampleRate + phase)
+                    + 0.7*(float)std::sin(4 * Pi * f * i / sampleRate + phase)
+                    + 0.3*(float)std::sin(6 * Pi * f * i / sampleRate + phase)
+                    ;
             }
             double fResult = pitchDetector.detectPitch(&buffer[0]);
+
+            double expectedBinNumber = sampleRate/f;
+            double binNumber = sampleRate/fResult;
+
+
             double result = FrequencyToMidiNote(fResult);
             double error = (result - expectedResult);
 
-            errors.push_back({expectedResult,error});
+            //errors.push_back({f,(binNumber-expectedBinNumber)*expectedBinNumber});
+            // errors.push_back({f,fResult-f});
+            errors.push_back({f,error});
             if (abs(error) > 0.001)
             {
                 // std::cout << "f: " << f << " error: " << error << std::endl;
@@ -79,6 +88,7 @@ static void testPitchDetection()
             f << '\n';
         }
 #endif
+
 
         std::cout << "Max error:" << maxError << " Min error: " << minError << std::endl
                   << std::endl;

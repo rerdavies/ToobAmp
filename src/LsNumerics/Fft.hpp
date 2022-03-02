@@ -12,7 +12,7 @@
 #include "Window.hpp"
 
 /*
- *   Copyright (c) 2021 Robin E. R. Davies
+ *   Copyright (c) 2022 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,10 +21,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,11 +34,8 @@
  *   SOFTWARE.
  */
 
-
 namespace LsNumerics
 {
-
-
 
     // FFT direction specifier
     enum class fft_dir
@@ -47,13 +44,12 @@ namespace LsNumerics
         backward = -1
     };
 
-
-
     template <typename T>
     class Fft
     {
     private:
-
+        std::vector<std::complex<T>> forwardTwiddle;
+        std::vector<std::complex<T>> backwardTwiddle;
         std::vector<int> bitReverse;
         std::vector<std::complex<T>> windowedData;
         T norm;
@@ -74,14 +70,14 @@ namespace LsNumerics
         }
 
         /*
-        *  Bit reverse an integer given a word of nb bits
-        *  NOTE: Only works for 32-bit words max
-        *  examples:
-        *  10b      -> 01b
-        *  101b     -> 101b
-        *  1011b    -> 1101b
-        *  0111001b -> 1001110b
-        */
+         *  Bit reverse an integer given a word of nb bits
+         *  NOTE: Only works for 32-bit words max
+         *  examples:
+         *  10b      -> 01b
+         *  101b     -> 101b
+         *  1011b    -> 1101b
+         *  0111001b -> 1001110b
+         */
         static int bitr(uint32_t x, int nb)
         {
             assert(nb > 0 && nb <= 32);
@@ -93,10 +89,27 @@ namespace LsNumerics
 
             return ((x >> (32 - nb)) & (0xFFFFFFFF >> (32 - nb)));
         }
+        void calculateTwiddleFactors(fft_dir dir, std::vector<std::complex<T>> &twiddles)
+        {
+            twiddles.resize(0);
+
+            for (int i = 1; i <= log2N; ++i) {
+                int m = 1 << i; // butterfly mask
+                int m2 = m >> 1;    // butterfly width
+                // fft butterflies
+
+                int wI = 0;
+                for (int j = 0; j < m2; ++j)
+                {
+                    twiddles.push_back(std::exp(std::complex<T>(0,-wI*Pi/m2*T(dir))));
+                    ++wI;
+                }
+            }
+        }
 
 
     public:
-        Fft() { }
+        Fft() {}
         Fft(int size)
         {
             SetSize(size);
@@ -105,17 +118,15 @@ namespace LsNumerics
         void SetSize(int size)
         {
 
-            if (this->N == size) 
+            if (this->N == size)
             {
                 return;
             }
-            assert((size & (size-1)) == 0); // must be power of 2!
-
+            assert((size & (size - 1)) == 0); // must be power of 2!
 
             this->N = size;
             bitReverse.resize(N);
             windowedData.resize(N);
-            
 
             log2N = log2(N);
 
@@ -124,88 +135,91 @@ namespace LsNumerics
                 bitReverse[j] = bitr(j, log2N);
             }
             norm = T(1) / std::sqrt(T(N));
-
+            calculateTwiddleFactors(fft_dir::forward, forwardTwiddle);
+            calculateTwiddleFactors(fft_dir::backward, backwardTwiddle);
         }
-
-
-        void compute(const std::vector<std::complex<T> > &input,std::vector<std::complex<T> > &output, fft_dir dir)
+        void compute(const std::vector<std::complex<T>> &input, std::vector<std::complex<T>> &output, fft_dir dir)
         {
             assert(input.size() >= N);
             assert(output.size() >= N);
-            int cnt = N;
 
+            int cnt = N;
             // pre-process the input data
             for (int j = 0; j < cnt; ++j)
                 output[j] = norm * input[bitReverse[j]];
 
+            const std::complex<T> *pTwiddles;
+            if (dir == fft_dir::forward)
+            {
+                pTwiddles = &(this->forwardTwiddle[0]);
+            } else {
+                pTwiddles = &(this->backwardTwiddle[0]);
+
+            }
             // fft passes
             for (int i = 1; i <= log2N; ++i)
             {
-                int m = 1 << i;             // butterfly mask
-                int m2 = m >> 1;             // butterfly width
-                std::complex<T> wj(1,0);
-                std::complex<T> wInc = std::exp(std::complex<T>(0,-Pi/m2*T(dir)));
+                int m = 1 << i;  // butterfly mask
+                int m2 = m >> 1; // butterfly width
+
+                //std::complex<T> wj(1, 0);
+                //std::complex<T> wInc = std::exp(std::complex<T>(0, -Pi / m2 * T(dir)));
+
                 // fft butterflies
                 for (int j = 0; j < m2; ++j)
                 {
+                    std::complex<double> w = *pTwiddles++;
                     for (int k = j; k < N; k += m)
                     {
-                        std::complex<T> t = wj*output[k+m2];
+                        std::complex<T> t = w * output[k + m2];
                         std::complex<T> u = output[k];
-                        output[k] = u+t;
-                        output[k+m2] = u-t;
+                        output[k] = u + t;
+                        output[k + m2] = u - t;
                     }
-                    wj *= wInc;
+                    //wj *= wInc;
                 }
             }
-
         }
 
-
-        void forward(const std::vector<std::complex<T> > &input, std::vector<std::complex<T> > &output)
+        void forward(const std::vector<std::complex<T>> &input, std::vector<std::complex<T>> &output)
         {
-            compute(input,output,fft_dir::forward);
+            compute(input, output, fft_dir::forward);
         }
-        void backward(const std::vector<std::complex<T> > &input, std::vector<std::complex<T> > &output)
+        void backward(const std::vector<std::complex<T>> &input, std::vector<std::complex<T>> &output)
         {
-            compute(input,output,fft_dir::backward);
+            compute(input, output, fft_dir::backward);
         }
 
-        template <typename U> 
-        void forward(const std::vector<U> &input, std::vector<std::complex<T> > &output)
+        template <typename U>
+        void forward(const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
             for (int i = 0; i < N; ++i)
             {
                 windowedData[i] = (T)(input[i]);
             }
-            compute(windowedData,input,fft_dir::forward);
-
+            compute(windowedData, input, fft_dir::forward);
         }
-        template <typename U> 
-        void backward(const std::vector<U> &input, std::vector<std::complex<T> > &output)
+        template <typename U>
+        void backward(const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
             for (int i = 0; i < N; ++i)
             {
                 windowedData[i] = input[i];
             }
-            compute(windowedData,input,fft_dir::backward);
-
+            compute(windowedData, input, fft_dir::backward);
         }
 
-        template <typename U> 
-        void forwardWindowed(const std::vector<U> &window,const std::vector<U> &input,std::vector<std::complex<T> > &output)
+        template <typename U>
+        void forwardWindowed(const std::vector<U> &window, const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
             for (int i = 0; i < N; ++i)
             {
-                windowedData[i] = (T)(window[i]*input[i]);
+                windowedData[i] = (T)(window[i] * input[i]);
             }
-            return compute(windowedData,output,fft_dir::forward);
+            return compute(windowedData, output, fft_dir::forward);
         }
     };
 
-
-} // namespace 
+} // namespace
 
 #endif // DJ_INCLUDE_FFT_H
-
-

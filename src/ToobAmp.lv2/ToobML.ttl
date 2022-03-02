@@ -40,7 +40,7 @@ toobml:filterGroup
 
 <http://two-play.com/plugins/toob-ml>
         a lv2:Plugin ,
-                lv2:AmplifierPlugin ;
+                lv2:SimulatorPlugin ;
                 doap:name "TooB ML Amplifier" ,
                 "TooB ML Amplifier"@en-gb 
                 ;
@@ -49,13 +49,16 @@ toobml:filterGroup
          lv2:minorVersion 0 ;
         lv2:microVersion 13 ;
         rdfs:comment """
-The TooB ML Amplifier plugin provides emulation of a variety of amplifiers and overdrive pedals that are implemented using artifical intelligence (machine learning) techniques.
+The TooB ML Amplifier plugin provides emulation of a variety of amplifiers and overdrive pedals that are implemented 
+using artifical intelligence/machine learning modelling of real amplifiers.
 
-The TooB ML Amplifier is based heavily on GuitarML Nueral PI project (http://github.com/GuitarML/NeuralPi), which is in turn based on the paper, Real-Time Guitar Amplification with Deep Learning (Alec Wrignt, Damskagg , Eero-Pekka Lauri Juvela, Vesa Valimaki, App Sci 2020 10(3) 766 https://doi.org/10.3390/app10030766).
+A few models are trained to emulate the effects of the gain control on the amps that they model, but most are not.
 
-Models are taken from the Guitar ML Neural PI project.
+For convenience, tone controls are provided for rough shaping of tone before the input signal is fed to the neural net models. The tone 
+section can be completely bypassed by setting all tone controls to exactly 0.5.
 
-You may want to precede this plugin with a a Tone Stack plugin, and follow it with a Cabinet Simulator.
+The TooB ML Amplifier is based heavily on code from the RTNeural project (https://github.com/jatinchowdhury18/RTNeural), by Jatin Chowdhury,
+and uses model files from from the GuitarML Neural Pi project (https://github.com/GuitarML/NeuralPi).
 
 """ ;
 
