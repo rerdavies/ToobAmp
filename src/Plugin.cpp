@@ -38,6 +38,7 @@
 #include "SpectrumAnalyzer.h"
 #include "ToobML.h"
 #include "ToobTuner.h"
+#include "ToobFreeverb.h"
 
 using namespace TwoPlay;
 
@@ -51,6 +52,7 @@ std::vector<Lv2PluginFactory> factories = {
     { SpectrumAnalyzer::URI, SpectrumAnalyzer::Create},
     { ToobML::URI, ToobML::Create},
     { ToobTuner::URI, ToobTuner::Create},
+    { ToobFreeverb::URI, ToobFreeverb::Create},
 };
 
 static const LV2_Descriptor*const* descriptors;

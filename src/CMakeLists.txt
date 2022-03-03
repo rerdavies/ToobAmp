@@ -16,6 +16,7 @@ add_custom_target(copy-files ALL
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED 
         CircularBuffer.h
+        ToobFreeverb.cpp ToobFreeverb.h
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
@@ -60,7 +61,7 @@ add_library(ToobAmp  SHARED
          iir/Custom.h
          iir/ChebyshevII.cpp
          
-
+         LsNumerics/Freeverb.cpp LsNumerics/Freeverb.hpp
          LsNumerics/ToneStackFilter.cpp LsNumerics/ToneStackFilter.h
          LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
          LsNumerics/PiecewiseChebyshevApproximation.hpp
