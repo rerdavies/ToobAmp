@@ -67,9 +67,9 @@ const StkFloat Freeverb::offsetRoom = 0.7;
 int Freeverb::cDelayLengths[] = {1617, 1557, 1491, 1422, 1356, 1277, 1188, 1116};
 int Freeverb::aDelayLengths[] = {225, 556, 441, 341};
 
-Freeverb::Freeverb(void)
+Freeverb::Freeverb(StkFloat sampleRate)
 {
-  Init(44100);
+  Init(sampleRate);
 }
 
 void Freeverb::Init(StkFloat sampleRate)

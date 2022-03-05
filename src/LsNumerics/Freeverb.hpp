@@ -293,7 +293,7 @@ namespace LsNumerics
           Freeverb [Effect Mix: 0.75; Room Size: 0.75; Damping: 0.25; Width: 1.0;
           Mode: freeze mode off].
         */
-        Freeverb();
+        Freeverb(StkFloat sampleRate = 44100);
 
         void Init(StkFloat ampleRate);
 
