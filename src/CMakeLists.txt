@@ -102,6 +102,13 @@ add_executable(BaxandallToneStackTest
     LsNumerics/LsPolynomial.cpp LsNumerics/LsPolynomial.hpp
     )
 
+# check for missing linkages.
+add_executable(linkageTest 
+    linkageTest.cpp )
+
+target_link_libraries(linkageTest ToobAmp)
+
+
 add_test(BaxandallToneStackTest COMMAND BaxandallToneStackTest)
 
 add_executable(PitchDetectorTest 
@@ -113,6 +120,9 @@ add_executable(PitchDetectorTest
 add_test(PitchDetectorTest COMMAND PitchDetectorTest)
 
 add_test(FftTest COMMAND FftTest)
+
+
+add_test(LinkageTest COMMAND linkageTest)
 
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")

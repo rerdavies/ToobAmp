@@ -198,7 +198,7 @@ namespace LsNumerics
             }
 
             //! Class destructor.
-            ~OnePole();
+            ~OnePole() {}
 
             //! Set the b[0] coefficient value.
             void setB0(StkFloat b0) { b_[0] = b0; };
