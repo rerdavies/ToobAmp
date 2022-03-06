@@ -8,10 +8,9 @@ Currently supported platforms:
 
 - Raspberry Pi 4 or 400, at least 2GB RAM
 - Ubuntu 21.04 or later (64-bit) 
-- Rasbian (64-bit)
-- Rasbian (32-bit)
+- Raspberry Pi OS (64-bit)
 
-64-bit operating systems are preferred, as 64-bit code runs significantly faster.
+--------------------
 
 &nbsp;
 
