@@ -9,14 +9,32 @@ ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberr
     For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that 
     provides low-pass, hi-pass and bright-boost filtering.
 
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/InputStage-ss.png)
+
+    &nbsp;
+
 *   **TooB Tone Stack**
 
     Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
 
-*   **Toob ML**
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-ss.png)
+
+    &nbsp;    
+
+*   **Toob ML Amplifier**
 
     Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
     pedals. 
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/MlAmplifier.png)
+
+    &nbsp;
 
 *   **TooB Power Stage**
 
@@ -25,22 +43,52 @@ ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberr
     to blistering full-on overdrive. Generally used in conjunction with the TooB Tone Stack and Toob CamSim 
     plugins.
 
-*   **TooB CabSim**
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Power-ss.png)
+
+    &nbsp;
+
+*   **TooB Cab Simulator**
 
     Rather than relying on expensive convolution effects, Toob CabSim provides an EQ section designed to 
     allow easy emulation of guitar cabinet/microphone combinations. 
 
-*   **TooB Freeverb**
+    &nbsp;
 
-    A particularly well-balanced Reverb plugin, based on the famous Freeverb algorithm.
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/CabSim-ss.png)
+
+    &nbsp;
+
+*   **TooB FreeVerb**
+
+    A particularly well-balanced Reverb plugin, based on the famous FreeVerb algorithm.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/FreeVerb-ss.png)
+
+    &nbsp;
 
 *   **TooB Tuner**
 
     An stable, accurate guitar tuner. (Currently only useful with PiPedal).
 
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Tuner-ss.png)
+
+    &nbsp;
+
 *   **TooB Spectrum Analyzer**
 
     Live-signal spectrum analyzer. (Currently only useful with PiPedal).
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/SpectrumAnalyzer.png)
+
+    &nbsp;
 
 ## Building ToobAmp
 
