@@ -94,11 +94,11 @@ ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberr
 
 Prerequisites:
 
-	`apt install lv2-dev`
+     apt install lv2-dev
 	
 If you have not installed Visual Studio Code, you will need to install CMake:
 
-	`apt install cmake`
+    apt install cmake
 
 ToobAmp was built using Visual Studio Code, with CMake build files.
 
@@ -107,16 +107,16 @@ will automatically detect and configure the project. Build and configuration too
 
 If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and instal the project:
 
-    ``./config     #configure the CMake project`
+    ./config     #configure the CMake project
    
-    `./bld   # build the project.
+    ./bld   # build the project.
     
 After a full build, run the following command to install ToobAmp:
 
-	`sudo ./install`
+    sudo ./install
 	
 To rebuild the debian package, run
 
-    `sudo ./makePackage`
+    sudo ./makePackage
 
 
