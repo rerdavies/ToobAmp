@@ -4,6 +4,18 @@ v0.0.1-Alpha.1
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
+Currently supported platforms:
+
+- Raspberry Pi 4 or 400, at least 2GB RAM
+- Ubuntu 21.04 or later (64-bit) 
+- Rasbian (64-bit)
+- Rasbian (32-bit)
+
+64-bit operating systems are preferred, as 64-bit code runs significantly faster.
+
+&nbsp;
+
+
 *   **TooB Input Stage**
 
     For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that 
@@ -105,7 +117,7 @@ ToobAmp was built using Visual Studio Code, with CMake build files.
 If you are using Visual Studio code, install the Microsoft CMake extension, and load the project directory. Visual Studio Code
 will automatically detect and configure the project. Build and configuration tools for the CMake project can be accessed on the Visual Studio Code status bar.
 
-If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and instal the project:
+If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and install the project:
 
     ./config     #configure the CMake project
    
