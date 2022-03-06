@@ -85,7 +85,7 @@ add_library(ToobAmp  SHARED
          
          )
 
-target_link_libraries(ToobAmp RTNeural)
+target_link_libraries(ToobAmp RTNeural dl)
 target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural
 )
