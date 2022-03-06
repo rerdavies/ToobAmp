@@ -1,0 +1,238 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: ToobAmp
+Upstream-Contact: rerdavies@gmail.com
+Source: https://github.com/rerdavies/ToobAmp
+
+File: "modules/RTNeural/modules/Eigen/Eigen/*"
+Copyright: 2017, The TensorFlow Authors.
+License: Apache-2.0
+
+File: "modules/RTNeural/modules/Eigen/Eigen/*"
+Copyright: 2011, Intel Corporation.
+ 2008,2015, Gael Guennebaud <gael.guennebaud@inria.fr>
+ 2010, Intel Corp.
+License: BSD-3-clause
+
+File: "modules/RTNeural/modules/xsimd/*"
+Copyright: 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack Martin Renou
+ 2016, QuantStack
+ 2016, Johan Mabille and Sylvain Corlay
+ Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
+License: BSD-3-clause
+
+File: "modules/RTNeural/*"
+Copyright: 2020, jatinchowdhury18
+License: BSD-3-clause
+
+File: "modules/RTNeural/modules/xsimd/*"
+Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
+License: BSL-1.0
+
+File: "src/*"
+Copyright: 2022, Robin E. R. Davies
+ 2009, Vinnie Falco
+ 2011-2021, Bernd Porr
+ 1995-2021, Perry R. Cook and Gary P. Scavone
+License: Expat
+
+File: "src/iir/*"
+Copyright: 2009, Vinnie Falco
+ 2011-2021, Bernd Porr
+License: Expat
+
+File: "modules/RTNeural/*"
+Copyright: 2013-2019, Niels Lohmann <http:nlohmann.me>.
+License: Expat
+
+File: "lv2"
+Copyright: 2006-2020, Steve Harris, David Robillard
+ 2000-2002, Richard W.E. Furse, Paul Barton-Davis, Stefan Westerfeld
+License: ISC
+
+File: "modules/RTNeural/modules/Eigen/Eigen/*"
+Copyright: 2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+ 2012, Gael Guennebaud <gael.guennebaud@inria.fr>
+ 1994, Xerox Corporation.
+License: MIT~Boehm
+
+File: "modules/RTNeural/modules/Eigen/Eigen/*"
+Copyright: 2008-2019, Gael Guennebaud <gael.guennebaud@inria.fr>
+ 2006-2011, Benoit Jacob <jacob.benoit.1@gmail.com>
+ 2014-2016, Benoit Steiner <benoit.steiner.goog@gmail.com>
+ 2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+ 2010-2013, Jitse Niesen <jitse@maths.leeds.ac.uk>
+ 2009, Hauke Heibel <hauke.heibel@googlemail.com>
+ 2008-2016, Konstantinos Margaritis <markos@freevec.org>
+ 2020, Arm Limited and Contributors
+ 2014,2016, Benoit Steiner (benoit.steiner.goog@gmail.com)
+ 2009-2013, Hauke Heibel <hauke.heibel@gmail.com>
+ 2001, Intel Corporation
+ 2020, Everton Constantino (everton.constantino@ibm.com)
+ 2021, Chip Kerchner (chip.kerchner@ibm.com)
+ 2009, Claire Maurice
+ 2012-2013, Desire Nuentsa <desire.nuentsa_wakam@inria.fr>
+ 2016, Fabien Giesen
+ 2007, Julien Pommier
+ 2009, Rohit Garg <rpg.314@gmail.com>
+ 2014,2016, Pedro Gonnet (pedro.gonnet@gmail.com)
+ 2016,2018-2019, Rasmus Munk Larsen <rmlarsen@google.com>
+ 2021, The Eigen Team
+ 2018, Wave Computing, Inc.
+ 2012, Alexey Korepanov <kaikaikai@yandex.ru>
+ 2020, Antonio Sanchez <cantonios@google.com>
+ 2016, Eugene Brevdo <ebrevdo@gmail.com>
+ 2013, Gauthier Brun <brun.gauthier@gmail.com>
+ 2013, Jean Ceccato <jean.ceccato@ensimag.fr>
+ 2013, Nicolas Carre <nicolas.carre@ensimag.fr>
+ 2013, Pierre Zoppitelli <pierre.zoppitelli@ensimag.fr>
+ 2009, Kenneth Riddile <kfriddile@yahoo.com>
+ 2010, Thomas Capricelli <orzel@freehackers.org>
+ 2013, Pavel Holoborodko <pavel@holoborodko.com>
+ 2009, Keir Mierle <mierle@gmail.com>
+ 2011, Timothy E. Holy <tim.holy@gmail.com >
+ 2007, Michael Olbrich <michael.olbrich@gmx.net>
+ 2009, Ricard Marxer <email@ricardmarxer.com>
+ 2010, Vincent Lejeune
+ 2021, NVIDIA CORPORATION.
+ 2021, C. Antonio Sanchez <cantonios@google.com>
+ 2017, Codeplay Software Limited
+ 2010, Daniel Lowengrub <lowdanie@gmail.com>
+ 2012, Desire Nuentsa Wakam <desire.nuentsa_wakam@inria.fr>
+ 2021, Erik Schultheis <erik.schultheis@aalto.fi>
+ 2016, Tobias Wood <tobias@spinicist.org.uk>
+ 2009, Mathieu Gautier <mathieu.gautier@cea.fr>
+ 2014, yoco <peter.xiau@gmail.com>
+ 2017, Kyle Macfarlan <kyle.macfarlan@gmail.com>
+ 2016, Rasmus Munk Larsen (rmlarsen@google.com)
+License: MPL-2.0
+
+License: Apache-2.0
+ This is free software, licensed under:
+ .
+ The Apache License, Version 2.0, January 2004
+ .
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ .
+ http://www.apache.org/licenses/LICENSE-2.0
+ .
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS"BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+
+License: BSD-3-clause
+ This is free software, licensed under:
+ .
+ The (three-clause) BSD License
+ .
+ The BSD License
+ .
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are
+ met:
+ .
+ * Redistributions of source code must retain the above copyright
+ notice, this list of conditions and the following disclaimer.
+ .
+ * Redistributions in binary form must reproduce the above copyright
+ notice, this list of conditions and the following disclaimer in the
+ documentation and/or other materials provided with the distribution.
+ .
+ * Neither the name of the licensor nor the names of its
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+ .
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+ CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+License: BSL-1.0
+ Permission is hereby granted, free of charge, to any person or organization
+ obtaining a copy of the software and accompanying documentation covered by
+ this license (the "Software") to use, reproduce, display, distribute, execute,
+ and transmit the Software, and to prepare derivative works of the Software,
+ and to permit third-parties to whom the Software is furnished to do so, all
+ subject to the following:
+ .
+ The copyright notices in the Software and this entire statement, including the
+ above license grant, this restriction and the following disclaimer, must be
+ included in all copies of the Software, in whole or in part, and all derivative
+ works of the Software, unless such copies or derivative works are solely in the
+ form of machine-executable object code generated by a source language processor.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+ COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES
+ OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+License: Expat
+ This is free software, licensed under:
+ .
+ The MIT (X11) License
+ .
+ The MIT License
+ .
+ Permission is hereby granted, free of charge, to any person
+ obtaining a copy of this software and associated
+ documentation files (the "Software"), to deal in the Software
+ without restriction, including without limitation the rights to
+ use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to
+ whom the Software is furnished to do so, subject to the
+ following conditions:
+ .
+ The above copyright notice and this permission notice shall
+ be included in all copies or substantial portions of the
+ Software.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT
+ WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ MERCHANTABILITY, FITNESS FOR A PARTICULAR
+ PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+ SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+ CONNECTION WITH THE SOFTWARE OR THE USE OR
+ OTHER DEALINGS IN THE SOFTWARE.
+
+License: ISC
+ Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+License: MIT~Boehm
+ THIS MATERIAL IS PROVIDED AS IS, WITH ABSOLUTELY NO WARRANTY
+ EXPRESSED OR IMPLIED.  ANY USE IS AT YOUR OWN RISK.
+ .
+ Permission is hereby granted to use or copy this program for any
+ purpose, provided the above notices are retained on all copies.
+ Permission to modify the code and to distribute modified code is
+ granted, provided the above notices are retained, and a notice that
+ the code was modified is included with the above copyright notice.
+
+License: MPL-2.0
+ This is free software, licensed under:
+ .
+ Mozilla Public License Version 2.0
+ .
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0.
+ .
+ On Debian systems, the complete text of Mozilla Public License v 2.0
+ can be found in '/usr/share/common-licenses/MPL-2.0'.
+

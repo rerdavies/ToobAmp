@@ -1,0 +1,3 @@
+cd ..
+licensecheck --deb-machine -r src modules /usr/include/lv2 >debian/copyrights-raw
+cd debian

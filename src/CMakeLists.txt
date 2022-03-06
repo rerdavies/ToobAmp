@@ -18,7 +18,7 @@ add_library(ToobAmp  SHARED
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
         ToobTuner.cpp ToobTuner.h
-        InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h lv2_rgext.h 
+        InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h

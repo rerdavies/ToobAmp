@@ -120,8 +120,8 @@ Files: modules/RTNeural/modules/xsimd/benchmark/main.cpp
  modules/RTNeural/modules/xsimd/test/xsimd_tester.hpp
  modules/RTNeural/modules/xsimd/test/xsimd_trigonometric_test.cpp
  modules/RTNeural/modules/xsimd/test/xsimd_trigonometric_test.hpp
-Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
- Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
+Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and
+  QuantStack
 License: UNKNOWN
  FIXME
 
@@ -652,8 +652,8 @@ Files: modules/RTNeural/modules/Eigen/Eigen/src/SparseCore/SparseColEtree.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_pivotL.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_pruneL.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_relax_snode.h
-Copyright: 2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
-License: MIT~Boehm or MPL-2.0
+Copyright: 2012, DÃ©sirÃ© Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+License: MIT~Boehm and/or MPL-2.0
  FIXME
 
 Files: modules/RTNeural/modules/Eigen/Eigen/src/Core/DenseCoeffsBase.h
@@ -683,8 +683,8 @@ Files: modules/RTNeural/modules/xsimd/include/xsimd/math/xsimd_error.hpp
  modules/RTNeural/modules/xsimd/include/xsimd/math/xsimd_invtrigo.hpp
  modules/RTNeural/modules/xsimd/include/xsimd/math/xsimd_rem_pio2.hpp
  modules/RTNeural/modules/xsimd/include/xsimd/math/xsimd_trigo_reduction.hpp
-Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
- Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
+Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and
+  QuantStack
 License: BSL-1.0
  FIXME
 
@@ -698,7 +698,7 @@ Files: modules/RTNeural/modules/Eigen/Eigen/SparseLU
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_kernel_bmod.h
 Copyright: 2009-2015, Gael Guennebaud <gael.guennebaud@inria.fr>
   2011-2014, Gael Guennebaud <gael.guennebaud@inria.fr>
-  2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+  2012, DÃ©sirÃ© Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
   2012, Gael Guennebaud <gael.guennebaud@inria.fr>
   2012-2014, Gael Guennebaud <gael.guennebaud@inria.fr>
   2014, Gael Guennebaud <gael.guennebaud@inria.fr>
@@ -727,7 +727,7 @@ Files: modules/RTNeural/modules/Eigen/Eigen/src/MetisSupport/MetisSupport.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLUImpl.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_Structs.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_Utils.h
-Copyright: 2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+Copyright: 2012, DÃ©sirÃ© Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
 License: MPL-2.0
  FIXME
 
@@ -788,9 +788,9 @@ License: Expat
 
 Files: modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_column_bmod.h
  modules/RTNeural/modules/Eigen/Eigen/src/SparseLU/SparseLU_panel_bmod.h
-Copyright: 2012, Désiré Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
+Copyright: 2012, DÃ©sirÃ© Nuentsa-Wakam <desire.nuentsa_wakam@inria.fr>
   2012, Gael Guennebaud <gael.guennebaud@inria.fr>
-License: MIT~Boehm or MPL-2.0
+License: MIT~Boehm and/or MPL-2.0
  FIXME
 
 Files: modules/RTNeural/modules/Eigen/Eigen/src/Core/DenseStorage.h
@@ -837,8 +837,8 @@ License: MPL-2.0
 
 Files: modules/RTNeural/modules/Eigen/Eigen/src/Core/arch/CUDA/Half.h
  modules/RTNeural/modules/Eigen/Eigen/src/Core/arch/Default/Half.h
-Copyright: 2016 Fabien Giesen
-  2016 Fabien Giesen
+Copyright: Fabian Giesen, 2016
+  Fabian Giesen, 2016.
 License: MPL-2.0
  FIXME
 
@@ -913,7 +913,7 @@ License: BSD-3-clause
  FIXME
 
 Files: modules/RTNeural/modules/xsimd/LICENSE
-Copyright: 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack Martin Renou
+Copyright: 2016, Johan Mabille, Sylvain Corlay, Wolf Vollprecht and Martin Renou
   2016, QuantStack
 License: BSD-3-clause
  FIXME
@@ -930,7 +930,7 @@ License: BSD-3-clause
 
 Files: modules/RTNeural/modules/Eigen/Eigen/src/Geometry/AlignedBox.h
 Copyright: 2008, Gael Guennebaud <gael.guennebaud@inria.fr>
-License: BSD-3-clause or MPL-2.0
+License: BSD-3-clause and/or MPL-2.0
  FIXME
 
 Files: modules/RTNeural/modules/json/json.hpp

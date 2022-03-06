@@ -28,7 +28,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /*
    Ported from STK source by Robin Davies.
-   Copyright (c) 2022 Robin Davies
+   Copyright (c) 2022 Robin E. R. Davies
    Changes licensed under the terms of the original STK license.
     
    https://github.com/thestk/stk
