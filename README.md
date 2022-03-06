@@ -1,74 +1,74 @@
-# ToobAmp LV2 Guitar Amp Plugins (v0.0.1 Alpha)
+# ToobAmp LV2 Guitar Amp Plugins
 
-The ToobAmp LV2 are a port of a set of experimental Guitar Amp plugins that were originally written for Native Instruments Reaktor that have been ported to LV2 plugins. They currently have user interfaces for MODP, and for Pipedal only.
+v0.0.1-Alpha.1
 
-Distortion and overdrive effects in the plugs are based on super-sampled arctan waveshaping. The Toob Amp Power Section plugin provides three successive arctan wave shapers that provide a rich and suble range of tones and drive effects.
+ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
-## The ToobAmp Input Stage
+*   **TooB Input Stage**
 
-![](src/ToobAmp.lv2/modgui/screenshot-toob-input-stage.png)
+    For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that 
+    provides low-pass, hi-pass and bright-boost filtering.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 1 Input Stage user interface in MODP
+*   **TooB Tone Stack**
 
-The ToobAmp Input Stage provides for trimming and shaping your guitar input signal.  The Input Stage provides:
+    Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
 
-* A trim control to boost input levels up to optimum level.
-* Low- and high-cut filters to clean up input signals,
-* A shelving filter to emulate bright input.
-* A noise gate.
-* a boost waveshaper to emulate overdriving of the pre-amp input buffer stage. 
+*   **Toob ML**
 
-## The ToobAmp Tone Stack
+    Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
+    pedals. 
 
-![ToobAmp in MODP](src/ToobAmp.lv2/modgui/screenshot-toob-tone-stack.png)
+*   **TooB Power Stage**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 2 Tone Stack user interface in MODP
+    Guitar amplifier power stage emulation. Three super-sampled gain stages with flexible control over
+    distortion/overdrive characteristics allow you to generate anything from warm sparkling clean tones
+    to blistering full-on overdrive. Generally used in conjunction with the TooB Tone Stack and Toob CamSim 
+    plugins.
 
-The ToobAmp Tone Stack stage provides accurate emulation of either Fender Bassman or Marshall JCM-800 tone stacks.
+*   **TooB CabSim**
 
-## The ToobAmp Power Stage
+    Rather than relying on expensive convolution effects, Toob CabSim provides an EQ section designed to 
+    allow easy emulation of guitar cabinet/microphone combinations. 
 
-![](src/ToobAmp.lv2/modgui/screenshot-toob-power-stage.png)
+*   **TooB Freeverb**
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 3 Power Stage user interface in MODP
+    A particularly well-balanced Reverb plugin, based on the famous Freeverb algorithm.
 
+*   **TooB Tuner**
 
-The ToobAmp Power Amp stage provides three consecutive super-sampled arctan waveshapers to provide anything from clean warm guitar tones to blistering overdrive. Use the trim controls to boost input signals to each stage to something close to 0dB as indicated on the VU meters beside each drive stage. The SAG and SAGD controls provde emulation of transformer sag, based on advanced analysis of Fender Bassman circuitry. SAG controls how much sag occurs on the input signal level. SAGD controls how much sag occurs on the output signal. Both controls will provide compression; but judicious use of the SAG control will cause a more gentle breakup of guitar signals that makes the amp feel more "forgiving".; the SAGD provides some amount of compression on the output signal. Use both controls judiciously, as high settings of either control will produce a sound that sounds noticeably compressed. 
+    An stable, accurate guitar tuner. (Currently only useful with PiPedal).
 
-## The ToobAmp Cab Simulator
+*   **TooB Spectrum Analyzer**
 
-![](Assets/CabSim.png)
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fig. 4 Cab Sim user interface in Pipedal.
-
-Rather than relying on expensive convolution effects, the Toob Amp Cab Emulator provides EQ controls that be can be used to match measured cabinet responses of real amps, or produce EQ settings to suit particular purposes without reference to actual cabinets responses. 
-
-Fender cabinets tend to have 60 or 70Hz low-frequency cutoffs, with a relatively flat frequency response after that; Marshall amps tend to have a low-frequency cutoff at 120Hz, and slight shelving boost somewhere close to 2khz. 
-
-The comb filter is used to emulate open-back speakers, which cause comb filtering effects in high-frequency ranges due to reflections off the wall behind the cabinet.  The ripples in the high frequecny response give final guitar tone a bit of "sparkle" that can be quite attractive. Set the comb filter frequency to somewhere between 1500 and 2000kHz, and adjust the depth to suit your personal taste.
-
+    Live-signal spectrum analyzer. (Currently only useful with PiPedal).
 
 ## Building ToobAmp
 
 Prerequisites:
 
-	`apt install libboost-all-dev lv2-dev`
+	`apt install lv2-dev`
 	
 If you have not installed Visual Studio Code, you will need to install CMake:
 
 	`apt install cmake`
 
-ToobAmp was built using Visual Studio Code, with CMake build files. If you load the ToobAmp directory in Visual Studio code, Code will automatically configure and build the project 
+ToobAmp was built using Visual Studio Code, with CMake build files.
 
-After a full build, in Visual Studio code, run the following command to install ToobAmp:
+If you are using Visual Studio code, install the Microsoft CMake extension, and load the project directory. Visual Studio Code
+will automatically detect and configure the project. Build and configuration tools for the CMake project can be accessed on the Visual Studio Code status bar.
 
-	`sudo ./install`
-	
 If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and instal the project:
 
-    ``./config     #configure the proejct`
+    ``./config     #configure the CMake project`
    
     `./bld   # build the project.
     
-    `sudo ./install`
-   
+After a full build, run the following command to install ToobAmp:
+
+	`sudo ./install`
+	
+To rebuild the debian package, run
+
+    `sudo ./makePackage`
+
+
