@@ -1,0 +1,3 @@
+ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They
+are specifically designed for use with the PiPedal project, but work perfectly well 
+with any LV2 Plugin host.
