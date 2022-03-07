@@ -8,8 +8,20 @@ Currently supported platforms:
 
 - Raspberry Pi 4 or 400, at least 2GB RAM
 - Ubuntu 21.04 or later (64-bit) 
-- Raspberry Pi OS (64-bit)
+- Raspberry Pi OS (64-bit), latest version.
 
+## Install ToobAmp
+
+Download the current install package for your platform:
+
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/untagged-98120516733744cd47e6/toobamp_0.0.1_arm64.deb)
+
+Run the following shell commands:
+
+    sudo apt update
+    cd ~/Downloads
+    sudo apt-get install ./toobamp_0.0.1_arm64.deb
+    
 --------------------
 
 &nbsp;
@@ -100,6 +112,8 @@ Currently supported platforms:
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/SpectrumAnalyzer.png)
 
     &nbsp;
+
+
 
 ## Building ToobAmp
 
