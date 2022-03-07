@@ -119,7 +119,10 @@ Run the following shell commands:
 
 Prerequisites:
 
-     apt install lv2-dev
+In the project directory, run:
+
+      git submodule update --init --recursive
+      apt install lv2-dev
 	
 If you have not installed Visual Studio Code, you will need to install CMake:
 
