@@ -71,13 +71,13 @@ Currently supported platforms:
 
     &nbsp;
 
-*   **TooB FreeVerb**
+*   **TooB Freeverb**
 
-    A particularly well-balanced Reverb plugin, based on the famous FreeVerb algorithm.
+    A particularly well-balanced Reverb plugin, based on the famous Freeverb algorithm.
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/FreeVerb-ss.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Freeverb-ss.png)
 
     &nbsp;
 
