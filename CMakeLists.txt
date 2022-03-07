@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.9)
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON")
 
-project(ToobAmp VERSION 0.0.2 DESCRIPTION "TooB Amp LV2 Plugin")
+project(ToobAmp VERSION 0.1.3 DESCRIPTION "TooB Amp LV2 Plugin")
 
 if(WIN32)
 	include_directories("C:/Users/rerda/source/lv2-1.18.2")
@@ -35,12 +35,11 @@ endif()
 
 
 set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Robin Davies<rerdavies@gmail.com") # required
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Robin Davies <rerdavies@gmail.com>") # required
 set(CPACK_PACKAGE_VENDOR "Robin Davies")
-set(CPACK_PACKAGE_VERSION_PATCH 1)
-set(CPACK_PACKAGE_DESCRIPTION "Lv2 guitar effect plugins for Raspberry Pi")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/debian/package_description.txt")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Lv2 guitar effects for Raspberry Pi")
-set(CPACK_DEBIAN_PACKAGE_SECTION non-free/sound)
+set(CPACK_DEBIAN_PACKAGE_SECTION sound)
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_PACKAGE_PREDEPENDS hostapd authbind )
 set(CPACK_DEBIAN_PACKAGE_CONTROL_STRICT_PERMISSION TRUE)
