@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v0.1.3-Alpha.2
+v0.1.5-alpha.4
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
@@ -14,7 +14,7 @@ Currently supported platforms:
 
 Download the current install package for your platform:
 
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v0.1.3-alpha.2/toobamp_0.1.3_arm64.deb)
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v0.1.5-alpha.4/toobamp_.1.5_arm64.deb)
 
 Run the following shell commands:
 
