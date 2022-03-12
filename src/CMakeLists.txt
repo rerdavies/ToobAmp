@@ -22,7 +22,7 @@ add_library(ToobAmp  SHARED
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h
-         ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h PowerStage.cpp PowerStage.h IDelay.h SagProcessor.h
+         ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h IDelay.h SagProcessor.h
          NoiseGate.cpp NoiseGate.h
          GainStage.cpp GainStage.h
          WaveShapes.cpp WaveShapes.h
