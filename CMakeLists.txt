@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.9)
 
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON")
 
-project(ToobAmp VERSION 0.1.5 DESCRIPTION "TooBAmp LV2 Plugin")
+project(ToobAmp VERSION 0.1.6 DESCRIPTION "TooBAmp LV2 Plugin")
 
 if(WIN32)
 	include_directories("C:/Users/rerda/source/lv2-1.18.2")
