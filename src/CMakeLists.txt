@@ -17,9 +17,14 @@ add_custom_target(copy-files ALL
 add_library(ToobAmp  SHARED 
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
+        ToobDelay.cpp ToobDelay.h
+        ToobChorus.cpp ToobChorus.h
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
+
+        LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
+        Ce2Chorus.cpp Ce2Chorus.hpp
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h
          ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h IDelay.h SagProcessor.h
@@ -94,13 +99,45 @@ target_include_directories(ToobAmp PRIVATE
 # Tests.
 add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp)
 
-add_test(FftTest COMMAND FftTest)
+add_test(FftTest FftTest)
 
 add_executable(BaxandallToneStackTest 
     LsNumerics/BaxandallToneStackTest.cpp 
     LsNumerics/BaxandallToneStack.cpp LsNumerics/BaxandallToneStack.hpp
     LsNumerics/LsPolynomial.cpp LsNumerics/LsPolynomial.hpp
     )
+
+add_test(BaxandallToneStackTest BaxandallToneStackTest)
+
+add_executable(Ce2ChorusTest 
+    Ce2ChorusTest.cpp
+    Ce2Chorus.cpp Ce2Chorus.hpp
+    Filters/LowPassFilter.cpp Filters/LowPassFilter.h
+    Filters/AudioFilter2.cpp Filters/AudioFilter2.h
+    Filters/AudioFilter.cpp Filters/AudioFilter.h
+    
+    LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp 
+    LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
+    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter
+    iir/Biquad.cpp
+    iir/Biquad.h
+    iir/Cascade.h
+    iir/Types.h
+    iir/PoleFilter.cpp
+    iir/Common.h
+    iir/PoleFilter.h
+    iir/Layout.h
+    iir/MathSupplement.h
+    iir/Cascade.cpp
+    iir/ChebyshevII.h
+    iir/ChebyshevI.cpp
+    iir/ChebyshevI.h
+    iir/ChebyshevII.cpp
+
+
+)
+
+add_test(Ce2ChorusTest Ce2ChorusTest)
 
 # check for missing linkages.
 add_executable(linkageTest 
@@ -109,7 +146,6 @@ add_executable(linkageTest
 target_link_libraries(linkageTest ToobAmp)
 
 
-add_test(BaxandallToneStackTest COMMAND BaxandallToneStackTest)
 
 add_executable(PitchDetectorTest 
     LsNumerics/Fft.hpp LsNumerics/Window.hpp 
@@ -117,12 +153,10 @@ add_executable(PitchDetectorTest
     LsNumerics/PitchDetectorTest.cpp 
     LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
 )
-add_test(PitchDetectorTest COMMAND PitchDetectorTest)
-
-add_test(FftTest COMMAND FftTest)
+add_test(PitchDetectorTest PitchDetectorTest)
 
 
-add_test(LinkageTest COMMAND linkageTest)
+add_test(LinkageTest linkageTest)
 
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")

@@ -7,15 +7,22 @@
 #include <iostream>
 #include <cassert>
 #include <fstream>
+#include <filesystem>
 
 using namespace LsNumerics;
 
 std::random_device randEngine;
 std::uniform_real_distribution<float> randDist(-1.0f, 1.0f);
 
+static std::filesystem::path GetTestOutputFile()
+{
+    std::filesystem::path testDirectory = std::filesystem::path(getenv("HOME")) / "testOutput";
+    std::filesystem::create_directories(testDirectory);
+    return testDirectory / "pitchTest.tsv";
+}
 static void testPitchDetection()
 {
-    std::vector<double> sampleRates{{24000, 22050, 44100,48000}};
+    std::vector<double> sampleRates{{24000, 22050}};
 
     std::vector<float> buffer;
 
@@ -78,7 +85,7 @@ static void testPitchDetection()
 #if 1
         {
             std::ofstream f;
-            f.open("/home/rerdavies/temp/data.tsv");
+            f.open(GetTestOutputFile());
             assert(!f.fail());
             for (int i = 0; i < errors.size(); ++i)
             {
