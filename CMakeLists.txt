@@ -11,19 +11,14 @@ project(ToobAmp VERSION 0.1.6 DESCRIPTION "TooBAmp LV2 Plugin")
 include(CTest)
 enable_testing()
 
+set (CMAKE_CXX_STANDARD 20)
 
 if(WIN32)
 	include_directories("C:/Users/rerda/source/lv2-1.18.2")
-	add_compile_options("/std:c++17")
 else()
 	include_directories("/usr/local/include")
 endif()
 
-if (MSVC)
-else()
-    
-    add_compile_options("-std=c++17")
-endif()
 
 # Include submodules
 add_subdirectory("modules")

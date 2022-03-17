@@ -338,7 +338,7 @@ namespace LsNumerics
         //! Update interdependent parameters.
         void update(void);
 
-        static inline StkFloat undenormalize( volatile StkFloat s ) {
+        static inline StkFloat undenormalize(  StkFloat s ) {
           s += 9.8607615E-32f;
           return s - 9.8607615E-32f;
         }
