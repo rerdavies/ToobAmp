@@ -95,7 +95,6 @@ target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural
 )
 
-
 # Tests.
 add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp)
 
