@@ -93,7 +93,7 @@ inline void ToobDelay::updateControls()
     if (lastLevel != *level)
     {
         lastLevel = *level;
-        levelValue = lastLevel * 0.01;
+        double levelValue = lastLevel * 0.01;
         if (levelValue > 1)
         {
             levelValue = 1;
@@ -101,20 +101,21 @@ inline void ToobDelay::updateControls()
         {
             levelValue = -1;
         }
+        // "power-ish". But gives a more useful range of values..
+        this->levelValue = levelValue*levelValue;
     }
     if (lastFeedback != *feedback)
     {
         lastFeedback = *feedback;
-        feedbackValue = (lastFeedback)*0.01;
+        double feedbackValue = (lastFeedback)*0.01;
         if (feedbackValue > 0.999)
         {
             feedbackValue = 0.999;
         } else if (feedbackValue < -0.999) {
             feedbackValue = -0.999;
         }
-        {
-            feedbackValue = 0.99;
-        }
+        // "power-ish". But gives a more useful range of values..
+        this->feedbackValue = feedbackValue*feedbackValue;
     }
 }
 void ToobDelay::Activate()

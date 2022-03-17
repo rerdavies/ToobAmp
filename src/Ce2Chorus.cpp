@@ -29,7 +29,7 @@ using namespace LsNumerics;
 
 constexpr float LFO_V0 = 4.5; // volts.
 constexpr float LFO_MIN = 0.1;
-constexpr float LFO_MAX = 7.5-LFO_V0;
+constexpr float LFO_MAX = 6.5-LFO_V0;
 
 constexpr float BUCKET_BRIGADE_V0_DELAY = 0.005; // s. total delay of the bucket brigade at Vlfo = LFO_V0.
 constexpr float BUCKET_BRIGADE_V0_RATE = 1024/BUCKET_BRIGADE_V0_DELAY; // The bucket brigade clock rate at LFO_V0
@@ -73,9 +73,14 @@ inline void Ce2Chorus::ClearBucketBrigade()
 }
 inline float Ce2Chorus::TickBucketBrigade(float voltage) {
 
+    // guard against out-of-range voltage swings because of the lfo filter.
+    if (voltage < 0.1f) voltage = 0.1f;
+    if (voltage > 10) voltage = 10;
+
     // assume that clock frequency is linearly proportional to voltage.
 
     float fBB = BUCKET_BRIGADE_V0_RATE*voltage/LFO_V0;
+    if (fBB < 1) fBB = 1; 
 
     float bbDelay = 1/fBB;
 

@@ -25,7 +25,7 @@
 
 
 
-#define TOOB_CHORUS_URI "http://two-play.com/plugins/toob-delay"
+#define TOOB_CHORUS_URI "http://two-play.com/plugins/toob-chorus"
 #ifndef TOOB_URI
 #define TOOB_URI "http://two-play.com/plugins/toob"
 #endif
@@ -78,11 +78,19 @@ inline void ToobChorus::updateControls()
     if (lastRate != *pRate)
     {
         lastRate = *pRate;
-        chorus.SetRate(lastRate);
+        double value = lastRate;
+        if (value < 0) value = 0;
+        if (value > 1) value = 1;
+        chorus.SetRate(value);
     }
     if (lastDepth != *pDepth)
     {
-        chorus.SetDepth(lastDepth);
+        lastDepth = *pDepth;
+        double value = lastDepth;
+        if (value < 0) value = 0;
+        if (value > 1) value = 1;
+        chorus.SetDepth(value);
+
     }
 }
 void ToobChorus::Activate()

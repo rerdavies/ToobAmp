@@ -42,7 +42,7 @@
 
 <http://two-play.com/plugins/toob-chorus> a lv2:Plugin ;
      lv2:binary <ToobAmp.so> ;
-     rdfs:seeAlso <ToobDelay.ttl> .
+     rdfs:seeAlso <ToobChorus.ttl> .
 
 
 
