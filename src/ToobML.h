@@ -63,12 +63,15 @@ namespace TwoPlay {
 	private:
 		enum class PortId {
 			TRIM = 0,
-			BASS,
-			MID,
-			TREBLE,
 			AMP_MODEL,
 			GAIN,
 			MASTER,
+			BASS,
+			MID,
+			TREBLE,
+
+			GAIN_ENABLE,
+
 			AUDIO_IN,
 			AUDIO_OUT,
 			CONTROL_IN,
@@ -86,8 +89,8 @@ namespace TwoPlay {
 		const float* bassData = nullptr;
 		const float* midData = nullptr;
 		const float* trebleData = nullptr;
+		float* gainEnableData = nullptr;
 
-		
 		float modelValue;
 		float gainValue = 0;
 		float trimDb = 0;
@@ -95,6 +98,7 @@ namespace TwoPlay {
 		float bassValue = 0;
 		float midValue = 0;
 		float trebleValue = 0;
+		float gainEnable = 1;
 
 		float trim = 1;
 		float master = 1;

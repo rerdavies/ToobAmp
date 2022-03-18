@@ -84,6 +84,7 @@ public:
 	virtual void Reset() = 0;
 	virtual void Process(int numSamples,const float*input, float*output,float param, float param2) = 0;
 	virtual float Process(float input, float param, float param2) = 0;
+	virtual bool IsGainEnabled() const = 0;
 	
 };
 
@@ -152,6 +153,7 @@ public:
 		model.reset();	
 	}
 
+	virtual  bool IsGainEnabled() const { return N_INPUTS > 1; }
 	virtual float Process(float input, float param, float param2) 
 	{
 		inData[0] = input;
@@ -244,7 +246,13 @@ void ToobML::ConnectPort(uint32_t port, void* data)
 	case PortId::TREBLE:
 		this->trebleData  = (const float*)data;
 		break;
-
+	case PortId::GAIN_ENABLE:
+		this->gainEnableData = (float*)data;
+		if (this->gainEnableData)
+		{
+			*(this->gainEnableData) = gainEnable;
+		}
+		break;
 	case PortId::TRIM:
 		this->trimData  = (const float*)data;
 		break;
@@ -455,6 +463,11 @@ void ToobML::AsyncLoadComplete(size_t modelIndex, ToobMlModel *pNewModel)
 	asyncState = AsyncState::Loaded;
 	this->pendingModelIndex = modelIndex;
 	this->pPendingLoad = pNewModel;
+	this->gainEnable = pNewModel->IsGainEnabled() ? 1.0f: 0.0f;
+	if (this->gainEnableData)
+	{
+		*(this->gainEnableData) = this->gainEnable;
+	}
 }
 
 inline void ToobML::HandleAsyncLoad()
