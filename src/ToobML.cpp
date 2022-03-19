@@ -51,8 +51,9 @@ using namespace TwoPlay;
 #include "NeuralModel.h"
 
 
-constexpr float MODEL_FADE_RATE = 0.3f; // seconds.
+constexpr float MODEL_FADE_RATE = 0.2f; // seconds.
 constexpr float MASTER_DEZIP_RATE = 0.1f; // seconds.
+constexpr float GAIN_DEZIP_RATE = 0.1f; // seconds.
 const int MAX_UPDATES_PER_SECOND = 10;
 
 const char* ToobML::URI= TOOB_ML_URI;
@@ -159,7 +160,7 @@ public:
 		inData[0] = input;
 		inData[1] = param;
 		inData[2] = param2;
-		return model.forward(inData) + input;
+		return model.forward(inData);
 	}
 
 	virtual void Process(int numSamples,const float*input, float*output,float param, float param2) {
@@ -168,7 +169,7 @@ public:
     	for (int i = 0; i < numSamples; ++i)
 		{
 			inData[0] = inData[i];
-        	output[i] = model.forward(inData) + input[i];
+        	output[i] = model.forward(inData);
 		}
 
 	}
@@ -570,7 +571,7 @@ void ToobML::Run(uint32_t n_samples)
 	{
 		gainValue = *gainData;
 		gain = gainValue * 0.1f;
-		gainDezipper.To(gain,MASTER_DEZIP_RATE);
+		gainDezipper.To(gain,GAIN_DEZIP_RATE);
 
 	}
 	if (*bassData != bassValue || *midData != midValue || *trebleData != trebleValue)

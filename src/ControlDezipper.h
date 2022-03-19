@@ -71,7 +71,7 @@ public:
     {
         if (samplesRemaining != 0)
         {
-            x + dx;
+            x += dx;
             if (--samplesRemaining == 0)
             {
                 x = targetX;

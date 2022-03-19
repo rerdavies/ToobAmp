@@ -68,6 +68,7 @@ inline void Ce2Chorus::ClearBucketBrigade()
         bucketBrigadeDelays[i] = averageDelay;
     }
     bucketBrigadeTotal = BUCKET_BRIGADE_V0_DELAY;
+    bucketBrigadeIndex = 0;
     bbX = 0;
 
 }
