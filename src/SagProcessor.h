@@ -92,9 +92,13 @@ namespace TwoPlay{
         {
             return currentSag;
         }
+
+        inline float GetInputScale() {
+            return 1/currentSagD;
+        }
         inline float TickOutput(float value)
         {
-            float powerInput = value*currentSagD;
+            float powerInput = value*currentSagD*currentSag;
 
             currentPower = std::fabs(powerFilter.Tick(powerInput*powerInput));
             currentSag = 1.0f/(currentPower*(sagAf-1)+1);

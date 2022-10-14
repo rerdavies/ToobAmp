@@ -262,7 +262,7 @@ void PowerStage2::Run(uint32_t n_samples)
 			float x = (float)(this->upsamplingFilter.Tick(lastValue));
 			//=========
 			float x1 = gain1.Tick(
-						x*sagProcessor.GetSagValue()/sagProcessor.GetSagDValue()
+						x*sagProcessor.GetInputScale()
 							);
 			float x2 = gain2.Tick(x1);
 			float x3 = gain3.Tick(x2);

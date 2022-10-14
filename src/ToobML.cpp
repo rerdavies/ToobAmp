@@ -224,6 +224,7 @@ ToobML::ToobML(double _rate,
 	this->trimDezipper.SetSampleRate(_rate);
 	this->gainDezipper.SetSampleRate(_rate);
 	this->baxandallToneStack.SetSampleRate(_rate);
+	this->sagProcessor.SetSampleRate(_rate);
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
@@ -279,6 +280,16 @@ void ToobML::ConnectPort(uint32_t port, void* data)
 	case PortId::NOTIFY_OUT:
 		this->notifyOut = (LV2_Atom_Sequence*)data;
 		break;
+	case PortId::SAG:
+		this->sagProcessor.Sag.SetData(data);
+		break;
+	case PortId::SAGD:
+		this->sagProcessor.SagD.SetData(data);
+		break;
+	case PortId::SAGF:
+		this->sagProcessor.SagF.SetData(data);
+		break;
+
 	}
 }
 
@@ -288,6 +299,7 @@ void ToobML::Activate()
 	responseChanged = true;
 	frameTime = 0;
 	this->baxandallToneStack.Reset();
+	this->sagProcessor.Reset();
 
 	delete pCurrentModel;
 	pCurrentModel = nullptr;
@@ -587,6 +599,8 @@ void ToobML::Run(uint32_t n_samples)
 		AsyncLoad((size_t)modelValue);
 		masterDezipper.To(0,MODEL_FADE_RATE);
 	}
+	sagProcessor.UpdateControls();
+
 	HandleAsyncLoad(); // trasnfer in a freshly loaded model if one is ready.
 
 	for (uint32_t i = 0; i < n_samples; ++i)
@@ -598,10 +612,12 @@ void ToobML::Run(uint32_t n_samples)
 			val = baxandallToneStack.Tick(val);
 		}
 
+		val = val*sagProcessor.GetInputScale();
 		if (this->pCurrentModel != nullptr)
 		{
 			val = this->pCurrentModel->Process(val,gainDezipper.Tick(),0);
 		}
+		val = sagProcessor.TickOutput(val);
 		output[i] = val*masterDezipper.Tick();
 	}
 	frameTime += n_samples;

@@ -1,5 +1,6 @@
 
 #include "PitchDetector.hpp"
+#include "IfPitchDetector.hpp"
 #include "LsMath.hpp"
 #include <cmath>
 #include <random>
@@ -8,10 +9,11 @@
 #include <cassert>
 #include <fstream>
 #include <filesystem>
+#include "Window.hpp"
 
 using namespace LsNumerics;
 
-std::random_device randEngine;
+std::mt19937 randEngine;
 std::uniform_real_distribution<float> randDist(-1.0f, 1.0f);
 
 static std::filesystem::path GetTestOutputFile()
@@ -20,50 +22,165 @@ static std::filesystem::path GetTestOutputFile()
     std::filesystem::create_directories(testDirectory);
     return testDirectory / "pitchTest.tsv";
 }
+
+
+double noiseLevel = Db2Af(-35);
+
+double F(size_t t,double f, double sampleRate)
+{
+    double result = (float)std::sin(2 * Pi * f * t / sampleRate ) 
+    + 0.1 * (float)std::sin(4 * Pi * f * (t+40) / sampleRate ) 
+    + 0.3* (float)std::sin(6 * Pi * f * (t+730) / sampleRate );
+
+    double noise = randDist(randEngine);
+    result += noise*noiseLevel;
+    return result;
+}
 static void testPitchDetection()
 {
-    std::vector<double> sampleRates{{24000, 22050}};
+    constexpr size_t SAMPLE_RATE = 24000;
+    //constexpr size_t FFT_SIZE = 4096;
+    constexpr size_t SAMPLE_STRIDE = 2048;
+
+    std::vector<double> sampleRates{{ 24000, 22050,48000,22050*4}};
 
     std::vector<float> buffer;
 
-    std::vector<std::pair<double,double> > errors;
+    std::vector<std::vector<double> > errors;
     for (auto sampleRate : sampleRates)
     {
         errors.resize(0);
         PitchDetector pitchDetector(sampleRate);
         std::cout << "Fs: " << sampleRate << " fftSize: " << pitchDetector.getFftSize() << std::endl;
+        //pitchDetector.Window() = Window::Hann<double>(pitchDetector.getFftSize());
 
-        buffer.resize(pitchDetector.getFftSize());
+        buffer.resize(pitchDetector.getFftSize()*2);
 
         double minError = std::numeric_limits<double>::max();
         double maxError = -std::numeric_limits<double>::max();
 
-
-        for (double f = 80; f < 1200; f += 2)
+        for (double f = 80; f < 923 ; f += 2)
         {
 
-            double phase = randDist(randEngine)*Pi;
+            double phase = randDist(randEngine) * Pi;
             double expectedResult = FrequencyToMidiNote(f);
             for (size_t i = 0; i < buffer.size(); ++i)
             {
-                buffer[i] = 
-                    (float)std::sin(2 * Pi * f * i / sampleRate + phase)
-                    + 0.7*(float)std::sin(4 * Pi * f * i / sampleRate + phase)
-                    + 0.3*(float)std::sin(6 * Pi * f * i / sampleRate + phase)
-                    ;
+                buffer[i] =
+
+                    F(i+100,f,sampleRate);
             }
             double fResult = pitchDetector.detectPitch(&buffer[0]);
 
-            double expectedBinNumber = sampleRate/f;
-            double binNumber = sampleRate/fResult;
+            // test using actual pitch, not pitch detected by cepstrum
+            double gResult = pitchDetector.getGrandkeEstimate(f);
 
+
+            double expectedBinNumber = sampleRate / f;
+            double binNumber = sampleRate / fResult;
 
             double result = FrequencyToMidiNote(fResult);
             double error = (result - expectedResult);
 
-            //errors.push_back({f,(binNumber-expectedBinNumber)*expectedBinNumber});
+            double gMidiResult = FrequencyToMidiNote(gResult);
+
+            // errors.push_back({f,(binNumber-expectedBinNumber)*expectedBinNumber});
             // errors.push_back({f,fResult-f});
-            errors.push_back({f,error});
+            errors.push_back({f, result-expectedResult});
+            if (abs(error) > 0.001)
+            {
+                std::cout << "f: " << f << " error: " << error << std::endl;
+            }
+            if (abs(error) > 1)
+            {
+                //  std::cout << "f: " << f << " error: " << error << std::endl;
+            }
+
+            if (error > maxError)
+            {
+                maxError = error;
+            }
+            if (error < minError)
+            {
+                minError = error;
+            }
+        }
+#if 1
+        {
+            std::ofstream f;
+            f.open(GetTestOutputFile());
+            assert(!f.fail());
+            for (int i = 0; i < errors.size(); ++i)
+            {
+                const auto &t = errors[i];
+
+                bool isFirst = true;
+
+                for (double v : t)
+                {
+                    if (!isFirst) f << ",";
+                    isFirst = false;
+                    f << v;   
+                }
+                f << endl;
+            }
+            f << '\n';
+        }
+#endif
+
+        std::cout << "Max error:" << maxError << " Min error: " << minError*100 << " cents" <<std::endl
+                  << std::endl;
+    }
+}
+
+static void testIfPitchDetection()
+{
+    constexpr size_t SAMPLE_RATE = 24000;
+    constexpr size_t FFT_SIZE = 4096;
+    constexpr size_t SAMPLE_OFFSET = FFT_SIZE/2;
+
+    std::vector<double> sampleRates{{SAMPLE_RATE}};
+
+    std::vector<float> buffer;
+
+    std::vector<std::pair<double, double>> errors;
+    for (auto sampleRate : sampleRates)
+    {
+        errors.resize(0);
+        IfPitchDetector pitchDetector(sampleRate, FFT_SIZE);
+        std::cout << "Fs: " << sampleRate << " fftSize: " << pitchDetector.getFftSize() << std::endl;
+        //pitchDetector.Window() = Window::Hann<double>(FFT_SIZE);
+
+        buffer.resize(pitchDetector.getFftSize()*2);
+
+        double minError = std::numeric_limits<double>::max();
+        double maxError = -std::numeric_limits<double>::max();
+
+        for (double f = 80; f < 923; f += 2)
+        {
+
+            double phase = randDist(randEngine) * Pi;
+            double expectedResult = FrequencyToMidiNote(f);
+            for (size_t i = 0; i < buffer.size(); ++i)
+            {
+                buffer[i] =
+
+                    F(i+100,f,sampleRate);
+            }
+            double _ = pitchDetector.prime(buffer,0);
+            double fResult = pitchDetector.detectPitch(buffer,SAMPLE_OFFSET,SAMPLE_OFFSET);
+
+
+
+            double expectedBinNumber = sampleRate / f;
+            double binNumber = sampleRate / fResult;
+
+            double result = FrequencyToMidiNote(fResult);
+            double error = (result - expectedResult);
+
+            // errors.push_back({f,(binNumber-expectedBinNumber)*expectedBinNumber});
+            // errors.push_back({f,fResult-f});
+            errors.push_back({f, error});
             if (abs(error) > 0.001)
             {
                 // std::cout << "f: " << f << " error: " << error << std::endl;
@@ -96,12 +213,10 @@ static void testPitchDetection()
         }
 #endif
 
-
         std::cout << "Max error:" << maxError << " Min error: " << minError << std::endl
                   << std::endl;
     }
 }
-
 
 static void fftCheck()
 {

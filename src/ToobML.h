@@ -45,6 +45,8 @@
 #include "OutputPort.h"
 #include "ControlDezipper.h"
 #include "LsNumerics/BaxandallToneStack.hpp"
+#include "SagProcessor.h"
+
 
 
 
@@ -72,10 +74,17 @@ namespace TwoPlay {
 
 			GAIN_ENABLE,
 
+			SAG,
+			SAGD,
+
+
 			AUDIO_IN,
 			AUDIO_OUT,
 			CONTROL_IN,
 			NOTIFY_OUT,
+
+			SAGF,
+
 		};
 
 		double rate;
@@ -103,6 +112,8 @@ namespace TwoPlay {
 		float trim = 1;
 		float master = 1;
 		float gain = 0;
+
+		SagProcessor sagProcessor;
 
 		LsNumerics::BaxandallToneStack baxandallToneStack;
 		bool bypassToneFilter = false;

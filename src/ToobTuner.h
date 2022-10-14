@@ -191,7 +191,7 @@ namespace TwoPlay {
 				}
 				if (aboveThreshold)
 				{
-					pitchResult = pitchDetector.detectPitch(this->lockResult.begin(),this->lockResult.end());
+					pitchResult = pitchDetector.detectPitch(this->lockResult.begin());
 				} else {
 					pitchResult = 0;
 				}

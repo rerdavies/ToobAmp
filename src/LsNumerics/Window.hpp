@@ -48,9 +48,20 @@ namespace LsNumerics
             }
             return window;
         }
+        template <typename T>
+        static std::vector<T> NoWindow(size_t N)
+        {
+            std::vector<T> window;
+            window.resize(N);
+            for (size_t i = 0; i < N; ++i)
+            {
+                window[i] = 1.0;
+            }
+            return window;
+        }
 
         template <typename T>
-        static std::vector<T> HannWindow(int size)
+        static std::vector<T> Hann(int size)
         {
             double alpha = 0.5;
             double beta = 1.0 - alpha;
@@ -61,6 +72,22 @@ namespace LsNumerics
             for (int i = 0; i < size; ++i)
             {
                 window[i] = (T)(alpha - beta * std::cos(scale * i));
+            }
+            return window;
+        }
+        template <typename T>
+        static std::vector<T> HannSquared(int size)
+        {
+            double alpha = 0.5;
+            double beta = 1.0 - alpha;
+
+            std::vector<T> window;
+            window.resize(size);
+            double scale = LsNumerics::Pi * 2 / (size - 1);
+            for (int i = 0; i < size; ++i)
+            {
+                double v = (alpha - beta * std::cos(scale * i));
+                window[i] = (T)(v*v);
             }
             return window;
         }

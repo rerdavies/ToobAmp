@@ -149,6 +149,7 @@ target_link_libraries(linkageTest ToobAmp)
 add_executable(PitchDetectorTest 
     LsNumerics/Fft.hpp LsNumerics/Window.hpp 
     LsNumerics/PitchDetector.cpp LsNumerics/PitchDetector.hpp
+    LsNumerics/IfPitchDetector.cpp LsNumerics/IfPitchDetector.hpp 
     LsNumerics/PitchDetectorTest.cpp 
     LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
 )

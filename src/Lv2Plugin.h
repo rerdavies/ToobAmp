@@ -43,6 +43,17 @@ namespace TwoPlay {
 
 	class Lv2Plugin;
 
+    enum class Lv2LogLevel
+    {
+        Trace = 0,
+        Note = 1,
+        Warning = 2,
+        Error = 3,
+        None = 4,
+    };
+
+
+
 	typedef Lv2Plugin* (*PFN_CREATE_PLUGIN)(double _rate,
 		const char* _bundle_path,
 		const LV2_Feature* const* features);
@@ -54,13 +65,6 @@ namespace TwoPlay {
 	};
 
 
-    enum class Lv2LogLevel {
-        Trace = 0,
-        Note =1,
-        Warning = 2,
-        Error = 3,
-        None = 4,
-    };
 
 
 	class Lv2Plugin {
