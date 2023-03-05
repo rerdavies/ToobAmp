@@ -3,9 +3,33 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
-set (GCC_EXTRA_FLAGS "-Wno-psabi")
 
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
+set(PROFILER 0)
+
+
+# message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+# message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+# message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic")
+
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
+    if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_ASSERTS")
+    #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_DEBUG")
+    endif()
+
+    SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
+endif()
+
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+   add_compile_definitions("DEBUG")
+endif()
 # Add resource files.
 add_custom_target(copy-files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2 ${CMAKE_CURRENT_BINARY_DIR}
@@ -107,6 +131,26 @@ add_executable(BaxandallToneStackTest
     )
 
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
+
+
+add_executable(ConvolutionReverbTest
+    LsNumerics/FftConvolution.cpp
+    LsNumerics/FftConvolution.hpp
+    LsNumerics/ConvolutionReverbTest.cpp
+    LsNumerics/Fft.hpp
+    LsNumerics/ConvolutionReverb.cpp
+    LsNumerics/ConvolutionReverb.hpp
+    LsNumerics/BalancedFft.cpp
+    LsNumerics/BalancedFft.hpp
+)
+if(PROFILER)
+    target_compile_options(ConvolutionReverbTest "-pg")
+    target_compile_definitions(ConvolutionReverbTest "WITHPERF")
+    #target_link_libraries(ConvolutionReverbTest profiler)
+    #target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")
+endif()
+
+add_test(ConvolutionReverbTest ConvolutionReverbTest)
 
 add_executable(Ce2ChorusTest 
     Ce2ChorusTest.cpp
