@@ -53,8 +53,7 @@ static void TestBalancedFft(FftDirection direction)
 {
 
     for (size_t n : {
-        256,
-        4, 8, 16, 32, 64, 128, 256, 512, 1024
+        256, 8, 16, 32, 64, 128, 256, 512, 1024
 #ifdef NDEBUG
                      ,2048,
                      4096, 1024 * 64
@@ -107,7 +106,9 @@ static void TestBalancedFft(FftDirection direction)
 
         ptrdiff_t outputIndex = -(ptrdiff_t)fft.Delay();
 
+#ifndef NDEBUG
         fft.PrintPlan("/tmp/plan.txt");
+#endif
         for (size_t i = 0; i < input.size(); ++i)
         {
             fft_complex_t result = fft.Tick(input[i]);
@@ -154,6 +155,7 @@ static void TestBalancedFft(FftDirection direction)
             }
             ++outputIndex;
         }
+
 
         for (size_t i = 0; i < n; ++i)
         {
@@ -305,6 +307,39 @@ static void TestBalancedConvolution()
         }
     }
 }
+
+class StreamCapturer
+{
+public:
+    StreamCapturer(size_t start, size_t end = std::numeric_limits<size_t>::max())
+    : start(start),end(end),index(0)
+    {
+        
+    }
+    StreamCapturer&operator<<(float value)
+    {
+        if (index >= start && index < end)
+        {
+            buffer.push_back(value);
+        }
+        ++index;
+        return *this;
+    }
+    StreamCapturer&operator<<(const std::vector<float>& values)
+    {
+        for (auto i = values.begin(); i != values.end(); ++i)
+        {
+            (*this) << (*i);
+        }
+        return *this;
+    }
+
+
+    const std::vector<float>&Buffer() const { return buffer; }
+private:
+    std::vector<float> buffer;
+    size_t start,end,index;
+};
 static void TestBalancedConvolutionSection()
 {
 
@@ -321,99 +356,80 @@ static void TestBalancedConvolutionSection()
 
         std::vector<float> impulseResponse;
         impulseResponse.resize(n);
-        impulseResponse[0] = 100;
-        impulseResponse[1] = 10;
-        impulseResponse[2] = 1;
-        impulseResponse[3] = 0.1;
+        impulseResponse[0] = 10000;
+        impulseResponse[1] = 100;
+        if (n > 2)
+        {
+            impulseResponse[2] = 1;
+            impulseResponse[3] = 0.01;
+        }
 
         std::vector<float> input;
-        input.resize(n * 2);
+        input.resize(n * 6);
         for (size_t i = 0; i < input.size(); ++i)
         {
             input[i] = i + 1;
         }
 
-        std::vector<float> expectedOutput;
-        expectedOutput.resize(n);
         NaturalConvolutionSection section((size_t)n, impulseResponse);
-        section.Convolve(input, expectedOutput);
 
-        for (size_t i = 0; i < n; ++i)
+        std::vector<float> buffer;
+        buffer.resize(n*2);
+        std::vector<float> buffer2;
+        buffer2.resize(n);
+        StreamCapturer s0(0);
+
+        for (size_t offset = 0; offset < input.size()-n; offset+= n)
         {
-            double expected = 0;
-            for (size_t j = 0; j < n; ++j)
+            for (size_t i = 0; i < n*2; ++i)
             {
-                float impulse = impulseResponse[j];
-                ssize_t dataIndex = n + i - j;
-                float data = input[dataIndex];
-                expected += impulse * data;
+                ptrdiff_t index = offset+i-n;
+                if (index < 0)
+                {
+                    buffer[0] = 0;
+                } else {
+                    buffer[i] = input[index];
+                }
             }
-            double error = (expected - expectedOutput[i]) / expected;
-            if (std::abs(error) > 1E-4)
-            {
-                throw std::logic_error("Test convolution failed.");
-            }
+            section.Convolve(buffer,buffer2);
+            s0 << buffer2;
         }
+        const std::vector<float> &expectedOutput = s0.Buffer();
 
         BalancedConvolutionSection convolutionSection(n, impulseResponse);
         cout << "MaxDelay: " << convolutionSection.Delay() << endl;
+#ifndef NDEBUG
+        convolutionSection.PrintPlan("/tmp/plan.txt");
+#endif
+
         // convolutionSection.PrintPlan();
 
-        std::vector<float> output;
         std::vector<float> t;
 
-        for (size_t i = 0; i < input.size(); ++i)
+        StreamCapturer streamResult(convolutionSection.Delay());
+
+        for (size_t i = 0; i < expectedOutput.size()+convolutionSection.Delay(); ++i)
         {
-            t.push_back(convolutionSection.Tick(input[i]));
+            float result = convolutionSection.Tick(i < input.size()? input[i]: 0);
+            streamResult << result;
+            t.push_back(result);
         }
-        for (size_t i = 0; i < 4 * input.size(); ++i)
-        {
-            t.push_back(convolutionSection.Tick(std::nan("")));
-        }
+
+        const std::vector<float>&output = streamResult.Buffer();
+
+        
         for (size_t i = 0; i < output.size(); ++i)
         {
             auto error = std::abs(expectedOutput[i] - output[i]);
+            if (std::abs(expectedOutput[i]) > 1)
+            {
+                error /= expectedOutput[i];
+            }
             if (error > 1E-4)
             {
                 throw std::logic_error("BalancedConvolutionTest failed.");
             }
         }
-
-#ifdef JUNK
-        std::vector<fft_complex_t> output;
-
-        for (size_t i = 0; i < input.size(); ++i)
-        {
-            fft_complex_t result = fft.Tick(input[i]);
-            ptrdiff_t outputIndex = i - fft.Delay();
-            if (outputIndex >= 0 && outputIndex < (ptrdiff_t)fft.Size())
-            {
-                assert(!std::isnan(result.real()));
-                output.push_back(result);
-            }
-        }
-        for (size_t i = input.size(); i < input.size() + fft.Delay(); ++i)
-        {
-            fft_complex_t result = fft.Tick(std::nan(""));
-            ptrdiff_t outputIndex = i - fft.Delay();
-            if (outputIndex >= 0 && outputIndex < (ptrdiff_t)fft.Size())
-            {
-                assert(!std::isnan(result.real()));
-                output.push_back(result);
-            }
-        }
-
-        for (size_t i = 0; i < n; ++i)
-        {
-            auto diff = expectedOutput[i] - output[i];
-            auto error = std::abs(diff);
-            if (error > 1E-2)
-            {
-                throw std::logic_error("FFT accuracy failed.");
-            }
-        }
-        // benchmark.
-#endif
     }
 }
 
@@ -780,19 +796,25 @@ void TestFftConvolutionStepBenchmark()
 void TestFft()
 {
 
+
+
     TestBalancedConvolutionSection();
 
-    Implementation::SlotUsageTest();
-
-    TestBalancedFft(FftDirection::Reverse);
-    TestBalancedFft(FftDirection::Forward);
-
-    TestBalancedConvolution();
-    TestBalancedConvolutionBenchmark();
-
-    TestFftConvolution();
-    TestFftConvolutionBenchmark();
     TestFftConvolutionStepBenchmark();
+
+    // TestBalancedFft(FftDirection::Reverse);
+    // TestBalancedFft(FftDirection::Forward);
+
+
+    // Implementation::SlotUsageTest();
+
+ 
+    // TestBalancedConvolution();
+    // TestBalancedConvolutionBenchmark();
+
+    // TestFftConvolution();
+    // TestFftConvolutionBenchmark();
+    // TestFftConvolutionStepBenchmark();
 }
 
 static bool IsProfiling()

@@ -36,10 +36,11 @@
 #include "Fft.hpp"
 #include <unordered_map>
 #include <fstream>
+#include <set>
 
 using namespace LsNumerics;
 
-// only generate node IDs in debug mode (very expensive)
+// only generate node IDs in debug mode (very expensive)  (O(n^2)) when enabled.
 #define DEBUG_OPS 0
 #if DEBUG_OPS
 #define SS_ID(x) SS(x)
@@ -47,9 +48,18 @@ using namespace LsNumerics;
 #define SS_ID(x) ""
 #endif
 
+#define RECYCLE_SLOTS 1
+
+std::string MaxString(const std::string &s, size_t maxLen)
+{
+    if (s.length() < maxLen)
+    {
+        return s;
+    }
+    return s.substr(0, maxLen - 3) + "...";
+}
 // When enabled, reduces workingMemory size as much as possible
 // by re-using slots in workingMemory whenever possible.
-#define RECYCLE_SLOTS 1
 namespace LsNumerics::Implementation
 {
     class SlotUsage
@@ -67,7 +77,6 @@ namespace LsNumerics::Implementation
     public:
         SlotUsage()
         {
-
         }
         SlotUsage(size_t planSize)
         {
@@ -119,13 +128,11 @@ namespace LsNumerics::Implementation
                     entry.to = (*addIndex).to;
                     *addIndex = entry;
                     return;
-
                 }
                 if (addIndex->to == addIndex->from && entry.from == addIndex->from)
                 {
                     *addIndex = entry;
-                    return;    
-                
+                    return;
                 }
                 throw std::logic_error("Overlapping range.");
             }
@@ -163,8 +170,9 @@ namespace LsNumerics::Implementation
             }
             if (from > to)
             {
-                if (contains_any(0,to)) return true;
-                return contains_any(from,planSize);
+                if (contains_any(0, to))
+                    return true;
+                return contains_any(from, planSize);
             }
             if (from == to) // a temporary borrow may not overwrite existing data.
             {
@@ -175,8 +183,9 @@ namespace LsNumerics::Implementation
                         return true;
                     }
                 }
-
-            } else {
+            }
+            else
+            {
                 for (auto &entry : used)
                 {
                     if (from < entry.to && to > entry.from)
@@ -187,29 +196,30 @@ namespace LsNumerics::Implementation
             }
             return false;
         }
-        void Print(std::ostream&o) const
+        void Print(std::ostream &o) const
         {
             o << '[';
-            for (const auto&entry: used)
+            for (const auto &entry : used)
             {
                 o << '(' << entry.from << ',' << entry.to << ')';
             }
             o << ']';
         }
-        void Print() const {
+        void Print() const
+        {
             Print(std::cout);
             std::cout << std::endl;
         }
         std::string ToString() const;
-
     };
 
-    std::string SlotUsage::ToString() const {
+    std::string SlotUsage::ToString() const
+    {
         std::stringstream s;
         Print(s);
         return s.str();
     }
-    std::ostream&operator<<(std::ostream&o,const SlotUsage&slotUsage)
+    std::ostream &operator<<(std::ostream &o, const SlotUsage &slotUsage)
     {
         slotUsage.Print(o);
         return o;
@@ -228,7 +238,6 @@ namespace LsNumerics::Implementation
         {
             this->planSize = planSize;
         }
-
         std::unordered_map<fft_index_t, SlotUsage> slotUsages;
 
         fft_index_t Allocate(std::size_t entries, FftOp *op);
@@ -266,16 +275,21 @@ namespace LsNumerics::Implementation
         }
         virtual ~FftOp()
         {
+            for (auto &input : inputs)
+            {
+                input->RemoveOutput(this);
+            }
         }
         virtual std::string Id() const = 0;
 
         virtual void AllocateMemory(IndexAllocator &allocator) = 0;
         virtual void FreeInputReferences(IndexAllocator &allocator) {}
-        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp*op) {}
+        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp *op) {}
         virtual void AddInputReference() {}
 
         void AddInput(op_ptr op)
         {
+            assert(op);
             this->inputs.push_back(op);
             op->outputs.push_back(this);
             fft_index_t inputT = op->GetEarliestAvailable();
@@ -284,6 +298,18 @@ namespace LsNumerics::Implementation
             {
                 earliest = inputT;
             }
+        }
+        void RemoveOutput(FftOp *output)
+        {
+            for (auto i = outputs.begin(); i != outputs.end(); ++i)
+            {
+                if ((*i) == output)
+                {
+                    outputs.erase(i);
+                    return;
+                }
+            }
+            throw std::logic_error("Output list corrupted.");
         }
         bool GetReady() const { return ready; }
         void SetReady(bool value = true) { ready = value; }
@@ -300,30 +326,30 @@ namespace LsNumerics::Implementation
         {
             return outputs;
         }
-        FftOp*GetOutput(size_t index)
+        FftOp *GetOutput(size_t index)
         {
             return outputs[index];
         }
-        const FftOp*GetOutput(size_t index) const
+        const FftOp *GetOutput(size_t index) const
         {
             return outputs[index];
         }
 
-        virtual fft_index_t GetLatestUse() const {
+        virtual fft_index_t GetLatestUse() const
+        {
             fft_index_t result = GetEarliestAvailable();
-            for (auto output: outputs)
+            for (auto output : outputs)
             {
                 fft_index_t t;
                 switch (output->GetOpType())
                 {
-                    case OpType::RightOutput:
-                    case OpType::LeftOutput:
-                        t = output->GetLatestUse();
-                        break;
-                    default:
-                        t = output->GetEarliestAvailable();
-                        break;
-                    
+                case OpType::RightOutput:
+                case OpType::LeftOutput:
+                    t = output->GetLatestUse();
+                    break;
+                default:
+                    t = output->GetEarliestAvailable();
+                    break;
                 }
                 if (t > result)
                 {
@@ -332,6 +358,29 @@ namespace LsNumerics::Implementation
             }
             return result;
         }
+
+        static void GetOps(std::set<FftOp *> &set, FftOp *op)
+        {
+            if (set.contains(op)) return;
+            if (op->GetOpType() == FftOp::OpType::ButterflyOp)
+            {
+                set.insert(op);
+            }
+            for (auto &input : op->GetInputs())
+            {
+                input->GetOps(set, input.get());
+            }
+        }
+        static size_t GetTotalOps(std::vector<FftOp::op_ptr> &outputs)
+        {
+            std::set<FftOp *> set;
+            for (auto &output : outputs)
+            {
+                GetOps(set, output.get());
+            }
+            return set.size();
+        }
+
         virtual fft_index_t GetEarliestAvailable() const { return earliest; }
 
         void SetEarliestAvailable(fft_index_t time)
@@ -385,7 +434,7 @@ namespace LsNumerics::Implementation
     {
     public:
         using base = FftOp;
-        InputOp(std::size_t t)
+        InputOp(std::size_t t, std::size_t planSize)
             : FftOp(OpType::InputOp),
               t((fft_index_t)t)
         {
@@ -399,7 +448,6 @@ namespace LsNumerics::Implementation
 
         virtual void AllocateMemory(IndexAllocator &allocator)
         {
-            SetStorageIndex((fft_index_t)t);
         }
         virtual std::string Id() const
         {
@@ -464,9 +512,11 @@ namespace LsNumerics::Implementation
                 SetStorageIndex(parent->GetStorageIndex());
             }
         }
-        virtual fft_index_t GetLatestUse() const {
-            const auto&outputs = this->GetOutputs();
-            if (outputs.size() == 0) return GetEarliestAvailable();
+        virtual fft_index_t GetLatestUse() const
+        {
+            const auto &outputs = this->GetOutputs();
+            if (outputs.size() == 0)
+                return GetEarliestAvailable();
             return GetOutput(0)->GetEarliestAvailable();
         }
         virtual fft_index_t GetEarliestAvailable() const
@@ -474,7 +524,7 @@ namespace LsNumerics::Implementation
             return GetInput(0)->GetEarliestAvailable();
         }
 
-        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp*op)
+        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp *op)
         {
             GetInput(0)->FreeStorageReference(allocator, op);
         }
@@ -519,16 +569,17 @@ namespace LsNumerics::Implementation
         {
             return GetInput(0)->GetEarliestAvailable();
         }
-        virtual fft_index_t GetLatestUse() const {
-            const auto&outputs = GetOutputs();
-            if (outputs.size() == 0)  // eg an output node.
+        virtual fft_index_t GetLatestUse() const
+        {
+            const auto &outputs = GetOutputs();
+            if (outputs.size() == 0) // eg an output node.
             {
                 return this->GetEarliestAvailable();
-            }   
+            }
             return GetOutput(0)->GetEarliestAvailable();
         }
 
-        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp*op)
+        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp *op)
         {
             GetInput(0)->FreeStorageReference(allocator, op);
         }
@@ -572,7 +623,7 @@ namespace LsNumerics::Implementation
             GetInput(0)->FreeStorageReference(allocator, this);
             GetInput(1)->FreeStorageReference(allocator, this);
         }
-        virtual void FreeStorageReference(IndexAllocator &allocator,FftOp*op)
+        virtual void FreeStorageReference(IndexAllocator &allocator, FftOp *op)
         {
             assert(references > 0);
             if (--references == 0)
@@ -587,6 +638,7 @@ namespace LsNumerics::Implementation
 
     void IndexAllocator::Free(fft_index_t index, std::size_t size, FftOp *op)
     {
+#if RECYCLE_SLOTS
         if (size == 2 && op != nullptr)
         {
             fft_index_t currentTime = op->GetEarliestAvailable();
@@ -594,10 +646,10 @@ namespace LsNumerics::Implementation
             auto &usage = slotUsages[index];
 
             // std::cout << "Free: " << index << "  from: " << currentTime << " to: " << expiryTime << " " << usage << std::endl;
-            usage.SetPlanSize(this->planSize/2);
-            usage.Add(currentTime,expiryTime);
+            usage.SetPlanSize(this->planSize);
+            usage.Add(currentTime, expiryTime);
 
-            for (auto &i: freeIndices)
+            for (auto &i : freeIndices)
             {
                 if (i.index == index)
                 {
@@ -606,6 +658,9 @@ namespace LsNumerics::Implementation
             }
             freeIndices.push_back(FreeIndexEntry{index, op->GetEarliestAvailable()});
         }
+#else
+        // no recycling of slots.
+#endif
     }
     fft_index_t IndexAllocator::Allocate(std::size_t entries, FftOp *op)
     {
@@ -621,13 +676,16 @@ namespace LsNumerics::Implementation
             {
                 auto &entry = (*i);
                 auto &usage = slotUsages[entry.index];
-                usage.SetPlanSize(this->planSize/2);
-                if (!usage.contains_any(currentTime,expiryTime))
+                usage.SetPlanSize(this->planSize);
+                if (!usage.contains_any(currentTime, expiryTime))
                 {
                     auto result = entry.index;
-                    // std::cout << "Allocate: time: " << currentTime << " index: " << entry.index 
-                    //     << " [" << currentTime << "," << expiryTime << ")" << " " << usage << std::endl;
-                    usage.contains_any(currentTime,expiryTime);
+                    // std::cout << "Allocate: time: " << currentTime << " index: " << entry.index
+                    //     << " [" << currentTime << "," << expiryTime << ")" << " "
+                    //     << " [" << (currentTime % this->planSize) << "," << (expiryTime % this->planSize) << ")" << " "
+                    //     << usage << std::endl;
+                    // std::cout << "  " << MaxString(op->Id(),60) << std::endl;
+                    usage.contains_any(currentTime, expiryTime);
                     freeIndices.erase(i);
                     recycledInputs++;
                     return result;
@@ -636,7 +694,7 @@ namespace LsNumerics::Implementation
         }
 #endif
         fft_index_t result = nextIndex;
-        
+
         nextIndex += entries;
         return result;
     }
@@ -702,12 +760,14 @@ namespace LsNumerics::Implementation
     public:
         void MakeFft(std::size_t size, FftDirection direction)
         {
+            this->planSize = size;
             std::vector<FftOp::op_ptr> orderedInputs = MakeInputs(size);
             this->inputs = orderedInputs;
             this->outputs = MakeFft(orderedInputs, direction);
 
             this->maxOpsPerCycle = (Log2(inputs.size())) / 2;    // the absolute minimum.
             this->maxOpsPerCycle = this->maxOpsPerCycle * 4 / 3; // provide some slack.
+            this->startingSlot = 0;
         }
 
         FftOp::op_ptr MakeConstant(const fft_complex_t &value)
@@ -727,7 +787,7 @@ namespace LsNumerics::Implementation
             for (std::size_t i = 0; i < size; ++i)
             {
 
-                FftOp::op_ptr in{new LsNumerics::Implementation::InputOp(i)};
+                FftOp::op_ptr in{new LsNumerics::Implementation::InputOp(i, this->planSize)};
 
                 orderedInputs.emplace_back(std::move(in));
             }
@@ -773,13 +833,40 @@ namespace LsNumerics::Implementation
             }
             return inputs;
         }
+
+        std::vector<FftOp::op_ptr> MakeHalfConvolutionSection(
+            std::vector<FftOp::op_ptr> &inputs,
+            std::vector<fft_complex_t> &fftConvolutionData)
+        {
+            std::vector<FftOp::op_ptr> inverseInputs = MakeFft(inputs, FftDirection::Forward);
+
+            auto opZero = MakeConstant(0);
+            // use a hacked butterfly op  multiply with Fft of impusle data.
+            std::vector<FftOp::op_ptr> convolvedInputs;
+
+            for (size_t i = 0; i < inverseInputs.size(); ++i)
+            {
+                auto m = fftConvolutionData[i];
+                FftOp::op_ptr convolveOp{
+                    new ButterflyOp(opZero, inverseInputs[i], MakeConstant(m))};
+                convolveOp = std::make_shared<LeftOutputOp>(convolveOp);
+                convolvedInputs.push_back(convolveOp);
+            }
+
+            auto result = MakeFft(convolvedInputs, FftDirection::Reverse);
+            // discard the first half, use the second half.
+            return std::vector<FftOp::op_ptr>(result.begin(), result.begin() + +result.size() / 2);
+        }
+
         plan_ptr MakeConvolutionSection(std::size_t size, size_t offset, std::vector<float> &data)
         {
-            std::vector<FftOp::op_ptr> orderedInputs = MakeInputs(size * 2);
+            this->planSize = size * 2;
+            std::vector<FftOp::op_ptr> orderedInputs = MakeInputs(size * 3);
             this->inputs = orderedInputs;
+            const float norm = 1; // (float)(std::sqrt(2 * size));
 
-            std::vector<fft_complex_t> fftData;
-            fftData.resize(size * 2);
+            std::vector<fft_complex_t> fftConvolutionData;
+            fftConvolutionData.resize(size * 2);
             {
                 if (offset >= data.size())
                 {
@@ -794,131 +881,51 @@ namespace LsNumerics::Implementation
                 }
                 for (size_t i = 0; i < len; ++i)
                 {
-                    buffer[i + size] = data[i + offset];
+                    buffer[i + size] = data[i + offset] * norm;
                 }
-                Fft<fft_float_t> normalFft(size * 2);
-                normalFft.forward(buffer, fftData);
+                Fft<double> normalFft(size * 2);
+                normalFft.forward(buffer, fftConvolutionData);
             }
+            std::vector<FftOp::op_ptr> firstInputs{orderedInputs.begin(), orderedInputs.begin() + 2 * size};
+            std::vector<FftOp::op_ptr> firstSection = MakeHalfConvolutionSection(firstInputs, fftConvolutionData);
 
-            std::vector<FftOp::op_ptr> inverseInputs = MakeFft(orderedInputs, FftDirection::Forward);
+            std::vector<FftOp::op_ptr> secondInputs = {orderedInputs.begin() + size, orderedInputs.end()};
+            std::vector<FftOp::op_ptr> secondSection = MakeHalfConvolutionSection(secondInputs, fftConvolutionData);
 
-            auto opZero = MakeConstant(0);
-            // use a hacked butterfly op  multiply with Fft of impusle data.
-            std::vector<FftOp::op_ptr> convolvedInputs;
+            this->maxOpsPerCycle = (Log2(size * 2)) / 2; // fft is 2 x size.
+            this->maxOpsPerCycle += 2;                   // for convolve butterflies.
+            this->maxOpsPerCycle *= 2;                   // One FFT, one inverse FFT.
 
-            for (size_t i = 0; i < inverseInputs.size(); ++i)
-            {
-                auto m = fftData[i];
-                FftOp::op_ptr convolveOp{
-                    new ButterflyOp(opZero, inverseInputs[i], MakeConstant(m))};
-                convolveOp = std::make_shared<LeftOutputOp>(convolveOp);
-                convolvedInputs.push_back(convolveOp);
-            }
-
-            this->outputs = MakeFft(convolvedInputs, FftDirection::Reverse);
-
-            this->maxOpsPerCycle = (Log2(inputs.size())) / 2;    // the absolute minimum.
-            this->maxOpsPerCycle *= 2;                           // because we're doing 2 FFts.
-            this->maxOpsPerCycle += 1;                           // for convolve butterflies.
             this->maxOpsPerCycle = this->maxOpsPerCycle * 4 / 3; // provide some slack.
 
+            // this->maxOpsPerCycle = 1024;
+
+            std::vector<FftOp::op_ptr> outputs;
+            outputs.reserve(firstSection.size() + secondSection.size());
+            outputs.insert(outputs.end(), firstSection.begin(), firstSection.end());
+            outputs.insert(outputs.end(), secondSection.begin(), secondSection.end());
+
+            // auto zero = MakeConstant(0);
+            // for (size_t i = 0; i < secondSection.size(); ++i)
+            // {
+            //     outputs.push_back(zero);
+            // }
+
+            this->outputs = std::move(outputs);
+            this->startingSlot = size;
+
             auto plan = Build();
-            // make the plan return zero for the first half of the result.
-            for (size_t i = 0; i < size; ++i)
-            {
-                plan->ZeroOutput(i + size, opZero->GetStorageIndex());
-            }
+
+            plan->CheckForOverwrites();
             return plan;
         }
 
     public:
-        plan_ptr Build()
-        {
-            ScheduleOps();
-            // PrintOpCounts(_schedule);
-            // PrintDelays();
-            AllocateMemory();
-            CheckForOverwrites();
-
-            std::size_t maxDelay = CalculateMaxDelay();
-            std::size_t size = inputs.size();
-            std::size_t workingMemorySize = this->workingMemorySize;
-            std::vector<PlanStep> ops;
-
-            for (std::size_t i = 0; i < inputs.size(); ++i)
-            {
-                PlanStep planStep;
-                planStep.inputIndex = (fft_index_t)i;
-                size_t outputIndex = (size + i - maxDelay) % size;
-                planStep.outputIndex = outputs[outputIndex]->GetStorageIndex();
-
-                std::size_t midPoint = _schedule.size() / 2;
-                for (auto op : _schedule[i + midPoint])
-                {
-                    if (op->GetOpType() == FftOp::OpType::ButterflyOp)
-                    {
-                        planStep.ops.push_back(CompileOp((ButterflyOp *)(op)));
-                    }
-                }
-                for (auto op : _schedule[i])
-                {
-                    if (op->GetOpType() == FftOp::OpType::ButterflyOp)
-                    {
-                        planStep.ops.push_back(CompileOp((ButterflyOp *)(op)));
-                    }
-                }
-                ops.push_back(std::move(planStep));
-            }
-            std::vector<FftPlan::ConstantEntry> compiledConstants;
-            for (auto &constant : constants)
-            {
-                ConstantOp *op = (ConstantOp *)(constant.get());
-                compiledConstants.push_back(
-                    FftPlan::ConstantEntry{op->GetStorageIndex(), op->GetValue()});
-            }
-            return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), std::move(compiledConstants));
-        }
+        size_t startingSlot;
+        plan_ptr Build();
 
         size_t Size() const { return inputs.size(); }
-        void CheckForOverwrites()
-        {
-            // If maxDelay is more than 150% of Size(),
-            // outut values get overrwritten by the final butterfly.
-            // if (CalculateMaxDelay() >= Size() *3/ 2)
-            // {
-            //     throw std::logic_error("Can't schedule.");
-            // }
-            // problem: an op result for the next FFT frame overwrites data required by an op in the
-            // currrent cycle.
-            // this occurs if the schedule slot for an op minus the schedule slotof it's inputs is greater than N.
-            for (auto &ops : _schedule)
-            {
-                for (auto op : ops)
-                {
-                    fft_index_t slot = op->GetEarliestAvailable();
 
-                    fft_index_t dependentSlot = op->GetInput(0)->GetEarliestAvailable();
-                    if (dependentSlot == CONSTANT_INDEX)
-                    {
-                        dependentSlot = op->GetInput(1)->GetEarliestAvailable();
-                    }
-                    else
-                    {
-                        fft_index_t t = op->GetInput(1)->GetEarliestAvailable();
-                        if (t != CONSTANT_INDEX && t < dependentSlot)
-                        {
-                            dependentSlot = t;
-                        }
-                    }
-                    // std::cout << "(" << slot - dependentSlot << ") ";
-                    if (slot - dependentSlot > (fft_index_t)Size())
-                    {
-                        throw std::logic_error("Can't schedule.");
-                    }
-                }
-            }
-            // std::cout << std::endl;
-        }
         static CompiledButterflyOp CompileOp(ButterflyOp *op)
         {
             auto in0 = op->GetInput(0)->GetStorageIndex();
@@ -934,17 +941,25 @@ namespace LsNumerics::Implementation
 
         std::size_t CalculateMaxDelay()
         {
-            std::size_t maxDelay = 0;
+            std::ptrdiff_t maxDelay = 0;
+
             for (std::size_t i = 0; i < outputs.size(); ++i)
             {
-                std::size_t delay = outputs[i]->GetEarliestAvailable() - i;
-                if (delay > maxDelay)
-                    maxDelay = delay;
+                auto available = outputs[i]->GetEarliestAvailable();
+                if (available >= 0)
+                {
+                    std::ptrdiff_t delay = available - i;
+                    if (delay > maxDelay)
+                        maxDelay = delay;
+                }
             }
-            return maxDelay;
+            return (std::size_t)maxDelay;
+            ;
         }
 
     private:
+        size_t planSize;
+
         struct ComplexHash
         {
             size_t operator()(const fft_complex_t &value) const
@@ -960,19 +975,15 @@ namespace LsNumerics::Implementation
 
         void AllocateMemory()
         {
-            IndexAllocator allocator(_schedule.size());
+            IndexAllocator allocator(this->planSize);
 
             // pre-allocate indices for inputs.
             allocator.Allocate(inputs.size(), nullptr);
             // don't recycle memory for outputs.
+            // TODO: We *could* recycle output slots to reduce cache use.
             for (auto &output : outputs)
             {
                 output->AddInputReference();
-            }
-            // allocate constants.
-            for (auto &op : constants)
-            {
-                op->AllocateMemory(allocator);
             }
             // LeftOutputOp and RightOutputOp instances aren't visible in the schedule.
             // Call AllocateMemory() to copy the storage indices from the referenced
@@ -982,9 +993,16 @@ namespace LsNumerics::Implementation
             {
                 output->AllocateMemory(allocator);
             }
-            for (std::size_t i = 0; i < _schedule.size(); ++i)
+
+            // allocate constants.
+            for (auto &op : constants)
             {
-                for (auto &op : _schedule[i])
+                op->AllocateMemory(allocator);
+            }
+
+            for (std::size_t i = 0; i < schedule.size(); ++i)
+            {
+                for (auto &op : schedule[i])
                 {
                     op->FreeInputReferences(allocator);
                     op->AllocateMemory(allocator);
@@ -1042,31 +1060,39 @@ namespace LsNumerics::Implementation
             }
         } ScheduleOpsComparator;
 
-        schedule_t _schedule;
+        schedule_t schedule;
         std::size_t maxOpsPerCycle = 2;
         std::size_t workingMemorySize = (std::size_t)-1;
 
         std::size_t GetOpCount(std::size_t slot)
         {
-            std::size_t midPoint = _schedule.size() / 2;
-            slot = slot % midPoint;
-            return _schedule[slot].size() + _schedule[slot + midPoint].size();
+            size_t result = 0;
+
+            for (size_t i = slot % this->planSize; i < schedule.size(); i += planSize)
+            {
+                result += schedule[i].size();
+            }
+            return result;
         }
         std::size_t ScheduleOp(std::size_t slot, FftOp *op)
         {
-            std::size_t initialSlot = slot;
-            std::size_t schedSize = _schedule.size();
+            size_t slotsTried = 0;
             while (true)
             {
                 std::size_t currentOps = GetOpCount(slot);
                 if (currentOps < maxOpsPerCycle)
                 {
-                    _schedule[slot % schedSize].push_back(op);
+                    if (slot >= schedule.size())
+                    {
+                        schedule.resize(schedule.size() + this->planSize);
+                    }
+                    schedule[slot].push_back(op);
                     op->SetEarliestAvailable(slot);
                     return slot;
                 }
                 ++slot;
-                if (slot % schedSize == initialSlot % schedSize)
+                ++slotsTried;
+                if (slotsTried == planSize)
                 {
                     throw std::logic_error("Fft scheduling failed.");
                 }
@@ -1075,9 +1101,10 @@ namespace LsNumerics::Implementation
         void ScheduleOps()
         {
             // this->maxOpsPerCycle = this->maxOpsPerCycle*this->maxOpsPerCycle+this->maxOpsPerCycle;
-
-            _schedule.resize(0);
-            _schedule.resize(inputs.size() * 2);
+            assert(this->planSize == this->outputs.size());
+            schedule.resize(0);
+            size_t numberOfOps = 0;
+            schedule.resize(this->planSize);
             for (std::size_t nOutput = 0; nOutput < this->outputs.size(); ++nOutput)
             {
                 std::vector<FftOp *> ops;
@@ -1094,10 +1121,12 @@ namespace LsNumerics::Implementation
                     {
                         slot = op->GetEarliestAvailable();
                     }
+                    ++numberOfOps;
                     slot = ScheduleOp(slot, op);
                     op->SetEarliestAvailable(slot);
                 }
             }
+            (void)numberOfOps;
         }
         void PrintDependencyMap(schedule_t &schedule)
         {
@@ -1160,6 +1189,77 @@ namespace LsNumerics::Implementation
         std::vector<FftOp::op_ptr> inputs;
         std::vector<FftOp::op_ptr> outputs;
     };
+
+    plan_ptr Builder::Build()
+    {
+        this->planSize = outputs.size();
+        size_t opCount = FftOp::GetTotalOps(outputs);
+        this->maxOpsPerCycle = (opCount + planSize - 1) / planSize;
+        this->maxOpsPerCycle = maxOpsPerCycle * 3 / 2; // some slack.
+        
+        ScheduleOps();
+        // PrintOpCounts(schedule);
+        // PrintDelays();
+        AllocateMemory();
+
+        std::size_t maxDelay = CalculateMaxDelay();
+        std::size_t planSize = this->planSize;
+        std::size_t workingMemorySize = this->workingMemorySize;
+        std::vector<PlanStep> ops;
+        fft_index_t discardSlot = workingMemorySize;
+        ++workingMemorySize;
+
+        std::size_t numberOfOps = 0;
+        for (std::size_t i = 0; i < planSize; ++i)
+        {
+            PlanStep planStep;
+            planStep.inputIndex = (fft_index_t)i;
+            if (inputs.size() > planSize)
+            {
+                assert(inputs.size() <= planSize * 2); // this can be fixed, but not currently implemented.
+                if (planStep.inputIndex + planSize < inputs.size())
+                {
+                    planStep.inputIndex2 = planStep.inputIndex + planSize;
+                }
+                else
+                {
+                    planStep.inputIndex2 = discardSlot;
+                }
+            }
+            else
+            {
+                planStep.inputIndex2 = -1;
+            }
+            size_t outputIndex = (planSize + i - maxDelay) % planSize;
+            planStep.outputIndex = outputs[outputIndex]->GetStorageIndex();
+
+            // schedule %size op latest first.
+            for (ptrdiff_t k = schedule.size() - planSize + i; k >= 0; k -= planSize)
+            // for (std::size_t k  = i; k < schedule.size(); k += planSize)
+            {
+                for (auto op : schedule[k])
+                {
+                    if (op->GetOpType() == FftOp::OpType::ButterflyOp)
+                    {
+                        ++numberOfOps;
+                        planStep.ops.push_back(CompileOp((ButterflyOp *)(op)));
+                    }
+                }
+            }
+            ops.push_back(std::move(planStep));
+        }
+        (void)numberOfOps; // suppress unused warning.
+
+        std::vector<FftPlan::ConstantEntry> compiledConstants;
+        for (auto &constant : constants)
+        {
+            ConstantOp *op = (ConstantOp *)(constant.get());
+            compiledConstants.push_back(
+                FftPlan::ConstantEntry{op->GetStorageIndex(), op->GetValue()});
+        }
+        return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), std::move(compiledConstants),this->startingSlot);
+    }
+
 }
 
 std::unordered_map<BalancedFft::PlanKey, BalancedFft::plan_ptr, BalancedFft::PlanKeyHash> BalancedFft::planCache;
@@ -1203,7 +1303,7 @@ BalancedConvolutionSection::BalancedConvolutionSection(std::size_t size, size_t 
 
 void Implementation::FftPlan::PrintPlan()
 {
-    PrintPlan(std::cout);
+    PrintPlan(std::cout,true);
 }
 void Implementation::FftPlan::PrintPlan(const std::string &fileName)
 {
@@ -1212,9 +1312,9 @@ void Implementation::FftPlan::PrintPlan(const std::string &fileName)
     {
         throw std::logic_error("Can't open file for output.");
     }
-    PrintPlan(o);
+    PrintPlan(o,false);
 }
-void Implementation::FftPlan::PrintPlan(std::ostream &output)
+void Implementation::FftPlan::PrintPlan(std::ostream &output,bool trimIds)
 {
     using namespace std;
     output << "  Size: " << this->Size() << endl;
@@ -1225,6 +1325,7 @@ void Implementation::FftPlan::PrintPlan(std::ostream &output)
         PlanStep &step = steps[i];
         output << "    " << i << ": [" << endl;
         output << "      input: " << step.inputIndex << endl;
+        output << "      input2: " << step.inputIndex2 << endl;
         output << "      output: " << step.outputIndex << endl;
         output << "      ops: [" << endl;
         for (auto &op : step.ops)
@@ -1234,7 +1335,12 @@ void Implementation::FftPlan::PrintPlan(std::ostream &output)
                    << "," << op.in1
                    << "->" << op.out;
 #if DEBUG_OPS
-            output << "  " << op.id.substr(0, std::min(op.id.length(), size_t(50)));
+            output << "  " << op.id.substr(0, std::min(op.id.length(), size_t(150)));
+            // if (trimIds)
+            // {
+            // } else {
+            //     output << "  " << op.id;
+            // }
 #endif
             output << endl;
         }
@@ -1247,6 +1353,10 @@ void Implementation::FftPlan::PrintPlan(std::ostream &output)
 void BalancedFft::SetPlan(plan_ptr plan)
 {
     this->plan = plan;
+    Reset();
+}
+void BalancedFft::Reset()
+{
     this->workingMemory.resize(0);
     this->workingMemory.resize(plan->StorageSize());
     plan->InitializeConstants(this->workingMemory);
@@ -1255,16 +1365,15 @@ void BalancedFft::SetPlan(plan_ptr plan)
 void BalancedConvolutionSection::SetPlan(plan_ptr plan)
 {
     this->plan = plan;
+    Reset();
+}
+void BalancedConvolutionSection::Reset()
+{
+    this->workingMemory.resize(0);
+    this->workingMemory.resize(plan->StorageSize());
+    plan->InitializeConstants(this->workingMemory);
 
-    this->evenWorkingMemory.resize(0);
-    this->evenWorkingMemory.resize(plan->StorageSize());
-    plan->InitializeConstants(this->evenWorkingMemory);
-
-    this->oddWorkingMemory.resize(0);
-    this->oddWorkingMemory.resize(plan->StorageSize());
-    plan->InitializeConstants(this->oddWorkingMemory);
-    evenPlanIndex = plan->Size() / 2;
-    oddPlanIndex = 0;
+    planIndex = plan->StartingIndex();
 }
 
 struct SectionDelayCacheEntry
@@ -1381,88 +1490,169 @@ void BalancedFft::PrintPlan()
 {
     this->plan->PrintPlan();
 }
-#define TEST_ASSERT(x) \
-{\
-    if (!(x))\
-    {\
-        throw std::logic_error(SS("Assert failed: " << #x));\
-    }\
-}
-
+#define TEST_ASSERT(x)                                           \
+    {                                                            \
+        if (!(x))                                                \
+        {                                                        \
+            throw std::logic_error(SS("Assert failed: " << #x)); \
+        }                                                        \
+    }
 
 void Implementation::SlotUsageTest()
 {
     {
         SlotUsage slotUsage(256);
-        slotUsage.Add(0,10);
+        slotUsage.Add(0, 10);
         TEST_ASSERT(slotUsage.Size() == 1);
-        slotUsage.Add(11,12);
+        slotUsage.Add(11, 12);
         TEST_ASSERT(slotUsage.Size() == 2);
 
         TEST_ASSERT(slotUsage.contains(11));
         TEST_ASSERT(!slotUsage.contains(12));
-        TEST_ASSERT(!slotUsage.contains_any(10,11));
-        TEST_ASSERT(!slotUsage.contains_any(10,10));
-        TEST_ASSERT(slotUsage.contains_any(11,11));
+        TEST_ASSERT(!slotUsage.contains_any(10, 11));
+        TEST_ASSERT(!slotUsage.contains_any(10, 10));
+        TEST_ASSERT(slotUsage.contains_any(11, 11));
 
-        TEST_ASSERT(slotUsage.contains_any(11,13));
-        TEST_ASSERT(slotUsage.contains_any(11,11));
-        TEST_ASSERT(!slotUsage.contains_any(12,13));
-        TEST_ASSERT(!slotUsage.contains_any(12,13));
-        TEST_ASSERT(!slotUsage.contains_any(12,12));
-
+        TEST_ASSERT(slotUsage.contains_any(11, 13));
+        TEST_ASSERT(slotUsage.contains_any(11, 11));
+        TEST_ASSERT(!slotUsage.contains_any(12, 13));
+        TEST_ASSERT(!slotUsage.contains_any(12, 13));
+        TEST_ASSERT(!slotUsage.contains_any(12, 12));
     }
     {
         SlotUsage slotUsage(256);
-        slotUsage.Add(255,256+10);
+        slotUsage.Add(255, 256 + 10);
         TEST_ASSERT(slotUsage.Size() == 2);
-        slotUsage.Add(10,10);
+        slotUsage.Add(10, 10);
         TEST_ASSERT(slotUsage.Size() == 2);
 
-        slotUsage.Add(10,12);
+        slotUsage.Add(10, 12);
         TEST_ASSERT(slotUsage.Size() == 2);
 
         TEST_ASSERT(slotUsage.contains(9));
         TEST_ASSERT(slotUsage.contains(10));
         TEST_ASSERT(!slotUsage.contains(12));
-        TEST_ASSERT(slotUsage.contains_any(10,11));
-        TEST_ASSERT(slotUsage.contains_any(10,10));
-        TEST_ASSERT(slotUsage.contains_any(11,15));
+        TEST_ASSERT(slotUsage.contains_any(10, 11));
+        TEST_ASSERT(slotUsage.contains_any(10, 10));
+        TEST_ASSERT(slotUsage.contains_any(11, 15));
 
-        TEST_ASSERT(slotUsage.contains_any(11,13));
-        TEST_ASSERT(slotUsage.contains_any(11,11));
-        TEST_ASSERT(!slotUsage.contains_any(12,13));
+        TEST_ASSERT(slotUsage.contains_any(11, 13));
+        TEST_ASSERT(slotUsage.contains_any(11, 11));
+        TEST_ASSERT(!slotUsage.contains_any(12, 13));
     }
     {
         SlotUsage slotUsage(256);
-        slotUsage.Add(0,10);
+        slotUsage.Add(0, 10);
         TEST_ASSERT(slotUsage.Size() == 1);
-        slotUsage.Add(12,12);
+        slotUsage.Add(12, 12);
         TEST_ASSERT(slotUsage.Size() == 2);
 
         TEST_ASSERT(slotUsage.contains(9));
         TEST_ASSERT(!slotUsage.contains(10));
         TEST_ASSERT(!slotUsage.contains(12));
-        TEST_ASSERT(!slotUsage.contains_any(11,12)); // yes we can re-use the slot.
+        TEST_ASSERT(!slotUsage.contains_any(11, 12)); // yes we can re-use the slot.
 
-        TEST_ASSERT(!slotUsage.contains_any(12,13)); // yes we can re-use the slot.
-        TEST_ASSERT(!slotUsage.contains_any(13,14)); // yes we can re-use the slot.
-        TEST_ASSERT(slotUsage.contains_any(11,13));
-        TEST_ASSERT(!slotUsage.contains_any(12,12));
+        TEST_ASSERT(!slotUsage.contains_any(12, 13)); // yes we can re-use the slot.
+        TEST_ASSERT(!slotUsage.contains_any(13, 14)); // yes we can re-use the slot.
+        TEST_ASSERT(slotUsage.contains_any(11, 13));
+        TEST_ASSERT(!slotUsage.contains_any(12, 12));
 
-        TEST_ASSERT(!slotUsage.contains_any(13,13));
+        TEST_ASSERT(!slotUsage.contains_any(13, 13));
 
-        slotUsage.Add(13,13);
+        slotUsage.Add(13, 13);
         TEST_ASSERT(slotUsage.Size() == 3);
-        slotUsage.Add(13,14);
+        slotUsage.Add(13, 14);
         TEST_ASSERT(slotUsage.Size() == 3);
 
-        slotUsage.Add(17,17);
+        slotUsage.Add(17, 17);
         TEST_ASSERT(slotUsage.Size() == 4);
 
-        slotUsage.Add(16,17);
+        slotUsage.Add(16, 17);
         TEST_ASSERT(slotUsage.Size() == 4);
+    }
+}
 
+void Implementation::FftPlan::CheckForOverwrites()
+{
+    // simulate execution of the plan, but trace the input generation,
+    // ensuring that ops never operate on data from two different generations
+    // and that outputs are of the correct generation.
+
+    std::vector<int> workingGenerations;
+    workingGenerations.resize(this->storageSize);
+
+    constexpr int UNINITIALIZED_GENERATION = -1;
+    constexpr int CONSTANT_GENERATION = -2;
+
+    for (size_t i = 0; i < workingGenerations.size(); ++i)
+    {
+        workingGenerations[i] = UNINITIALIZED_GENERATION; // uninitialized.
+    }
+    for (const auto &constant : this->constants)
+    {
+        workingGenerations[constant.index] = CONSTANT_GENERATION;
     }
 
+    int expectedOutputGeneration = -1;
+    int outputDelay = Delay();
+    size_t stepIndex = 0;
+
+    for (int generation = 0; generation < 20; ++generation)
+    {
+        for (size_t i = 0; i < steps.size(); ++i)
+        {
+            auto &step = steps[stepIndex];
+
+            if (step.inputIndex2 != -1)
+            {
+                workingGenerations[step.inputIndex2] = workingGenerations[step.inputIndex];
+            }
+            workingGenerations[step.inputIndex] = generation;
+
+            for (auto &op : step.ops)
+            {
+                auto inGenerationL = workingGenerations[op.in0];
+                auto inGenerationR = workingGenerations[op.in1];
+                int outGeneration;
+                if (inGenerationL < 0)
+                {
+                    outGeneration = inGenerationR;
+                }
+                else if (inGenerationR < 0)
+                {
+                    outGeneration = inGenerationL;
+                }
+                else
+                {
+                    assert(inGenerationL == inGenerationR);
+                    outGeneration = inGenerationL;
+                }
+                workingGenerations[op.out] = outGeneration;
+                workingGenerations[op.out + 1] = outGeneration;
+            }
+            int outputGeneration = workingGenerations[step.outputIndex];
+            if (outputGeneration != CONSTANT_GENERATION)
+            {
+                if (outputGeneration != expectedOutputGeneration)
+                {
+                    std::cout << "Output is wrong generation."
+                              << "  generation: " << generation << " step: " << (&step - (&steps[0]))
+                              << " expected: " << expectedOutputGeneration
+                              << " actual: " << outputGeneration
+                              << std::endl;
+                }
+            }
+            if (--outputDelay == 0)
+            {
+                ++expectedOutputGeneration;
+                outputDelay = this->steps.size();
+            }
+
+            ++stepIndex;
+            if (stepIndex == steps.size())
+            {
+                stepIndex = 0;
+            }
+        }
+    }
 }

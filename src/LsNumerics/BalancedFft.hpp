@@ -60,7 +60,7 @@ namespace LsNumerics
     namespace Implementation
     {
         void SlotUsageTest();
-        
+
         class CompiledButterflyOp
         {
         public:
@@ -89,6 +89,15 @@ namespace LsNumerics
             using fft_float_t = double;
             using fft_complex_t = std::complex<double>;
 
+            double Tick(double value, std::vector<fft_complex_t> &workingMemory)
+            {
+                workingMemory[inputIndex] = value;
+                for (std::size_t i = 0; i < ops.size(); ++i)
+                {
+                    ops[i].Tick(workingMemory);
+                }
+                return workingMemory[this->outputIndex].real();
+            }
             fft_complex_t Tick(fft_complex_t value, std::vector<fft_complex_t> &workingMemory)
             {
                 workingMemory[inputIndex] = value;
@@ -99,6 +108,7 @@ namespace LsNumerics
                 return workingMemory[this->outputIndex];
             }
             fft_index_t inputIndex;
+            fft_index_t inputIndex2;
             fft_index_t outputIndex;
             std::vector<CompiledButterflyOp> ops;
         };
@@ -110,22 +120,42 @@ namespace LsNumerics
                 fft_index_t index;
                 fft_complex_t value;
             };
-            FftPlan(std::size_t maxDelay, std::size_t storageSize, std::vector<PlanStep> &&ops, std::vector<ConstantEntry> &&constants)
+            FftPlan(
+                std::size_t maxDelay, 
+                std::size_t storageSize, 
+                std::vector<PlanStep> &&ops,
+                 std::vector<ConstantEntry> &&constants, 
+                 size_t startingIndex
+            )
                 : norm(fft_float_t(1 / std::sqrt((double)ops.size()))),
                   maxDelay(maxDelay),
                   storageSize(storageSize),
                   steps(std::move(ops)),
-                  constants(std::move(constants))
+                  constants(std::move(constants)),
+                  startingIndex(startingIndex)
             {
             }
             std::size_t Delay() const { return maxDelay; }
             std::size_t Size() const { return steps.size(); }
             std::size_t StorageSize() const { return storageSize; }
             fft_float_t Norm() const { return norm; }
+            std::size_t StartingIndex() const { return startingIndex; }
 
+            double Tick(std::size_t step, double value, std::vector<fft_complex_t> &workingMemory)
+            {
+                return steps[step].Tick(value*norm, workingMemory);
+            }
             fft_complex_t Tick(std::size_t step, fft_complex_t value, std::vector<fft_complex_t> &workingMemory)
             {
                 return steps[step].Tick(value*norm, workingMemory);
+            }
+            float ConvolutionTick(std::size_t step, float value, std::vector<fft_complex_t> &workingMemory)
+            {
+                double t = (value*norm);
+                auto &planStep = steps[step];
+                workingMemory[planStep.inputIndex2] = t; // provide data for the extra inputs.
+                float result =  (float)planStep.Tick(t, workingMemory);
+                return result;
             }
             void InitializeConstants(std::vector<fft_complex_t> &workingMemory)
             {
@@ -135,8 +165,9 @@ namespace LsNumerics
                 }
             }
             void PrintPlan();
-            void PrintPlan(std::ostream&stream);
+            void PrintPlan(std::ostream&stream,bool trimIds);
             void PrintPlan(const std::string&filename);
+            void CheckForOverwrites();
             
             void ZeroOutput(size_t output,fft_index_t storageIndex)
             {
@@ -149,6 +180,7 @@ namespace LsNumerics
             std::size_t storageSize;
             std::vector<PlanStep> steps;
             std::vector<ConstantEntry> constants;
+            std::size_t startingIndex;
         };
         using plan_ptr = std::shared_ptr<FftPlan>;
 
@@ -173,7 +205,6 @@ namespace LsNumerics
     public:
         size_t Size() const { return plan->Size(); }
         size_t Delay() const { return plan->Delay(); }
-
 
         fft_complex_t Tick(fft_complex_t value)
         {
@@ -205,6 +236,7 @@ namespace LsNumerics
                 outputs[i] = Tick(inputs[i]).real();
             }
         }
+        void Reset();
     private:
         void SetPlan(plan_ptr plan);
 
@@ -271,18 +303,13 @@ namespace LsNumerics
         }
         float Tick(float value)
         {
-            auto evenResult = plan->Tick(evenPlanIndex, value, evenWorkingMemory).real();
-            if (++evenPlanIndex >= plan->Size())
+            auto result = plan->ConvolutionTick(planIndex, value, workingMemory);
+            if (++planIndex >= plan->Size())
             {
-                evenPlanIndex = 0;
-            }
-            auto oddResult = plan->Tick(oddPlanIndex,value,oddWorkingMemory).real();
-            if (++oddPlanIndex >= plan->Size())
-            {
-                oddPlanIndex = 0;
+                planIndex = 0;
             }
 
-            return (float)(evenResult+oddResult);
+            return (float)(result);
         }
         void Tick(std::size_t frames, float *RESTRICT inputs, float *RESTRICT outputs)
         {
@@ -292,14 +319,13 @@ namespace LsNumerics
             }
         }
 
+        void Reset();
     private:
         void SetPlan(plan_ptr plan);
 
-        std::vector<fft_complex_t> evenWorkingMemory;
-        std::vector<fft_complex_t> oddWorkingMemory;
+        std::vector<fft_complex_t> workingMemory;
         plan_ptr plan;
-        size_t evenPlanIndex = 0;
-        size_t oddPlanIndex = 0;
+        size_t planIndex = 0;
 
         static std::unordered_map<std::size_t, plan_ptr> planCache;
         static plan_ptr GetPlan(std::size_t size, size_t offset,std::vector<float> &data);
