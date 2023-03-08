@@ -60,6 +60,7 @@ std::string MaxString(const std::string &s, size_t maxLen)
 }
 // When enabled, reduces workingMemory size as much as possible
 // by re-using slots in workingMemory whenever possible.
+#ifndef JUNK
 namespace LsNumerics::Implementation
 {
     class SlotUsage
@@ -143,16 +144,7 @@ namespace LsNumerics::Implementation
         }
         bool contains(fft_index_t time)
         {
-            if (time > planSize)
-            {
-                time -= planSize;
-            }
-            for (auto &entry : used)
-            {
-                if (time >= entry.from && time < entry.to)
-                    return true;
-            }
-            return false;
+            return contains_any(time,time+1);
         }
         bool contains_any(fft_index_t from, fft_index_t to)
         {
@@ -188,6 +180,17 @@ namespace LsNumerics::Implementation
             {
                 for (auto &entry : used)
                 {
+                    if (entry.to == entry.from)
+                    {
+                        if (from == to && from == entry.from)
+                        {
+                            return false;
+                        }
+                        if (from < entry.to+1 && to > entry.from)
+                        {
+                            return true;
+                        }
+                    }
                     if (from < entry.to && to > entry.from)
                     {
                         return true;
@@ -224,15 +227,190 @@ namespace LsNumerics::Implementation
         slotUsage.Print(o);
         return o;
     }
+#else
+namespace LsNumerics::Implementation
+{
+    class SlotUsage
+    {
+    private:
+        fft_index_t planSize;
 
+        std::vector<uint64_t> bitMask;
+
+
+        static constexpr size_t BITCOUNT = sizeof(uint64_t)*8;
+        static constexpr size_t ALL_ONES = (size_t)-1;
+
+    public:
+        SlotUsage()
+        {
+        }
+        SlotUsage(size_t planSize)
+        {
+            SetPlanSize(planSize);
+        }
+        void SetPlanSize(size_t planSize)
+        {
+            bitMask.resize((planSize+BITCOUNT-1) / BITCOUNT);
+            this->planSize = (fft_index_t)(planSize);
+        }
+
+        fft_index_t borrowedSlot = -1;
+        // range: [from,to)
+        void Add(fft_index_t from, fft_index_t to)
+        {
+            if (from == to)
+            {
+                borrowedSlot = from;
+                ++to;
+            }
+            else
+            {
+                borrowedSlot = -1;
+            }
+            if (from >= planSize)
+            {
+                from -= planSize;
+                to -= planSize;
+            }
+            else if (to > planSize)
+            {
+                to -= planSize;
+                Add(0, to);
+                Add(from, planSize);
+                return;
+            }
+            size_t firstSlot = ((size_t)from) /BITCOUNT;
+            size_t lastSlot = ((size_t)to-1) / BITCOUNT;
+            size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
+            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to)                         % BITCOUNT);
+
+            if (firstSlot == lastSlot)
+            {
+                bitMask[firstSlot] |= (firstMask & lastMask);
+            }
+            else
+            {
+                bitMask[firstSlot] |= (firstMask);
+                for (size_t i = firstSlot + 1; i < lastSlot; ++i)
+                {
+                    bitMask[i] = ALL_ONES;
+                }
+                if (lastMask != 0) {
+                    bitMask[lastSlot] |= (lastMask);
+                }
+            }
+        }
+        bool contains(fft_index_t time) const
+        {
+            return contains_any(time, time + 1);
+        }
+        bool contains_any(fft_index_t from, fft_index_t to) const
+        {
+            if (from >= planSize)
+            {
+                if (from == to)
+                {
+                    to %= planSize;
+                }
+                from %= planSize;
+            }
+            if (to > planSize)
+            {
+                to = to % planSize;
+            }
+            if (from == to)
+            {
+                if (borrowedSlot == from)
+                {
+                    return false;
+                }
+                ++to;
+            }
+
+            size_t firstSlot = ((size_t)from) /BITCOUNT;
+            size_t lastSlot = ((size_t)to-1) / BITCOUNT;
+            size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
+            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to) % BITCOUNT);
+
+            if (firstSlot == lastSlot)
+            {
+                return (bitMask[firstSlot] & firstMask & lastMask) != 0;
+            }
+            else
+            {
+                if ((bitMask[firstSlot] & firstMask) != 0)
+                {
+                    return true;
+                }
+                if ((lastSlot != bitMask.size() && bitMask[lastSlot] & lastMask) != 0)
+                {
+                    return true;
+                }
+                for (size_t i = firstSlot + 1; i < lastSlot; ++i)
+                {
+                    if (bitMask[i] != 0)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return false;
+        }
+        void Print(std::ostream &o) const
+        {
+            o << '[';
+            fft_index_t count = (fft_index_t)(bitMask.size()*sizeof(std::uint64_t));
+
+            for (fft_index_t i = 0; i < count; /**/)
+            {
+                if (contains(i))
+                {
+                    auto start = i;
+                    ++i;
+                    while (i < count && contains(i))
+                    {
+                        ++i;
+                    }
+                    auto end = i;
+                    o << '[' << start << ',' << end << ')';
+
+                } else {
+                    ++i;
+                }
+            }
+            o << ']';
+        }
+        void Print() const
+        {
+            Print(std::cout);
+            std::cout << std::endl;
+        }
+        std::string ToString() const;
+    };
+
+    std::string SlotUsage::ToString() const
+    {
+        std::stringstream s;
+        Print(s);
+        return s.str();
+    }
+    std::ostream &operator<<(std::ostream &o, const SlotUsage &slotUsage)
+    {
+        slotUsage.Print(o);
+        return o;
+    }
+
+#endif
     class FftOp;
 
     class IndexAllocator
     {
 
     public:
-        std::size_t recycledInputs = 0;
-        std::size_t discardedInputs = 0;
+        std::size_t recycledSlots = 0;
+        std::size_t discardedSlots = 0;
 
         IndexAllocator(size_t planSize)
         {
@@ -361,7 +539,8 @@ namespace LsNumerics::Implementation
 
         static void GetOps(std::set<FftOp *> &set, FftOp *op)
         {
-            if (set.contains(op)) return;
+            if (set.contains(op))
+                return;
             if (op->GetOpType() == FftOp::OpType::ButterflyOp)
             {
                 set.insert(op);
@@ -641,22 +820,24 @@ namespace LsNumerics::Implementation
 #if RECYCLE_SLOTS
         if (size == 2 && op != nullptr)
         {
+        // std::cout << "Free: " << index << "  from: " << currentTime << " to: " << expiryTime << " " << usage << std::endl;
             fft_index_t currentTime = op->GetEarliestAvailable();
+
+
             fft_index_t expiryTime = op->GetLatestUse();
             auto &usage = slotUsages[index];
-
-            // std::cout << "Free: " << index << "  from: " << currentTime << " to: " << expiryTime << " " << usage << std::endl;
-            usage.SetPlanSize(this->planSize);
-            usage.Add(currentTime, expiryTime);
-
-            for (auto &i : freeIndices)
+            if (usage.Size() >= 20) // prevent O(N^2) behaviour for large FFTs.
             {
-                if (i.index == index)
-                {
-                    throw std::logic_error("Double free.");
-                }
+                ++this->discardedSlots;
+                slotUsages.erase(index);
+                // don't recycle this slot again.
+
+            } else {
+                usage.SetPlanSize(this->planSize);
+                usage.Add(currentTime, expiryTime);
+
+                freeIndices.push_back(FreeIndexEntry{index, op->GetEarliestAvailable()});
             }
-            freeIndices.push_back(FreeIndexEntry{index, op->GetEarliestAvailable()});
         }
 #else
         // no recycling of slots.
@@ -672,9 +853,9 @@ namespace LsNumerics::Implementation
             fft_index_t currentTime = op->GetEarliestAvailable();
             fft_index_t expiryTime = op->GetLatestUse();
 
-            for (auto i = freeIndices.begin(); i != freeIndices.end(); ++i)
+            for (ptrdiff_t i = freeIndices.size()-1; i >= 0; --i)
             {
-                auto &entry = (*i);
+                auto &entry = freeIndices[i];
                 auto &usage = slotUsages[entry.index];
                 usage.SetPlanSize(this->planSize);
                 if (!usage.contains_any(currentTime, expiryTime))
@@ -686,8 +867,8 @@ namespace LsNumerics::Implementation
                     //     << usage << std::endl;
                     // std::cout << "  " << MaxString(op->Id(),60) << std::endl;
                     usage.contains_any(currentTime, expiryTime);
-                    freeIndices.erase(i);
-                    recycledInputs++;
+                    freeIndices.erase(freeIndices.begin()+i);
+                    recycledSlots++;
                     return result;
                 }
             }
@@ -698,7 +879,6 @@ namespace LsNumerics::Implementation
         nextIndex += entries;
         return result;
     }
-
 }
 
 using namespace LsNumerics::Implementation;
@@ -1196,7 +1376,7 @@ namespace LsNumerics::Implementation
         size_t opCount = FftOp::GetTotalOps(outputs);
         this->maxOpsPerCycle = (opCount + planSize - 1) / planSize;
         this->maxOpsPerCycle = maxOpsPerCycle * 3 / 2; // some slack.
-        
+
         ScheduleOps();
         // PrintOpCounts(schedule);
         // PrintDelays();
@@ -1257,7 +1437,7 @@ namespace LsNumerics::Implementation
             compiledConstants.push_back(
                 FftPlan::ConstantEntry{op->GetStorageIndex(), op->GetValue()});
         }
-        return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), std::move(compiledConstants),this->startingSlot);
+        return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), std::move(compiledConstants), this->startingSlot);
     }
 
 }
@@ -1303,7 +1483,7 @@ BalancedConvolutionSection::BalancedConvolutionSection(std::size_t size, size_t 
 
 void Implementation::FftPlan::PrintPlan()
 {
-    PrintPlan(std::cout,true);
+    PrintPlan(std::cout, true);
 }
 void Implementation::FftPlan::PrintPlan(const std::string &fileName)
 {
@@ -1312,9 +1492,9 @@ void Implementation::FftPlan::PrintPlan(const std::string &fileName)
     {
         throw std::logic_error("Can't open file for output.");
     }
-    PrintPlan(o,false);
+    PrintPlan(o, false);
 }
-void Implementation::FftPlan::PrintPlan(std::ostream &output,bool trimIds)
+void Implementation::FftPlan::PrintPlan(std::ostream &output, bool trimIds)
 {
     using namespace std;
     output << "  Size: " << this->Size() << endl;
@@ -1502,32 +1682,44 @@ void Implementation::SlotUsageTest()
 {
     {
         SlotUsage slotUsage(256);
-        slotUsage.Add(0, 10);
-        TEST_ASSERT(slotUsage.Size() == 1);
-        slotUsage.Add(11, 12);
-        TEST_ASSERT(slotUsage.Size() == 2);
+        slotUsage.Add(0, 84);
+        slotUsage.Add(84, 87);
 
-        TEST_ASSERT(slotUsage.contains(11));
-        TEST_ASSERT(!slotUsage.contains(12));
-        TEST_ASSERT(!slotUsage.contains_any(10, 11));
-        TEST_ASSERT(!slotUsage.contains_any(10, 10));
-        TEST_ASSERT(slotUsage.contains_any(11, 11));
+        TEST_ASSERT(slotUsage.contains(0));
+        TEST_ASSERT(slotUsage.contains(86));
+        TEST_ASSERT(!slotUsage.contains(87));
+        TEST_ASSERT(slotUsage.contains_any(86,87));
+        TEST_ASSERT(!slotUsage.contains_any(87,256));
+        TEST_ASSERT(slotUsage.contains_any(250,300));
 
-        TEST_ASSERT(slotUsage.contains_any(11, 13));
-        TEST_ASSERT(slotUsage.contains_any(11, 11));
-        TEST_ASSERT(!slotUsage.contains_any(12, 13));
-        TEST_ASSERT(!slotUsage.contains_any(12, 13));
-        TEST_ASSERT(!slotUsage.contains_any(12, 12));
+        TEST_ASSERT(slotUsage.contains_any(86,86));
+        TEST_ASSERT(!slotUsage.contains_any(87,87));
+        slotUsage.Add(88,88);
+        TEST_ASSERT(!slotUsage.contains_any(88,88)); // borrowed slot.
+        TEST_ASSERT(slotUsage.contains(88)); // borrowed slot.
+    }
+    {
+        SlotUsage slotUsage(256);
+        slotUsage.Add(238,256+10);
+        for (fft_index_t i = 0; i < 10; ++i)
+        {
+            TEST_ASSERT(slotUsage.contains(i));
+        }
+        for (fft_index_t i = 10; i < 238; ++i)
+        {
+            TEST_ASSERT(!slotUsage.contains(i));
+        }
+        for (fft_index_t i = 238; i < 256; ++i)
+        {
+            TEST_ASSERT(slotUsage.contains(i));
+        }
     }
     {
         SlotUsage slotUsage(256);
         slotUsage.Add(255, 256 + 10);
-        TEST_ASSERT(slotUsage.Size() == 2);
         slotUsage.Add(10, 10);
-        TEST_ASSERT(slotUsage.Size() == 2);
 
         slotUsage.Add(10, 12);
-        TEST_ASSERT(slotUsage.Size() == 2);
 
         TEST_ASSERT(slotUsage.contains(9));
         TEST_ASSERT(slotUsage.contains(10));
@@ -1543,16 +1735,18 @@ void Implementation::SlotUsageTest()
     {
         SlotUsage slotUsage(256);
         slotUsage.Add(0, 10);
-        TEST_ASSERT(slotUsage.Size() == 1);
         slotUsage.Add(12, 12);
-        TEST_ASSERT(slotUsage.Size() == 2);
 
         TEST_ASSERT(slotUsage.contains(9));
         TEST_ASSERT(!slotUsage.contains(10));
-        TEST_ASSERT(!slotUsage.contains(12));
+        TEST_ASSERT(slotUsage.contains(12));
+        TEST_ASSERT(!slotUsage.contains_any(12,12));
+        TEST_ASSERT(slotUsage.contains_any(9,9));
+
+        TEST_ASSERT(slotUsage.contains(12));
         TEST_ASSERT(!slotUsage.contains_any(11, 12)); // yes we can re-use the slot.
 
-        TEST_ASSERT(!slotUsage.contains_any(12, 13)); // yes we can re-use the slot.
+        TEST_ASSERT(slotUsage.contains_any(12, 13)); // yes we can re-use the slot.
         TEST_ASSERT(!slotUsage.contains_any(13, 14)); // yes we can re-use the slot.
         TEST_ASSERT(slotUsage.contains_any(11, 13));
         TEST_ASSERT(!slotUsage.contains_any(12, 12));
@@ -1560,15 +1754,11 @@ void Implementation::SlotUsageTest()
         TEST_ASSERT(!slotUsage.contains_any(13, 13));
 
         slotUsage.Add(13, 13);
-        TEST_ASSERT(slotUsage.Size() == 3);
         slotUsage.Add(13, 14);
-        TEST_ASSERT(slotUsage.Size() == 3);
 
         slotUsage.Add(17, 17);
-        TEST_ASSERT(slotUsage.Size() == 4);
 
         slotUsage.Add(16, 17);
-        TEST_ASSERT(slotUsage.Size() == 4);
     }
 }
 

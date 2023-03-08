@@ -660,8 +660,9 @@ void TestFftConvolutionStepBenchmark()
             << " " << std::setw(12) << "naive" 
             << " " << std::setw(12) << "seconds" 
             << " " << std::setw(12) << "cycles" 
+            << " " << std::setw(12) << "delay" 
             << setw(0) << std::left << endl;
-    ss << "----------------------------------------------------------------------"  << endl;
+    ss << "-------------------------------------------------------------------------------------"  << endl;
 
     for (size_t n : {
             4,
@@ -778,6 +779,9 @@ void TestFftConvolutionStepBenchmark()
         ss 
             << std::setw(12) << std::right << seconds
             << std::setw(12) << std::right << samples;
+
+        ss 
+            << std::setw(12) << std::right <<  balancedSection.Delay();
         ss
             << setw(0) << endl;
         // reduce iterations if our measurement took too long.
@@ -796,6 +800,7 @@ void TestFftConvolutionStepBenchmark()
 void TestFft()
 {
 
+    Implementation::SlotUsageTest();
 
 
     TestBalancedConvolutionSection();
@@ -806,7 +811,6 @@ void TestFft()
     // TestBalancedFft(FftDirection::Forward);
 
 
-    // Implementation::SlotUsageTest();
 
  
     // TestBalancedConvolution();
@@ -827,22 +831,22 @@ static bool IsProfiling()
 }
 int main(int argc, char **argv)
 {
-    // TestFftConvolutionStepBenchmark();
-    #ifndef JUNK
-    if (IsProfiling())
-    {
-        TestFftConvolutionBenchmark(true);
-        return EXIT_SUCCESS;
-    }
-    try
-    {
-        TestFft();
-    }
-    catch (const std::exception &e)
-    {
-        std::cout << "TEST FAILED: " << e.what() << std::endl;
-        return EXIT_FAILURE;
-    }
-    return EXIT_SUCCESS;
-    #endif
+    TestFftConvolutionStepBenchmark();
+    // #ifndef JUNK
+    // if (IsProfiling())
+    // {
+    //     TestFftConvolutionBenchmark(true);
+    //     return EXIT_SUCCESS;
+    // }
+    // try
+    // {
+    //     TestFft();
+    // }
+    // catch (const std::exception &e)
+    // {
+    //     std::cout << "TEST FAILED: " << e.what() << std::endl;
+    //     return EXIT_FAILURE;
+    // }
+    // return EXIT_SUCCESS;
+    // #endif
 }
