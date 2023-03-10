@@ -35,28 +35,56 @@
 #include <sstream>
 #include "../ss.hpp"
 
+#ifdef WITHGPERFTOOLS
+#include <gperftools/profiler.h>
+#endif
+
 #pragma GCC diagnostic ignored "-Wunused-function"
 
 using namespace LsNumerics;
 using namespace std;
 
+#define TEST_ASSERT(x)                                           \
+    {                                                            \
+        if (!(x))                                                \
+        {                                                        \
+            throw std::logic_error(SS("Assert failed: " << #x)); \
+        }                                                        \
+    }
 
-#define TEST_ASSERT(x) \
-{\
-    if (!(x))\
-    {\
-        throw std::logic_error(SS("Assert failed: " << #x));\
-    }\
+static bool IsProfiling()
+{
+#ifdef WITHGPERFTOOLS
+    return true;
+#else
+    return false;
+#endif
+}
+
+void UsePlanCache()
+{
+    BalancedConvolution::SetPlanFileDirectory("fftplans");
+    if (!BalancedConvolutionSection::PlanFileExists(64))
+    {
+        BalancedConvolution::SetPlanFileDirectory("");
+        std::cout << "Plan cache files not installed." << std::endl;
+        return;
+    }
+}
+void DisablePlanCache()
+{
+    BalancedConvolution::SetPlanFileDirectory("");
 }
 
 static void TestBalancedFft(FftDirection direction)
 {
 
     for (size_t n : {
-        256, 8, 16, 32, 64, 128, 256, 512, 1024
+             256, 8, 16, 32, 64, 128, 256, 512, 1024
 #ifdef NDEBUG
-                     ,2048,
-                     4096, 1024 * 64
+             ,
+             2048,
+             4096, 1024 * 64
 #endif
          })
     {
@@ -121,7 +149,9 @@ static void TestBalancedFft(FftDirection direction)
             else if (outputIndex >= (ptrdiff_t)input.size() && outputIndex < (ptrdiff_t)(input.size() + input2.size()))
             {
                 output2[outputIndex - input.size()] = result;
-            } else {
+            }
+            else
+            {
                 TEST_ASSERT(result == std::complex<double>(0));
             }
             ++outputIndex;
@@ -155,7 +185,6 @@ static void TestBalancedFft(FftDirection direction)
             }
             ++outputIndex;
         }
-
 
         for (size_t i = 0; i < n; ++i)
         {
@@ -228,13 +257,72 @@ private:
     std::vector<fft_complex_t> convolutionData;
 };
 
+static void TestBalancedConvolutionSequencing()
+{
+    // ensure that Sections are correctly sequenced and delayed.
+    std::cout << "=== TestBalancedConvolutionSequencing ===" << std::endl;
+    constexpr size_t TEST_SIZE = 65536 + 3918;
+
+    UsePlanCache();
+
+    std::vector<float> impulseResponse;
+    impulseResponse.resize(TEST_SIZE);
+    for (size_t i = 0; i < TEST_SIZE; ++i)
+    {
+        impulseResponse[i] = i;
+    }
+
+    std::vector<float> inputValues;
+    inputValues.resize(TEST_SIZE);
+    inputValues[0] = 1;
+
+    BalancedConvolution convolution(impulseResponse);
+    for (size_t i = 0; i < TEST_SIZE; ++i)
+    {
+        float result = convolution.Tick(inputValues[i]);
+        float expected = impulseResponse[i];
+        float error = std::abs(result - expected);
+        if (expected > 1)
+        {
+            error /= expected;
+        }
+
+        TEST_ASSERT(error < 1E4);
+    }
+    for (size_t i = 0; i < TEST_SIZE; ++i)
+    {
+        float result = convolution.Tick(inputValues[i]);
+        float expected = impulseResponse[i];
+        float error = std::abs(result - expected);
+        if (expected > 1)
+        {
+            error /= expected;
+        }
+
+        TEST_ASSERT(error < 1E4);
+    }
+
+    DisablePlanCache();
+}
 static void TestBalancedConvolution()
 {
-    for (size_t n : {0, 1, 2, 4, 64 + 10, 128 + 10, 256 + 10, 512 + 10, 1024 + 10
+    for (size_t n : {
+             0,
+             1,
+             2,
+             4,
+             64 + 10,
+             128 + 10,
+             256 + 10,
+             512 + 10,
+             1024 + 10
 #ifdef NDEBUG
-            ,2048 + 2047, 4095 + 512, 
+             ,
+             2048 + 2047,
+             4095 + 512,
+             16384 + 512,
 #endif
-    })
+         })
     {
         std::cout << "=== TestConvolution(" << n << ") ===" << std::endl;
         struct Tap
@@ -243,6 +331,7 @@ static void TestBalancedConvolution()
             float scale;
         };
         std::vector<Tap> testTaps{
+
             {0, 100 * 100},
             {59, 100},
             {100, 1.0},
@@ -254,7 +343,11 @@ static void TestBalancedConvolution()
             {1029, 2.5},
             {2053, 1.2},
             {4093, -0.923},
+            {9093, -1.923},
+            {19093, 3.923},
+            {38093, 6.923},
 
+            {9093, -1.923},
         };
 
         // generate impulse that will generate data we can easily verify.
@@ -312,11 +405,10 @@ class StreamCapturer
 {
 public:
     StreamCapturer(size_t start, size_t end = std::numeric_limits<size_t>::max())
-    : start(start),end(end),index(0)
+        : start(start), end(end), index(0)
     {
-        
     }
-    StreamCapturer&operator<<(float value)
+    StreamCapturer &operator<<(float value)
     {
         if (index >= start && index < end)
         {
@@ -325,7 +417,7 @@ public:
         ++index;
         return *this;
     }
-    StreamCapturer&operator<<(const std::vector<float>& values)
+    StreamCapturer &operator<<(const std::vector<float> &values)
     {
         for (auto i = values.begin(); i != values.end(); ++i)
         {
@@ -334,25 +426,39 @@ public:
         return *this;
     }
 
+    const std::vector<float> &Buffer() const { return buffer; }
 
-    const std::vector<float>&Buffer() const { return buffer; }
 private:
     std::vector<float> buffer;
-    size_t start,end,index;
+    size_t start, end, index;
 };
-static void TestBalancedConvolutionSection()
-{
 
-    for (size_t n : {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+static void TestBalancedConvolutionSection(bool useCache)
+{
+    std::vector<size_t> convolutionSizes = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
 #ifndef DEBUG
-                     ,
-                     4096, 1024 * 64
+                                            ,
+                                            4096, 1024 * 64
 #endif
-         })
+    };
+    if (useCache)
+    {
+
+        UsePlanCache();
+        convolutionSizes = {32, 64, 128, 256, 512, 1024, 2048, 4096, 8 * 1024, 16 * 1024, 32 * 1024, 64 * 1024};
+    }
+    else
+    {
+        DisablePlanCache();
+    }
+
+    for (size_t n : convolutionSizes)
     {
         cout << "=== TestBalancedConvolutionSection ("
              << n
-             << ") ======" << endl;
+             << ") "
+             << ((useCache) ? "(cached)" : "(uncached)")
+             << " ======" << endl;
 
         std::vector<float> impulseResponse;
         impulseResponse.resize(n);
@@ -374,24 +480,26 @@ static void TestBalancedConvolutionSection()
         NaturalConvolutionSection section((size_t)n, impulseResponse);
 
         std::vector<float> buffer;
-        buffer.resize(n*2);
+        buffer.resize(n * 2);
         std::vector<float> buffer2;
         buffer2.resize(n);
         StreamCapturer s0(0);
 
-        for (size_t offset = 0; offset < input.size()-n; offset+= n)
+        for (size_t offset = 0; offset < input.size() - n; offset += n)
         {
-            for (size_t i = 0; i < n*2; ++i)
+            for (size_t i = 0; i < n * 2; ++i)
             {
-                ptrdiff_t index = offset+i-n;
+                ptrdiff_t index = offset + i - n;
                 if (index < 0)
                 {
                     buffer[0] = 0;
-                } else {
+                }
+                else
+                {
                     buffer[i] = input[index];
                 }
             }
-            section.Convolve(buffer,buffer2);
+            section.Convolve(buffer, buffer2);
             s0 << buffer2;
         }
         const std::vector<float> &expectedOutput = s0.Buffer();
@@ -408,16 +516,15 @@ static void TestBalancedConvolutionSection()
 
         StreamCapturer streamResult(convolutionSection.Delay());
 
-        for (size_t i = 0; i < expectedOutput.size()+convolutionSection.Delay(); ++i)
+        for (size_t i = 0; i < expectedOutput.size() + convolutionSection.Delay(); ++i)
         {
-            float result = convolutionSection.Tick(i < input.size()? input[i]: 0);
+            float result = convolutionSection.Tick(i < input.size() ? input[i] : 0);
             streamResult << result;
             t.push_back(result);
         }
 
-        const std::vector<float>&output = streamResult.Buffer();
+        const std::vector<float> &output = streamResult.Buffer();
 
-        
         for (size_t i = 0; i < output.size(); ++i)
         {
             auto error = std::abs(expectedOutput[i] - output[i]);
@@ -431,6 +538,99 @@ static void TestBalancedConvolutionSection()
             }
         }
     }
+    DisablePlanCache();
+}
+static void TestDirectConvolutionSection()
+{
+    std::vector<size_t> convolutionSizes = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+#ifndef DEBUG
+                                            ,
+                                            4096, 1024 * 64
+#endif
+    };
+    for (size_t n : convolutionSizes)
+    {
+        cout << "=== TestDirectConvolutionSection ("
+             << n
+             << ") "
+             << " ======" << endl;
+
+        std::vector<float> impulseResponse;
+        impulseResponse.resize(n);
+        impulseResponse[0] = 10000;
+        impulseResponse[1] = 100;
+        if (n > 2)
+        {
+            impulseResponse[2] = 1;
+            impulseResponse[3] = 0.01;
+        }
+
+        std::vector<float> input;
+        input.resize(n * 6);
+        for (size_t i = 0; i < input.size(); ++i)
+        {
+            input[i] = i + 1;
+        }
+
+        NaturalConvolutionSection naturalSection((size_t)n, impulseResponse);
+
+        std::vector<float> buffer;
+        buffer.resize(n * 2);
+        std::vector<float> buffer2;
+        buffer2.resize(n);
+        StreamCapturer s0(0);
+
+        for (size_t offset = 0; offset < input.size() - n; offset += n)
+        {
+            for (size_t i = 0; i < n * 2; ++i)
+            {
+                ptrdiff_t index = offset + i - n;
+                if (index < 0)
+                {
+                    buffer[0] = 0;
+                }
+                else
+                {
+                    buffer[i] = input[index];
+                }
+            }
+            naturalSection.Convolve(buffer, buffer2);
+            s0 << buffer2;
+        }
+        const std::vector<float> &expectedOutput = s0.Buffer();
+
+        Implementation::DirectConvolutionSection convolutionSection(n, 0, impulseResponse);
+        cout << "MaxDelay: " << convolutionSection.Delay() << endl;
+
+        // convolutionSection.PrintPlan();
+
+        std::vector<float> t;
+
+        StreamCapturer streamResult(convolutionSection.Delay());
+
+        for (size_t i = 0; i < expectedOutput.size() + convolutionSection.Delay(); ++i)
+        {
+            float result = convolutionSection.Tick(i < input.size() ? input[i] : 0);
+            streamResult << result;
+            t.push_back(result);
+        }
+
+        const std::vector<float> &output = streamResult.Buffer();
+
+        for (size_t i = 0; i < output.size(); ++i)
+        {
+            auto error = std::abs(expectedOutput[i] - output[i]);
+            if (std::abs(expectedOutput[i]) > 1)
+            {
+                error /= expectedOutput[i];
+            }
+            if (error > 1E-4)
+            {
+                throw std::logic_error("DirectConvolutionTest failed.");
+            }
+        }
+    }
+    DisablePlanCache();
 }
 
 static size_t NextPowerOf2(size_t size)
@@ -442,69 +642,88 @@ static size_t NextPowerOf2(size_t size)
     }
     return result;
 }
-void TestBalancedConvolutionBenchmark()
+void BenchmarkBalancedConvolution()
 {
-    std::cout << "=== Balanced Convolution benchmark =====" << endl;
-    size_t sampleRate = 44100;
+    UsePlanCache();
 
-    double benchmarkTimeSeconds = 4.0;
-    double impulseTimeSeconds = 0.1;
-    size_t impulseSize = (size_t)sampleRate * impulseTimeSeconds;
+    // std::vector<double> impulseTimes = {0.01, 0.1, 1.0};
+    std::vector<double> impulseTimes = {1.0};
 
-    std::vector<float> impulseData;
-    impulseData.resize(impulseSize);
-    for (size_t i = 0; i < impulseSize; ++i)
+    for (auto impulseTimeSeconds : impulseTimes)
     {
-        impulseData[i] = i / (float)impulseSize;
+        std::cout << "=== Balanced Convolution benchmark " << impulseTimeSeconds << "sec =====" << endl;
+        size_t sampleRate = 44100;
+
+        double benchmarkTimeSeconds = 22.0;
+        size_t impulseSize = (size_t)sampleRate * impulseTimeSeconds;
+
+        std::vector<float> impulseData;
+        impulseData.resize(impulseSize);
+        for (size_t i = 0; i < impulseSize; ++i)
+        {
+            impulseData[i] = i / (float)impulseSize;
+        }
+
+        size_t bufferSize = 64;
+        std::vector<float> inputBuffer;
+        std::vector<float> outputBuffer;
+        inputBuffer.resize(bufferSize);
+        outputBuffer.resize(bufferSize);
+        for (size_t i = 0; i < bufferSize; ++i)
+        {
+            inputBuffer[i] = i / (float)bufferSize;
+        }
+
+        BalancedConvolution convolver(impulseData);
+
+        size_t nSamples = (size_t)(sampleRate * benchmarkTimeSeconds);
+
+        using clock = std::chrono::steady_clock;
+
+#ifdef WITHGPERFTOOLS
+        ProfilerStart("/tmp/out.prof");
+#endif
+        auto startTime = clock::now();
+        for (size_t i = 0; i < nSamples; i += bufferSize)
+        {
+            convolver.Tick(inputBuffer, outputBuffer);
+        }
+        auto endTime = clock::now();
+        auto diff = endTime - startTime;
+        using second_duration = std::chrono::duration<float>;
+        second_duration seconds = endTime - startTime;
+#ifdef WITHGPERFTOOLS
+        ProfilerStop();
+#endif
+
+        double percent = seconds.count() / benchmarkTimeSeconds * 100;
+
+        std::cout << "Performance (percent of realtime): " << percent << "%" << std::endl;
+
+        if (!IsProfiling())
+        {
+            size_t size = NextPowerOf2(impulseData.size());
+            NaturalConvolutionSection section(size, impulseData);
+            std::vector<float> t;
+            t.resize(size * 2);
+            outputBuffer.resize(size);
+
+            size_t nativeSamples = 0;
+            startTime = clock::now();
+            for (size_t i = 0; i < nSamples; i += size)
+            {
+                section.Convolve(t, outputBuffer);
+                nativeSamples += size;
+            }
+            endTime = clock::now();
+            diff = endTime - startTime;
+            seconds = endTime - startTime;
+
+            percent = seconds.count() / benchmarkTimeSeconds * nativeSamples / nSamples * 100;
+            cout << "Natural fft time: " << percent << "%" << endl;
+        }
     }
-
-    size_t bufferSize = 64;
-    std::vector<float> inputBuffer;
-    std::vector<float> outputBuffer;
-    inputBuffer.resize(bufferSize);
-    outputBuffer.resize(bufferSize);
-    for (size_t i = 0; i < bufferSize; ++i)
-    {
-        inputBuffer[i] = i / (float)bufferSize;
-    }
-
-    BalancedConvolution convolver(impulseData);
-
-    size_t nSamples = (size_t)(sampleRate * benchmarkTimeSeconds);
-
-    using clock = std::chrono::steady_clock;
-
-    auto startTime = clock::now();
-    for (size_t i = 0; i < nSamples; i += bufferSize)
-    {
-        convolver.Tick(inputBuffer, outputBuffer);
-    }
-    auto endTime = clock::now();
-    auto diff = endTime - startTime;
-    using second_duration = std::chrono::duration<float>;
-    second_duration seconds = endTime - startTime;
-
-    double percent = seconds.count() / benchmarkTimeSeconds * 100;
-
-    std::cout << "Performance (percent of realtime): " << percent << "%" << std::endl;
-
-    size_t size = NextPowerOf2(impulseData.size());
-    NaturalConvolutionSection section(size, impulseData);
-    std::vector<float> t;
-    t.resize(size * 2);
-    outputBuffer.resize(size);
-
-    startTime = clock::now();
-    for (size_t i = 0; i < nSamples; i += t.size())
-    {
-        section.Convolve(t, outputBuffer);
-    }
-    endTime = clock::now();
-    diff = endTime - startTime;
-    seconds = endTime - startTime;
-
-    percent = seconds.count() / benchmarkTimeSeconds * 100;
-    cout << "Natural fft time: " << percent << "%";
+    DisablePlanCache();
 }
 
 void TestFftConvolution()
@@ -623,82 +842,83 @@ void TestFftConvolutionBenchmark(bool profiling = false)
         t.resize(size * 2);
         outputBuffer.resize(size);
 
+        size_t naturalSamples = 0;
         startTime = clock::now();
-        for (size_t i = 0; i < nSamples; i += t.size())
+        for (size_t i = 0; i < nSamples; i += size)
         {
             section.Convolve(t, outputBuffer);
+            naturalSamples += size;
         }
         endTime = clock::now();
         diff = endTime - startTime;
         seconds = endTime - startTime;
 
-        percent = seconds.count() / benchmarkTimeSeconds * 100;
-        cout << "Natural fft time: " << percent << "%" << endl;
+        percent = seconds.count() / (benchmarkTimeSeconds * naturalSamples / nSamples) * 100;
+        cout << "Natural fft time: " << percent << "%" << endl
+             << endl;
     }
 }
 
 static void Consume(double value)
 {
-
 }
 
-void TestFftConvolutionStepBenchmark()
+void BenchmarkFftConvolutionStep()
 {
 
-    //std::stringstream ss;
+    // std::stringstream ss;
 
-    constexpr size_t FRAMES = 8*1024*1024;
+    constexpr size_t FRAMES = 8 * 1024 * 1024;
 
     size_t frames = FRAMES;
 
-
     std::ostream &ss = std::cout;
 
-    ss << std::left << std::setw(8) << "N" 
-            << " " << std::setw(12) << "fft" 
-            << " " << std::setw(12) << "balanced" 
-            << " " << std::setw(12) << "naive" 
-            << " " << std::setw(12) << "seconds" 
-            << " " << std::setw(12) << "cycles" 
-            << " " << std::setw(12) << "delay" 
-            << setw(0) << std::left << endl;
-    ss << "-------------------------------------------------------------------------------------"  << endl;
+    ss << std::left << std::setw(8) << "N"
+       << " " << std::setw(12) << "fft"
+       << " " << std::setw(12) << "balanced"
+       << " " << std::setw(12) << "naive"
+       << " " << std::setw(12) << "seconds"
+       << " " << std::setw(12) << "cycles"
+       << " " << std::setw(12) << "delay"
+       << setw(0) << std::left << endl;
+    ss << "-------------------------------------------------------------------------------------" << endl;
 
     for (size_t n : {
-            4,
-            8,
-            16,
-            32,
-            64,
-            128,
-            256,
-            512,
-            1024,
-            2048,
-            4096,
-            8*1024,
-            16*1024,
-            32*1024,
-            64*1024,
-            128*1024
-    }) {
+             4,
+             8,
+             16,
+             32,
+             64,
+             128,
+             256,
+             512,
+             1024,
+             2048,
+             4096,
+             8 * 1024,
+             16 * 1024,
+             32 * 1024,
+             64 * 1024,
+             128 * 1024})
+    {
 
         using clock_t = std::chrono::high_resolution_clock;
         using ns_duration_t = std::chrono::nanoseconds;
 
         std::vector<float> impulse;
-        impulse.resize(n*2);
-        for (size_t i = 0; i < n*2; ++i)
+        impulse.resize(n * 2);
+        for (size_t i = 0; i < n * 2; ++i)
         {
-            impulse[i] = i/double(n*2);
+            impulse[i] = i / double(n * 2);
         }
-        FftConvolution::Section fftSection(n,0,impulse);
+        FftConvolution::Section fftSection(n, 0, impulse);
 
         std::vector<float> input;
         input.resize(n);
 
         // FftConvolution
-        FftConvolution::DelayLine delayLine(n*2);
+        FftConvolution::DelayLine delayLine(n * 2);
 
         auto start = clock_t::now();
         for (size_t frame = 0; frame < frames; ++frame)
@@ -709,11 +929,10 @@ void TestFftConvolutionStepBenchmark()
                 fftSection.Tick(delayLine);
             }
         }
-        ns_duration_t fftConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now()-start);
+        ns_duration_t fftConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - start);
 
         // balanced convolution.
-        BalancedConvolutionSection balancedSection(n,impulse);
-
+        BalancedConvolutionSection balancedSection(n, impulse);
 
         auto bStart = clock_t::now();
         for (size_t frame = 0; frame < frames; ++frame)
@@ -723,11 +942,7 @@ void TestFftConvolutionStepBenchmark()
                 balancedSection.Tick(input[i]);
             }
         }
-        ns_duration_t bConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now()-bStart);
-
-
-
-
+        ns_duration_t bConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - bStart);
 
         // Naive convolution.
         bool showNaive = n <= 1024;
@@ -746,7 +961,7 @@ void TestFftConvolutionStepBenchmark()
                         double result = 0;
                         for (size_t k = 0; k < n; ++k)
                         {
-                            result += delayLine[k]*impulse[k];
+                            result += delayLine[k] * impulse[k];
                         }
                         sink = result;
                     }
@@ -754,34 +969,37 @@ void TestFftConvolutionStepBenchmark()
                     fftSection.Tick(delayLine);
                 }
             }
-            nConvolutionMs = std::chrono::duration_cast<ns_duration_t>(clock_t::now()-nStart);
+            nConvolutionMs = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - nStart);
             Consume(sink);
         }
 
-        size_t samples = frames*n;
-        double scale = 1.0/samples;
+        size_t samples = frames * n;
+        double scale = 1.0 / samples;
 
         double seconds = std::chrono::duration_cast<std::chrono::duration<float>>(bConvolutionDuration).count();
-        
-        ss << std::setprecision(3)
-            << std::setiosflags(std::ios_base::fixed)
-            << std::left << std::setw(8) << n 
-            << " " << std::setw(12) << std::right << fftConvolutionDuration.count()*scale
-            << " " << std::setw(12) << std::right << bConvolutionDuration.count()*scale
-            << " " << std::setw(12) << std::right;
 
-        if (showNaive) {
-            ss << nConvolutionMs.count()*scale;
-        } else {
+        ss << std::setprecision(3)
+           << std::setiosflags(std::ios_base::fixed)
+           << std::left << std::setw(8) << n
+           << " " << std::setw(12) << std::right << fftConvolutionDuration.count() * scale
+           << " " << std::setw(12) << std::right << bConvolutionDuration.count() * scale
+           << " " << std::setw(12) << std::right;
+
+        if (showNaive)
+        {
+            ss << nConvolutionMs.count() * scale;
+        }
+        else
+        {
             ss << " ";
         }
 
-        ss 
+        ss
             << std::setw(12) << std::right << seconds
             << std::setw(12) << std::right << samples;
 
-        ss 
-            << std::setw(12) << std::right <<  balancedSection.Delay();
+        ss
+            << std::setw(12) << std::right << balancedSection.Delay();
         ss
             << setw(0) << endl;
         // reduce iterations if our measurement took too long.
@@ -794,59 +1012,52 @@ void TestFftConvolutionStepBenchmark()
 
     // std::cout << ss.str();
     // std::cout.flush();
-
 }
 
 void TestFft()
 {
+    BenchmarkBalancedConvolution();
+
+    TestDirectConvolutionSection();
+    TestBalancedConvolutionSequencing();
+    TestBalancedConvolution();
 
     Implementation::SlotUsageTest();
 
+    TestBalancedConvolutionSection(true);
+    TestBalancedConvolutionSection(false);
 
-    TestBalancedConvolutionSection();
-
-    TestFftConvolutionStepBenchmark();
+    BenchmarkFftConvolutionStep();
 
     // TestBalancedFft(FftDirection::Reverse);
     // TestBalancedFft(FftDirection::Forward);
 
-
-
- 
     // TestBalancedConvolution();
-    // TestBalancedConvolutionBenchmark();
+    // BenchmarkBalancedConvolution();
 
     // TestFftConvolution();
     // TestFftConvolutionBenchmark();
-    // TestFftConvolutionStepBenchmark();
 }
 
-static bool IsProfiling()
-{
-#ifdef WITHPERF
-    return true;
-#else
-    return false;
-#endif
-}
 int main(int argc, char **argv)
 {
-    TestFftConvolutionStepBenchmark();
-    // #ifndef JUNK
-    // if (IsProfiling())
-    // {
-    //     TestFftConvolutionBenchmark(true);
-    //     return EXIT_SUCCESS;
-    // }
-    // try
-    // {
-    //     TestFft();
-    // }
-    // catch (const std::exception &e)
-    // {
-    //     std::cout << "TEST FAILED: " << e.what() << std::endl;
-    //     return EXIT_FAILURE;
-    // }
-    // return EXIT_SUCCESS;
-    // #endif
+    try
+    {
+        if (IsProfiling())
+        {
+            //BenchmarkFftConvolutionStep();
+            BenchmarkBalancedConvolution();
+            return EXIT_SUCCESS;
+        }
+        else
+        {
+            TestFft();
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "TEST FAILED: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

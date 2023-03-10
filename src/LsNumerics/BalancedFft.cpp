@@ -37,6 +37,8 @@
 #include <unordered_map>
 #include <fstream>
 #include <set>
+#include "BinaryWriter.hpp"
+#include "BinaryReader.hpp"
 
 using namespace LsNumerics;
 
@@ -49,6 +51,17 @@ using namespace LsNumerics;
 #endif
 
 #define RECYCLE_SLOTS 1
+
+static const fft_index_t ToIndex(size_t value)
+{
+    if (value > (size_t)std::numeric_limits<fft_index_t>::max())
+    {
+        throw std::logic_error("Maximum index exceeded.");
+    }
+    return (fft_index_t)(value);
+}
+
+const char *Implementation::FftPlan::MAGIC_FILE_STRING = "FftPlan";
 
 std::string MaxString(const std::string &s, size_t maxLen)
 {
@@ -85,7 +98,7 @@ namespace LsNumerics::Implementation
         }
         void SetPlanSize(size_t planSize)
         {
-            this->planSize = (fft_index_t)(planSize);
+            this->planSize = ToIndex(planSize);
         }
         size_t Size() { return used.size(); }
         // range: [from,to)
@@ -144,7 +157,7 @@ namespace LsNumerics::Implementation
         }
         bool contains(fft_index_t time)
         {
-            return contains_any(time,time+1);
+            return contains_any(time, time + 1);
         }
         bool contains_any(fft_index_t from, fft_index_t to)
         {
@@ -166,35 +179,63 @@ namespace LsNumerics::Implementation
                     return true;
                 return contains_any(from, planSize);
             }
+            if (used.size() == 0)
+                return false;
+
+            // binary search to find the first entry that where entry.from >= from
+            ptrdiff_t minIndex = 0;
+            ptrdiff_t maxIndex = used.size() - 1;
+            while (minIndex < maxIndex)
+            {
+                size_t mid = (minIndex + maxIndex) / 2;
+                auto &entry = used[mid];
+                if (entry.from == from)
+                {
+                    minIndex = maxIndex = mid;
+                }
+                else if (entry.from > to)
+                {
+                    maxIndex = mid - 1;
+                }
+                else /* entry.from < to*/
+                {
+                    if (entry.to > from)
+                    {
+                        minIndex = maxIndex = mid;
+                    }
+                    else
+                    {
+                        minIndex = mid + 1;
+                    }
+                }
+            }
+            if (minIndex < 0 || minIndex >= (ptrdiff_t)used.size())
+                return false;
+            auto &entry = used[minIndex];
             if (from == to) // a temporary borrow may not overwrite existing data.
             {
-                for (auto &entry : used)
+                if (entry.from == entry.to)
                 {
-                    if (from < entry.to && from >= entry.from)
+                    return false;
+                }
+                return from < entry.to && to + 1 > entry.from;
+            }
+            else
+            {
+                if (entry.to == entry.from)
+                {
+                    if (from == to && from == entry.from)
+                    {
+                        return false;
+                    }
+                    if (from < entry.to + 1 && to > entry.from)
                     {
                         return true;
                     }
                 }
-            }
-            else
-            {
-                for (auto &entry : used)
+                if (from < entry.to && to > entry.from)
                 {
-                    if (entry.to == entry.from)
-                    {
-                        if (from == to && from == entry.from)
-                        {
-                            return false;
-                        }
-                        if (from < entry.to+1 && to > entry.from)
-                        {
-                            return true;
-                        }
-                    }
-                    if (from < entry.to && to > entry.from)
-                    {
-                        return true;
-                    }
+                    return true;
                 }
             }
             return false;
@@ -237,8 +278,7 @@ namespace LsNumerics::Implementation
 
         std::vector<uint64_t> bitMask;
 
-
-        static constexpr size_t BITCOUNT = sizeof(uint64_t)*8;
+        static constexpr size_t BITCOUNT = sizeof(uint64_t) * 8;
         static constexpr size_t ALL_ONES = (size_t)-1;
 
     public:
@@ -251,8 +291,8 @@ namespace LsNumerics::Implementation
         }
         void SetPlanSize(size_t planSize)
         {
-            bitMask.resize((planSize+BITCOUNT-1) / BITCOUNT);
-            this->planSize = (fft_index_t)(planSize);
+            bitMask.resize((planSize + BITCOUNT - 1) / BITCOUNT);
+            this->planSize = ToIndex(planSize);
         }
 
         fft_index_t borrowedSlot = -1;
@@ -280,10 +320,10 @@ namespace LsNumerics::Implementation
                 Add(from, planSize);
                 return;
             }
-            size_t firstSlot = ((size_t)from) /BITCOUNT;
-            size_t lastSlot = ((size_t)to-1) / BITCOUNT;
+            size_t firstSlot = ((size_t)from) / BITCOUNT;
+            size_t lastSlot = ((size_t)to - 1) / BITCOUNT;
             size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
-            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to)                         % BITCOUNT);
+            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to) % BITCOUNT);
 
             if (firstSlot == lastSlot)
             {
@@ -296,7 +336,8 @@ namespace LsNumerics::Implementation
                 {
                     bitMask[i] = ALL_ONES;
                 }
-                if (lastMask != 0) {
+                if (lastMask != 0)
+                {
                     bitMask[lastSlot] |= (lastMask);
                 }
             }
@@ -328,8 +369,8 @@ namespace LsNumerics::Implementation
                 ++to;
             }
 
-            size_t firstSlot = ((size_t)from) /BITCOUNT;
-            size_t lastSlot = ((size_t)to-1) / BITCOUNT;
+            size_t firstSlot = ((size_t)from) / BITCOUNT;
+            size_t lastSlot = ((size_t)to - 1) / BITCOUNT;
             size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
             size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to) % BITCOUNT);
 
@@ -361,7 +402,7 @@ namespace LsNumerics::Implementation
         void Print(std::ostream &o) const
         {
             o << '[';
-            fft_index_t count = (fft_index_t)(bitMask.size()*sizeof(std::uint64_t));
+            fft_index_t count = ToIndex(bitMask.size() * sizeof(std::uint64_t));
 
             for (fft_index_t i = 0; i < count; /**/)
             {
@@ -375,8 +416,9 @@ namespace LsNumerics::Implementation
                     }
                     auto end = i;
                     o << '[' << start << ',' << end << ')';
-
-                } else {
+                }
+                else
+                {
                     ++i;
                 }
             }
@@ -416,16 +458,38 @@ namespace LsNumerics::Implementation
         {
             this->planSize = planSize;
         }
-        std::unordered_map<fft_index_t, SlotUsage> slotUsages;
+        std::vector<SlotUsage> slotUsages;
 
         fft_index_t Allocate(std::size_t entries, FftOp *op);
         void Free(fft_index_t index, std::size_t size, FftOp *op);
 
     private:
+        SlotUsage &GetSlotUsage(size_t index)
+        {
+            size_t size = slotUsages.size();
+            if (index >= size)
+            {
+                size_t newSize = slotUsages.size();
+                if (newSize < (size_t)(this->planSize))
+                {
+                    newSize = this->planSize * 2;
+                }
+                while (newSize < index)
+                {
+                    newSize *= 2;
+                }
+                slotUsages.resize(newSize);
+                for (size_t i = size; i < newSize; ++i)
+                {
+                    slotUsages[i].SetPlanSize(this->planSize);
+                }
+            }
+            return slotUsages[index];
+        }
+
         struct FreeIndexEntry
         {
             fft_index_t index;
-            fft_index_t lastUsed;
         };
         std::vector<FreeIndexEntry> freeIndices;
         fft_index_t nextIndex = 0;
@@ -820,23 +884,21 @@ namespace LsNumerics::Implementation
 #if RECYCLE_SLOTS
         if (size == 2 && op != nullptr)
         {
-        // std::cout << "Free: " << index << "  from: " << currentTime << " to: " << expiryTime << " " << usage << std::endl;
+            // std::cout << "Free: " << index << "  from: " << currentTime << " to: " << expiryTime << " " << usage << std::endl;
             fft_index_t currentTime = op->GetEarliestAvailable();
 
-
             fft_index_t expiryTime = op->GetLatestUse();
-            auto &usage = slotUsages[index];
-            if (usage.Size() >= 20) // prevent O(N^2) behaviour for large FFTs.
+            auto &usage = GetSlotUsage(index);
+            if (usage.Size() >= 100) // prevent O(N^2) behaviour for large FFTs.
             {
                 ++this->discardedSlots;
-                slotUsages.erase(index);
                 // don't recycle this slot again.
-
-            } else {
-                usage.SetPlanSize(this->planSize);
+            }
+            else
+            {
                 usage.Add(currentTime, expiryTime);
 
-                freeIndices.push_back(FreeIndexEntry{index, op->GetEarliestAvailable()});
+                freeIndices.push_back(FreeIndexEntry{index});
             }
         }
 #else
@@ -853,10 +915,10 @@ namespace LsNumerics::Implementation
             fft_index_t currentTime = op->GetEarliestAvailable();
             fft_index_t expiryTime = op->GetLatestUse();
 
-            for (ptrdiff_t i = freeIndices.size()-1; i >= 0; --i)
+            for (ptrdiff_t i = freeIndices.size() - 1; i >= 0; --i)
             {
                 auto &entry = freeIndices[i];
-                auto &usage = slotUsages[entry.index];
+                auto &usage = GetSlotUsage(entry.index);
                 usage.SetPlanSize(this->planSize);
                 if (!usage.contains_any(currentTime, expiryTime))
                 {
@@ -866,8 +928,7 @@ namespace LsNumerics::Implementation
                     //     << " [" << (currentTime % this->planSize) << "," << (expiryTime % this->planSize) << ")" << " "
                     //     << usage << std::endl;
                     // std::cout << "  " << MaxString(op->Id(),60) << std::endl;
-                    usage.contains_any(currentTime, expiryTime);
-                    freeIndices.erase(freeIndices.begin()+i);
+                    freeIndices.erase(freeIndices.begin() + i);
                     recycledSlots++;
                     return result;
                 }
@@ -950,6 +1011,12 @@ namespace LsNumerics::Implementation
             this->startingSlot = 0;
         }
 
+        FftOp::op_ptr MakeConvolutionConstant(const fft_complex_t &value)
+        {
+            FftOp::op_ptr result = std::make_shared<ConstantOp>(value);
+            return result;
+        }
+
         FftOp::op_ptr MakeConstant(const fft_complex_t &value)
         {
             if (constantCache.contains(value))
@@ -1016,7 +1083,7 @@ namespace LsNumerics::Implementation
 
         std::vector<FftOp::op_ptr> MakeHalfConvolutionSection(
             std::vector<FftOp::op_ptr> &inputs,
-            std::vector<fft_complex_t> &fftConvolutionData)
+            std::vector<FftOp::op_ptr> &impulseFftConstants)
         {
             std::vector<FftOp::op_ptr> inverseInputs = MakeFft(inputs, FftDirection::Forward);
 
@@ -1026,9 +1093,8 @@ namespace LsNumerics::Implementation
 
             for (size_t i = 0; i < inverseInputs.size(); ++i)
             {
-                auto m = fftConvolutionData[i];
                 FftOp::op_ptr convolveOp{
-                    new ButterflyOp(opZero, inverseInputs[i], MakeConstant(m))};
+                    new ButterflyOp(opZero, inverseInputs[i], impulseFftConstants[i])};
                 convolveOp = std::make_shared<LeftOutputOp>(convolveOp);
                 convolvedInputs.push_back(convolveOp);
             }
@@ -1038,39 +1104,21 @@ namespace LsNumerics::Implementation
             return std::vector<FftOp::op_ptr>(result.begin(), result.begin() + +result.size() / 2);
         }
 
-        plan_ptr MakeConvolutionSection(std::size_t size, size_t offset, std::vector<float> &data)
+        plan_ptr MakeConvolutionSection(std::size_t size)
         {
             this->planSize = size * 2;
             std::vector<FftOp::op_ptr> orderedInputs = MakeInputs(size * 3);
             this->inputs = orderedInputs;
-            const float norm = 1; // (float)(std::sqrt(2 * size));
 
-            std::vector<fft_complex_t> fftConvolutionData;
-            fftConvolutionData.resize(size * 2);
+            for (size_t i = 0; i < size * 2; ++i)
             {
-                if (offset >= data.size())
-                {
-                    throw std::logic_error("No impulse data.");
-                }
-                std::vector<fft_complex_t> buffer;
-                buffer.resize(size * 2);
-                size_t len = size;
-                if (len > data.size() - offset)
-                {
-                    len = data.size() - offset;
-                }
-                for (size_t i = 0; i < len; ++i)
-                {
-                    buffer[i + size] = data[i + offset] * norm;
-                }
-                Fft<double> normalFft(size * 2);
-                normalFft.forward(buffer, fftConvolutionData);
+                impulseFftConstants.push_back(MakeConvolutionConstant(0));
             }
             std::vector<FftOp::op_ptr> firstInputs{orderedInputs.begin(), orderedInputs.begin() + 2 * size};
-            std::vector<FftOp::op_ptr> firstSection = MakeHalfConvolutionSection(firstInputs, fftConvolutionData);
+            std::vector<FftOp::op_ptr> firstSection = MakeHalfConvolutionSection(firstInputs, impulseFftConstants);
 
             std::vector<FftOp::op_ptr> secondInputs = {orderedInputs.begin() + size, orderedInputs.end()};
-            std::vector<FftOp::op_ptr> secondSection = MakeHalfConvolutionSection(secondInputs, fftConvolutionData);
+            std::vector<FftOp::op_ptr> secondSection = MakeHalfConvolutionSection(secondInputs, impulseFftConstants);
 
             this->maxOpsPerCycle = (Log2(size * 2)) / 2; // fft is 2 x size.
             this->maxOpsPerCycle += 2;                   // for convolve butterflies.
@@ -1152,6 +1200,9 @@ namespace LsNumerics::Implementation
         using schedule_t = std::vector<std::vector<FftOp *>>;
 
         std::vector<FftOp::op_ptr> constants;
+        size_t impulseFftOffset = (size_t)-1;
+        size_t constantsOffset = (size_t)-1;
+        std::vector<FftOp::op_ptr> impulseFftConstants;
 
         void AllocateMemory()
         {
@@ -1174,10 +1225,30 @@ namespace LsNumerics::Implementation
                 output->AllocateMemory(allocator);
             }
 
-            // allocate constants.
-            for (auto &op : constants)
+            // allocate convolution fft constants.
+            this->impulseFftOffset = allocator.Allocate(0, nullptr);
+            allocator.Allocate(this->impulseFftConstants.size(), nullptr);
+
+            for (size_t i = 0; i < impulseFftConstants.size(); ++i)
             {
-                op->AllocateMemory(allocator);
+                this->impulseFftConstants[i]->SetStorageIndex(ToIndex(i + this->impulseFftOffset));
+            }
+            this->impulseFftOffset = impulseFftConstants[0]->GetStorageIndex();
+
+            // allocate constants.
+            this->constantsOffset = allocator.Allocate(0, nullptr);
+            size_t constantSize = constants.size();
+            ;
+            if (constantSize & 1)
+            {
+                ++constantSize; // maintain memory aligment.
+            }
+
+            allocator.Allocate(constantSize, nullptr);
+
+            for (size_t i = 0; i < constants.size(); ++i)
+            {
+                constants[i]->SetStorageIndex(ToIndex(constantsOffset + i));
             }
 
             for (std::size_t i = 0; i < schedule.size(); ++i)
@@ -1190,6 +1261,7 @@ namespace LsNumerics::Implementation
             }
             this->workingMemorySize = allocator.Allocate(0, nullptr);
         }
+
         static std::size_t countButterflies(std::vector<FftOp *> schedulerSlot)
         {
             std::size_t count = 0;
@@ -1430,14 +1502,14 @@ namespace LsNumerics::Implementation
         }
         (void)numberOfOps; // suppress unused warning.
 
-        std::vector<FftPlan::ConstantEntry> compiledConstants;
+        std::vector<fft_complex_t> compiledConstants;
+        compiledConstants.reserve(constants.size());
         for (auto &constant : constants)
         {
             ConstantOp *op = (ConstantOp *)(constant.get());
-            compiledConstants.push_back(
-                FftPlan::ConstantEntry{op->GetStorageIndex(), op->GetValue()});
+            compiledConstants.push_back(op->GetValue());
         }
-        return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), std::move(compiledConstants), this->startingSlot);
+        return std::make_shared<FftPlan>(maxDelay, workingMemorySize, std::move(ops), this->constantsOffset, std::move(compiledConstants), this->startingSlot, this->impulseFftOffset);
     }
 
 }
@@ -1463,22 +1535,9 @@ BalancedFft::plan_ptr BalancedFft::GetPlan(std::size_t size, FftDirection direct
 }
 std::unordered_map<std::size_t, BalancedFft::plan_ptr> BalancedConvolutionSection::planCache;
 
-BalancedFft::plan_ptr BalancedConvolutionSection::GetPlan(std::size_t size, std::size_t offset, std::vector<float> &data)
-{
-    plan_ptr plan;
-    Builder builder;
-    plan = builder.MakeConvolutionSection(size, offset, data);
-    planCache[size] = plan;
-    return plan;
-}
-
 BalancedFft::BalancedFft(std::size_t size, FftDirection direction)
 {
     this->SetPlan(GetPlan(size, direction));
-}
-BalancedConvolutionSection::BalancedConvolutionSection(std::size_t size, size_t offset, std::vector<float> &data)
-{
-    this->SetPlan(GetPlan(size, offset, data));
 }
 
 void Implementation::FftPlan::PrintPlan()
@@ -1542,15 +1601,59 @@ void BalancedFft::Reset()
     plan->InitializeConstants(this->workingMemory);
 }
 
-void BalancedConvolutionSection::SetPlan(plan_ptr plan)
+void BalancedConvolutionSection::SetPlan(
+    plan_ptr plan, size_t offset, const std::vector<float> &impulseData)
 {
     this->plan = plan;
+    this->size = plan->Size() / 2;
+
+    std::vector<fft_complex_t> fftConvolutionData;
+    fftConvolutionData.resize(size * 2);
+    {
+        std::vector<fft_complex_t> buffer;
+        buffer.resize(size * 2);
+        size_t len = size;
+        if (offset >= impulseData.size())
+        {
+            len = 0;
+        }
+        else if (offset + len > impulseData.size())
+        {
+            len = impulseData.size() - offset;
+        }
+        const float norm = 1; // (float)(std::sqrt(2 * size)); ?
+
+        for (size_t i = 0; i < len; ++i)
+        {
+            buffer[i + size] = impulseData[i + offset] * norm;
+        }
+        Fft<double> normalFft(size * 2);
+        normalFft.forward(buffer, fftConvolutionData);
+    }
+
+    // Copy the convolution data in working memory.
+    this->workingMemory.resize(0);
+    this->workingMemory.resize(plan->StorageSize());
+    size_t impulseFftOffset = plan->ImpulseFftOffset();
+    for (size_t i = 0; i < size * 2; ++i)
+    {
+        this->workingMemory[impulseFftOffset + i] = fftConvolutionData[i];
+    }
     Reset();
 }
 void BalancedConvolutionSection::Reset()
 {
-    this->workingMemory.resize(0);
-    this->workingMemory.resize(plan->StorageSize());
+    // zero out data while preserving the convoltion data.
+
+    for (size_t i = 0; i < plan->ImpulseFftOffset(); ++i)
+    {
+        this->workingMemory[i] = 0;
+    }
+    // skip over the convolution data.
+    for (size_t i = plan->ImpulseFftOffset() + size * 2; i < workingMemory.size(); ++i)
+    {
+        this->workingMemory[i] = 0;
+    }
     plan->InitializeConstants(this->workingMemory);
 
     planIndex = plan->StartingIndex();
@@ -1563,6 +1666,7 @@ struct SectionDelayCacheEntry
 };
 
 static std::vector<SectionDelayCacheEntry> sectionDelayCache;
+
 
 size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
 {
@@ -1583,33 +1687,30 @@ size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
 BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulseResponse)
 {
     constexpr size_t INITIAL_SECTION_SIZE = 64;
+    constexpr size_t BALANCED_FFT_SAMPLES = 2048;
 
+    size_t delaySize = -1;
     if (size < INITIAL_SECTION_SIZE)
     {
         directConvolutionLength = size;
-        delayLine.SetSize(directConvolutionLength + 1);
+        delaySize = directConvolutionLength;
     }
     else
     {
         size_t sectionSize = INITIAL_SECTION_SIZE;
         size_t sectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize);
-
         directConvolutionLength = sectionDelay;
         if (directConvolutionLength > size)
         {
             directConvolutionLength = size;
         }
+        delaySize = directConvolutionLength;
 
         size_t sampleOffset = directConvolutionLength;
 
-        while (sampleOffset < size)
+        while (sampleOffset < size && sampleOffset < BALANCED_FFT_SAMPLES)
         {
             size_t remaining = size - sampleOffset;
-            while (remaining <= sectionSize / 2 && sectionSize > INITIAL_SECTION_SIZE)
-            {
-                sectionSize = sectionSize / 2;
-                sectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize);
-            }
 
             size_t nextSectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize * 2);
             if (sampleOffset > nextSectionDelay)
@@ -1617,15 +1718,67 @@ BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulse
                 sectionSize *= 2;
                 sectionDelay = nextSectionDelay;
             }
-            std::cout << "sampleOffset: " << sampleOffset
+            while (remaining <= sectionSize / 2 && sectionSize > INITIAL_SECTION_SIZE)
+            {
+                sectionSize = sectionSize / 2;
+                sectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize);
+            }
+
+            size_t inputDelay = sampleOffset-sectionDelay;
+
+            std::cout << "balanced "
+                      << "sampleOffset: " << sampleOffset
                       << " SectionSize: " << sectionSize
                       << " sectionDelay: " << sectionDelay
-                      << " input delay: " << (sampleOffset - sectionDelay)
+                      << " input delay: " << inputDelay
                       << std::endl;
-            sections.emplace_back(
+
+            if (inputDelay > delaySize)
+            {
+                delaySize = inputDelay;
+            }
+            balancedSections.emplace_back(
                 Section{
-                    sampleOffset - sectionDelay,
+                    inputDelay,
                     BalancedConvolutionSection(
+                        sectionSize,
+                        sampleOffset,
+                        impulseResponse)});
+            sampleOffset += sectionSize;
+        }
+        while (sampleOffset < size)
+        {
+            size_t remaining = size - sampleOffset;
+
+            size_t nextSectionDelay = DirectConvolutionSection::GetSectionDelay(sectionSize * 2);
+            if (sampleOffset > nextSectionDelay)
+            {
+                sectionSize *= 2;
+                sectionDelay = nextSectionDelay;
+            }
+            while (remaining <= sectionSize / 2 && sectionSize > INITIAL_SECTION_SIZE)
+            {
+                sectionSize = sectionSize / 2;
+                sectionDelay = DirectConvolutionSection::GetSectionDelay(sectionSize);
+            }
+
+            size_t inputDelay = sampleOffset-sectionDelay;
+            std::cout << "direct   "
+                      << "sampleOffset: " << sampleOffset
+                      << " SectionSize: " << sectionSize
+                      << " sectionDelay: " << sectionDelay
+                      << " input delay: " << inputDelay
+                      << std::endl;
+
+            if (inputDelay > delaySize)
+            {
+                delaySize = inputDelay;
+            }
+
+            directSections.emplace_back(
+                DirectSection{
+                    inputDelay,
+                    DirectConvolutionSection(
                         sectionSize,
                         sampleOffset,
                         impulseResponse)});
@@ -1637,15 +1790,7 @@ BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulse
     {
         directImpulse[i] = impulseResponse[i];
     }
-    size_t maxDelay = directConvolutionLength;
-    for (auto &section : sections)
-    {
-        if (section.sampleDelay > maxDelay)
-        {
-            maxDelay = section.sampleDelay;
-        }
-    }
-    delayLine.SetSize(maxDelay + 1);
+    delayLine.SetSize(delaySize + 1);
 }
 static int NextPowerOf2(size_t value)
 {
@@ -1657,7 +1802,7 @@ static int NextPowerOf2(size_t value)
     return result;
 }
 
-void BalancedConvolution::DelayLine::SetSize(size_t size)
+void Implementation::DelayLine::SetSize(size_t size)
 {
     size = NextPowerOf2(size);
     this->size_mask = size - 1;
@@ -1678,8 +1823,48 @@ void BalancedFft::PrintPlan()
         }                                                        \
     }
 
+void SlotUsageSearchTest(const std::vector<fft_index_t> &values)
+{
+    // checks that the binary search for contains_any is working
+    {
+        // non-borrowable
+        SlotUsage slotUsage(256);
+        for (size_t value : values)
+        {
+            slotUsage.Add(value, value + 1);
+        }
+
+        for (size_t value : values)
+        {
+            TEST_ASSERT(!slotUsage.contains(value - 1));
+            TEST_ASSERT(slotUsage.contains(value));
+            TEST_ASSERT(!slotUsage.contains(value + 1));
+        }
+    }
+    {
+        // borrowable
+        SlotUsage slotUsage(256);
+        for (size_t value : values)
+        {
+            slotUsage.Add(value, value);
+        }
+
+        for (size_t value : values)
+        {
+            TEST_ASSERT(!slotUsage.contains(value - 1));
+            TEST_ASSERT(slotUsage.contains(value));
+            TEST_ASSERT(slotUsage.contains_any(value - 1, value + 1));
+            TEST_ASSERT(!slotUsage.contains(value + 1));
+            TEST_ASSERT(!slotUsage.contains_any(value, value));
+            TEST_ASSERT(!slotUsage.contains_any(value - 1, value - 1));
+            TEST_ASSERT(!slotUsage.contains_any(value + 1, value + 1));
+        }
+    }
+}
+
 void Implementation::SlotUsageTest()
 {
+    SlotUsageSearchTest({1, 9, 42, 56, 58, 61, 63, 70, 91});
     {
         SlotUsage slotUsage(256);
         slotUsage.Add(0, 84);
@@ -1688,19 +1873,19 @@ void Implementation::SlotUsageTest()
         TEST_ASSERT(slotUsage.contains(0));
         TEST_ASSERT(slotUsage.contains(86));
         TEST_ASSERT(!slotUsage.contains(87));
-        TEST_ASSERT(slotUsage.contains_any(86,87));
-        TEST_ASSERT(!slotUsage.contains_any(87,256));
-        TEST_ASSERT(slotUsage.contains_any(250,300));
+        TEST_ASSERT(slotUsage.contains_any(86, 87));
+        TEST_ASSERT(!slotUsage.contains_any(87, 256));
+        TEST_ASSERT(slotUsage.contains_any(250, 300));
 
-        TEST_ASSERT(slotUsage.contains_any(86,86));
-        TEST_ASSERT(!slotUsage.contains_any(87,87));
-        slotUsage.Add(88,88);
-        TEST_ASSERT(!slotUsage.contains_any(88,88)); // borrowed slot.
-        TEST_ASSERT(slotUsage.contains(88)); // borrowed slot.
+        TEST_ASSERT(slotUsage.contains_any(86, 86));
+        TEST_ASSERT(!slotUsage.contains_any(87, 87));
+        slotUsage.Add(88, 88);
+        TEST_ASSERT(!slotUsage.contains_any(88, 88)); // borrowed slot.
+        TEST_ASSERT(slotUsage.contains(88));          // borrowed slot.
     }
     {
         SlotUsage slotUsage(256);
-        slotUsage.Add(238,256+10);
+        slotUsage.Add(238, 256 + 10);
         for (fft_index_t i = 0; i < 10; ++i)
         {
             TEST_ASSERT(slotUsage.contains(i));
@@ -1740,13 +1925,13 @@ void Implementation::SlotUsageTest()
         TEST_ASSERT(slotUsage.contains(9));
         TEST_ASSERT(!slotUsage.contains(10));
         TEST_ASSERT(slotUsage.contains(12));
-        TEST_ASSERT(!slotUsage.contains_any(12,12));
-        TEST_ASSERT(slotUsage.contains_any(9,9));
+        TEST_ASSERT(!slotUsage.contains_any(12, 12));
+        TEST_ASSERT(slotUsage.contains_any(9, 9));
 
         TEST_ASSERT(slotUsage.contains(12));
         TEST_ASSERT(!slotUsage.contains_any(11, 12)); // yes we can re-use the slot.
 
-        TEST_ASSERT(slotUsage.contains_any(12, 13)); // yes we can re-use the slot.
+        TEST_ASSERT(slotUsage.contains_any(12, 13));  // yes we can re-use the slot.
         TEST_ASSERT(!slotUsage.contains_any(13, 14)); // yes we can re-use the slot.
         TEST_ASSERT(slotUsage.contains_any(11, 13));
         TEST_ASSERT(!slotUsage.contains_any(12, 12));
@@ -1778,9 +1963,9 @@ void Implementation::FftPlan::CheckForOverwrites()
     {
         workingGenerations[i] = UNINITIALIZED_GENERATION; // uninitialized.
     }
-    for (const auto &constant : this->constants)
+    for (size_t i = 0; i < constants.size(); ++i)
     {
-        workingGenerations[constant.index] = CONSTANT_GENERATION;
+        workingGenerations[i + this->constantsOffset] = CONSTANT_GENERATION;
     }
 
     int expectedOutputGeneration = -1;
@@ -1845,4 +2030,277 @@ void Implementation::FftPlan::CheckForOverwrites()
             }
         }
     }
+}
+
+Implementation::CompiledButterflyOp::CompiledButterflyOp(BinaryReader &reader)
+{
+
+    auto position = reader.Tell();
+    (void)position;
+
+    reader >> in0 >> in1 >> out >> M_index;
+}
+
+void Implementation::CompiledButterflyOp::Write(BinaryWriter &writer) const
+{
+    auto position = writer.Tell();
+    (void)position;
+    writer << in0 << in1 << out << M_index;
+}
+
+Implementation::PlanStep::PlanStep(BinaryReader &reader)
+{
+    reader >> inputIndex >> inputIndex2 >> outputIndex;
+
+    size_t opsSize;
+    reader >> opsSize;
+    ops.reserve(opsSize);
+    for (size_t i = 0; i < opsSize; ++i)
+    {
+        ops.push_back(CompiledButterflyOp(reader));
+    }
+}
+
+void Implementation::PlanStep::Write(BinaryWriter &writer) const
+{
+    writer << inputIndex << inputIndex2 << outputIndex;
+
+    writer << ops.size();
+    for (const auto &op : ops)
+    {
+        op.Write(writer);
+    }
+}
+
+static void ThrowFormatError()
+{
+    throw std::logic_error("Invalid file format.");
+}
+
+FftPlan::FftPlan(BinaryReader &reader)
+{
+    const char *p = FftPlan::MAGIC_FILE_STRING;
+    char c;
+    while (*p)
+    {
+        reader >> c;
+        if (c != *p)
+        {
+            ThrowFormatError();
+        }
+        ++p;
+    }
+    reader >> c;
+    if (c != 0)
+    {
+        ThrowFormatError();
+    }
+    uint64_t version;
+    reader >> version;
+    if (version != FftPlan::FILE_VERSION)
+    {
+        throw std::logic_error("Invalid file version.");
+    }
+
+    reader >> norm >> maxDelay >> storageSize;
+
+    size_t stepsSize;
+    reader >> stepsSize;
+    steps.reserve(stepsSize);
+
+    for (size_t i = 0; i < stepsSize; ++i)
+    {
+        steps.push_back(PlanStep(reader));
+    }
+
+    reader >> this->constantsOffset;
+    size_t constantsSize;
+    reader >> constantsSize;
+    constants.reserve(constantsSize);
+    for (size_t i = 0; i < constantsSize; ++i)
+    {
+        fft_complex_t value;
+        reader >> value;
+        constants.push_back(value);
+    }
+    reader >> startingIndex >> impulseFftOffset;
+
+    uint64_t magicTail;
+    reader >> magicTail;
+    if (magicTail != MAGIC_TAIL_CONSTANT)
+    {
+        throw std::logic_error("File data is corrupted.");
+    }
+}
+
+void Implementation::FftPlan::Write(BinaryWriter &writer) const
+{
+
+    const char *p = FftPlan::MAGIC_FILE_STRING;
+    while (*p)
+    {
+        writer << *p++;
+    }
+    writer << (char)0;
+    writer << FftPlan::FILE_VERSION;
+
+    writer << norm
+           << maxDelay
+           << storageSize;
+
+    writer << steps.size();
+    for (const auto &step : steps)
+    {
+        step.Write(writer);
+    }
+    writer << constantsOffset;
+    writer << constants.size();
+    for (const auto &value : constants)
+    {
+        writer << value;
+    }
+    writer << startingIndex
+           << impulseFftOffset;
+    writer << MAGIC_TAIL_CONSTANT;
+}
+
+BalancedConvolutionSection::BalancedConvolutionSection(std::size_t size, size_t offset, const std::vector<float> &data)
+{
+    this->SetPlan(GetPlan(size), offset, data);
+}
+
+BalancedConvolutionSection::BalancedConvolutionSection(
+    const std::filesystem::path &path,
+    size_t offset, const std::vector<float> &data)
+{
+    try
+    {
+        SetPlan(GetPlan(path), offset, data);
+    }
+    catch (const std::exception &e)
+    {
+        throw std::logic_error(SS("Can't open convolution plan file. " << e.what()));
+    }
+}
+
+std::mutex BalancedConvolutionSection::planCacheMutex;
+
+void BalancedConvolutionSection::ClearPlanCache()
+{
+    std::lock_guard lock(planCacheMutex);
+
+    planCache.clear();
+}
+BalancedFft::plan_ptr BalancedConvolutionSection::GetPlan(std::size_t size)
+{
+    std::lock_guard lock(planCacheMutex);
+    if (planCache.contains(size))
+    {
+        return planCache[size];
+    }
+    plan_ptr plan;
+    if (PlanFileExists(size))
+    {
+        BinaryReader reader(GetPlanFilePath(size));
+        plan = std::make_shared<FftPlan>(reader);
+    }
+    else
+    {
+        Builder builder;
+        plan = builder.MakeConvolutionSection(size);
+    }
+    planCache[size] = plan;
+    return plan;
+}
+
+plan_ptr BalancedConvolutionSection::GetPlan(const std::filesystem::path &path)
+{
+    std::filesystem::path fullyQualifiedPath = std::filesystem::canonical(path);
+    BinaryReader reader(fullyQualifiedPath);
+    try
+    {
+        return std::make_shared<FftPlan>(reader);
+    }
+    catch (const std::exception &e)
+    {
+        throw std::logic_error(SS(e.what() << " " << fullyQualifiedPath.string()));
+    }
+}
+
+void BalancedConvolutionSection::Save(const std::filesystem::path &path)
+{
+    try
+    {
+        BinaryWriter writer(path);
+        plan->Write(writer);
+    }
+    catch (const std::exception &e)
+    {
+        throw std::logic_error(SS("Can't open convolution plan file. " << e.what()));
+    }
+}
+
+std::filesystem::path BalancedConvolutionSection::planFileDirectory;
+
+std::filesystem::path BalancedConvolutionSection::GetPlanFilePath(size_t size)
+{
+    if (planFileDirectory.string().length() == 0)
+    {
+        throw std::logic_error("PlanFileDirectory not set.");
+    }
+    return std::filesystem::canonical(
+        BalancedConvolutionSection::planFileDirectory / SS(size << ".convolutionPlan"));
+}
+
+bool BalancedConvolutionSection::PlanFileExists(size_t size)
+{
+    if (planFileDirectory.string().length() == 0)
+    {
+        return false;
+    }
+
+    std::filesystem::path path = GetPlanFilePath(size);
+    return std::filesystem::exists(path);
+}
+
+Implementation::DirectConvolutionSection::DirectConvolutionSection(
+    size_t size,
+    size_t offset, const std::vector<float> &impulseData)
+    : fftPlan(size * 2),
+      size(size)
+{
+    buffer.resize(size * 2);
+    inputBuffer.resize(size * 2);
+    impulseFft.resize(size * 2);
+    size_t len = size;
+
+    const float norm = (float)(std::sqrt(2 * size));
+
+    if (offset >= impulseData.size())
+    {
+        len = 0;
+    }
+    else if (offset + len > impulseData.size())
+    {
+        len = impulseData.size() - offset;
+    }
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        impulseFft[i + size] = norm*impulseData[i + offset];
+    }
+    fftPlan.compute(impulseFft, impulseFft, fft_dir::forward);
+    bufferIndex = 0;
+}
+
+void Implementation::DirectConvolutionSection::UpdateBuffer()
+{
+    fftPlan.compute(inputBuffer, buffer, fft_dir::forward);
+    size_t size2 = size * 2;
+    for (size_t i = 0; i < size2; ++i)
+    {
+        buffer[i] *= impulseFft[i];
+    }
+    fftPlan.compute(buffer, buffer, fft_dir::backward);
+    bufferIndex = 0;
 }

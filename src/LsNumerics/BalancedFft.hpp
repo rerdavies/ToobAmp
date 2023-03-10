@@ -22,14 +22,10 @@
  * SOFTWARE.
  */
 
-/* DO NOT USE!!!
-
-  PERFORMANCE IS ABOUT 6x worse than direct FFT convolution, and 
-  does not yeilds 150% of real-time CPU use for very reasonable
-  cases.
-*/
 
 #pragma once
+
+
 #include <cstddef>
 #include <complex>
 #include <vector>
@@ -38,6 +34,9 @@
 #include <cassert>
 #include <cmath>
 #include <unordered_map>
+#include <filesystem>
+#include <mutex>
+#include "Fft.hpp"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -50,6 +49,8 @@ namespace LsNumerics
     using fft_index_t = int32_t;
     static constexpr fft_index_t CONSTANT_INDEX = -1;
     static constexpr fft_index_t INVALID_INDEX = -2;
+    class BinaryWriter;
+    class BinaryReader;
 
     enum class FftDirection
     {
@@ -61,23 +62,90 @@ namespace LsNumerics
     {
         void SlotUsageTest();
 
+        class DelayLine
+        {
+        public:
+            DelayLine() { SetSize(0); }
+            DelayLine(size_t size)
+            {
+                SetSize(size);
+            }
+            void SetSize(size_t size);
+
+            void push(float value)
+            {
+                head = (head - 1) & size_mask;
+                storage[head] = value;
+            }
+            float at(size_t index) const
+            {
+                return storage[(head + index) & size_mask];
+            }
+
+            float operator[](size_t index) const
+            {
+                return at(index);
+            }
+
+        private:
+            std::vector<float> storage;
+            std::size_t head = 0;
+            std::size_t size_mask = 0;
+        };
+
+
+        class DirectConvolutionSection {
+        public:
+            DirectConvolutionSection(
+                size_t size,
+                size_t offset,const std::vector<float>&impulseData);
+
+            float_t Size() const { return size; }
+            float_t Delay() const { return size; }
+            static size_t GetSectionDelay(size_t size) { return size; }
+            float Tick(float input)
+            {
+                if (bufferIndex >= size)
+                {
+                    UpdateBuffer();
+                }
+                // input buffer in reverse order.
+
+                inputBuffer[bufferIndex] = inputBuffer[bufferIndex+size];
+                inputBuffer[bufferIndex+size] = input;
+                float result =  (float(buffer[bufferIndex].real()));
+                ++bufferIndex;
+                return result;
+
+            }
+        private: 
+            void UpdateBuffer();
+            Fft<double>  fftPlan;
+            size_t size;
+            std::vector<fft_complex_t> impulseFft;
+            size_t bufferIndex;
+            std::vector<float> inputBuffer;
+            std::vector<fft_complex_t> buffer;
+        };
         class CompiledButterflyOp
         {
         public:
-            CompiledButterflyOp(fft_index_t in0, fft_index_t in1, fft_index_t out,fft_index_t M_index)
-                : in0(in0), in1(in1),out(out), M_index(M_index)
+            CompiledButterflyOp(fft_index_t in0, fft_index_t in1, fft_index_t out, fft_index_t M_index)
+                : in0(in0), in1(in1), out(out), M_index(M_index)
             {
                 assert(in0 != INVALID_INDEX);
                 assert(in1 != INVALID_INDEX);
             }
+            CompiledButterflyOp(BinaryReader &);
             void Tick(std::vector<fft_complex_t> &workingMemory)
             {
-                fft_complex_t& M = workingMemory[M_index];
+                fft_complex_t &M = workingMemory[M_index];
                 fft_complex_t t1 = workingMemory[in1] * M;
                 fft_complex_t t0 = workingMemory[in0];
                 workingMemory[out] = t0 + t1;
-                workingMemory[out+1] = t0 - t1;
+                workingMemory[out + 1] = t0 - t1;
             }
+            void Write(BinaryWriter &writer) const;
             fft_index_t in0, in1, out, M_index;
 #ifndef NDEBUG
             std::string id;
@@ -88,6 +156,9 @@ namespace LsNumerics
         public:
             using fft_float_t = double;
             using fft_complex_t = std::complex<double>;
+
+            PlanStep() { }
+            PlanStep(BinaryReader &reader);
 
             double Tick(double value, std::vector<fft_complex_t> &workingMemory)
             {
@@ -107,6 +178,9 @@ namespace LsNumerics
                 }
                 return workingMemory[this->outputIndex];
             }
+
+            void Write(BinaryWriter &writer) const;
+
             fft_index_t inputIndex;
             fft_index_t inputIndex2;
             fft_index_t outputIndex;
@@ -115,72 +189,83 @@ namespace LsNumerics
         class FftPlan
         {
         public:
-            struct ConstantEntry
-            {
-                fft_index_t index;
-                fft_complex_t value;
-            };
+            static const char *MAGIC_FILE_STRING;
+            static constexpr uint64_t FILE_VERSION = 101;
+            static constexpr uint64_t MAGIC_TAIL_CONSTANT = 0x10394A2BE7F3C34D;
+
             FftPlan(
-                std::size_t maxDelay, 
-                std::size_t storageSize, 
+                std::size_t maxDelay,
+                std::size_t storageSize,
                 std::vector<PlanStep> &&ops,
-                 std::vector<ConstantEntry> &&constants, 
-                 size_t startingIndex
-            )
+                std::size_t constantsOffset,
+                std::vector<fft_complex_t> &&constants,
+                size_t startingIndex,
+                size_t impulseFftOffset)
                 : norm(fft_float_t(1 / std::sqrt((double)ops.size()))),
                   maxDelay(maxDelay),
                   storageSize(storageSize),
                   steps(std::move(ops)),
+                  constantsOffset(constantsOffset),
                   constants(std::move(constants)),
-                  startingIndex(startingIndex)
+                  startingIndex(startingIndex),
+                  impulseFftOffset(impulseFftOffset)
+
             {
             }
+            FftPlan(BinaryReader &reader);
+
+            void Write(BinaryWriter &writer) const;
+
             std::size_t Delay() const { return maxDelay; }
             std::size_t Size() const { return steps.size(); }
             std::size_t StorageSize() const { return storageSize; }
             fft_float_t Norm() const { return norm; }
             std::size_t StartingIndex() const { return startingIndex; }
+            std::size_t ImpulseFftOffset() const { return impulseFftOffset; }
 
             double Tick(std::size_t step, double value, std::vector<fft_complex_t> &workingMemory)
             {
-                return steps[step].Tick(value*norm, workingMemory);
+                return steps[step].Tick(value * norm, workingMemory);
             }
             fft_complex_t Tick(std::size_t step, fft_complex_t value, std::vector<fft_complex_t> &workingMemory)
             {
-                return steps[step].Tick(value*norm, workingMemory);
+                return steps[step].Tick(value * norm, workingMemory);
             }
             float ConvolutionTick(std::size_t step, float value, std::vector<fft_complex_t> &workingMemory)
             {
-                double t = (value*norm);
+                double t = (value * norm);
                 auto &planStep = steps[step];
                 workingMemory[planStep.inputIndex2] = t; // provide data for the extra inputs.
-                float result =  (float)planStep.Tick(t, workingMemory);
+                float result = (float)planStep.Tick(t, workingMemory);
                 return result;
             }
             void InitializeConstants(std::vector<fft_complex_t> &workingMemory)
             {
-                for (const auto &constant : constants)
+                for (size_t i = 0; i < constants.size(); ++i)
                 {
-                    workingMemory[constant.index] = constant.value;
+                    workingMemory[i+constantsOffset] = constants[i];
                 }
             }
             void PrintPlan();
-            void PrintPlan(std::ostream&stream,bool trimIds);
-            void PrintPlan(const std::string&filename);
+            void PrintPlan(std::ostream &stream, bool trimIds);
+            void PrintPlan(const std::string &filename);
             void CheckForOverwrites();
-            
-            void ZeroOutput(size_t output,fft_index_t storageIndex)
+
+            void ZeroOutput(size_t output, fft_index_t storageIndex)
             {
                 size_t slot = (output + maxDelay) % steps.size();
                 steps[slot].outputIndex = storageIndex;
             }
+
         private:
             double norm;
             std::size_t maxDelay;
             std::size_t storageSize;
             std::vector<PlanStep> steps;
-            std::vector<ConstantEntry> constants;
+            std::size_t constantsOffset;
+            std::vector<fft_complex_t> constants;
             std::size_t startingIndex;
+            std::size_t impulseFftOffset;
         };
         using plan_ptr = std::shared_ptr<FftPlan>;
 
@@ -191,8 +276,7 @@ namespace LsNumerics
     /// every N samples where N is the size of the FFT. The balanced FFT incurs a fixed computational expense in each sample cycle,
     /// while also making FFT results available earlier.
 
-
-    class BalancedFft 
+    class BalancedFft
     {
     public:
         using Plan = Implementation::FftPlan;
@@ -200,8 +284,10 @@ namespace LsNumerics
 
         BalancedFft(size_t size, FftDirection direction);
         ~BalancedFft() {}
+
         void PrintPlan();
-        void PrintPlan(const std::string& fileName) { plan->PrintPlan(fileName);}
+        void PrintPlan(const std::string &fileName) { plan->PrintPlan(fileName); }
+
     public:
         size_t Size() const { return plan->Size(); }
         size_t Delay() const { return plan->Delay(); }
@@ -237,6 +323,7 @@ namespace LsNumerics
             }
         }
         void Reset();
+
     private:
         void SetPlan(plan_ptr plan);
 
@@ -244,7 +331,6 @@ namespace LsNumerics
         std::vector<fft_complex_t> workingMemory;
         plan_ptr plan;
         size_t planIndex = 0;
-
 
     private:
         struct PlanKey
@@ -272,32 +358,47 @@ namespace LsNumerics
         static plan_ptr GetPlan(std::size_t size, FftDirection direction);
     };
 
-    class BalancedConvolutionSection 
+
+    /// @brief Convolution section with balanced exection time per cycle.
+    /// For moderate sizes of N, generating the execution plan can take a significant amount of time.
+    /// 
+    /// The recommended way to use this package is to pre-generate files containing the execution plan.
+    /// See @ref BalancedConvolution for details.
+
+    class BalancedConvolutionSection
     {
     public:
-
         using Plan = Implementation::FftPlan;
         using plan_ptr = Implementation::plan_ptr;
 
-        BalancedConvolutionSection(size_t size, size_t offset,std::vector<float> &impulseResponse);
-
-        BalancedConvolutionSection(size_t size, std::vector<float> &impulseResponse)
-        : BalancedConvolutionSection(size,0,impulseResponse)
+        static void SetPlanFileDirectory(const std::filesystem::path &path)
         {
-
+            planFileDirectory = path;
         }
+
+        BalancedConvolutionSection(size_t size, size_t offset, const std::vector<float> &impulseResponse);
+
+        BalancedConvolutionSection(size_t size, const std::vector<float> &impulseResponse)
+            : BalancedConvolutionSection(size, 0, impulseResponse)
+        {
+        }
+        BalancedConvolutionSection(const std::filesystem::path &path,
+                                   size_t offset, const std::vector<float> &data);
+
+        void Save(const std::filesystem::path &path);
+
         ~BalancedConvolutionSection() {}
 
         static size_t GetSectionDelay(size_t size);
 
-        size_t Delay() const { return plan->Delay()-plan->Size()/2; }
-
+        size_t Size() const { return size; }
+        size_t Delay() const { return plan->Delay() - plan->Size() / 2; }
 
         void PrintPlan()
         {
             plan->PrintPlan();
         }
-        void PrintPlan(const std::string&fileName)
+        void PrintPlan(const std::string &fileName)
         {
             plan->PrintPlan(fileName);
         }
@@ -320,23 +421,64 @@ namespace LsNumerics
         }
 
         void Reset();
+        static bool PlanFileExists(size_t size);
+        static void ClearPlanCache();
+
     private:
-        void SetPlan(plan_ptr plan);
+        static std::mutex planCacheMutex;
+
+        static std::filesystem::path GetPlanFilePath(size_t size);
+
+        void SetPlan(plan_ptr plan, size_t offset, const std::vector<float> &impulseData);
+
+        static std::filesystem::path planFileDirectory;
+
+
+        size_t size = 0;
 
         std::vector<fft_complex_t> workingMemory;
         plan_ptr plan;
         size_t planIndex = 0;
 
         static std::unordered_map<std::size_t, plan_ptr> planCache;
-        static plan_ptr GetPlan(std::size_t size, size_t offset,std::vector<float> &data);
+        static plan_ptr GetPlan(std::size_t size);
+        static plan_ptr GetPlan(const std::filesystem::path &path);
     };
 
-    class BalancedConvolution {
+    /// @brief Convolution using a roughly fixed execution time per cycle.
+    ///
+    /// Normal convolution requires fft operations that can be enormously expensive every n
+    /// cycles. BalancedConvolution spreads out the execution time so that there is roughly
+    /// a fixed amount execution time per cycle.
+    ///
+    /// Generation execution plans can take a significant amount of time (tens or hundreds of seconds).
+    /// It is recommended that you configure BalancedConvolution to use pre-generated execution plans
+    /// generated at compile time, and stored in files.
+    /// 
+    /// To use pregenerated plan files, follow these steps.
+    ///
+    /// 1. Generate the execution plans using the GenerateFftPlans executable a build time.
+    ///
+    ///       GenerateFftPlans <output-directory>
+    ///
+    /// 2. Copy these files into a fixed location at install time. (May be read-only).
+    /// 
+    /// 3. Call BalancedConvolution::SetPlanFileDirector(<plan-file-directory>) to
+    ///    to cause execution plans to be loaded from disk instead of being generated at 
+    ///    runtime.
+    ///
+    class BalancedConvolution
+    {
     public:
         BalancedConvolution(size_t size, std::vector<float> impulseResponse);
 
         BalancedConvolution(std::vector<float> impulseResponse)
-        :BalancedConvolution(impulseResponse.size(),impulseResponse) {
+            : BalancedConvolution(impulseResponse.size(), impulseResponse)
+        {
+        }
+        static void SetPlanFileDirectory(const std::filesystem::path&path)
+        {
+            BalancedConvolutionSection::SetPlanFileDirectory(path);
         }
 
         float Tick(float value)
@@ -345,64 +487,49 @@ namespace LsNumerics
             double result = 0;
             for (size_t i = 0; i < directConvolutionLength; ++i)
             {
-                result += delayLine[i]*(double)directImpulse[i];
+                result += delayLine[i] * (double)directImpulse[i];
             }
-            for (size_t i = 0; i < sections.size(); ++i)
+            for (auto&section: balancedSections)
             {
-                auto&section = sections[i];
                 result += section.fftSection.Tick(delayLine[section.sampleDelay]);
+            }
+            for (auto& section: directSections)
+            {
+                result += section.directSection.Tick(delayLine[section.sampleDelay]);
             }
             return (float)result;
         }
-        void Tick(size_t frames, float*input,float*output)
+        void Tick(size_t frames, float *input, float *output)
         {
             for (size_t i = 0; i < frames; ++i)
             {
                 output[i] = Tick(input[i]);
             }
         }
-        void Tick(std::vector<float>&input, std::vector<float>&output)
+        void Tick(std::vector<float> &input, std::vector<float> &output)
         {
-            Tick(input.size(),&(input[0]),&(output[0]));
+            Tick(input.size(), &(input[0]), &(output[0]));
         }
 
-    private:
-        class DelayLine {
-        public: 
-            DelayLine() { SetSize(0);}
-            DelayLine(size_t size) {
-                SetSize(size);
-            }
-            void SetSize(size_t size);
 
-            void push(float value)
-            {
-                head = (head-1) & size_mask;
-                storage[head] = value;
-            }
-            float at(size_t index) const {
-                return storage[(head+index) & size_mask];
-            }
-
-            float operator[](size_t index) const {
-                return at(index);
-            }
-        private:
-            std::vector<float> storage;
-            std::size_t head = 0;
-            std::size_t size_mask = 0;
-        };
     private:
         std::vector<float> directImpulse;
-        DelayLine delayLine;
+        Implementation::DelayLine delayLine;
         size_t directConvolutionLength;
 
-        struct Section {
+        struct Section
+        {
             size_t sampleDelay;
             BalancedConvolutionSection fftSection;
         };
+        struct DirectSection
+        {
+            size_t sampleDelay;
+            Implementation::DirectConvolutionSection directSection;
+        };
 
-        std::vector<Section> sections;
+        std::vector<Section> balancedSections;
+        std::vector<DirectSection> directSections;
     };
 
 }

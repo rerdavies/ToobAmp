@@ -3,8 +3,9 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
+set (CMAKE_CXX_STANDARD 20)
 
-set(PROFILER 0)
+set(PROFILER 1)
 
 
 # message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -133,7 +134,25 @@ add_executable(BaxandallToneStackTest
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
 
+add_executable(GenerateFftPlans
+    LsNumerics/BinaryReader.hpp
+    LsNumerics/BinaryReader.cpp
+    LsNumerics/BinaryWriter.cpp
+    LsNumerics/BinaryWriter.hpp
+    LsNumerics/FftConvolution.cpp
+    LsNumerics/FftConvolution.hpp
+    LsNumerics/GenerateFftPlans.cpp
+    LsNumerics/Fft.hpp
+    LsNumerics/BalancedFft.cpp
+    LsNumerics/BalancedFft.hpp
+)
+
 add_executable(ConvolutionReverbTest
+    LsNumerics/BinaryReader.hpp
+    LsNumerics/BinaryReader.cpp
+    LsNumerics/BinaryWriter.cpp
+    LsNumerics/BinaryWriter.hpp
+
     LsNumerics/FftConvolution.cpp
     LsNumerics/FftConvolution.hpp
     LsNumerics/ConvolutionReverbTest.cpp
@@ -144,8 +163,12 @@ add_executable(ConvolutionReverbTest
     LsNumerics/BalancedFft.hpp
 )
 if(PROFILER)
-    target_compile_options(ConvolutionReverbTest "-pg")
-    target_compile_definitions(ConvolutionReverbTest "WITHPERF")
+    target_link_libraries(ConvolutionReverbTest PRIVATE profiler)
+    target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")    
+
+    # target_compile_options(ConvolutionReverbTest PRIVATE "-pg")
+    # target_link_options(ConvolutionReverbTest PRIVATE "-pg")
+    # target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHPERF")
     #target_link_libraries(ConvolutionReverbTest profiler)
     #target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")
 endif()

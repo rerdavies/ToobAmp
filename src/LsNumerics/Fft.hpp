@@ -1,16 +1,4 @@
 
-#ifndef LSNUMERICS_INCLUDE_FFT_H
-#define LSNUMERICS_INCLUDE_FFT_H
-
-#include <complex> // std::complex
-#include <vector>  // std::vector
-
-#include <cmath>
-#include <cstdint>
-#include <cassert>
-#include "LsMath.hpp"
-#include "Window.hpp"
-
 /*
  *   Copyright (c) 2022 Robin E. R. Davies
  *   All rights reserved.
@@ -33,6 +21,20 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
+
+#pragma once
+
+#ifndef LSNUMERICS_INCLUDE_FFT_HPP
+#define LSNUMERICS_INCLUDE_FFT_HPP
+
+#include <complex> // std::complex
+#include <vector>  // std::vector
+
+#include <cmath>
+#include <cstdint>
+#include <cassert>
+#include "LsMath.hpp"
+#include "Window.hpp"
 
 namespace LsNumerics
 {
@@ -93,20 +95,20 @@ namespace LsNumerics
         {
             twiddles.resize(0);
 
-            for (int i = 1; i <= log2N; ++i) {
-                int m = 1 << i; // butterfly mask
-                int m2 = m >> 1;    // butterfly width
+            for (int i = 1; i <= log2N; ++i)
+            {
+                int m = 1 << i;  // butterfly mask
+                int m2 = m >> 1; // butterfly width
                 // fft butterflies
 
                 int wI = 0;
                 for (int j = 0; j < m2; ++j)
                 {
-                    twiddles.push_back(std::exp(std::complex<T>(0,-wI*Pi/m2*T(dir))));
+                    twiddles.push_back(std::exp(std::complex<T>(0, -wI * Pi / m2 * T(dir))));
                     ++wI;
                 }
             }
         }
-
 
     public:
         Fft() {}
@@ -145,41 +147,39 @@ namespace LsNumerics
             assert(output.size() >= (size_t)N);
 
             int cnt = N;
+            // pre-process the input data using a borrowed buffer
+            // in case input and output are aliased.
+            if (&input == &output)
+            {
+                for (int j = 0; j < cnt; ++j)
+                {
+                    windowedData[j] = norm * input[bitReverse[j]];
+                }
+                for (int j = 0; j < cnt; ++j)
+                {
+                    output[j] = windowedData[j];
+                }
+            }
+            else
+            {
+                for (int j = 0; j < cnt; ++j)
+                {
+                    output[j] = norm*input[bitReverse[j]];
+                }
+            }
+            computeInner(output,dir);
+        }
+        void compute(const std::vector<float> &input, std::vector<std::complex<T>> &output, fft_dir dir)
+        {
+            assert(N != -1);
+            assert(input.size() >= (size_t)N);
+            assert(output.size() >= (size_t)N);
+
+            int cnt = N;
             // pre-process the input data
             for (int j = 0; j < cnt; ++j)
                 output[j] = norm * input[bitReverse[j]];
-
-            // const std::complex<T> *pTwiddles;
-            // if (dir == fft_dir::forward)
-            // {
-            //     pTwiddles = &(this->forwardTwiddle[0]);
-            // } else {
-            //     pTwiddles = &(this->backwardTwiddle[0]);
-
-            // }
-            // fft passes
-            for (int i = 1; i <= log2N; ++i)
-            {
-                int m = 1 << i;  // butterfly mask
-                int m2 = m >> 1; // butterfly width
-
-                std::complex<double> wj(1, 0);
-                std::complex<double> wInc = std::exp(std::complex<double>(0, Pi / m2 * double(dir)));
-
-                // fft butterflies
-                for (int j = 0; j < m2; ++j)
-                {
-                    std::complex<T> w = std::complex<T>((T)wj.real(),(T)wj.imag());
-                    for (int k = j; k < N; k += m)
-                    {
-                        std::complex<T> t = w * output[k + m2];
-                        std::complex<T> u = output[k];
-                        output[k] = u + t;
-                        output[k + m2] = u - t;
-                    }
-                    wj *= wInc;
-                }
-            }
+            computeInner(output,dir);
         }
 
         void forward(const std::vector<std::complex<T>> &input, std::vector<std::complex<T>> &output)
@@ -217,7 +217,6 @@ namespace LsNumerics
             {
                 output[i] = (U)(windowedData[i].real());
             }
-
         }
 
         template <typename U>
@@ -228,6 +227,34 @@ namespace LsNumerics
                 windowedData[i] = (T)(window[i] * input[i]);
             }
             return compute(windowedData, output, fft_dir::forward);
+        }
+
+    private:
+        void computeInner(std::vector<std::complex<T>> &output, fft_dir dir)
+        {
+            // fft passes
+            for (int i = 1; i <= log2N; ++i)
+            {
+                int m = 1 << i;  // butterfly mask
+                int m2 = m >> 1; // butterfly width
+
+                std::complex<double> wj(1, 0);
+                std::complex<double> wInc = std::exp(std::complex<double>(0, Pi / m2 * double(dir)));
+
+                // fft butterflies
+                for (int j = 0; j < m2; ++j)
+                {
+                    std::complex<T> w = std::complex<T>((T)wj.real(), (T)wj.imag());
+                    for (int k = j; k < N; k += m)
+                    {
+                        std::complex<T> t = w * output[k + m2];
+                        std::complex<T> u = output[k];
+                        output[k] = u + t;
+                        output[k + m2] = u - t;
+                    }
+                    wj *= wInc;
+                }
+            }
         }
     };
 

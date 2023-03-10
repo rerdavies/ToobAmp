@@ -35,7 +35,7 @@ endif()
 
 
 set(CPACK_GENERATOR "DEB")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Robin Davies <rerdavies@gmail.com>") # required
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Robin Davies <rerdavies at gmail.com>") # required
 set(CPACK_PACKAGE_VENDOR "Robin Davies")
 set(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/debian/package_description.txt")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Lv2-based guitar effects pedal for Raspberry Pi")
