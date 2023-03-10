@@ -33,7 +33,7 @@ private:
     float x = 0;
     float targetX = 0;
     float dx = 0;
-    size_t samplesRemaining = 0;;
+    size_t samplesRemaining = 0;
     
 public:
     ControlDezipper(float initialValue = 0)

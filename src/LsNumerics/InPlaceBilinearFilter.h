@@ -66,7 +66,7 @@ namespace LsNumerics {
             }
 
             // zero out the transforms.
-            for (int i = 0; i < sizeof(bilinearTransformStorage)/sizeof(bilinearTransformStorage[0]); ++i)
+            for (size_t i = 0; i < sizeof(bilinearTransformStorage)/sizeof(bilinearTransformStorage[0]); ++i)
             {
                 bilinearTransformStorage[i] = 0;
             }

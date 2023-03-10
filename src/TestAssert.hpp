@@ -1,7 +1,7 @@
 /*
  * MIT License
  * 
- * Copyright (c) 2022 Robin E. R. Davies
+ * Copyright (c) 2023 Robin E. R. Davies
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -22,41 +22,17 @@
  * SOFTWARE.
  */
 
-#include "IfPitchDetector.hpp"
+#pragma once
 
 
+#include <stdexcept>
+#include "ss.hpp"
 
-using namespace LsNumerics;
-
-void IfPitchDetector::prime(std::vector<float> p, size_t index)
-{
-    for (size_t i = 0; i < fftSize; ++i)
-    {
-        windowBuffer[i] = p[i+index]*window[i];
+#define TEST_ASSERT(x)                                           \
+    {                                                            \
+        if (!(x))                                                \
+        {                                                        \
+            throw std::logic_error(SS("Assert failed: " << #x)); \
+        }                                                        \
     }
-    fftPlan.forward(windowBuffer,*fftBuffer);    
-}
-
-double IfPitchDetector::detectPitch(std::vector<float> p, size_t index,size_t sampleStride)
-{
-
-    for (size_t i = 0; i < fftSize; ++i)
-    {
-        windowBuffer[i] = p[i+index]*window[i];
-    }
-
-    fftPlan.forward(windowBuffer,*fftBuffer);
-
-    for (size_t i = 0; i < phase.size(); ++i)
-    {
-        auto d = (*fftBuffer)[i]/(*lastBuffer)[i];
-        phase[0] = std::atan2(d.imag(),d.real());
-    }
-
-
-
-
-    swapBuffers();
-    return 0;
-}
 

@@ -39,4 +39,4 @@ namespace TwoPlay {
         if (value <= _MIN_DB) return 0;
         return std::pow(10,value*0.05);
     }
-}; // namespace.
+} // namespace

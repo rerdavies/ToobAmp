@@ -190,5 +190,5 @@ namespace LsNumerics
         return RationalPolynomial::Multiply(left, right);
     }
 
-};
+}
 

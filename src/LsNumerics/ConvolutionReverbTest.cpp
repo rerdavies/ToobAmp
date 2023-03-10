@@ -109,7 +109,7 @@ static void TestBalancedFft(FftDirection direction)
             input2[i] = -i - 1;
         }
 
-        Fft<double> normalFft{(int)n};
+        Fft<double> normalFft{n};
 
         std::vector<fft_complex_t> expectedOutput;
         expectedOutput.resize(n);

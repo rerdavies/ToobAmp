@@ -51,9 +51,9 @@ namespace LsNumerics {
 		PiecewiseChebyshevApproximation(
 			std::function<double(double)> function, double minValue, double maxValue, size_t segmentCount, int chebyshevOrder = 5, bool checkMaxError = true)
 			:function(function),
+			maxIndex(segmentCount),
 			minValue(minValue),
 			maxValue(maxValue),
-			maxIndex(segmentCount),
 			chebyshevOrder(chebyshevOrder),
 			checkMaxError(checkMaxError)
 		{
@@ -67,9 +67,9 @@ namespace LsNumerics {
 		}
 		PiecewiseChebyshevApproximation(double minValue, double maxValue, size_t maxIndex, int chebyshevOrder,
 			const std::vector<ChebyshevApproximation>& interpolators)
-			:minValue(minValue),
+			:maxIndex(maxIndex),
+			minValue(minValue),
 			maxValue(maxValue),
-			maxIndex(maxIndex),
 			chebyshevOrder(chebyshevOrder),
 			interpolators(interpolators),
 			checkMaxError(false)
@@ -172,4 +172,4 @@ namespace LsNumerics {
 
 	};
 
-};
+}

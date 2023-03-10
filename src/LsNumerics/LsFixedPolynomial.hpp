@@ -412,5 +412,5 @@ namespace LsNumerics
         return FixedPolynomial<N>::Multiply(left, right);
     }
 
-};
+}
 

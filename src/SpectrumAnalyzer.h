@@ -92,7 +92,7 @@ namespace TwoPlay {
 		private: 
 			SpectrumAnalyzer*pThis;
 			std::string svgPath;
-			int blockSize;
+			size_t blockSize;
 			float minFrequency;
 			float maxFrequency;
 		public:
@@ -102,10 +102,10 @@ namespace TwoPlay {
 			{
 			}
 
-			void SetParameters(int blockSize, float minFrequency,float maxFrequency)
+			void SetParameters(size_t blockSize, float minFrequency,float maxFrequency)
 			{
 				// force block size to power of two.
-				int t = 1;
+				size_t t = 1;
 				while (t < blockSize)
 				{
 					t <<= 1;
@@ -116,7 +116,7 @@ namespace TwoPlay {
 				this->minFrequency = minFrequency;
 				this->maxFrequency = maxFrequency;
 			}
-			int GetBlockSize()
+			size_t GetBlockSize()
 			{
 				return blockSize;
 			}
@@ -132,7 +132,7 @@ namespace TwoPlay {
 
 		FftWorker fftWorker;
 
-		static constexpr  int MAX_FFT_SIZE = 8192;
+		static constexpr  size_t MAX_FFT_SIZE = 8192;
 
 		LsNumerics::Fft<double> fft {4};
 		std::vector<std::complex<double> > fftResult;
@@ -140,14 +140,14 @@ namespace TwoPlay {
 
 		std::vector<float> svgBins;
 
-		std::string GetSvgPath(int blockSize,float minF, float maxF);
+		std::string GetSvgPath(size_t blockSize,float minF, float maxF);
 		void RequestSpectrum()
 		{
 			if (this->fftState == FftState::Idle)
 			{
 				this->captureOffset = 0;
 				this->fftState = FftState::Capturing;
-				fftWorker.SetParameters((int)(this->blockSize.GetValue()), this->minF.GetValue(),this->maxF.GetValue());
+				fftWorker.SetParameters(this->blockSize.GetValue(), this->minF.GetValue(),this->maxF.GetValue());
 				this->captureBuffer.resize(fftWorker.GetBlockSize());
 
 			} // else we'll get one real soon anyway.
@@ -159,8 +159,8 @@ namespace TwoPlay {
 		std::string bundle_path;
 
 
-		const float* inputL = NULL;;
-		float* outputL = NULL;;
+		const float* inputL = NULL;
+		float* outputL = NULL;
 
 		LV2_Atom_Sequence* controlIn = NULL;
 		LV2_Atom_Sequence* notifyOut = NULL;
@@ -256,4 +256,4 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	};
-};
+}

@@ -1,6 +1,7 @@
 #include "Fft.hpp"
 #include <cstddef>
 #include <cassert>
+#include "../TestAssert.hpp"
 
 
 using namespace LsNumerics;
@@ -27,7 +28,7 @@ static void fftTest()
 
     for (size_t i = 0; i < inverse.size(); ++i)
     {
-        assert(std::abs(inverse[i]-input[i]) < 1E-7);
+        TEST_ASSERT(std::abs(inverse[i]-input[i]) < 1E-7);
     }
 
     
@@ -46,9 +47,9 @@ static void fftTest()
             double t = std::abs(forwardResult[i]);
             if (i == f)
             {
-                assert(std::abs(t-std::sqrt(N)/2) < 1E-7);
+                TEST_ASSERT(std::abs(t-std::sqrt(N)/2) < 1E-7);
             } else {
-                assert(std::abs(t) < 1E-7);
+                TEST_ASSERT(std::abs(t) < 1E-7);
             }
         }
     }

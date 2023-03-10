@@ -218,7 +218,7 @@ public:
     reference(const std::string&name,MEMBER_TYPE CLASS::*member_pointer)
     {
         return new json_member_reference<CLASS,MEMBER_TYPE>(name,member_pointer);
-    };
+    }
     template <typename CLASS, typename MEMBER_TYPE,typename ENUM_CONVERTER>
     static json_enum_member_reference<CLASS,MEMBER_TYPE> *
     enum_reference(
@@ -227,14 +227,14 @@ public:
         const ENUM_CONVERTER*converter)
     {
         return new json_enum_member_reference<CLASS,MEMBER_TYPE>(name,member_pointer,converter);
-    };
+    }
 
     template <typename CLASS, typename MEMBER_TYPE> 
     static json_conditional_member_reference<CLASS,MEMBER_TYPE> *
     conditional_reference(const std::string&name,MEMBER_TYPE CLASS::*member_pointer,typename JsonConditionFunction<CLASS,MEMBER_TYPE>::Pointer condition  )
     {
         return new json_conditional_member_reference<CLASS,MEMBER_TYPE>(name,member_pointer,condition);
-    };
+    }
 
 };
 
@@ -244,7 +244,7 @@ template <typename T>
 class HasJsonPropertyMap {
 
     template <class TYPE>
-    static std::true_type test (decltype(TYPE::jmap) *) { return std::true_type();};
+    static std::true_type test (decltype(TYPE::jmap) *) { return std::true_type();}
 
     template <class TYPE>
     static std::false_type test (...);
@@ -333,6 +333,7 @@ public:
 
 
 private:
+    [[noreturn]]
     static void throw_encoding_error();
 
     static  uint32_t continuation_byte(std::string_view::iterator &p, std::string_view::const_iterator end);
@@ -753,6 +754,7 @@ public:
     void read(std::vector<T>*value)
     {
         char c;
+        (void)c; // avoid unused warning.
         std::vector<T> result;
 
         consume('[');
@@ -782,7 +784,7 @@ class HasJsonRead {
 
 
     template <typename TYPE, typename ARG>
-    static std::true_type test (decltype(json_reader(std::cin).read((ARG*)nullptr))*v) { return std::true_type();};
+    static std::true_type test (decltype(json_reader(std::cin).read((ARG*)nullptr))*v) { return std::true_type();}
 
     template <typename TYPE, typename ARG>
     static std::false_type test (...);

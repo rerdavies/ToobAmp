@@ -48,15 +48,15 @@ namespace LsNumerics {
             
         }
 
-        double prime(std::vector<float> p, size_t index);
+        void prime(std::vector<float> p, size_t index);
         double detectPitch(std::vector<float> p, size_t index,size_t sampleStride);
         size_t getFftSize() const { return fftSize;}
 
 
 
     private:
-        size_t fftSize;
         Fft<double> fftPlan;
+        size_t fftSize;
 
         std::vector<double> window;
         buffer_t windowBuffer;
@@ -76,4 +76,4 @@ namespace LsNumerics {
         }
 
     };
-};
+}

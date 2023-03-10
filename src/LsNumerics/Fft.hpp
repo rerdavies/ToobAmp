@@ -52,15 +52,15 @@ namespace LsNumerics
     private:
         std::vector<std::complex<T>> forwardTwiddle;
         std::vector<std::complex<T>> backwardTwiddle;
-        std::vector<int> bitReverse;
+        std::vector<uint32_t> bitReverse;
         std::vector<std::complex<T>> windowedData;
         T norm;
-        int log2N;
-        int N = -1;
+        size_t log2N;
+        size_t N = -1;
 
-        static int log2(int x)
+        static size_t log2(size_t x)
         {
-            int result = 0;
+            size_t result = 0;
 
             while (x > 1)
             {
@@ -80,7 +80,7 @@ namespace LsNumerics
          *  1011b    -> 1101b
          *  0111001b -> 1001110b
          */
-        static int bitr(uint32_t x, int nb)
+        static uint32_t bitr(uint32_t x, size_t nb)
         {
             assert(nb > 0 && nb <= 32);
             x = (x << 16) | (x >> 16);
@@ -95,14 +95,14 @@ namespace LsNumerics
         {
             twiddles.resize(0);
 
-            for (int i = 1; i <= log2N; ++i)
+            for (size_t i = 1; i <= log2N; ++i)
             {
-                int m = 1 << i;  // butterfly mask
-                int m2 = m >> 1; // butterfly width
+                size_t m = 1 << i;  // butterfly mask
+                size_t m2 = m >> 1; // butterfly width
                 // fft butterflies
 
-                int wI = 0;
-                for (int j = 0; j < m2; ++j)
+                size_t wI = 0;
+                for (size_t j = 0; j < m2; ++j)
                 {
                     twiddles.push_back(std::exp(std::complex<T>(0, -wI * Pi / m2 * T(dir))));
                     ++wI;
@@ -112,12 +112,12 @@ namespace LsNumerics
 
     public:
         Fft() {}
-        Fft(int size)
+        Fft(size_t size)
         {
             SetSize(size);
         }
-        int GetSize() const { return N; }
-        void SetSize(int size)
+        size_t GetSize() const { return N; }
+        void SetSize(size_t size)
         {
 
             if (this->N == size)
@@ -132,11 +132,11 @@ namespace LsNumerics
 
             log2N = log2(N);
 
-            for (int j = 0; j < N; ++j)
+            for (size_t j = 0; j < N; ++j)
             {
                 bitReverse[j] = bitr(j, log2N);
             }
-            norm = T(1) / std::sqrt(T(N));
+            norm = T(1 / std::sqrt(double(N)));
             calculateTwiddleFactors(fft_dir::forward, forwardTwiddle);
             calculateTwiddleFactors(fft_dir::backward, backwardTwiddle);
         }
@@ -146,23 +146,23 @@ namespace LsNumerics
             assert(input.size() >= (size_t)N);
             assert(output.size() >= (size_t)N);
 
-            int cnt = N;
+            size_t cnt = N;
             // pre-process the input data using a borrowed buffer
             // in case input and output are aliased.
             if (&input == &output)
             {
-                for (int j = 0; j < cnt; ++j)
+                for (size_t j = 0; j < cnt; ++j)
                 {
                     windowedData[j] = norm * input[bitReverse[j]];
                 }
-                for (int j = 0; j < cnt; ++j)
+                for (size_t j = 0; j < cnt; ++j)
                 {
                     output[j] = windowedData[j];
                 }
             }
             else
             {
-                for (int j = 0; j < cnt; ++j)
+                for (size_t j = 0; j < cnt; ++j)
                 {
                     output[j] = norm*input[bitReverse[j]];
                 }
@@ -175,9 +175,9 @@ namespace LsNumerics
             assert(input.size() >= (size_t)N);
             assert(output.size() >= (size_t)N);
 
-            int cnt = N;
+            size_t cnt = N;
             // pre-process the input data
-            for (int j = 0; j < cnt; ++j)
+            for (size_t j = 0; j < cnt; ++j)
                 output[j] = norm * input[bitReverse[j]];
             computeInner(output,dir);
         }
@@ -194,7 +194,7 @@ namespace LsNumerics
         template <typename U>
         void forward(const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
-            for (int i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 windowedData[i] = (T)(input[i]);
             }
@@ -203,7 +203,7 @@ namespace LsNumerics
         template <typename U>
         void backward(const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
-            for (int i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 windowedData[i] = input[i];
             }
@@ -213,7 +213,7 @@ namespace LsNumerics
         void backward(const std::vector<std::complex<T>> &input, std::vector<std::complex<U>> &output)
         {
             compute(input, windowedData, fft_dir::backward);
-            for (int i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 output[i] = (U)(windowedData[i].real());
             }
@@ -222,7 +222,7 @@ namespace LsNumerics
         template <typename U>
         void forwardWindowed(const std::vector<U> &window, const std::vector<U> &input, std::vector<std::complex<T>> &output)
         {
-            for (int i = 0; i < N; ++i)
+            for (size_t i = 0; i < N; ++i)
             {
                 windowedData[i] = (T)(window[i] * input[i]);
             }
@@ -233,19 +233,19 @@ namespace LsNumerics
         void computeInner(std::vector<std::complex<T>> &output, fft_dir dir)
         {
             // fft passes
-            for (int i = 1; i <= log2N; ++i)
+            for (size_t i = 1; i <= log2N; ++i)
             {
-                int m = 1 << i;  // butterfly mask
-                int m2 = m >> 1; // butterfly width
+                size_t m = 1 << i;  // butterfly mask
+                size_t m2 = m >> 1; // butterfly width
 
                 std::complex<double> wj(1, 0);
                 std::complex<double> wInc = std::exp(std::complex<double>(0, Pi / m2 * double(dir)));
 
                 // fft butterflies
-                for (int j = 0; j < m2; ++j)
+                for (size_t j = 0; j < m2; ++j)
                 {
                     std::complex<T> w = std::complex<T>((T)wj.real(), (T)wj.imag());
-                    for (int k = j; k < N; k += m)
+                    for (size_t k = j; k < N; k += m)
                     {
                         std::complex<T> t = w * output[k + m2];
                         std::complex<T> u = output[k];

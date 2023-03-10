@@ -244,9 +244,6 @@ void PowerStage2::Run(uint32_t n_samples)
 	}
 
 
-	float *upsampledInputBuffer = this->upsampledInputBuffer;
-	float *upsampledOutputBuffer = this->upsampledOutputBuffer;
-
 	uint32_t ix = 0;
 	float lastValue = this->lastvalue;
 	while (ix < n_samples)

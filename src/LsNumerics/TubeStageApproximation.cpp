@@ -552,5 +552,5 @@ TubeStageApproximation::TubeStageApproximation()
 } }
 {
     
-};
+}
 TubeStageApproximation LsNumerics::gTubeStageApproximation;

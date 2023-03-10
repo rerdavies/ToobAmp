@@ -48,4 +48,4 @@ public:
 
 extern TubeStageApproximation gTubeStageApproximation;
 
-}; // namespace.
+} // namespace

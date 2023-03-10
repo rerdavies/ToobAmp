@@ -14,7 +14,7 @@ set(PROFILER 1)
 
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic")
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder")
 
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
@@ -47,6 +47,7 @@ add_library(ToobAmp  SHARED
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
+
 
         LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
         Ce2Chorus.cpp Ce2Chorus.hpp
@@ -121,11 +122,13 @@ target_include_directories(ToobAmp PRIVATE
 )
 
 # Tests.
-add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp)
+add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp TestAssert.hpp
+)
 
 add_test(FftTest FftTest)
 
 add_executable(BaxandallToneStackTest 
+    TestAssert.hpp
     LsNumerics/BaxandallToneStackTest.cpp 
     LsNumerics/BaxandallToneStack.cpp LsNumerics/BaxandallToneStack.hpp
     LsNumerics/LsPolynomial.cpp LsNumerics/LsPolynomial.hpp
@@ -148,6 +151,8 @@ add_executable(GenerateFftPlans
 )
 
 add_executable(ConvolutionReverbTest
+    TestAssert.hpp
+
     LsNumerics/BinaryReader.hpp
     LsNumerics/BinaryReader.cpp
     LsNumerics/BinaryWriter.cpp
@@ -176,6 +181,8 @@ endif()
 add_test(ConvolutionReverbTest ConvolutionReverbTest)
 
 add_executable(Ce2ChorusTest 
+    TestAssert.hpp
+
     Ce2ChorusTest.cpp
     Ce2Chorus.cpp Ce2Chorus.hpp
     Filters/LowPassFilter.cpp Filters/LowPassFilter.h
@@ -214,6 +221,8 @@ target_link_libraries(linkageTest ToobAmp)
 
 
 add_executable(PitchDetectorTest 
+    TestAssert.hpp
+
     LsNumerics/Fft.hpp LsNumerics/Window.hpp 
     LsNumerics/PitchDetector.cpp LsNumerics/PitchDetector.hpp
     LsNumerics/IfPitchDetector.cpp LsNumerics/IfPitchDetector.hpp 

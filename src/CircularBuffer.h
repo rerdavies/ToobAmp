@@ -114,8 +114,8 @@ namespace TwoPlay {
             }
 
         private:
-            T*p;
             const LockResult *lockResult;
+            T*p;
         };
         struct LockResult {
             T * p0;
@@ -137,7 +137,6 @@ namespace TwoPlay {
             LockResult result;
             this->count = count;
             size_t readTail = this->head;
-            size_t readHead = readTail-count;
             if (count > readTail)
             {
                 result.count0 = count-readTail;

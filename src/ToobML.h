@@ -324,4 +324,4 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	};
-};
+}

@@ -75,8 +75,8 @@ namespace TwoPlay {
 		ToneStackFilter toneStackFilter;
 		BaxandallToneStack baxandallToneStack;
 
-		const float* input = NULL;;
-		float* output = NULL;;
+		const float* input = NULL;
+		float* output = NULL;
 
 		LV2_Atom_Sequence* controlIn = NULL;
 		LV2_Atom_Sequence* notifyOut = NULL;
@@ -195,4 +195,4 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	};
-};
+}

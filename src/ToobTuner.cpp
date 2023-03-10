@@ -69,8 +69,8 @@ ToobTuner::ToobTuner(double _rate,
 	: 
 	Lv2Plugin(features),
 	rate(_rate),
-	filterResponse(),
 	bundle_path(_bundle_path),
+	filterResponse(),
 	tunerWorker(this)
 {
 	uris.Map(this);

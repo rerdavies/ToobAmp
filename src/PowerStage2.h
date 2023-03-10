@@ -114,8 +114,8 @@ namespace TwoPlay {
 		RangedInputPort gain3_enable = RangedInputPort(0.0f,1.0f);
 		RangedDbInputPort master = RangedDbInputPort(-60.0f, 30.0f);
 
-		const float* input = NULL;;
-		float* output = NULL;;
+		const float* input = NULL;
+		float* output = NULL;
 
 		LV2_Atom_Sequence* controlIn = NULL;
 		LV2_Atom_Sequence* notifyOut = NULL;
@@ -234,4 +234,4 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	};
-};
+}

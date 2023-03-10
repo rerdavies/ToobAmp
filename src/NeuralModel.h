@@ -27,7 +27,14 @@
 #include <vector>
 
 #include "json.hpp"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wpedantic"
+
 #include "RTNeural/RTNeural.h"
+
+#pragma GCC diagnostic pop
 
 namespace TwoPlay {
 

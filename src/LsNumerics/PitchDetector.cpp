@@ -165,8 +165,6 @@ bool PitchDetector::findQuadraticMaximumNoLog(int binNumber, std::vector<double>
 
 inline size_t PitchDetector::findCepstrumBin(std::vector<double> &cepstrum)
 {
-    double dx = 1.0 / cepstrumFftSize;
-    size_t n = cepstrum.size();
     double bestX = -1;
     double bestValue = -std::numeric_limits<double>::max();
     bool peaked = false;
@@ -259,7 +257,7 @@ double PitchDetector::getGrandkeEstimate(double minFrequency, double maxFrequenc
     size_t maxBin = (size_t)std::ceil(maxFrequency*cepstrumFftSize/sampleRate)+1;
     if (minBin < 0) return 0;
 
-    size_t bin;
+    size_t bin = size_t(-1);
     double bestVal = -1;
     for (size_t i = minBin; i <= maxBin; ++i)
     {
@@ -270,7 +268,7 @@ double PitchDetector::getGrandkeEstimate(double minFrequency, double maxFrequenc
             bestVal = val;
         }
     }
-    if (bin == -1) return 0;
+    if (bin == size_t(-1)) return 0;
 
     double alpha = std::abs(fftBuffer[bin]) / std::abs(fftBuffer[bin + 1]);
     double delta = (2 * alpha - 1) / (alpha + 1);
@@ -381,7 +379,6 @@ double PitchDetector::refineWithCrossCorrelation(std::vector<double> &crossCorre
     {
         double correlationResult = this->sampleRate / quadResult.x;
 
-        double expectedBin = this->sampleRate / std::round(correlationResult);
 
         return correlationResult;
     }

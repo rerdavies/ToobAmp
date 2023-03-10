@@ -41,6 +41,7 @@ static char hex(int v)
     return (char)('A' + v - 10);
 }
 
+
 void json_writer::throw_encoding_error()
 {
     throw std::invalid_argument("Invalid UTF-8 character sequence");
@@ -64,7 +65,7 @@ void json_writer::write(string_view v,bool enforceValidUtf8Encoding)
     os << '"';
     while (p != v.end())
     {
-        uint32_t uc;
+        uint32_t uc = 0;
         uint8_t c = (uint8_t)*p++;
         if ((c & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_BITS)
         {
@@ -532,13 +533,13 @@ void json_reader::skip_number()
 void json_reader::skip_array()
 {
     int  c;
-    consume('[');
 
+    consume('[');
     while (true)
     {
         c = peek();
-        if (peek() == -1) throw_format_error("Premature end of file reading json.");
-        if (peek() == ']')
+        if (c == -1) throw_format_error("Premature end of file reading json.");
+        if (c == ']')
         {
             c = get();
             break;

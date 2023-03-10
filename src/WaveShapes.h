@@ -40,7 +40,7 @@ inline double AtanApprox(double x)
                 *x2-0.333331)
                 *x2+1)*x;
 
-};
+}
 
 inline double Atan(double value)
 {

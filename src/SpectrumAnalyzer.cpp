@@ -150,7 +150,7 @@ void SpectrumAnalyzer::Run(uint32_t n_samples)
 	{
 		uint32_t samplesThisTime = std::min((uint32_t)(captureBuffer.size()-captureOffset),n_samples);
 
-		for (int i = 0; i < samplesThisTime; ++i)
+		for (size_t i = 0; i < samplesThisTime; ++i)
 		{
 			captureBuffer[captureOffset++] = inputL[i];
 		}
@@ -248,8 +248,8 @@ void SpectrumAnalyzer::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*o
 		lv2_atom_forge_frame_time(&forge, 0);
 
 		LV2_Atom_Forge_Frame objectFrame;
-		LV2_Atom_Forge_Ref   set =
-			lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+
+		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
 
 		lv2_atom_forge_key(&forge, uris.patch_property);		
 		lv2_atom_forge_urid(&forge, uris.param_spectrumResponse);
@@ -263,7 +263,7 @@ void SpectrumAnalyzer::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*o
 
 const int SPECTRUM_POINTS = 200;
 
-std::string SpectrumAnalyzer::GetSvgPath(int blockSize,float minF, float maxF)
+std::string SpectrumAnalyzer::GetSvgPath(size_t blockSize,float minF, float maxF)
 {
 	std::stringstream s;
 	s << std::setprecision(4); 

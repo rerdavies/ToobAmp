@@ -158,5 +158,5 @@ namespace LsNumerics
             s << "}";
         }
     };
-};
+}
 

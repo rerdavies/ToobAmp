@@ -98,7 +98,6 @@ namespace LsNumerics
                 return Polynomial::Zero;
             }
 
-            size_t length = left.values.size();
             std::vector<double> values = left.values;
             values[0] += right;
             return Polynomial(std::move(values));
@@ -409,5 +408,5 @@ namespace LsNumerics
         return Polynomial::Multiply(left, right);
     }
 
-};
+}
 

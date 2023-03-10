@@ -10,9 +10,11 @@
 #include <fstream>
 #include <filesystem>
 #include "Window.hpp"
+#include "../TestAssert.hpp"
 
 using namespace LsNumerics;
 
+#define UNUSED_VARIABLE(x) ((void)x)
 std::mt19937 randEngine;
 std::uniform_real_distribution<float> randDist(-1.0f, 1.0f);
 
@@ -38,9 +40,9 @@ double F(size_t t,double f, double sampleRate)
 }
 static void testPitchDetection()
 {
-    constexpr size_t SAMPLE_RATE = 24000;
+    //constexpr size_t SAMPLE_RATE = 24000;
     //constexpr size_t FFT_SIZE = 4096;
-    constexpr size_t SAMPLE_STRIDE = 2048;
+    //constexpr size_t SAMPLE_STRIDE = 2048;
 
     std::vector<double> sampleRates{{ 24000, 22050,48000,22050*4}};
 
@@ -63,6 +65,8 @@ static void testPitchDetection()
         {
 
             double phase = randDist(randEngine) * Pi;
+            UNUSED_VARIABLE(phase);
+
             double expectedResult = FrequencyToMidiNote(f);
             for (size_t i = 0; i < buffer.size(); ++i)
             {
@@ -77,12 +81,15 @@ static void testPitchDetection()
 
 
             double expectedBinNumber = sampleRate / f;
+            UNUSED_VARIABLE(expectedBinNumber);
             double binNumber = sampleRate / fResult;
+            UNUSED_VARIABLE(binNumber);
 
             double result = FrequencyToMidiNote(fResult);
             double error = (result - expectedResult);
 
             double gMidiResult = FrequencyToMidiNote(gResult);
+            UNUSED_VARIABLE(gMidiResult);
 
             // errors.push_back({f,(binNumber-expectedBinNumber)*expectedBinNumber});
             // errors.push_back({f,fResult-f});
@@ -110,7 +117,7 @@ static void testPitchDetection()
             std::ofstream f;
             f.open(GetTestOutputFile());
             assert(!f.fail());
-            for (int i = 0; i < errors.size(); ++i)
+            for (size_t i = 0; i < errors.size(); ++i)
             {
                 const auto &t = errors[i];
 
@@ -133,7 +140,7 @@ static void testPitchDetection()
     }
 }
 
-static void testIfPitchDetection()
+void testIfPitchDetection()
 {
     constexpr size_t SAMPLE_RATE = 24000;
     constexpr size_t FFT_SIZE = 4096;
@@ -160,6 +167,7 @@ static void testIfPitchDetection()
         {
 
             double phase = randDist(randEngine) * Pi;
+            UNUSED_VARIABLE(phase);
             double expectedResult = FrequencyToMidiNote(f);
             for (size_t i = 0; i < buffer.size(); ++i)
             {
@@ -167,13 +175,15 @@ static void testIfPitchDetection()
 
                     F(i+100,f,sampleRate);
             }
-            double _ = pitchDetector.prime(buffer,0);
+            pitchDetector.prime(buffer,0);
             double fResult = pitchDetector.detectPitch(buffer,SAMPLE_OFFSET,SAMPLE_OFFSET);
 
 
 
             double expectedBinNumber = sampleRate / f;
+            UNUSED_VARIABLE(expectedBinNumber);
             double binNumber = sampleRate / fResult;
+            UNUSED_VARIABLE(binNumber);
 
             double result = FrequencyToMidiNote(fResult);
             double error = (result - expectedResult);
@@ -203,8 +213,8 @@ static void testIfPitchDetection()
         {
             std::ofstream f;
             f.open(GetTestOutputFile());
-            assert(!f.fail());
-            for (int i = 0; i < errors.size(); ++i)
+            TEST_ASSERT(!f.fail());
+            for (size_t i = 0; i < errors.size(); ++i)
             {
                 const auto &t = errors[i];
                 f << t.first << "\t" << t.second << '\n';
@@ -220,7 +230,7 @@ static void testIfPitchDetection()
 
 static void fftCheck()
 {
-    int FFT_SIZE = 4096;
+    size_t FFT_SIZE = 4096;
 
     Fft<double> fft{FFT_SIZE};
     std::vector<std::complex<double>> input;
@@ -233,7 +243,7 @@ static void fftCheck()
     scratch.resize(FFT_SIZE);
     output.resize(FFT_SIZE);
 
-    for (int i = 0; i < FFT_SIZE; ++i)
+    for (size_t i = 0; i < FFT_SIZE; ++i)
     {
         input[i] = randDist(randEngine);
     }
@@ -243,7 +253,7 @@ static void fftCheck()
     for (size_t i = 0; i < FFT_SIZE; ++i)
     {
         double error = std::abs(input[i] - output[i]);
-        assert(error < 1E-7);
+        TEST_ASSERT(error < 1E-7);
     }
 }
 

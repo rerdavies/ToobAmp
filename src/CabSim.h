@@ -89,8 +89,8 @@ namespace TwoPlay {
 		CombFilter combFilter;
 
 
-		const float* inputL = NULL;;
-		float* outputL = NULL;;
+		const float* inputL = NULL;
+		float* outputL = NULL;
 
 		LV2_Atom_Sequence* controlIn = NULL;
 		LV2_Atom_Sequence* notifyOut = NULL;
@@ -205,4 +205,4 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	};
-};
+}

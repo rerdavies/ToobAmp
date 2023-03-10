@@ -29,11 +29,9 @@ ToobFreeverb::ToobFreeverb(
     const char *bundle_path,
     const LV2_Feature *const *features)
     :   Lv2Plugin(features),
+        freeverb(rate),
         rate(rate),
-        bundle_path(bundle_path),
-        freeverb(rate)
-        
-
+        bundle_path(bundle_path)
 {
 }
 
