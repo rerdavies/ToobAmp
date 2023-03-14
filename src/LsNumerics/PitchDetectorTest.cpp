@@ -232,7 +232,7 @@ static void fftCheck()
 {
     size_t FFT_SIZE = 4096;
 
-    Fft<double> fft{FFT_SIZE};
+    Fft fft{FFT_SIZE};
     std::vector<std::complex<double>> input;
     std::vector<std::complex<double>> scratch;
     std::vector<std::complex<double>> output;
@@ -247,8 +247,8 @@ static void fftCheck()
     {
         input[i] = randDist(randEngine);
     }
-    fft.forward(input, scratch);
-    fft.backward(scratch, output);
+    fft.Forward(input, scratch);
+    fft.Backward(scratch, output);
 
     for (size_t i = 0; i < FFT_SIZE; ++i)
     {

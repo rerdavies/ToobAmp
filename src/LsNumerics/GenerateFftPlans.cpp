@@ -62,7 +62,7 @@ int main(int argc, char**argv)
     impulseResponse.push_back(0);
 
     std::filesystem::create_directories(outputDirectory);
-    for (size_t n = 32; n <= maxSize; n *= 2)
+    for (size_t n = 4; n <= maxSize; n *= 2)
     {
         cout << "Generating ConvolutionSection plan n=" << n << endl;
         BalancedConvolutionSection section {n,0,impulseResponse};

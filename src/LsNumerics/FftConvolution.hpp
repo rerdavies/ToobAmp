@@ -86,12 +86,12 @@ namespace LsNumerics
 
             void push(float value)
             {
-                head = (head - 1) & size_mask;
+                head = (head - 1) & sizeMask;
                 storage[head] = value;
             }
             float at(size_t index) const
             {
-                return storage[(head + index) & size_mask];
+                return storage[(head + index) & sizeMask];
             }
 
             float operator[](size_t index) const
@@ -102,7 +102,7 @@ namespace LsNumerics
         private:
             std::vector<float> storage;
             std::size_t head = 0;
-            std::size_t size_mask = 0;
+            std::size_t sizeMask = 0;
         };
 
         // FFT specifically tweaked for Convolution.

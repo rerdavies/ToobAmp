@@ -55,7 +55,7 @@ namespace LsNumerics {
 
 
     private:
-        Fft<double> fftPlan;
+        Fft fftPlan;
         size_t fftSize;
 
         std::vector<double> window;

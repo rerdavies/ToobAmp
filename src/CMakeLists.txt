@@ -5,7 +5,7 @@ cmake_minimum_required (VERSION 3.18)
 
 set (CMAKE_CXX_STANDARD 20)
 
-set(PROFILER 1)
+set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
 
 
 # message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -14,7 +14,7 @@ set(PROFILER 1)
 
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder")
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=200000")
 
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
@@ -102,6 +102,7 @@ add_library(ToobAmp  SHARED
          LsNumerics/BaxandallToneStack.hpp
          LsNumerics/LsChebyshevPolynomial.cpp
          LsNumerics/Fft.hpp
+         LsNumerics/Fft.cpp
          LsNumerics/Window.hpp
          LsNumerics/LsChebyshevPolynomial.hpp
          LsNumerics/LsRationalPolynomial.cpp
@@ -122,7 +123,15 @@ target_include_directories(ToobAmp PRIVATE
 )
 
 # Tests.
-add_executable(FftTest LsNumerics/FftTest.cpp LsNumerics/Fft.hpp LsNumerics/Window.hpp TestAssert.hpp
+add_executable(FftTest 
+    LsNumerics/FftTest.cpp 
+    LsNumerics/CacheInfo.hpp
+    LsNumerics/Fft.hpp 
+    LsNumerics/Fft.cpp
+    LsNumerics/StagedFft.hpp 
+    LsNumerics/StagedFft.cpp
+    LsNumerics/Window.hpp 
+    TestAssert.hpp
 )
 
 add_test(FftTest FftTest)
@@ -145,14 +154,13 @@ add_executable(GenerateFftPlans
     LsNumerics/FftConvolution.cpp
     LsNumerics/FftConvolution.hpp
     LsNumerics/GenerateFftPlans.cpp
-    LsNumerics/Fft.hpp
+    LsNumerics/StagedFft.cpp
+    LsNumerics/StagedFft.hpp
     LsNumerics/BalancedFft.cpp
     LsNumerics/BalancedFft.hpp
 )
 
-add_executable(ConvolutionReverbTest
-    TestAssert.hpp
-
+add_library(BalancedConvolution STATIC
     LsNumerics/BinaryReader.hpp
     LsNumerics/BinaryReader.cpp
     LsNumerics/BinaryWriter.cpp
@@ -160,25 +168,35 @@ add_executable(ConvolutionReverbTest
 
     LsNumerics/FftConvolution.cpp
     LsNumerics/FftConvolution.hpp
-    LsNumerics/ConvolutionReverbTest.cpp
-    LsNumerics/Fft.hpp
+    LsNumerics/StagedFft.cpp
+    LsNumerics/StagedFft.hpp
     LsNumerics/ConvolutionReverb.cpp
     LsNumerics/ConvolutionReverb.hpp
     LsNumerics/BalancedFft.cpp
     LsNumerics/BalancedFft.hpp
-)
-if(PROFILER)
-    target_link_libraries(ConvolutionReverbTest PRIVATE profiler)
-    target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")    
 
-    # target_compile_options(ConvolutionReverbTest PRIVATE "-pg")
-    # target_link_options(ConvolutionReverbTest PRIVATE "-pg")
-    # target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHPERF")
-    #target_link_libraries(ConvolutionReverbTest profiler)
-    #target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")
+    LsNumerics/SynchronizedDelayLine.hpp
+    LsNumerics/SynchronizedDelayLine.cpp
+)
+
+
+
+add_executable(ConvolutionReverbTest
+    TestAssert.hpp
+    CommandLineParser.hpp
+    LsNumerics/ConvolutionReverbTest.cpp
+    
+)
+
+
+if(PROFILER)
+    target_link_libraries(ConvolutionReverbTest PRIVATE  BalancedConvolution profiler)
+    target_compile_definitions(ConvolutionReverbTest PRIVATE "WITHGPERFTOOLS")    
+else()
+    target_link_libraries(ConvolutionReverbTest PRIVATE BalancedConvolution)
 endif()
 
-add_test(ConvolutionReverbTest ConvolutionReverbTest)
+add_test(ConvolutionReverbTest ConvolutionReverbTest "--build")
 
 add_executable(Ce2ChorusTest 
     TestAssert.hpp
@@ -223,7 +241,9 @@ target_link_libraries(linkageTest ToobAmp)
 add_executable(PitchDetectorTest 
     TestAssert.hpp
 
-    LsNumerics/Fft.hpp LsNumerics/Window.hpp 
+    LsNumerics/Fft.hpp 
+    LsNumerics/Fft.cpp
+    LsNumerics/Window.hpp 
     LsNumerics/PitchDetector.cpp LsNumerics/PitchDetector.hpp
     LsNumerics/IfPitchDetector.cpp LsNumerics/IfPitchDetector.hpp 
     LsNumerics/PitchDetectorTest.cpp 
@@ -249,6 +269,7 @@ set_target_properties(ToobAmp PROPERTIES PREFIX "")
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 17)
 
 include(GNUInstallDirs)
+
 
 
 install(TARGETS ToobAmp

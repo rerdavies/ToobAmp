@@ -44,7 +44,7 @@ static int NextPowerOf2(size_t value)
 void FftConvolution::DelayLine::SetSize(size_t size)
 {
     size = NextPowerOf2(size);
-    this->size_mask = size - 1;
+    this->sizeMask = size - 1;
     this->head = 0;
     this->storage.resize(0);
     this->storage.resize(size);

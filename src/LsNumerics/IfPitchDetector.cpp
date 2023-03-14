@@ -34,7 +34,7 @@ void IfPitchDetector::prime(std::vector<float> p, size_t index)
     {
         windowBuffer[i] = p[i+index]*window[i];
     }
-    fftPlan.forward(windowBuffer,*fftBuffer);    
+    fftPlan.Forward(windowBuffer,*fftBuffer);    
 }
 
 double IfPitchDetector::detectPitch(std::vector<float> p, size_t index,size_t sampleStride)
@@ -45,7 +45,7 @@ double IfPitchDetector::detectPitch(std::vector<float> p, size_t index,size_t sa
         windowBuffer[i] = p[i+index]*window[i];
     }
 
-    fftPlan.forward(windowBuffer,*fftBuffer);
+    fftPlan.Forward(windowBuffer,*fftBuffer);
 
     for (size_t i = 0; i < phase.size(); ++i)
     {

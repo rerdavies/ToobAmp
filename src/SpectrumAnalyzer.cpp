@@ -273,7 +273,7 @@ std::string SpectrumAnalyzer::GetSvgPath(size_t blockSize,float minF, float maxF
 	{
 		fftWindow = LsNumerics::Window::ExactBlackman<float>(blockSize);
 	}
-	fft.forwardWindowed(this->fftWindow,this->captureBuffer,fftResult);
+	fft.ForwardWindowed(this->fftWindow,this->captureBuffer,fftResult);
 
 	float norm = 2/std::sqrt(fftResult.size());
 	int lastX = 0;

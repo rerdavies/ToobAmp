@@ -315,7 +315,7 @@ double PitchDetector::detectPitch(size_t sampleStride)
 double PitchDetector::detectPitch()
 {
 
-    fftPlan.forward(scratchBuffer, fftBuffer);
+    fftPlan.Forward(scratchBuffer, fftBuffer);
 
     for (int i = 0; i < cepstrumFftSize; ++i)
     {
@@ -324,7 +324,7 @@ double PitchDetector::detectPitch()
         scratchBuffer[i] = std::abs(t);
     }
 
-    fftPlan.forward(scratchBuffer, cepstrumBuffer);
+    fftPlan.Forward(scratchBuffer, cepstrumBuffer);
 
     for (size_t i = 0; i < cepstrum.size(); ++i)
     {

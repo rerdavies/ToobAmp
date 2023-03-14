@@ -26,7 +26,7 @@
 #include "FftConvolution.hpp"
 #include "BalancedFft.hpp"
 #include <iostream>
-#include "Fft.hpp"
+#include "StagedFft.hpp"
 #include <cmath>
 #include <numbers>
 #include <cstdlib>
@@ -34,6 +34,7 @@
 #include <iomanip>
 #include <sstream>
 #include "../ss.hpp"
+#include "../CommandLineParser.hpp"
 
 #ifdef WITHGPERFTOOLS
 #include <gperftools/profiler.h>
@@ -43,6 +44,9 @@
 
 using namespace LsNumerics;
 using namespace std;
+using namespace TwoPlay;
+
+std::ostream &output = cout;
 
 #define TEST_ASSERT(x)                                           \
     {                                                            \
@@ -52,10 +56,14 @@ using namespace std;
         }                                                        \
     }
 
+bool shortTests = false;
+bool buildTests = false;
+static std::string profilerFileName;
+
 static bool IsProfiling()
 {
 #ifdef WITHGPERFTOOLS
-    return true;
+    return profilerFileName.length() != 0;
 #else
     return false;
 #endif
@@ -63,18 +71,32 @@ static bool IsProfiling()
 
 void UsePlanCache()
 {
+    if (buildTests)
+        return;
     BalancedConvolution::SetPlanFileDirectory("fftplans");
     if (!BalancedConvolutionSection::PlanFileExists(64))
     {
         BalancedConvolution::SetPlanFileDirectory("");
         std::cout << "Plan cache files not installed." << std::endl;
-        return;
+        std::cout << "Run \'build/src/GenerateFftPlans fftplans in the project root." << std::endl;
+        std::cout << "Warning: requires at 8GB of memory to run!" << std::endl;
+        throw std::logic_error("Can't continue.");
     }
 }
+
 void DisablePlanCache()
 {
+    if (buildTests)
+        return;
     BalancedConvolution::SetPlanFileDirectory("");
 }
+
+class PlanCacheGuard
+{
+public:
+    PlanCacheGuard() { UsePlanCache(); }
+    ~PlanCacheGuard() { DisablePlanCache(); }
+};
 
 static void TestBalancedFft(FftDirection direction)
 {
@@ -109,7 +131,7 @@ static void TestBalancedFft(FftDirection direction)
             input2[i] = -i - 1;
         }
 
-        Fft<double> normalFft{n};
+        StagedFft normalFft = StagedFft(n);
 
         std::vector<fft_complex_t> expectedOutput;
         expectedOutput.resize(n);
@@ -117,13 +139,13 @@ static void TestBalancedFft(FftDirection direction)
         expectedOutput2.resize(n);
         if (direction == FftDirection::Forward)
         {
-            normalFft.forward(input, expectedOutput);
-            normalFft.forward(input2, expectedOutput2);
+            normalFft.Compute(input, expectedOutput, StagedFft::Direction::Forward);
+            normalFft.Compute(input2, expectedOutput2, StagedFft::Direction::Forward);
         }
         else
         {
-            normalFft.backward(input, expectedOutput);
-            normalFft.backward(input2, expectedOutput2);
+            normalFft.Compute(input, expectedOutput, StagedFft::Direction::Backward);
+            normalFft.Compute(input2, expectedOutput2, StagedFft::Direction::Backward);
         }
 
         std::vector<fft_complex_t> output;
@@ -229,7 +251,7 @@ public:
         outputBuffer.resize(impulse.size());
 
         convolutionData.resize(impulse.size());
-        fft.forward(impulse, convolutionData);
+        fft.Compute(impulse, convolutionData, StagedFft::Direction::Forward);
     }
 
     void Convolve(std::vector<float> &data, std::vector<float> &output)
@@ -237,12 +259,12 @@ public:
         assert(data.size() == size * 2);
         assert(output.size() == size);
 
-        fft.forward(data, buffer);
+        fft.Compute(data, buffer, StagedFft::Direction::Forward);
         for (std::size_t i = 0; i < buffer.size(); ++i)
         {
             buffer[i] *= convolutionData[i];
         }
-        fft.backward(buffer, this->outputBuffer);
+        fft.Compute(buffer, this->outputBuffer, StagedFft::Direction::Backward);
         for (size_t i = 0; i < size; ++i)
         {
             output[i] = this->outputBuffer[i].real();
@@ -251,7 +273,7 @@ public:
 
 private:
     std::size_t size;
-    Fft<fft_float_t> fft;
+    StagedFft fft;
     std::vector<fft_complex_t> buffer;
     std::vector<fft_complex_t> outputBuffer;
     std::vector<fft_complex_t> convolutionData;
@@ -259,9 +281,16 @@ private:
 
 static void TestBalancedConvolutionSequencing()
 {
+
+    PlanCacheGuard guard;
+
     // ensure that Sections are correctly sequenced and delayed.
     std::cout << "=== TestBalancedConvolutionSequencing ===" << std::endl;
-    constexpr size_t TEST_SIZE = 65536 + 3918;
+    size_t TEST_SIZE = 65536 + 3918;
+    if (buildTests)
+    {
+        TEST_SIZE = 2048;
+    }
 
     UsePlanCache();
 
@@ -287,7 +316,7 @@ static void TestBalancedConvolutionSequencing()
             error /= expected;
         }
 
-        TEST_ASSERT(error < 1E4);
+        TEST_ASSERT(error < 1E-4);
     }
     for (size_t i = 0; i < TEST_SIZE; ++i)
     {
@@ -299,7 +328,7 @@ static void TestBalancedConvolutionSequencing()
             error /= expected;
         }
 
-        TEST_ASSERT(error < 1E4);
+        TEST_ASSERT(error < 1E-4);
     }
 
     DisablePlanCache();
@@ -441,6 +470,10 @@ static void TestBalancedConvolutionSection(bool useCache)
                                             4096, 1024 * 64
 #endif
     };
+    if (buildTests)
+    {
+        convolutionSizes = {4, 8, 16, 32, 64, 128, 256};
+    }
     if (useCache)
     {
 
@@ -644,10 +677,18 @@ static size_t NextPowerOf2(size_t size)
 }
 void BenchmarkBalancedConvolution()
 {
+
     UsePlanCache();
 
-    // std::vector<double> impulseTimes = {0.01, 0.1, 1.0};
-    std::vector<double> impulseTimes = {1.0};
+    std::vector<double> impulseTimes = {0.01, 0.1, 1.0, 2.0};
+    if (buildTests)
+    {
+        impulseTimes = {0.1};
+    }
+    if (IsProfiling())
+    {
+        impulseTimes = {1.0};
+    }
 
     for (auto impulseTimeSeconds : impulseTimes)
     {
@@ -657,6 +698,12 @@ void BenchmarkBalancedConvolution()
         double benchmarkTimeSeconds = 22.0;
         size_t impulseSize = (size_t)sampleRate * impulseTimeSeconds;
 
+#ifdef WITHGPERFTOOLS
+        if (IsProfiling())
+        {
+            benchmarkTimeSeconds *= 4;
+        }
+#endif
         std::vector<float> impulseData;
         impulseData.resize(impulseSize);
         for (size_t i = 0; i < impulseSize; ++i)
@@ -681,7 +728,10 @@ void BenchmarkBalancedConvolution()
         using clock = std::chrono::steady_clock;
 
 #ifdef WITHGPERFTOOLS
-        ProfilerStart("/tmp/out.prof");
+        if (IsProfiling())
+        {
+            ProfilerStart(profilerFileName.c_str());
+        }
 #endif
         auto startTime = clock::now();
         for (size_t i = 0; i < nSamples; i += bufferSize)
@@ -693,7 +743,10 @@ void BenchmarkBalancedConvolution()
         using second_duration = std::chrono::duration<float>;
         second_duration seconds = endTime - startTime;
 #ifdef WITHGPERFTOOLS
-        ProfilerStop();
+        if (IsProfiling())
+        {
+            ProfilerStop();
+        }
 #endif
 
         double percent = seconds.count() / benchmarkTimeSeconds * 100;
@@ -865,10 +918,18 @@ static void Consume(double value)
 
 void BenchmarkFftConvolutionStep()
 {
+    if (buildTests)
+        return;
+    UsePlanCache();
 
     // std::stringstream ss;
+#define SHORT 0
 
+#if !SHORT
     constexpr size_t FRAMES = 8 * 1024 * 1024;
+#else
+    constexpr size_t FRAMES = 8 * 1024 * 1024 / 256 / 2;
+#endif
 
     size_t frames = FRAMES;
 
@@ -885,6 +946,7 @@ void BenchmarkFftConvolutionStep()
     ss << "-------------------------------------------------------------------------------------" << endl;
 
     for (size_t n : {
+#if !SHORT
              4,
              8,
              16,
@@ -892,6 +954,7 @@ void BenchmarkFftConvolutionStep()
              64,
              128,
              256,
+#endif
              512,
              1024,
              2048,
@@ -900,7 +963,7 @@ void BenchmarkFftConvolutionStep()
              16 * 1024,
              32 * 1024,
              64 * 1024,
-             128 * 1024})
+             128 * 1024 })
     {
 
         using clock_t = std::chrono::high_resolution_clock;
@@ -912,7 +975,7 @@ void BenchmarkFftConvolutionStep()
         {
             impulse[i] = i / double(n * 2);
         }
-        FftConvolution::Section fftSection(n, 0, impulse);
+        Implementation::DirectConvolutionSection directSection(n, 0, impulse);
 
         std::vector<float> input;
         input.resize(n);
@@ -925,8 +988,7 @@ void BenchmarkFftConvolutionStep()
         {
             for (size_t i = 0; i < n; ++i)
             {
-                delayLine.push(input[i]);
-                fftSection.Tick(delayLine);
+                directSection.Tick(input[i]);
             }
         }
         ns_duration_t fftConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - start);
@@ -965,8 +1027,6 @@ void BenchmarkFftConvolutionStep()
                         }
                         sink = result;
                     }
-
-                    fftSection.Tick(delayLine);
                 }
             }
             nConvolutionMs = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - nStart);
@@ -1000,6 +1060,15 @@ void BenchmarkFftConvolutionStep()
 
         ss
             << std::setw(12) << std::right << balancedSection.Delay();
+
+        if (directSection.IsL2Optimized())
+        {
+            ss << " " << std::setw(12) << std::left << "L2";
+        }
+        else if (directSection.IsL1Optimized())
+        {
+            ss << " " << std::setw(12) << std::left << "L1";
+        }
         ss
             << setw(0) << endl;
         // reduce iterations if our measurement took too long.
@@ -1012,46 +1081,156 @@ void BenchmarkFftConvolutionStep()
 
     // std::cout << ss.str();
     // std::cout.flush();
+
+    DisablePlanCache();
+}
+
+void TestDirectConvolutionSectionAllocations()
+{
+
+    if (buildTests)
+        return;
+    PlanCacheGuard usePlanCache;
+
+    // test code that allows viewing of section allocations in a balanced convolution when the corresponding traces are uncommented.
+    std::vector<float> impulseData;
+    impulseData.resize(105);
+    impulseData[1] = 1;
+
+    for (size_t n = 15382; n < 255 * 1024; n = n * 5 / 4)
+    {
+        cout << "==== TestDirectConvolutionSectionAllocations(" << n << ") === " << endl;
+        BalancedConvolution convolution(n, impulseData);
+    }
 }
 
 void TestFft()
 {
-    BenchmarkBalancedConvolution();
 
-    TestDirectConvolutionSection();
-    TestBalancedConvolutionSequencing();
-    TestBalancedConvolution();
-
+    // If you need to isolate a particular test, add a command-line test name instead
+    // of re-ordering tests here (in order to reduce potential merge conflicts).
+    // see: ADD_TEST_NAME_HERE.
     Implementation::SlotUsageTest();
 
-    TestBalancedConvolutionSection(true);
+    if (!buildTests)
+    {
+        TestBalancedConvolutionSection(true);
+    }
     TestBalancedConvolutionSection(false);
 
+    TestBalancedConvolutionSequencing();
+
+    TestFftConvolution();
+
+    TestDirectConvolutionSectionAllocations();
+
+    TestDirectConvolutionSection();
+    TestBalancedConvolution();
+
+    BenchmarkBalancedConvolution();
+
     BenchmarkFftConvolutionStep();
+
+    TestFftConvolutionBenchmark();
 
     // TestBalancedFft(FftDirection::Reverse);
     // TestBalancedFft(FftDirection::Forward);
 
     // TestBalancedConvolution();
     // BenchmarkBalancedConvolution();
-
-    // TestFftConvolution();
-    // TestFftConvolutionBenchmark();
 }
 
-int main(int argc, char **argv)
+static void PrintHelp()
 {
+    cout << "ConvolutionReverbTest - A suite of Tests for BalancedConvultionReverb and sub-components" << endl
+         << "Copyright 20202, Robin Davies" << endl
+         << endl
+         << "Syntax: ConvolutionReverbTest [OPTIONS] [TEST_TYPE]" << endl
+         << endl
+         << "Options: " << endl
+         << "  --build    Run only build-machine tests." << endl
+         << "  --short    Don't run long-running tests." << endl
+         << "  --profile <filename>" << endl
+         << "        Generate gprof profiler output to the selected filename" << endl
+         << "        (for convolution_benchmark only)" << endl
+         << "        e.g.  --profile /tmp/prof.out" << endl
+         << "  -o ,--ouput <filename" << endl
+         << "        Send test output to the specified file" << endl
+         << "  -h, --help   Display this message." << endl
+         << endl
+         << "Tests: " << endl
+         << "  section_benchmark:" << endl
+         << "     Benchmark BalancedConvolutionSection, and DirectConvolutionSection" << endl
+         << "  convolution_benchmark:" << endl
+         << "     Determine percent of realtime used for basic convolutions." << endl
+         << "  section_allocations: " << endl
+         << "      Verify scheduling of convolution sections." << endl
+         << endl
+         << "Remarks:" << endl
+         << "  The default behaviour is to run all tests." << endl
+         << endl;
+}
+
+int main(int argc, const char **argv)
+{
+
+    CommandLineParser parser;
+
+    bool help = false;
+    std::string testName;
+
     try
     {
-        if (IsProfiling())
+        parser.AddOption("h", "help", &help);
+        parser.AddOption("", "short", &shortTests);
+        parser.AddOption("", "profile", &profilerFileName);
+        parser.AddOption("", "build", &buildTests);
+
+        parser.Parse(argc, argv);
+
+        if (help)
         {
-            //BenchmarkFftConvolutionStep();
-            BenchmarkBalancedConvolution();
+            PrintHelp();
             return EXIT_SUCCESS;
+        }
+        if (parser.Arguments().size() > 1)
+        {
+            throw CommandLineException("Incorrect number of parameters.");
+        }
+        if (parser.Arguments().size() == 1)
+        {
+            testName = parser.Arguments()[0];
+        }
+    }
+    catch (const std::exception &e)
+    {
+        cout << "ERROR: " << e.what() << endl;
+        return EXIT_FAILURE;
+    }
+
+#pragma GCC diagnostic ignored "-Wdangling-else"
+    try
+    {
+        /*  ADD_TEST_NAME_HERE  (don't forget to revise PrintHelp()) )*/
+        if (testName == "section_benchmark")
+        {
+            BenchmarkFftConvolutionStep();
+        }
+        else if (testName == "convolution_benchmark")
+        {
+            BenchmarkBalancedConvolution();
+        }
+        else if (testName == "section_allocations")
+        {
+            TestDirectConvolutionSectionAllocations();
+        }
+        else if (testName == "")
+        {
+            TestFft();
         }
         else
         {
-            TestFft();
+            throw CommandLineException(SS("Unrecognized test name: " + testName));
         }
     }
     catch (const std::exception &e)

@@ -50,7 +50,24 @@ using namespace LsNumerics;
 #define SS_ID(x) ""
 #endif
 
-#define RECYCLE_SLOTS 1
+#define RECYCLE_SLOTS 1               // disable for test purposes only
+#define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
+
+static std::size_t Log2(std::size_t value)
+{
+    int log = 0;
+    while (value > 0)
+    {
+        ++log;
+        value >>= 1;
+    }
+    return log;
+}
+static std::size_t Pow2(std::size_t value)
+{
+    return 1 << value;
+}
+
 
 static const fft_index_t ToIndex(size_t value)
 {
@@ -59,6 +76,58 @@ static const fft_index_t ToIndex(size_t value)
         throw std::logic_error("Maximum index exceeded.");
     }
     return (fft_index_t)(value);
+}
+
+// gathered from benchmarks on Raspberry Pi 4.
+// aproximate execution time per sample in ns.
+struct ExecutionEntry {
+    size_t n;
+    double nanosecondsPerSample;
+};
+
+static std::vector<ExecutionEntry> executionTimePerSampleNs  {
+    // n	direct
+    {4, 82.402},
+    {8, 75.522},
+    {16, 78.877},
+    {32, 86.127},
+    {64, 92.286},
+    {128, 100.439},
+    {256, 107.703},
+    {512, 155.486},
+    {1024, 164.186},
+    {2048, 192.041},
+    {4096, 206.026},
+    {8192, 241.912},
+    {16384, 285.395},
+    {32768, 448.843},
+    {65536, 575.380},
+    {131072, 668.226},
+};
+
+static std::vector<size_t> GetDirectExecutionLeadTimesByLog2N(size_t sampleRate)
+{
+    // calculate the lead time in samples based on how long it takes to execute
+    // a direction section of a particular size.
+    std::vector<size_t> result;
+    result.reserve(executionTimePerSampleNs.size()+3);
+    result.push_back(0); // 0
+    result.push_back(1); // 0
+    result.push_back(2); // 0
+    for (const auto&entry: executionTimePerSampleNs)
+    {
+        double executionTimeSeconds = entry.n*entry.nanosecondsPerSample*1E-9;
+        executionTimeSeconds *= ((double)sampleRate)/44100; // benchmarks were for 44100.
+        executionTimeSeconds += 0.002; // 2 ms for scheduling overhead.
+        executionTimeSeconds *= 1.5; // slack for cache contention
+        executionTimeSeconds *= 1.8/1.5; // in case we're running on 1.5Ghz pi.
+        size_t samplesLeadTime = (std::ceil(executionTimeSeconds*sampleRate));
+        // and we have to lead by a frame's-worth of data.
+        samplesLeadTime += entry.n;
+        samplesLeadTime += 512; // granularity of audio frame.
+        result.push_back(samplesLeadTime);
+    }
+    return result;
 }
 
 const char *Implementation::FftPlan::MAGIC_FILE_STRING = "FftPlan";
@@ -474,7 +543,7 @@ namespace LsNumerics::Implementation
                 {
                     newSize = this->planSize * 2;
                 }
-                while (newSize < index)
+                while (newSize <= index)
                 {
                     newSize *= 2;
                 }
@@ -643,6 +712,7 @@ namespace LsNumerics::Implementation
             for (auto &input : inputs)
             {
                 fft_index_t inputTime = input->GetEarliestAvailable();
+
                 if (inputTime > result)
                 {
                     result = inputTime;
@@ -943,27 +1013,6 @@ namespace LsNumerics::Implementation
 }
 
 using namespace LsNumerics::Implementation;
-
-static std::size_t Log2(std::size_t value)
-{
-    int log = 0;
-    while (value > 0)
-    {
-        ++log;
-        value >>= 1;
-    }
-    return log;
-}
-static std::size_t Pow2(std::size_t value)
-{
-    int pow2 = 1;
-    while (value > 0)
-    {
-        pow2 *= 2;
-        --value;
-    }
-    return pow2;
-}
 
 static std::size_t ReverseBits(std::size_t value, std::size_t nBits)
 {
@@ -1627,8 +1676,8 @@ void BalancedConvolutionSection::SetPlan(
         {
             buffer[i + size] = impulseData[i + offset] * norm;
         }
-        Fft<double> normalFft(size * 2);
-        normalFft.forward(buffer, fftConvolutionData);
+        Fft normalFft = Fft(size * 2);
+        normalFft.Compute(buffer, fftConvolutionData, StagedFft::Direction::Forward);
     }
 
     // Copy the convolution data in working memory.
@@ -1667,7 +1716,6 @@ struct SectionDelayCacheEntry
 
 static std::vector<SectionDelayCacheEntry> sectionDelayCache;
 
-
 size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
 {
     for (size_t i = 0; i < sectionDelayCache.size(); ++i)
@@ -1684,11 +1732,34 @@ size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
     sectionDelayCache.push_back(t);
     return t.delay;
 }
-BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulseResponse)
-{
-    constexpr size_t INITIAL_SECTION_SIZE = 64;
-    constexpr size_t BALANCED_FFT_SAMPLES = 2048;
 
+size_t convolutionSampleRate = (size_t)-1;
+std::vector<size_t> directSectionLeadTimes;
+
+
+static size_t GetDirectSectionLeadTime(size_t directSectionSize)
+{
+    size_t log2Size = Log2(directSectionSize);
+    if (log2Size >= directSectionLeadTimes.size())
+    {
+        return std::numeric_limits<size_t>::max(); // i.e never ready.
+    }
+    return directSectionLeadTimes[Log2(directSectionSize)];
+}
+
+BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate)
+{
+    constexpr size_t INITIAL_SECTION_SIZE = 128;
+    constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
+    constexpr size_t MAX_BALANCED_SECTION = 132 * 1024;                                // calculating balanced sections larger than this requires too much memory. Can't go larger than this.
+    constexpr size_t DIRECT_SECTION_CUTOFF_LIMIT = std::numeric_limits<size_t>::max(); // the point at which balanced sections become faster than direct sections.
+
+    // nb: global data, but constructor is always protected by the cache mutex.
+    if (convolutionSampleRate != sampleRate)
+    {
+        convolutionSampleRate = sampleRate;
+        directSectionLeadTimes = GetDirectExecutionLeadTimesByLog2N(sampleRate);
+    }
     size_t delaySize = -1;
     if (size < INITIAL_SECTION_SIZE)
     {
@@ -1697,9 +1768,15 @@ BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulse
     }
     else
     {
-        size_t sectionSize = INITIAL_SECTION_SIZE;
-        size_t sectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize);
-        directConvolutionLength = sectionDelay;
+        // Generate lists of sections based on the following criteria.
+        // 1. Initially, we need to use balanced sections on the real-time thread to build up enough delayed samples to switch to DirectSections which are much faster.
+        // 2. Once we have enough samples to run direct sections (on a background thread), use direct sections.
+        // 3. Due to better cache conditioning, balanced sections run much faster for very large sizes (> 32768), so switch back to balanced sections for very large sections (which run on the real-time thread)
+
+        size_t balancedSectionSize = INITIAL_SECTION_SIZE;
+        size_t balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+        size_t directSectionSize = INITIAL_DIRECT_SECTION_SIZE;
+        directConvolutionLength = balancedSectionDelay;
         if (directConvolutionLength > size)
         {
             directConvolutionLength = size;
@@ -1708,87 +1785,143 @@ BalancedConvolution::BalancedConvolution(size_t size, std::vector<float> impulse
 
         size_t sampleOffset = directConvolutionLength;
 
-        while (sampleOffset < size && sampleOffset < BALANCED_FFT_SAMPLES)
-        {
-            size_t remaining = size - sampleOffset;
+        balancedSections.reserve(16);
+        directSections.reserve(16);
 
-            size_t nextSectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize * 2);
-            if (sampleOffset > nextSectionDelay)
-            {
-                sectionSize *= 2;
-                sectionDelay = nextSectionDelay;
-            }
-            while (remaining <= sectionSize / 2 && sectionSize > INITIAL_SECTION_SIZE)
-            {
-                sectionSize = sectionSize / 2;
-                sectionDelay = BalancedConvolutionSection::GetSectionDelay(sectionSize);
-            }
-
-            size_t inputDelay = sampleOffset-sectionDelay;
-
-            std::cout << "balanced "
-                      << "sampleOffset: " << sampleOffset
-                      << " SectionSize: " << sectionSize
-                      << " sectionDelay: " << sectionDelay
-                      << " input delay: " << inputDelay
-                      << std::endl;
-
-            if (inputDelay > delaySize)
-            {
-                delaySize = inputDelay;
-            }
-            balancedSections.emplace_back(
-                Section{
-                    inputDelay,
-                    BalancedConvolutionSection(
-                        sectionSize,
-                        sampleOffset,
-                        impulseResponse)});
-            sampleOffset += sectionSize;
-        }
         while (sampleOffset < size)
         {
+
             size_t remaining = size - sampleOffset;
 
-            size_t nextSectionDelay = DirectConvolutionSection::GetSectionDelay(sectionSize * 2);
-            if (sampleOffset > nextSectionDelay)
+            size_t nextBalancedSectionDelay = std::numeric_limits<size_t>::max();
+            if (balancedSectionSize < MAX_BALANCED_SECTION) // don't even consider balanced section sizes larger than this. Don't even ask.
             {
-                sectionSize *= 2;
-                sectionDelay = nextSectionDelay;
+                nextBalancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize * 2);
             }
-            while (remaining <= sectionSize / 2 && sectionSize > INITIAL_SECTION_SIZE)
+            // Update balanced section size.
+            if (sampleOffset >= nextBalancedSectionDelay)
             {
-                sectionSize = sectionSize / 2;
-                sectionDelay = DirectConvolutionSection::GetSectionDelay(sectionSize);
+                balancedSectionSize *= 2;
+                balancedSectionDelay = nextBalancedSectionDelay;
             }
-
-            size_t inputDelay = sampleOffset-sectionDelay;
-            std::cout << "direct   "
-                      << "sampleOffset: " << sampleOffset
-                      << " SectionSize: " << sectionSize
-                      << " sectionDelay: " << sectionDelay
-                      << " input delay: " << inputDelay
-                      << std::endl;
-
-            if (inputDelay > delaySize)
+            while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
             {
-                delaySize = inputDelay;
+                balancedSectionSize = balancedSectionSize / 2;
+                balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
             }
 
-            directSections.emplace_back(
-                DirectSection{
-                    inputDelay,
-                    DirectConvolutionSection(
-                        sectionSize,
-                        sampleOffset,
-                        impulseResponse)});
-            sampleOffset += sectionSize;
+            size_t directSectionDelay;
+
+            // Pick a candidate Direct section.
+
+            bool canUseDirectSection = false;
+            while (true)
+            {
+                directSectionDelay =  GetDirectSectionLeadTime(directSectionSize);
+                if (directSectionDelay == std::numeric_limits<size_t>::max())
+                {
+                    throw std::logic_error("Failed to schedule direct section.");
+                }
+                if (directSectionDelay > sampleOffset)
+                {
+                    canUseDirectSection = false;
+                    break;
+                }
+                
+                canUseDirectSection = true;
+
+                // don't increase direct section size if we can reach the end with the current size.
+                if (directSectionSize >= remaining) 
+                {
+                    break;
+                }
+                // don't increase the direct section size if we don't have enough samples.
+                size_t nextDirectSectionDelay = GetDirectSectionLeadTime(directSectionSize * 2);
+                if (nextDirectSectionDelay > sampleOffset)
+                {
+                    break;
+                }
+                directSectionSize = directSectionSize * 2;
+            }
+
+            // if we can use a shorter section size for the last section, do so.
+            while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
+            {
+                balancedSectionSize = balancedSectionSize / 2;
+                balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+            }
+            while (remaining <= directSectionSize / 2 && directSectionSize > INITIAL_SECTION_SIZE)
+            {
+                directSectionSize = directSectionSize / 2;
+                directSectionDelay = DirectConvolutionSection::GetSectionDelay(directSectionSize);
+            }
+
+            bool useBalancedSection = !canUseDirectSection;
+            if (directSectionSize >= DIRECT_SECTION_CUTOFF_LIMIT && balancedSectionSize >= DIRECT_SECTION_CUTOFF_LIMIT)
+            {
+                useBalancedSection = true;
+            }
+            if (useBalancedSection)
+            {
+                size_t inputDelay = sampleOffset - balancedSectionDelay;
+
+#if DISPLAY_SECTION_ALLOCATIONS
+                std::cout << "balanced "
+                          << "sampleOffset: " << sampleOffset
+                          << " SectionSize: " << balancedSectionSize
+                          << " sectionDelay: " << balancedSectionDelay
+                          << " input delay: " << inputDelay
+                          << std::endl;
+#endif
+
+                if (inputDelay > delaySize)
+                {
+                    delaySize = inputDelay;
+                }
+                balancedSections.emplace_back(
+                    Section{
+                        inputDelay,
+                        BalancedConvolutionSection(
+                            balancedSectionSize,
+                            sampleOffset,
+                            impulseResponse)});
+                sampleOffset += balancedSectionSize;
+            }
+            else
+            {
+
+                size_t inputDelay = sampleOffset - DirectConvolutionSection::GetSectionDelay(directSectionSize);
+
+#if DISPLAY_SECTION_ALLOCATIONS
+                std::cout << "direct   "
+                          << "sampleOffset: " << sampleOffset
+                          << " SectionSize: " << directSectionSize
+                          << " sectionDelay: " << directSectionDelay
+                          << " input delay: " << inputDelay
+                          << std::endl;
+#endif
+
+                size_t myDelaySize = inputDelay + directSectionSize;
+                if (myDelaySize > delaySize)
+                {
+                    delaySize = myDelaySize;
+                }
+
+                directSections.emplace_back(
+                    DirectSection{
+                        inputDelay,
+                        DirectConvolutionSection(
+                            directSectionSize,
+                            sampleOffset,
+                            impulseResponse)});
+                sampleOffset += directSectionSize;
+            }
         }
     }
     directImpulse.resize(directConvolutionLength);
     for (size_t i = 0; i < directConvolutionLength; ++i)
     {
-        directImpulse[i] = impulseResponse[i];
+        directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i]: 0;
     }
     delayLine.SetSize(delaySize + 1);
 }
@@ -1805,7 +1938,7 @@ static int NextPowerOf2(size_t value)
 void Implementation::DelayLine::SetSize(size_t size)
 {
     size = NextPowerOf2(size);
-    this->size_mask = size - 1;
+    this->sizeMask = size - 1;
     this->head = 0;
     this->storage.resize(0);
     this->storage.resize(size);
@@ -1978,7 +2111,7 @@ void Implementation::FftPlan::CheckForOverwrites()
         {
             auto &step = steps[stepIndex];
 
-            if (step.inputIndex2 != -1)
+            if (step.inputIndex2 != CONSTANT_INDEX)
             {
                 workingGenerations[step.inputIndex2] = workingGenerations[step.inputIndex];
             }
@@ -2263,6 +2396,8 @@ bool BalancedConvolutionSection::PlanFileExists(size_t size)
     return std::filesystem::exists(path);
 }
 
+
+
 Implementation::DirectConvolutionSection::DirectConvolutionSection(
     size_t size,
     size_t offset, const std::vector<float> &impulseData)
@@ -2287,20 +2422,20 @@ Implementation::DirectConvolutionSection::DirectConvolutionSection(
 
     for (size_t i = 0; i < len; ++i)
     {
-        impulseFft[i + size] = norm*impulseData[i + offset];
+        impulseFft[i + size] = norm * impulseData[i + offset];
     }
-    fftPlan.compute(impulseFft, impulseFft, fft_dir::forward);
+    fftPlan.Compute(impulseFft, impulseFft, Fft::Direction::Forward);
     bufferIndex = 0;
 }
 
 void Implementation::DirectConvolutionSection::UpdateBuffer()
 {
-    fftPlan.compute(inputBuffer, buffer, fft_dir::forward);
+    fftPlan.Compute(inputBuffer, buffer, Fft::Direction::Forward);
     size_t size2 = size * 2;
     for (size_t i = 0; i < size2; ++i)
     {
         buffer[i] *= impulseFft[i];
     }
-    fftPlan.compute(buffer, buffer, fft_dir::backward);
+    fftPlan.Compute(buffer, buffer, Fft::Direction::Backward);
     bufferIndex = 0;
 }

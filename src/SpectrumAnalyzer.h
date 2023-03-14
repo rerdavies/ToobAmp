@@ -134,7 +134,7 @@ namespace TwoPlay {
 
 		static constexpr  size_t MAX_FFT_SIZE = 8192;
 
-		LsNumerics::Fft<double> fft {4};
+		LsNumerics::Fft fft {4};
 		std::vector<std::complex<double> > fftResult;
 		std::vector<float> fftWindow;
 

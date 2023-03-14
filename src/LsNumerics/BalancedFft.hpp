@@ -36,7 +36,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <mutex>
-#include "Fft.hpp"
+#include "StagedFft.hpp"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -47,8 +47,8 @@ namespace LsNumerics
     using fft_float_t = double;
     using fft_complex_t = std::complex<fft_float_t>;
     using fft_index_t = int32_t;
-    static constexpr fft_index_t CONSTANT_INDEX = -1;
-    static constexpr fft_index_t INVALID_INDEX = -2;
+    static constexpr fft_index_t CONSTANT_INDEX = fft_index_t(-1);
+    static constexpr fft_index_t INVALID_INDEX = fft_index_t(-2);
     class BinaryWriter;
     class BinaryReader;
 
@@ -74,12 +74,12 @@ namespace LsNumerics
 
             void push(float value)
             {
-                head = (head - 1) & size_mask;
+                head = (head - 1) & sizeMask;
                 storage[head] = value;
             }
             float at(size_t index) const
             {
-                return storage[(head + index) & size_mask];
+                return storage[(head + index) & sizeMask];
             }
 
             float operator[](size_t index) const
@@ -90,7 +90,7 @@ namespace LsNumerics
         private:
             std::vector<float> storage;
             std::size_t head = 0;
-            std::size_t size_mask = 0;
+            std::size_t sizeMask = 0;
         };
 
 
@@ -100,8 +100,8 @@ namespace LsNumerics
                 size_t size,
                 size_t offset,const std::vector<float>&impulseData);
 
-            float_t Size() const { return size; }
-            float_t Delay() const { return size; }
+            size_t Size() const { return size; }
+            size_t Delay() const { return size; }
             static size_t GetSectionDelay(size_t size) { return size; }
             float Tick(float input)
             {
@@ -118,9 +118,16 @@ namespace LsNumerics
                 return result;
 
             }
+            bool IsL1Optimized() const {
+                return fftPlan.IsL1Optimized();
+            }
+            bool IsL2Optimized() const {
+                return fftPlan.IsL2Optimized();
+            }
         private: 
+            using Fft = StagedFft;
             void UpdateBuffer();
-            Fft<double>  fftPlan;
+            Fft fftPlan;
             size_t size;
             std::vector<fft_complex_t> impulseFft;
             size_t bufferIndex;
@@ -138,6 +145,14 @@ namespace LsNumerics
             }
             CompiledButterflyOp(BinaryReader &);
             void Tick(std::vector<fft_complex_t> &workingMemory)
+            {
+                fft_complex_t &M = workingMemory[M_index];
+                fft_complex_t t1 = workingMemory[in1] * M;
+                fft_complex_t t0 = workingMemory[in0];
+                workingMemory[out] = t0 + t1;
+                workingMemory[out + 1] = t0 - t1;
+            }
+            void Tick(fft_complex_t*workingMemory)
             {
                 fft_complex_t &M = workingMemory[M_index];
                 fft_complex_t t1 = workingMemory[in1] * M;
@@ -163,20 +178,23 @@ namespace LsNumerics
             double Tick(double value, std::vector<fft_complex_t> &workingMemory)
             {
                 workingMemory[inputIndex] = value;
-                for (std::size_t i = 0; i < ops.size(); ++i)
+                size_t sz = ops.size();
+                for (std::size_t i = 0; i < sz; ++i)
                 {
                     ops[i].Tick(workingMemory);
                 }
                 return workingMemory[this->outputIndex].real();
             }
-            fft_complex_t Tick(fft_complex_t value, std::vector<fft_complex_t> &workingMemory)
+
+            fft_complex_t Tick(fft_complex_t value, std::vector<fft_complex_t> &workingMemory) 
             {
-                workingMemory[inputIndex] = value;
+                fft_complex_t*p = &workingMemory[0];
+                p[inputIndex] = value;
                 for (std::size_t i = 0; i < ops.size(); ++i)
                 {
                     ops[i].Tick(workingMemory);
                 }
-                return workingMemory[this->outputIndex];
+                return p[this->outputIndex];
             }
 
             void Write(BinaryWriter &writer) const;
@@ -370,6 +388,7 @@ namespace LsNumerics
     public:
         using Plan = Implementation::FftPlan;
         using plan_ptr = Implementation::plan_ptr;
+        using Fft = StagedFft;
 
         static void SetPlanFileDirectory(const std::filesystem::path &path)
         {
@@ -470,10 +489,10 @@ namespace LsNumerics
     class BalancedConvolution
     {
     public:
-        BalancedConvolution(size_t size, std::vector<float> impulseResponse);
+        BalancedConvolution(size_t size, const std::vector<float> &impulseResponse,size_t sampleRate = 44100);
 
-        BalancedConvolution(std::vector<float> impulseResponse)
-            : BalancedConvolution(impulseResponse.size(), impulseResponse)
+        BalancedConvolution(const std::vector<float>& impulseResponse,size_t sampleRate = 44100)
+            : BalancedConvolution(impulseResponse.size(), impulseResponse,sampleRate)
         {
         }
         static void SetPlanFileDirectory(const std::filesystem::path&path)
@@ -513,6 +532,7 @@ namespace LsNumerics
 
 
     private:
+        size_t sampleRate = 48000;
         std::vector<float> directImpulse;
         Implementation::DelayLine delayLine;
         size_t directConvolutionLength;

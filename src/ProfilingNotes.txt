@@ -1,0 +1,91 @@
+/*
+ * MIT License
+ * 
+ * Copyright (c) 2023 Robin E. R. Davies
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+ * of the Software, and to permit persons to whom the Software is furnished to do
+ * so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+ConvolutionReverbTest BenchmarkBalancedConvolution()
+Baseline
+
+        balanced sampleOffset: 84 SectionSize: 64 sectionDelay: 84 input delay: 0
+        balanced sampleOffset: 148 SectionSize: 64 sectionDelay: 84 input delay: 64
+        balanced sampleOffset: 212 SectionSize: 128 sectionDelay: 171 input delay: 41
+        balanced sampleOffset: 340 SectionSize: 128 sectionDelay: 171 input delay: 169
+        balanced sampleOffset: 468 SectionSize: 256 sectionDelay: 346 input delay: 122
+        balanced sampleOffset: 724 SectionSize: 512 sectionDelay: 703 input delay: 21
+        balanced sampleOffset: 1236 SectionSize: 512 sectionDelay: 703 input delay: 533
+        balanced sampleOffset: 1748 SectionSize: 1024 sectionDelay: 1426 input delay: 322
+        direct   sampleOffset: 2772 SectionSize: 2048 sectionDelay: 2048 input delay: 724
+        direct   sampleOffset: 4820 SectionSize: 4096 sectionDelay: 4096 input delay: 724
+        direct   sampleOffset: 8916 SectionSize: 8192 sectionDelay: 8192 input delay: 724
+        direct   sampleOffset: 17108 SectionSize: 16384 sectionDelay: 16384 input delay: 724
+        direct   sampleOffset: 33492 SectionSize: 16384 sectionDelay: 16384 input delay: 17108
+
+
+    Percent of realtime: 31.35%
+    BalancedConvolution::Tick  682 (95.3%)
+       inline: 1.5%
+        BalancedConvolutionSection::Tick: 399 (55.1%)
+        DirectConvolutionSection::Tick: 257 (35.9%)
+
+
+Do 512 DFTs in chunks (L1 page size)
+    ~20% improvement for large blocks.
+
+Break DFTs into L2 pages.
+   ...
+
+    balanced sampleOffset: 171 SectionSize: 128 sectionDelay: 171 input delay: 0
+    balanced sampleOffset: 299 SectionSize: 128 sectionDelay: 171 input delay: 128
+    balanced sampleOffset: 427 SectionSize: 256 sectionDelay: 346 input delay: 81
+    balanced sampleOffset: 683 SectionSize: 256 sectionDelay: 346 input delay: 337
+    balanced sampleOffset: 939 SectionSize: 512 sectionDelay: 703 input delay: 236
+    balanced sampleOffset: 1451 SectionSize: 1024 sectionDelay: 1426 input delay: 25
+    direct   sampleOffset: 2475 SectionSize: 1024 sectionDelay: 1024 input delay: 1451
+    direct   sampleOffset: 3499 SectionSize: 2048 sectionDelay: 2048 input delay: 1451
+    direct   sampleOffset: 5547 SectionSize: 4096 sectionDelay: 4096 input delay: 1451
+    direct   sampleOffset: 9643 SectionSize: 8192 sectionDelay: 8192 input delay: 1451
+    direct   sampleOffset: 17835 SectionSize: 16384 sectionDelay: 16384 input delay: 1451
+    direct   sampleOffset: 34219 SectionSize: 16384 sectionDelay: 16384 input delay: 17835
+    PROFILE: interrupts/evictions/bytes = 540/224/14064
+    Performance (percent of realtime): 24.6256%
+
+
+     BalancedConvolutionTick:
+        23 (4.3%)
+        538 (%99.6%)
+
+    BalancedConvolutionSection::Tick
+        334 (61.9%)
+
+        CompiledButterflyOp::Tick
+            243 (45.0%)    
+
+    DirctConvolutionSection::Tick
+        170(31.5%)
+
+        ComputeInnerSmall
+            102 (18.9%)
+    
+
+
+    std::vector operator[] 
+        251 (46.5%)

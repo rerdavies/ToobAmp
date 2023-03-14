@@ -24,21 +24,23 @@
 
 #pragma once
 
+#include <cstddef>
+
 namespace LsNumerics {
     namespace CacheInfo {
         // not currently used.
 
         // Rasberry Pi 4
-        size_t L1ICacheSize = 48*1024;
-        size_t L1ICacheAssociativity = 3; 
-        size_t L1IBlockSize = L1CacheSize/L1ICacheAssociativity;
+        constexpr size_t L1InstructionCacheSize = 192*1024;
+        constexpr size_t L1InstructionCacheAssociativity = 3; 
+        constexpr size_t L1InstructionBlockSize = L1InstructionCacheSize/L1InstructionCacheAssociativity;
 
-        size_t L1DCacheSize = 32*1024;
-        size_t L1DCacheAssociativity = 2;
-        size_t L1DBlockSize = L1CacheSize/L1DCacheAssociativity; // 2-way associative
+        constexpr size_t L1DataCacheSize = 128*1024;
+        constexpr size_t L1DataCacheAssociativity = 4;
+        constexpr size_t L1DataBlockSize = L1DataCacheSize/L1DataCacheAssociativity; // 2-way associative
 
-        size_t L2CacheSize = 1024*1024;
-        size_t L2CacheAssociativity = 16;
-        size_t L2BlockSize = L2CacheAssociativity/16; // 16-way associative.
+        constexpr size_t L2CacheSize = 1024*1024;
+        constexpr size_t L2CacheAssociativity = 16;
+        constexpr size_t L2BlockSize = L2CacheAssociativity/16; // 16-way associative.
     }
 }

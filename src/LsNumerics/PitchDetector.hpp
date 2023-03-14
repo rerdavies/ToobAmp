@@ -90,7 +90,7 @@ namespace LsNumerics
      */
     class PitchDetector
     {
-        Fft<double> fftPlan;
+        Fft fftPlan;
 
     private:
         int cepstrumFftSize;
@@ -124,7 +124,7 @@ namespace LsNumerics
         std::vector<complex> lastFftBuffer;
 
 #if LS_ENABLE_AUTO_CORRELATION_CODE
-        Fft<double> crossCorrelationFft;
+        Fft crossCorrelationFft;
         int crossCorrelationSize;
         int crossCorrelationSamples;
         std::vector<double> autoCorrelation;
