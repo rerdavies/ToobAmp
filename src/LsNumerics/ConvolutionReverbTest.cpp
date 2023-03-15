@@ -24,7 +24,7 @@
 
 #include "ConvolutionReverb.hpp"
 #include "FftConvolution.hpp"
-#include "BalancedFft.hpp"
+#include "BalancedConvolution.hpp"
 #include <iostream>
 #include "StagedFft.hpp"
 #include <cmath>
@@ -35,6 +35,8 @@
 #include <sstream>
 #include "../ss.hpp"
 #include "../CommandLineParser.hpp"
+
+#include <time.h> // for clock_nanosleep
 
 #ifdef WITHGPERFTOOLS
 #include <gperftools/profiler.h>
@@ -68,6 +70,48 @@ static bool IsProfiling()
     return false;
 #endif
 }
+
+static float RelError(float expected, float actual)
+{
+    float error = std::abs(expected - actual);
+    float absExpected = std::abs(expected);
+    if (absExpected > 1)
+    {
+        error /= absExpected;
+    }
+    return error;
+}
+
+class ClockSleeper
+{
+public:
+    static constexpr clockid_t CLOCK = CLOCK_MONOTONIC;
+
+    ClockSleeper()
+    {
+        struct timespec resolution;
+        clock_getres(CLOCK, &resolution);
+        clock_gettime(CLOCK, &currentTime);
+    }
+
+    void Sleep(int64_t nanoseconds)
+    {
+        currentTime.tv_nsec += nanoseconds;
+        while (nanoseconds + currentTime.tv_nsec >= 1000000000)
+        {
+            ++currentTime.tv_sec;
+            nanoseconds -= 1000000000;
+        }
+        currentTime.tv_nsec += (long)nanoseconds;
+
+        struct timespec remaining;
+
+        clock_nanosleep(CLOCK, TIMER_ABSTIME, &currentTime, &remaining);
+    }
+
+private:
+    timespec currentTime;
+};
 
 void UsePlanCache()
 {
@@ -680,10 +724,10 @@ void BenchmarkBalancedConvolution()
 
     UsePlanCache();
 
-    std::vector<double> impulseTimes = {0.01, 0.1, 1.0, 2.0};
+    std::vector<double> impulseTimes = {0.1, 1.0, 2.0};
     if (buildTests)
     {
-        impulseTimes = {0.1};
+        impulseTimes = {1.0};
     }
     if (IsProfiling())
     {
@@ -721,7 +765,7 @@ void BenchmarkBalancedConvolution()
             inputBuffer[i] = i / (float)bufferSize;
         }
 
-        BalancedConvolution convolver(impulseData);
+        BalancedConvolution convolver(impulseData,48000,bufferSize);
 
         size_t nSamples = (size_t)(sampleRate * benchmarkTimeSeconds);
 
@@ -1104,6 +1148,149 @@ void TestDirectConvolutionSectionAllocations()
     }
 }
 
+
+static void RealtimeConvolutionCpuUse()
+{
+    UsePlanCache();
+    for (size_t N : {
+             48000,     // buncha sections.
+         })
+    {
+        cout << "==== BenchmarkRealtimeConvolution n=" << N << endl;
+        cout << "Check CPU use. Press Ctrl+C to stop." << endl;
+
+        size_t BUFFER_SAMPLES = 256;
+        size_t SAMPLE_RATE = 48000;
+
+        std::vector<float> impulse;
+        impulse.resize(N);
+        for (size_t i = 0; i < N; ++i)
+        {
+            impulse[i] = i + 1;
+        }
+
+        std::vector<float> inputData;
+        inputData.resize(N);
+        inputData[0] = 1;
+
+        BalancedConvolution convolution(impulse,SAMPLE_RATE,BUFFER_SAMPLES);
+
+        size_t inputIndex = 0;
+        std::vector<float> inputBuffer;
+        inputBuffer.resize(BUFFER_SAMPLES);
+        std::vector<float> outputBuffer;
+        outputBuffer.resize(BUFFER_SAMPLES);
+
+        size_t sleepNanoseconds = 1000000000 * BUFFER_SAMPLES / SAMPLE_RATE;
+
+
+        ClockSleeper clockSleeper;
+
+        size_t nSample = 0;
+        size_t outputIndex = 0;
+        while (true)
+        {
+            for (size_t i = 0; i < BUFFER_SAMPLES; ++i)
+            {
+                inputBuffer[i] = inputData[inputIndex++];
+                if (inputIndex >= inputData.size())
+                {
+                    inputIndex = 0;
+                }
+                ++nSample;
+            }
+            convolution.Tick(inputBuffer, outputBuffer);
+
+            for (size_t i = 0; i < BUFFER_SAMPLES; ++i)
+            {
+                float expected = impulse[outputIndex++];
+                if (outputIndex >= impulse.size())
+                {
+                    outputIndex = 0;
+                }
+                float actual = outputBuffer[i];
+
+                TEST_ASSERT(RelError(expected, actual) < 1E-4);
+            }
+            clockSleeper.Sleep(sleepNanoseconds);
+        }
+        (void)nSample;
+    }
+    DisablePlanCache();
+}
+
+
+static void TestRealtimeConvolution()
+{
+    UsePlanCache();
+    for (size_t N : {
+             683 + 255, // one direct section
+             939 + 511, // two direct sections,
+             32554,     // buncha sections.
+         })
+    {
+        cout << "==== TestRealtimeConvolution n=" << N << endl;
+
+        size_t BUFFER_SAMPLES = 256;
+        size_t SAMPLE_RATE = 48000;
+
+        std::vector<float> impulse;
+        impulse.resize(N);
+        for (size_t i = 0; i < N; ++i)
+        {
+            impulse[i] = i + 1;
+        }
+
+        std::vector<float> inputData;
+        inputData.resize(N);
+        inputData[0] = 1;
+
+        BalancedConvolution convolution(impulse,SAMPLE_RATE,BUFFER_SAMPLES);
+
+        size_t inputIndex = 0;
+        std::vector<float> inputBuffer;
+        inputBuffer.resize(BUFFER_SAMPLES);
+        std::vector<float> outputBuffer;
+        outputBuffer.resize(BUFFER_SAMPLES);
+
+        size_t sleepNanoseconds = 1000000000 * BUFFER_SAMPLES / SAMPLE_RATE;
+
+        size_t nFrames = N * 4 / BUFFER_SAMPLES;
+
+        ClockSleeper clockSleeper;
+
+        size_t nSample = 0;
+        size_t outputIndex = 0;
+        for (size_t frame = 0; frame < nFrames; ++frame)
+        {
+            for (size_t i = 0; i < BUFFER_SAMPLES; ++i)
+            {
+                inputBuffer[i] = inputData[inputIndex++];
+                if (inputIndex >= inputData.size())
+                {
+                    inputIndex = 0;
+                }
+                ++nSample;
+            }
+            convolution.Tick(inputBuffer, outputBuffer);
+
+            for (size_t i = 0; i < BUFFER_SAMPLES; ++i)
+            {
+                float expected = impulse[outputIndex++];
+                if (outputIndex >= impulse.size())
+                {
+                    outputIndex = 0;
+                }
+                float actual = outputBuffer[i];
+
+                TEST_ASSERT(RelError(expected, actual) < 1E-4);
+            }
+            clockSleeper.Sleep(sleepNanoseconds);
+        }
+        (void)nSample;
+    }
+    DisablePlanCache();
+}
 void TestFft()
 {
 
@@ -1112,13 +1299,14 @@ void TestFft()
     // see: ADD_TEST_NAME_HERE.
     Implementation::SlotUsageTest();
 
+    TestBalancedConvolutionSequencing();
+
     if (!buildTests)
     {
         TestBalancedConvolutionSection(true);
     }
     TestBalancedConvolutionSection(false);
 
-    TestBalancedConvolutionSequencing();
 
     TestFftConvolution();
 
@@ -1127,11 +1315,14 @@ void TestFft()
     TestDirectConvolutionSection();
     TestBalancedConvolution();
 
+    TestFftConvolutionBenchmark();
+
+    TestRealtimeConvolution();
+
     BenchmarkBalancedConvolution();
 
     BenchmarkFftConvolutionStep();
 
-    TestFftConvolutionBenchmark();
 
     // TestBalancedFft(FftDirection::Reverse);
     // TestBalancedFft(FftDirection::Forward);
@@ -1212,7 +1403,15 @@ int main(int argc, const char **argv)
     try
     {
         /*  ADD_TEST_NAME_HERE  (don't forget to revise PrintHelp()) )*/
-        if (testName == "section_benchmark")
+        if (testName == "realtime_convolution_cpu_use")
+        {
+            RealtimeConvolutionCpuUse();
+        }
+        else if (testName == "realtime_convolution")
+        {
+            TestRealtimeConvolution();
+        }
+        else if (testName == "section_benchmark")
         {
             BenchmarkFftConvolutionStep();
         }

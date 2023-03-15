@@ -22,9 +22,7 @@
  * SOFTWARE.
  */
 
-
 #pragma once
-
 
 #include <cstddef>
 #include <complex>
@@ -37,6 +35,7 @@
 #include <filesystem>
 #include <mutex>
 #include "StagedFft.hpp"
+#include "SynchronizedDelayLine.hpp"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -93,15 +92,17 @@ namespace LsNumerics
             std::size_t sizeMask = 0;
         };
 
-
-        class DirectConvolutionSection {
+        class DirectConvolutionSection
+        {
         public:
             DirectConvolutionSection(
                 size_t size,
-                size_t offset,const std::vector<float>&impulseData);
+                size_t offset, const std::vector<float> &impulseData,
+                size_t sectionDelay = 0);
 
             size_t Size() const { return size; }
-            size_t Delay() const { return size; }
+            size_t SampleOffset() const { return offset; }
+            size_t Delay() const { return schedulerDelay; }
             static size_t GetSectionDelay(size_t size) { return size; }
             float Tick(float input)
             {
@@ -111,24 +112,32 @@ namespace LsNumerics
                 }
                 // input buffer in reverse order.
 
-                inputBuffer[bufferIndex] = inputBuffer[bufferIndex+size];
-                inputBuffer[bufferIndex+size] = input;
-                float result =  (float(buffer[bufferIndex].real()));
+                inputBuffer[bufferIndex] = inputBuffer[bufferIndex + size];
+                inputBuffer[bufferIndex + size] = input;
+                float result = (float(buffer[bufferIndex].real()));
                 ++bufferIndex;
                 return result;
-
             }
-            bool IsL1Optimized() const {
+
+
+            void Execute(SynchronizedDelayLine&input,size_t time, SynchronizedSingleReaderDelayLine &output);
+
+            bool IsL1Optimized() const
+            {
                 return fftPlan.IsL1Optimized();
             }
-            bool IsL2Optimized() const {
+            bool IsL2Optimized() const
+            {
                 return fftPlan.IsL2Optimized();
             }
-        private: 
+
+        private:
             using Fft = StagedFft;
             void UpdateBuffer();
+            size_t schedulerDelay;
             Fft fftPlan;
             size_t size;
+            size_t offset;
             std::vector<fft_complex_t> impulseFft;
             size_t bufferIndex;
             std::vector<float> inputBuffer;
@@ -152,7 +161,7 @@ namespace LsNumerics
                 workingMemory[out] = t0 + t1;
                 workingMemory[out + 1] = t0 - t1;
             }
-            void Tick(fft_complex_t*workingMemory)
+            void Tick(fft_complex_t *workingMemory)
             {
                 fft_complex_t &M = workingMemory[M_index];
                 fft_complex_t t1 = workingMemory[in1] * M;
@@ -172,7 +181,7 @@ namespace LsNumerics
             using fft_float_t = double;
             using fft_complex_t = std::complex<double>;
 
-            PlanStep() { }
+            PlanStep() {}
             PlanStep(BinaryReader &reader);
 
             double Tick(double value, std::vector<fft_complex_t> &workingMemory)
@@ -186,9 +195,9 @@ namespace LsNumerics
                 return workingMemory[this->outputIndex].real();
             }
 
-            fft_complex_t Tick(fft_complex_t value, std::vector<fft_complex_t> &workingMemory) 
+            fft_complex_t Tick(fft_complex_t value, std::vector<fft_complex_t> &workingMemory)
             {
-                fft_complex_t*p = &workingMemory[0];
+                fft_complex_t *p = &workingMemory[0];
                 p[inputIndex] = value;
                 for (std::size_t i = 0; i < ops.size(); ++i)
                 {
@@ -261,7 +270,7 @@ namespace LsNumerics
             {
                 for (size_t i = 0; i < constants.size(); ++i)
                 {
-                    workingMemory[i+constantsOffset] = constants[i];
+                    workingMemory[i + constantsOffset] = constants[i];
                 }
             }
             void PrintPlan();
@@ -376,10 +385,9 @@ namespace LsNumerics
         static plan_ptr GetPlan(std::size_t size, FftDirection direction);
     };
 
-
     /// @brief Convolution section with balanced exection time per cycle.
     /// For moderate sizes of N, generating the execution plan can take a significant amount of time.
-    /// 
+    ///
     /// The recommended way to use this package is to pre-generate files containing the execution plan.
     /// See @ref BalancedConvolution for details.
 
@@ -452,7 +460,6 @@ namespace LsNumerics
 
         static std::filesystem::path planFileDirectory;
 
-
         size_t size = 0;
 
         std::vector<fft_complex_t> workingMemory;
@@ -473,7 +480,7 @@ namespace LsNumerics
     /// Generation execution plans can take a significant amount of time (tens or hundreds of seconds).
     /// It is recommended that you configure BalancedConvolution to use pre-generated execution plans
     /// generated at compile time, and stored in files.
-    /// 
+    ///
     /// To use pregenerated plan files, follow these steps.
     ///
     /// 1. Generate the execution plans using the GenerateFftPlans executable a build time.
@@ -481,71 +488,181 @@ namespace LsNumerics
     ///       GenerateFftPlans <output-directory>
     ///
     /// 2. Copy these files into a fixed location at install time. (May be read-only).
-    /// 
+    ///
     /// 3. Call BalancedConvolution::SetPlanFileDirector(<plan-file-directory>) to
-    ///    to cause execution plans to be loaded from disk instead of being generated at 
+    ///    to cause execution plans to be loaded from disk instead of being generated at
     ///    runtime.
     ///
     class BalancedConvolution
     {
     public:
-        BalancedConvolution(size_t size, const std::vector<float> &impulseResponse,size_t sampleRate = 44100);
+        BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, 
+            size_t sampleRate = 44100,
+            size_t maxAudioBufferSize = 128);
 
-        BalancedConvolution(const std::vector<float>& impulseResponse,size_t sampleRate = 44100)
-            : BalancedConvolution(impulseResponse.size(), impulseResponse,sampleRate)
+        BalancedConvolution(const std::vector<float> &impulseResponse, size_t sampleRate = 44100, size_t maxAudioBufferSize = 128)
+            : BalancedConvolution(impulseResponse.size(), impulseResponse, sampleRate,maxAudioBufferSize)
         {
         }
-        static void SetPlanFileDirectory(const std::filesystem::path&path)
+
+        ~BalancedConvolution();
+        static void SetPlanFileDirectory(const std::filesystem::path &path)
         {
             BalancedConvolutionSection::SetPlanFileDirectory(path);
         }
 
-        float Tick(float value)
+    private:
+        float TickUnsynchronized(float value)
         {
-            delayLine.push(value);
+            delayLine.Write(value);
             double result = 0;
             for (size_t i = 0; i < directConvolutionLength; ++i)
             {
                 result += delayLine[i] * (double)directImpulse[i];
             }
-            for (auto&section: balancedSections)
+            for (auto &section : balancedSections)
             {
                 result += section.fftSection.Tick(delayLine[section.sampleDelay]);
             }
-            for (auto& section: directSections)
+            for (auto &sectionThread : directSectionThreads)
             {
-                result += section.directSection.Tick(delayLine[section.sampleDelay]);
+                result += sectionThread->Tick();
             }
             return (float)result;
         }
+
+    public:
+        float Tick(float value)
+        {
+            float result = TickUnsynchronized(value);
+            delayLine.SynchWrite();
+            return result;
+        }
+
         void Tick(size_t frames, float *input, float *output)
         {
             for (size_t i = 0; i < frames; ++i)
             {
-                output[i] = Tick(input[i]);
+                output[i] = TickUnsynchronized(input[i]);
             }
+            delayLine.SynchWrite();
         }
         void Tick(std::vector<float> &input, std::vector<float> &output)
         {
             Tick(input.size(), &(input[0]), &(output[0]));
         }
-
+        void Close();
 
     private:
+        void PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize);
+        void PrepareThreads();
+        class DirectSectionThread;
+        DirectSectionThread*GetDirectSectionThreadBySize(size_t size);
+
+    private:
+        struct DirectSection
+        {
+            size_t sampleDelay;
+            Implementation::DirectConvolutionSection directSection;
+        };
+
+        class ThreadedDirectSection {
+        public:
+            using DirectConvolutionSection = Implementation::DirectConvolutionSection;
+            ThreadedDirectSection()
+            :   section(nullptr)
+            {
+
+            }
+
+            ThreadedDirectSection(DirectSection &section);
+        public:
+            size_t Size() const { return section->directSection.Size(); }
+            bool Execute(SynchronizedDelayLine& inputDelayLine);
+
+            void Close() { outputDelayLine.Close(); }
+
+            float Tick() { return outputDelayLine.Read(); }
+        private:
+            size_t currentSample = 0;
+            SynchronizedSingleReaderDelayLine outputDelayLine;
+            DirectSection* section;
+        };
+        std::vector<std::unique_ptr<ThreadedDirectSection>> threadedDirectSections;
+
+        class DirectSectionThread
+        {
+        public:
+            DirectSectionThread()
+            :threadNumber(-1)
+            {
+
+            }
+            DirectSectionThread(int threadNumber)
+            :threadNumber(threadNumber)
+            {
+
+            }
+            int GetThreadNumber() const { return threadNumber; } 
+
+            float Tick() {
+                double result = 0;
+                for (auto section: sections)
+                {
+                    result += section->Tick();
+                }
+                return result;
+            }
+            void Execute(SynchronizedDelayLine&inputDelayLine)
+            {
+                while (true)
+                {
+                    bool processed = false;
+                    for (auto section: sections)
+                    {
+                        if (section->Execute(inputDelayLine))
+                        {
+                            processed = true;
+                        }
+                    }
+                    if (!processed)
+                    {
+                        inputDelayLine.ReadWait();
+                    }
+                }
+            }
+            void Close()
+            {
+                for (auto section: sections)
+                {
+                    section->Close();
+                }
+            }
+            void AddSection(ThreadedDirectSection*threadedSection)
+            {
+                sections.push_back(threadedSection);
+            }
+
+        private:
+            int threadNumber = -1;
+            std::vector<ThreadedDirectSection*>sections;
+        };
+
+        using section_thread_ptr = std::unique_ptr<DirectSectionThread>;
+        std::vector<section_thread_ptr> directSectionThreads;
+
+        static std::mutex globalMutex;
+        
+
         size_t sampleRate = 48000;
         std::vector<float> directImpulse;
-        Implementation::DelayLine delayLine;
+        SynchronizedDelayLine delayLine;
         size_t directConvolutionLength;
 
         struct Section
         {
             size_t sampleDelay;
             BalancedConvolutionSection fftSection;
-        };
-        struct DirectSection
-        {
-            size_t sampleDelay;
-            Implementation::DirectConvolutionSection directSection;
         };
 
         std::vector<Section> balancedSections;

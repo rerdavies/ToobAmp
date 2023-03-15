@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "BalancedFft.hpp"
+#include "BalancedConvolution.hpp"
 #include "../ss.hpp"
 #include <memory>
 #include <cassert>
@@ -51,7 +51,7 @@ using namespace LsNumerics;
 #endif
 
 #define RECYCLE_SLOTS 1               // disable for test purposes only
-#define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
+#define DISPLAY_SECTION_ALLOCATIONS 0 // enable for test purposes only
 
 static std::size_t Log2(std::size_t value)
 {
@@ -68,7 +68,6 @@ static std::size_t Pow2(std::size_t value)
     return 1 << value;
 }
 
-
 static const fft_index_t ToIndex(size_t value)
 {
     if (value > (size_t)std::numeric_limits<fft_index_t>::max())
@@ -80,52 +79,108 @@ static const fft_index_t ToIndex(size_t value)
 
 // gathered from benchmarks on Raspberry Pi 4.
 // aproximate execution time per sample in ns.
-struct ExecutionEntry {
+struct ExecutionEntry
+{
     size_t n;
     double nanosecondsPerSample;
+    int threadNumber;
 };
 
-static std::vector<ExecutionEntry> executionTimePerSampleNs  {
+constexpr int INVALID_THREAD_ID = -1; // DirectionSections with this size are not encounered in normal use.
+
+std::mutex BalancedConvolution::globalMutex;
+
+static std::vector<ExecutionEntry> executionTimePerSampleNs{
     // n	direct
-    {4, 82.402},
-    {8, 75.522},
-    {16, 78.877},
-    {32, 86.127},
-    {64, 92.286},
-    {128, 100.439},
-    {256, 107.703},
-    {512, 155.486},
-    {1024, 164.186},
-    {2048, 192.041},
-    {4096, 206.026},
-    {8192, 241.912},
-    {16384, 285.395},
-    {32768, 448.843},
-    {65536, 575.380},
-    {131072, 668.226},
-};
+    {4, 82.402, INVALID_THREAD_ID},
+    {8, 75.522, INVALID_THREAD_ID},
+    {16, 78.877, INVALID_THREAD_ID},
+    {32, 86.127, INVALID_THREAD_ID},
+    {64, 92.286, INVALID_THREAD_ID},
 
-static std::vector<size_t> GetDirectExecutionLeadTimesByLog2N(size_t sampleRate)
+    // executed on thread 1.
+    {128, 100.439, 1},
+    {256, 107.703, 1},
+    {512, 155.486, 1},
+    {1024, 164.186, 2},
+    // executed on thread 2
+    {2048, 192.041, 2},
+    {4096, 206.026, 2},
+    {8192, 241.912, 3},
+    {16384, 285.395, 3},
+    {32768, 448.843, 4},
+    {65536, 575.380, 4},
+    {131072, 668.226, 5},
+};
+constexpr int MAX_THREAD_ID = 6;
+constexpr size_t INVALID_EXECUTION_TIME = std::numeric_limits<size_t>::max();
+
+static int GetDirectSectionThreadId(size_t size)
+{
+    for (auto &entry : executionTimePerSampleNs)
+    {
+        if (entry.n == size)
+        {
+            return entry.threadNumber;
+        }
+    }
+    return INVALID_THREAD_ID;
+}
+std::vector<size_t> directSectionLeadTimes;
+
+static void UpdateDirectExecutionLeadTimes(size_t sampleRate,size_t maxAudioBufferSize)
 {
     // calculate the lead time in samples based on how long it takes to execute
     // a direction section of a particular size.
-    std::vector<size_t> result;
-    result.reserve(executionTimePerSampleNs.size()+3);
-    result.push_back(0); // 0
-    result.push_back(1); // 0
-    result.push_back(2); // 0
-    for (const auto&entry: executionTimePerSampleNs)
+
+    // Calculate per-thread worst execution times.
+    // (Service threads handle groups of block sizes.)
+    std::vector<int> basicExecutionTime;
+    basicExecutionTime.resize(MAX_THREAD_ID + 1);
+    for (const auto &entry : executionTimePerSampleNs)
     {
-        double executionTimeSeconds = entry.n*entry.nanosecondsPerSample*1E-9;
-        executionTimeSeconds *= ((double)sampleRate)/44100; // benchmarks were for 44100.
-        executionTimeSeconds += 0.002; // 2 ms for scheduling overhead.
-        executionTimeSeconds *= 1.5; // slack for cache contention
-        executionTimeSeconds *= 1.8/1.5; // in case we're running on 1.5Ghz pi.
-        size_t samplesLeadTime = (std::ceil(executionTimeSeconds*sampleRate));
-        // and we have to lead by a frame's-worth of data.
-        samplesLeadTime += entry.n;
-        samplesLeadTime += 512; // granularity of audio frame.
-        result.push_back(samplesLeadTime);
+        if (entry.threadNumber != INVALID_THREAD_ID)
+        {
+            double executionTimeSeconds = entry.n * entry.nanosecondsPerSample * 1E-9;
+            executionTimeSeconds *= ((double)sampleRate) / 44100; // benchmarks were for 44100.
+            executionTimeSeconds *= 1.8 / 1.5;                    // in case we're running on 1.5Ghz pi.
+            executionTimeSeconds *= 2;                            // competing for cache space.
+            executionTimeSeconds *= 1.5;                          // because there may be duplicates
+            size_t samplesLeadTime = (std::ceil(executionTimeSeconds * sampleRate));
+
+            basicExecutionTime[entry.threadNumber] += samplesLeadTime;
+        }
+    }
+
+    directSectionLeadTimes.resize(executionTimePerSampleNs.size() + 3);
+    for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
+    {
+        directSectionLeadTimes[i] = INVALID_EXECUTION_TIME;
+    }
+    double schedulingJitterSeconds = 0.002;                                         // 2ms for scheduiling overhead.
+
+    size_t schedulingJitter = (size_t)(schedulingJitterSeconds * sampleRate + maxAudioBufferSize);
+
+    for (const auto &entry : executionTimePerSampleNs)
+    {
+        size_t log2N = Log2(entry.n);
+        if (entry.threadNumber != INVALID_THREAD_ID)
+        {
+            directSectionLeadTimes[log2N] = basicExecutionTime[entry.threadNumber] + schedulingJitter + entry.n;
+        }
+    }
+}
+static size_t GetDirectSectionLeadTime(size_t directSectionSize)
+{
+    size_t log2Size = Log2(directSectionSize);
+    if (log2Size >= directSectionLeadTimes.size())
+    {
+        throw std::logic_error("Unexpected direct section lead time.");
+    }
+    auto result = directSectionLeadTimes[Log2(directSectionSize)];
+    if (result == INVALID_EXECUTION_TIME)
+    {
+        throw std::logic_error("Unexpected direct section lead time.");
     }
     return result;
 }
@@ -1733,21 +1788,62 @@ size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
     return t.delay;
 }
 
-size_t convolutionSampleRate = (size_t)-1;
-std::vector<size_t> directSectionLeadTimes;
+static size_t convolutionSampleRate = (size_t)-1;
+static size_t convolutionMaxAudioBufferSize = (size_t)-1;
 
-
-static size_t GetDirectSectionLeadTime(size_t directSectionSize)
+BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate,size_t maxAudioBufferSize)
 {
-    size_t log2Size = Log2(directSectionSize);
-    if (log2Size >= directSectionLeadTimes.size())
-    {
-        return std::numeric_limits<size_t>::max(); // i.e never ready.
-    }
-    return directSectionLeadTimes[Log2(directSectionSize)];
+    PrepareSections(size, impulseResponse, sampleRate,maxAudioBufferSize);
+    PrepareThreads();
 }
 
-BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate)
+BalancedConvolution::DirectSectionThread *BalancedConvolution::GetDirectSectionThreadBySize(size_t size)
+{
+    int threadNumber = GetDirectSectionThreadId(size);
+    if (threadNumber == INVALID_THREAD_ID)
+    {
+        throw std::logic_error("Invalide thread id.");
+    }
+    for (auto &thread : directSectionThreads)
+    {
+        if (thread->GetThreadNumber() == threadNumber)
+        {
+            return thread.get();
+        }
+    }
+    directSectionThreads.emplace_back(std::make_unique<DirectSectionThread>(threadNumber));
+    return directSectionThreads[directSectionThreads.size() - 1].get();
+}
+void BalancedConvolution::PrepareThreads()
+{
+    threadedDirectSections.reserve(directSections.size());
+    for (size_t i = 0; i < directSections.size(); ++i)
+    {
+        DirectSection &section = directSections[i];
+        threadedDirectSections.emplace_back(std::make_unique<ThreadedDirectSection>(section));
+    }
+
+    for (auto &threadedDirectSection : threadedDirectSections)
+    {
+        auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
+        sectionThread->AddSection(threadedDirectSection.get());
+    }
+
+    for (size_t i = 0; i < directSectionThreads.size(); ++i)
+    {
+        DirectSectionThread *thread = directSectionThreads[i].get();
+        if (thread)
+        {
+            delayLine.CreateThread(
+                [this, thread]()
+                {
+                    thread->Execute(this->delayLine);
+                },
+                -(int)thread->GetThreadNumber());
+        }
+    }
+}
+void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate,size_t maxAudioBufferSize)
 {
     constexpr size_t INITIAL_SECTION_SIZE = 128;
     constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
@@ -1755,10 +1851,15 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
     constexpr size_t DIRECT_SECTION_CUTOFF_LIMIT = std::numeric_limits<size_t>::max(); // the point at which balanced sections become faster than direct sections.
 
     // nb: global data, but constructor is always protected by the cache mutex.
-    if (convolutionSampleRate != sampleRate)
+
     {
-        convolutionSampleRate = sampleRate;
-        directSectionLeadTimes = GetDirectExecutionLeadTimesByLog2N(sampleRate);
+        std::lock_guard lock{globalMutex};
+        if (convolutionSampleRate != sampleRate || convolutionMaxAudioBufferSize != maxAudioBufferSize)
+        {
+            convolutionSampleRate = sampleRate;
+            convolutionMaxAudioBufferSize = maxAudioBufferSize;
+            UpdateDirectExecutionLeadTimes(sampleRate,maxAudioBufferSize);
+        }
     }
     size_t delaySize = -1;
     if (size < INITIAL_SECTION_SIZE)
@@ -1817,7 +1918,7 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
             bool canUseDirectSection = false;
             while (true)
             {
-                directSectionDelay =  GetDirectSectionLeadTime(directSectionSize);
+                directSectionDelay = GetDirectSectionLeadTime(directSectionSize);
                 if (directSectionDelay == std::numeric_limits<size_t>::max())
                 {
                     throw std::logic_error("Failed to schedule direct section.");
@@ -1827,11 +1928,11 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
                     canUseDirectSection = false;
                     break;
                 }
-                
+
                 canUseDirectSection = true;
 
                 // don't increase direct section size if we can reach the end with the current size.
-                if (directSectionSize >= remaining) 
+                if (directSectionSize >= remaining)
                 {
                     break;
                 }
@@ -1853,7 +1954,7 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
             while (remaining <= directSectionSize / 2 && directSectionSize > INITIAL_SECTION_SIZE)
             {
                 directSectionSize = directSectionSize / 2;
-                directSectionDelay = DirectConvolutionSection::GetSectionDelay(directSectionSize);
+                directSectionDelay = GetDirectSectionLeadTime(directSectionSize);
             }
 
             bool useBalancedSection = !canUseDirectSection;
@@ -1890,7 +1991,7 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
             else
             {
 
-                size_t inputDelay = sampleOffset - DirectConvolutionSection::GetSectionDelay(directSectionSize);
+                size_t inputDelay = sampleOffset - directSectionDelay;
 
 #if DISPLAY_SECTION_ALLOCATIONS
                 std::cout << "direct   "
@@ -1901,7 +2002,7 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
                           << std::endl;
 #endif
 
-                size_t myDelaySize = inputDelay + directSectionSize;
+                size_t myDelaySize = sampleOffset + directSectionSize + 256; //long enough to survive an underrun.
                 if (myDelaySize > delaySize)
                 {
                     delaySize = myDelaySize;
@@ -1913,7 +2014,7 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
                         DirectConvolutionSection(
                             directSectionSize,
                             sampleOffset,
-                            impulseResponse)});
+                            impulseResponse, directSectionDelay)});
                 sampleOffset += directSectionSize;
             }
         }
@@ -1921,9 +2022,9 @@ BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &
     directImpulse.resize(directConvolutionLength);
     for (size_t i = 0; i < directConvolutionLength; ++i)
     {
-        directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i]: 0;
+        directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
     }
-    delayLine.SetSize(delaySize + 1);
+    delayLine.SetSize(delaySize + 1, 256);
 }
 static int NextPowerOf2(size_t value)
 {
@@ -2396,14 +2497,17 @@ bool BalancedConvolutionSection::PlanFileExists(size_t size)
     return std::filesystem::exists(path);
 }
 
-
-
 Implementation::DirectConvolutionSection::DirectConvolutionSection(
     size_t size,
-    size_t offset, const std::vector<float> &impulseData)
+    size_t offset, const std::vector<float> &impulseData,
+    size_t schedulerDelay)
     : fftPlan(size * 2),
       size(size)
 {
+    this->offset = offset;
+    if (schedulerDelay == 0)
+        schedulerDelay = size;
+    this->schedulerDelay = schedulerDelay;
     buffer.resize(size * 2);
     inputBuffer.resize(size * 2);
     impulseFft.resize(size * 2);
@@ -2438,4 +2542,68 @@ void Implementation::DirectConvolutionSection::UpdateBuffer()
     }
     fftPlan.Compute(buffer, buffer, Fft::Direction::Backward);
     bufferIndex = 0;
+}
+
+BalancedConvolution::~BalancedConvolution()
+{
+    Close();
+}
+
+void BalancedConvolution::Close()
+{
+    // shut down Direct Convolution Threads in an orderly manner.
+    for (auto &thread : directSectionThreads)
+    {
+        thread->Close(); // close the thread's delay line.
+    }
+    delayLine.Close(); // shut down all delayLine threads.
+}
+
+bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &delayLine)
+{
+    size_t size = section->directSection.Size();
+    if (delayLine.IsReadReady(currentSample, size))
+    {
+        section->directSection.Execute(delayLine, currentSample, outputDelayLine);
+        currentSample += size;
+        return true;
+    }
+    return false;
+}
+
+void DirectConvolutionSection::Execute(SynchronizedDelayLine &input, size_t time, SynchronizedSingleReaderDelayLine &output)
+{
+    size_t size = Size();
+    for (size_t i = 0; i < size; ++i)
+    {
+        inputBuffer[i] = inputBuffer[i + size];
+    }
+    input.ReadRange(time, size, size, inputBuffer);
+    UpdateBuffer();
+
+    // if (TRACE_DELAY_LINE_MESSAGES)
+    // {
+    //     TraceDelayLineMessage(SS("Write buffer[" << size << "] t=" << time ));
+    // }
+    output.Write(size, 0, this->buffer);
+}
+
+BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection &section)
+    : section(&section)
+{
+    auto &directSection = section.directSection;
+    size_t size = directSection.Size();
+    (void)size;
+    size_t sampleOffset = directSection.SampleOffset();
+    size_t sectionDelay = directSection.Delay();
+    size_t inputDelay = sampleOffset - sectionDelay;
+    (void)inputDelay;
+
+    this->currentSample = 0;
+
+    size_t delayLineSize = sampleOffset + sectionDelay+ 256;
+    outputDelayLine.SetSize(delayLineSize,delayLineSize-size);
+    std::vector<float> tempBuffer;
+    tempBuffer.resize(sampleOffset);
+    outputDelayLine.Write(tempBuffer.size(), 0, tempBuffer);
 }

@@ -146,19 +146,6 @@ add_executable(BaxandallToneStackTest
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
 
-add_executable(GenerateFftPlans
-    LsNumerics/BinaryReader.hpp
-    LsNumerics/BinaryReader.cpp
-    LsNumerics/BinaryWriter.cpp
-    LsNumerics/BinaryWriter.hpp
-    LsNumerics/FftConvolution.cpp
-    LsNumerics/FftConvolution.hpp
-    LsNumerics/GenerateFftPlans.cpp
-    LsNumerics/StagedFft.cpp
-    LsNumerics/StagedFft.hpp
-    LsNumerics/BalancedFft.cpp
-    LsNumerics/BalancedFft.hpp
-)
 
 add_library(BalancedConvolution STATIC
     LsNumerics/BinaryReader.hpp
@@ -172,11 +159,22 @@ add_library(BalancedConvolution STATIC
     LsNumerics/StagedFft.hpp
     LsNumerics/ConvolutionReverb.cpp
     LsNumerics/ConvolutionReverb.hpp
-    LsNumerics/BalancedFft.cpp
-    LsNumerics/BalancedFft.hpp
+    LsNumerics/BalancedConvolution.cpp
+    LsNumerics/BalancedConvolution.hpp
 
     LsNumerics/SynchronizedDelayLine.hpp
     LsNumerics/SynchronizedDelayLine.cpp
+)
+
+target_link_libraries(BalancedConvolution pthread)
+
+
+add_executable(GenerateFftPlans
+    LsNumerics/GenerateFftPlans.cpp
+)
+target_link_libraries(GenerateFftPlans
+    PRIVATE BalancedConvolution
+
 )
 
 

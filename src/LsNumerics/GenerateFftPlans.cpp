@@ -25,7 +25,7 @@
 #include <iostream>
 #include <string>
 #include <filesystem>
-#include "BalancedFft.hpp"
+#include "BalancedConvolution.hpp"
 #include <stdexcept>
 #include "../ss.hpp"
 
