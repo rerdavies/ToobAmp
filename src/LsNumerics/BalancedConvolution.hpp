@@ -494,7 +494,7 @@ namespace LsNumerics
     ///    to cause execution plans to be loaded from disk instead of being generated at
     ///    runtime.
     ///
-    class BalancedConvolution : private SynchronizedSingleReaderDelayLine::IReadReadyCallback
+    class BalancedConvolution : private SynchronizedSingleReaderDelayLine::IDelayLineCallback
     {
     public:
         BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, 
@@ -568,7 +568,7 @@ namespace LsNumerics
         DirectSectionThread*GetDirectSectionThreadBySize(size_t size);
 
     private:
-        using IReadReadyCallback = SynchronizedSingleReaderDelayLine::IReadReadyCallback;
+        using IDelayLineCallback = SynchronizedSingleReaderDelayLine::IDelayLineCallback;
         struct DirectSection
         {
             size_t sampleDelay;
@@ -584,7 +584,7 @@ namespace LsNumerics
 
             }
 
-            void SetWriteReadyCallback(IReadReadyCallback*callback)
+            void SetWriteReadyCallback(IDelayLineCallback*callback)
             {
                 outputDelayLine.SetWriteReadyCallback(callback);
             }

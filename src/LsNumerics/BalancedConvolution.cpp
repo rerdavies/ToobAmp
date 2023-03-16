@@ -1827,7 +1827,7 @@ void BalancedConvolution::PrepareThreads()
     {
         auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
         sectionThread->AddSection(threadedDirectSection.get());
-        threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IReadReadyCallback*>(this));
+        threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IDelayLineCallback*>(this));
     }
 
     for (size_t i = 0; i < directSectionThreads.size(); ++i)

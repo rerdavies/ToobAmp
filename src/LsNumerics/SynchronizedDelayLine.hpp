@@ -187,7 +187,7 @@ namespace LsNumerics
     public:
         static constexpr size_t DEFAULT_LOW_WATER_MARK = std::numeric_limits<size_t>::max();
 
-        class IReadReadyCallback {
+        class IDelayLineCallback {
         public:
             virtual void OnSynchronizedSingleReaderDelayLineReady() = 0;
             virtual void OnSynchronizedSingleReaderDelayLineUnderrun() = 0;
@@ -205,7 +205,7 @@ namespace LsNumerics
         {
             Close();
         }
-        void SetWriteReadyCallback(IReadReadyCallback *callback)
+        void SetWriteReadyCallback(IDelayLineCallback *callback)
         {
             this->writeReadyCallback = callback;
         }
@@ -233,7 +233,7 @@ namespace LsNumerics
         }
 
     private:
-        IReadReadyCallback *writeReadyCallback = nullptr;
+        IDelayLineCallback *writeReadyCallback = nullptr;
         void ReadWait();
 
     public:
