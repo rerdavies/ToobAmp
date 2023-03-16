@@ -37,22 +37,22 @@ namespace LsNumerics {
         ~BinaryWriter();
 
         BinaryWriter&operator <<(std::uint8_t value) {
-            out << (char)value;
+            (*pOut) << (char)value;
             CheckFail();
             return *this;
         }
         BinaryWriter&operator<<(std::int8_t value) {
-            out << (char)value;
+            (*pOut) << (char)value;
             CheckFail();
             return *this;
         }
         BinaryWriter&operator<<(char value) {
-            out << (char)value;
+            (*pOut) << (char)value;
             CheckFail();
             return *this;
         }
         BinaryWriter&operator <<(bool value) {
-            out << (char)(value ? 1:0);
+            (*pOut) << (char)(value ? 1:0);
             CheckFail();
             return *this;
         }
@@ -68,7 +68,7 @@ namespace LsNumerics {
         BinaryWriter&operator<<(const std::complex<double>&value);
         BinaryWriter&operator<<(const std::string& value);
 
-        std::streampos Tell() { return out.tellp();}
+        std::streampos Tell() { return pOut->tellp();}
 
         template <typename T> 
         BinaryWriter& operator<<(const std::vector<T>&vector)
@@ -84,15 +84,25 @@ namespace LsNumerics {
 
 
     private:
+        class Extra {
+        public:
+            virtual ~Extra() { }
+            virtual std::ostream *GetStream() = 0;
+        };
+
+        class GZipExtra;
+        class FStreamExtra;
+
+        Extra *pExtra = nullptr;
         void ThrowWriteError();
         void CheckFail()
         {
-            if (out.fail())
+            if (pOut->fail())
             {
                 ThrowWriteError();
             }
         }
     private:
-        std::ofstream out;
+        std::ostream *pOut = nullptr;
     };
 }

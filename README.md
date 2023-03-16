@@ -124,6 +124,8 @@ In the project directory, run:
      git submodule update --init --recursive
      sudo apt update
      sudo apt install lv2-dev
+     sudo apt install libboost-iostreams-dev
+
 	
 If you have not installed Visual Studio Code, you will need to install CMake:
 

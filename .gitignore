@@ -3,6 +3,7 @@
 /.vscode
 /build
 /fftplans
+/fftplans.gz
 /t.txt
 /tmp.txt
 *.backup

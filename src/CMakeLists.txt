@@ -166,11 +166,12 @@ add_library(BalancedConvolution STATIC
     LsNumerics/SynchronizedDelayLine.cpp
 )
 
-target_link_libraries(BalancedConvolution pthread)
+target_link_libraries(BalancedConvolution pthread boost_iostreams.a z.a)
 
 
 add_executable(GenerateFftPlans
     LsNumerics/GenerateFftPlans.cpp
+    CommandLineParser.hpp
 )
 target_link_libraries(GenerateFftPlans
     PRIVATE BalancedConvolution

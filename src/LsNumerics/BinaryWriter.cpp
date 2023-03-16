@@ -25,35 +25,85 @@
 #include "BinaryWriter.hpp"
 #include <stdexcept>
 #include "../ss.hpp"
+#include <boost/iostreams/filtering_streambuf.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 
 using namespace LsNumerics;
+using namespace std;
+using namespace boost::iostreams;
+
+
+class BinaryWriter::GZipExtra: public BinaryWriter::Extra {
+public:
+
+    GZipExtra(const std::filesystem::path& path)
+    :out(&gzipFbuf)
+    {
+        f.open(path,ios_base::binary | ios_base::trunc);
+        if (!f.is_open())
+        {
+            throw std::logic_error(SS("Can't open file " << path.string()));
+        }
+        gzipFbuf.push(gzip_compressor());
+        gzipFbuf.push(f);
+
+    }
+    virtual std::ostream*GetStream() {
+        return &out;
+    }
+private:
+    std::ofstream f;
+    boost::iostreams::filtering_streambuf<boost::iostreams::output> gzipFbuf;
+    std::ostream out;
+
+};
+class BinaryWriter::FStreamExtra: public BinaryWriter::Extra {
+public:
+    FStreamExtra(const std::filesystem::path& path)
+    {
+        out.open(path,ios_base::out | ios_base::binary | ios_base::trunc);
+        if (!out.is_open())
+        {
+            throw std::logic_error(SS("Path not found: " << path));
+        }
+    }
+
+    virtual std::ostream*GetStream() {
+        return &out;
+    }
+private:
+    std::ofstream out;
+};
 
 BinaryWriter::BinaryWriter(const std::filesystem::path &path)
 {
-    out.open(path.string(),std::ios_base::binary | std::ios_base::trunc);
-    if (!out.is_open())
+
+    if (path.extension().string() == ".gz")
     {
-        throw std::logic_error(SS("Path not found: " << path));
+        pExtra = new GZipExtra(path);
+    } else {
+        pExtra = new FStreamExtra(path);
     }
+    this->pOut = pExtra->GetStream();
 }
 
 BinaryWriter::~BinaryWriter()
 {
-
+    delete pExtra;
 }
 
 BinaryWriter&BinaryWriter::operator<<(std::uint16_t value)
 {
-    out << (char)(value);
-    out << (char)(value >> 8);
+    (*pOut) << (char)(value);
+    (*pOut) << (char)(value >> 8);
     this->CheckFail();
     return *this;
 }
 BinaryWriter& BinaryWriter::operator<<(std::int16_t value)
 {
-    out << (char)(value);
-    out << (char)(value >> 8);
+    (*pOut) << (char)(value);
+    (*pOut) << (char)(value >> 8);
     this->CheckFail();
     return *this;
 }
@@ -74,7 +124,7 @@ BinaryWriter&BinaryWriter::write(size_t size, void*data)
 {
     for (size_t i = 0; i < size; ++i)
     {
-        out << ((char*)data)[i];
+        (*pOut) << ((char*)data)[i];
     }
     return *this;
 }

@@ -36,11 +36,12 @@ namespace LsNumerics {
     class BinaryReader {
     public:
         BinaryReader(const std::filesystem::path&path);
+        ~BinaryReader();
 
         BinaryReader&operator>>(int8_t &value)
         {
             char c;
-            in.get(c);
+            pIn->get(c);
             value = (int8_t)c;
             CheckFail();
             return *this;
@@ -49,7 +50,7 @@ namespace LsNumerics {
         BinaryReader&operator>>(uint8_t &value)
         {
             char c;
-            in.get(c);
+            pIn->get(c);
             value = (uint8_t)c;
             CheckFail();
             return *this;
@@ -57,7 +58,7 @@ namespace LsNumerics {
         BinaryReader& operator>>(bool &value)
         {
             char c;
-            in.get(c);
+            pIn->get(c);
             CheckFail();
             value = c != 0;
             return *this;
@@ -66,7 +67,7 @@ namespace LsNumerics {
         BinaryReader& operator>>(char &value)
         {
             char c;
-            in.get(c);
+            pIn->get(c);
             value = c;
             CheckFail();
             return *this;
@@ -84,19 +85,24 @@ namespace LsNumerics {
         BinaryReader& operator>>(std::complex<double>&value);
         BinaryReader& operator>>(std::string& value);
 
-        std::streampos Tell() { return in.tellg();}
+        std::streampos Tell() { return pIn->tellg();}
 
 
     private:
+        struct Extra;
+        struct FStreamExtra;
+        struct GzipExtra;
+
+        Extra*pExtra = nullptr;
         void ThrowReadError();
         void CheckFail() {
-            if (in.fail())
+            if (pIn->fail())
             {
                 ThrowReadError();
             }
 
         }
 
-        std::ifstream in;
+        std::istream *pIn = nullptr;
     };
 }

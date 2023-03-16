@@ -2269,17 +2269,16 @@ void Implementation::FftPlan::CheckForOverwrites()
 Implementation::CompiledButterflyOp::CompiledButterflyOp(BinaryReader &reader)
 {
 
-    auto position = reader.Tell();
-    (void)position;
 
+    // undo compression optimizations.
     reader >> in0 >> in1 >> out >> M_index;
+    in1 += in0;
 }
 
 void Implementation::CompiledButterflyOp::Write(BinaryWriter &writer) const
 {
-    auto position = writer.Tell();
-    (void)position;
-    writer << in0 << in1 << out << M_index;
+    // adjust values in an attempt to improve compressibility.
+    writer << in0 << (in1-in0) << out << M_index;
 }
 
 Implementation::PlanStep::PlanStep(BinaryReader &reader)
@@ -2470,7 +2469,7 @@ void BalancedConvolutionSection::Save(const std::filesystem::path &path)
     }
     catch (const std::exception &e)
     {
-        throw std::logic_error(SS("Can't open convolution plan file. " << e.what()));
+        throw std::logic_error(SS("Can't create convolution plan file. " << e.what() << " (" << path.string() << ")"));
     }
 }
 
@@ -2482,8 +2481,14 @@ std::filesystem::path BalancedConvolutionSection::GetPlanFilePath(size_t size)
     {
         throw std::logic_error("PlanFileDirectory not set.");
     }
-    return std::filesystem::canonical(
-        BalancedConvolutionSection::planFileDirectory / SS(size << ".convolutionPlan"));
+    std::filesystem::path gzDirectory = BalancedConvolutionSection::planFileDirectory.string()+".gz";
+    std::filesystem::path gzPath = gzDirectory / SS(size << ".convolutionPlan.gz");
+    if (std::filesystem::exists(gzPath))
+    {
+        return gzPath;
+    }
+
+    return BalancedConvolutionSection::planFileDirectory / SS(size << ".convolutionPlan");
 }
 
 bool BalancedConvolutionSection::PlanFileExists(size_t size)
@@ -2492,7 +2497,6 @@ bool BalancedConvolutionSection::PlanFileExists(size_t size)
     {
         return false;
     }
-
     std::filesystem::path path = GetPlanFilePath(size);
     return std::filesystem::exists(path);
 }

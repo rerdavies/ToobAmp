@@ -825,6 +825,7 @@ void BenchmarkBalancedConvolution()
 
 void TestFftConvolution()
 {
+    UsePlanCache();
     for (size_t n : {
 
              (size_t)0,
@@ -882,6 +883,7 @@ void TestFftConvolution()
             }
         }
     }
+    DisablePlanCache();
 }
 
 void TestFftConvolutionBenchmark(bool profiling = false)
