@@ -379,6 +379,7 @@ static void TestBalancedConvolutionSequencing()
 }
 static void TestBalancedConvolution()
 {
+    UsePlanCache();
     for (size_t n : {
              0,
              1,
@@ -397,7 +398,7 @@ static void TestBalancedConvolution()
 #endif
          })
     {
-        std::cout << "=== TestConvolution(" << n << ") ===" << std::endl;
+        std::cout << "=== TestBalancedConvolution(" << n << ") ===" << std::endl;
         struct Tap
         {
             size_t delay;
@@ -472,6 +473,7 @@ static void TestBalancedConvolution()
             }
         }
     }
+    DisablePlanCache();
 }
 
 class StreamCapturer
@@ -1109,11 +1111,11 @@ void BenchmarkFftConvolutionStep()
 
         if (directSection.IsL2Optimized())
         {
-            ss << " " << std::setw(12) << std::left << "L2";
+            ss << " " << std::setw(12) << std::left << "L2-optimized";
         }
         else if (directSection.IsL1Optimized())
         {
-            ss << " " << std::setw(12) << std::left << "L1";
+            ss << " " << std::setw(12) << std::left << "L1-optimized";
         }
         ss
             << setw(0) << endl;
@@ -1155,7 +1157,7 @@ static void RealtimeConvolutionCpuUse()
 {
     UsePlanCache();
     for (size_t N : {
-             48000,     // buncha sections.
+             48000     // buncha sections.
          })
     {
         cout << "==== BenchmarkRealtimeConvolution n=" << N << endl;
@@ -1216,6 +1218,7 @@ static void RealtimeConvolutionCpuUse()
             }
             clockSleeper.Sleep(sleepNanoseconds);
         }
+
         (void)nSample;
     }
     DisablePlanCache();
@@ -1257,7 +1260,8 @@ static void TestRealtimeConvolution()
 
         size_t sleepNanoseconds = 1000000000 * BUFFER_SAMPLES / SAMPLE_RATE;
 
-        size_t nFrames = N * 4 / BUFFER_SAMPLES;
+        double seconds = 5.0;
+        size_t nFrames = (size_t)((seconds *SAMPLE_RATE)/ BUFFER_SAMPLES);
 
         ClockSleeper clockSleeper;
 
@@ -1289,6 +1293,8 @@ static void TestRealtimeConvolution()
             }
             clockSleeper.Sleep(sleepNanoseconds);
         }
+        cout << "Underruns: " << convolution.GetUnderrunCount() << endl;
+
         (void)nSample;
     }
     DisablePlanCache();
@@ -1299,6 +1305,10 @@ void TestFft()
     // If you need to isolate a particular test, add a command-line test name instead
     // of re-ordering tests here (in order to reduce potential merge conflicts).
     // see: ADD_TEST_NAME_HERE.
+
+
+    TestBalancedConvolution();
+
     Implementation::SlotUsageTest();
 
     TestBalancedConvolutionSequencing();
@@ -1315,7 +1325,6 @@ void TestFft()
     TestDirectConvolutionSectionAllocations();
 
     TestDirectConvolutionSection();
-    TestBalancedConvolution();
 
     TestFftConvolutionBenchmark();
 
@@ -1401,11 +1410,19 @@ int main(int argc, const char **argv)
         return EXIT_FAILURE;
     }
 
-#pragma GCC diagnostic ignored "-Wdangling-else"
+#pragma GCC diagnostic ignored "-Wdangling-else" // stupid error.
     try
     {
         /*  ADD_TEST_NAME_HERE  (don't forget to revise PrintHelp()) )*/
-        if (testName == "realtime_convolution_cpu_use")
+        if (testName == "check_for_stalls")
+        {
+            // check for read stalls. Run indefinitely.
+            while (true)
+            {
+                TestBalancedConvolution();
+            }
+        }
+        else if (testName == "realtime_convolution_cpu_use")
         {
             RealtimeConvolutionCpuUse();
         }

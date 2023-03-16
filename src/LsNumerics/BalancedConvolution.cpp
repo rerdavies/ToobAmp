@@ -51,7 +51,7 @@ using namespace LsNumerics;
 #endif
 
 #define RECYCLE_SLOTS 1               // disable for test purposes only
-#define DISPLAY_SECTION_ALLOCATIONS 0 // enable for test purposes only
+#define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
 
 static std::size_t Log2(std::size_t value)
 {
@@ -1827,6 +1827,7 @@ void BalancedConvolution::PrepareThreads()
     {
         auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
         sectionThread->AddSection(threadedDirectSection.get());
+        threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IReadReadyCallback*>(this));
     }
 
     for (size_t i = 0; i < directSectionThreads.size(); ++i)
@@ -2566,13 +2567,19 @@ void BalancedConvolution::Close()
 bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &delayLine)
 {
     size_t size = section->directSection.Size();
-    if (delayLine.IsReadReady(currentSample, size))
+    bool processed = false;
+    while (delayLine.IsReadReady(currentSample, size))
     {
-        section->directSection.Execute(delayLine, currentSample, outputDelayLine);
-        currentSample += size;
-        return true;
+        if (outputDelayLine.CanWrite(size))
+        {
+            section->directSection.Execute(delayLine, currentSample, outputDelayLine);
+            currentSample += size;
+            processed = true;
+        } else {
+            break;
+        }
     }
-    return false;
+    return processed;
 }
 
 void DirectConvolutionSection::Execute(SynchronizedDelayLine &input, size_t time, SynchronizedSingleReaderDelayLine &output)
@@ -2610,4 +2617,39 @@ BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection 
     std::vector<float> tempBuffer;
     tempBuffer.resize(sampleOffset);
     outputDelayLine.Write(tempBuffer.size(), 0, tempBuffer);
+}
+
+
+void BalancedConvolution::OnSynchronizedSingleReaderDelayLineUnderrun()
+{
+    ++underrunCount;
+}
+void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
+{
+    // hack to allow us to wait on a signle condition variable.
+    // If an output delay line writeStalled and now becomes ready, pump the main delay line once 
+    // to get Execute() to happen once more.
+    this->delayLine.NotifyReadReady();
+}
+
+
+void BalancedConvolution::DirectSectionThread::Execute(SynchronizedDelayLine&inputDelayLine)
+{
+
+    size_t tailPosition = inputDelayLine.GetReadTailPosition();
+    while (true)
+    {
+        bool processed = false;
+        for (auto section: sections)
+        {
+            if (section->Execute(inputDelayLine))
+            {
+                processed = true;
+            }
+        }
+        if (!processed)
+        {
+            tailPosition = inputDelayLine.WaitForMoreReadData(tailPosition);
+        }
+    }
 }

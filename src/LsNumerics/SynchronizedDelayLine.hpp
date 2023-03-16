@@ -35,10 +35,10 @@
 #include <functional>
 #include <limits>
 #include <complex>
+#include <chrono>
 
 namespace LsNumerics
 {
-
     constexpr bool TRACE_DELAY_LINE_MESSAGES = false;
 
     void TraceDelayLineMessage(const std::string &message);
@@ -81,6 +81,7 @@ namespace LsNumerics
             storage[head & sizeMask] = value;
             ++head;
         }
+
         void SynchWrite()
         {
             std::lock_guard lock{mutex};
@@ -94,6 +95,29 @@ namespace LsNumerics
                 readHead = readTail - size;
             }
             readConditionVariable.notify_all();
+        }
+
+        size_t GetReadTailPosition()
+        {
+            std::lock_guard lock{mutex};
+            return readTail;
+        }
+
+        size_t WaitForMoreReadData(size_t previousTailPosition)
+        {
+            while (true)
+            {
+                std::unique_lock lock{mutex};
+                if (closed)
+                {
+                    throw DelayLineClosedException();
+                }
+                if (readTail != previousTailPosition)
+                {
+                    return readTail;
+                }
+                this->readConditionVariable.wait(lock);
+            }
         }
 
         float At(size_t index) const
@@ -111,6 +135,9 @@ namespace LsNumerics
         void ReadWait()
         {
             std::unique_lock lock{mutex};
+            if (closed) {
+                throw DelayLineClosedException();
+            }
             readConditionVariable.wait(lock);
         }
         void ReadRange(size_t position, size_t size, size_t outputOffset, std::vector<float> &output);
@@ -126,8 +153,15 @@ namespace LsNumerics
 
         void CreateThread(const std::function<void(void)> &threadProc, int relativeThreadPriority);
 
+        void NotifyReadReady()
+        {
+            std::lock_guard lock { mutex};
+            this->readConditionVariable.notify_all();
+        }
+
     private:
-        static constexpr size_t MAX_READ_BORROW = 256;
+
+        static constexpr size_t MAX_READ_BORROW = 16;
         bool IsReadReady_(size_t position, size_t count);
         bool closed = false;
         std::mutex mutex;
@@ -149,20 +183,31 @@ namespace LsNumerics
     private:
 
         static constexpr size_t MAX_READ_BORROW = 16;
+        static constexpr std::chrono::milliseconds READ_TIMEOUT{10000};
     public:
         static constexpr size_t DEFAULT_LOW_WATER_MARK = std::numeric_limits<size_t>::max();
+
+        class IReadReadyCallback {
+        public:
+            virtual void OnSynchronizedSingleReaderDelayLineReady() = 0;
+            virtual void OnSynchronizedSingleReaderDelayLineUnderrun() = 0;
+        };
 
         SynchronizedSingleReaderDelayLine(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
         {
             SetSize(size, lowWaterMark);
         }
         SynchronizedSingleReaderDelayLine()
-            : SynchronizedSingleReaderDelayLine(0, 0)
+            : SynchronizedSingleReaderDelayLine(0, 0) 
         {
         }
         ~SynchronizedSingleReaderDelayLine()
         {
             Close();
+        }
+        void SetWriteReadyCallback(IReadReadyCallback *callback)
+        {
+            this->writeReadyCallback = callback;
         }
 
         void SetSize(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
@@ -171,19 +216,24 @@ namespace LsNumerics
             {
                 lowWaterMark = size / 2;
             }
-            this->lowWaterMark = lowWaterMark;
-            buffer.resize(size+ MAX_READ_BORROW);
+            this->lowWaterMark = lowWaterMark+MAX_READ_BORROW;
+            if (size != 0)
+            {
+                buffer.resize(size+ MAX_READ_BORROW);
+            }
         }
 
         void Close()
         {
             std::lock_guard lock{mutex};
             closed = true;
+            writeStalled = false;
             writeToReadConditionVariable.notify_all();
             readToWriteConditionVariable.notify_all();
         }
 
     private:
+        IReadReadyCallback *writeReadyCallback = nullptr;
         void ReadWait();
 
     public:
@@ -206,6 +256,7 @@ namespace LsNumerics
             return result;
         }
 
+
         bool CanWrite(size_t size)
         {
             std::unique_lock lock{mutex};
@@ -213,156 +264,24 @@ namespace LsNumerics
             {
                 throw DelayLineClosedException();
             }
-            return writeCount + size <= buffer.size();
+            bool result =  writeCount + size <= buffer.size();
+            if (!result)
+            {
+                writeStalled = true;
+            }
+            return result;
         }
 
         void WriteWait()
         {
             std::unique_lock lock{mutex};
+            writeStalled = true;
             this->readToWriteConditionVariable.wait(lock);
         }
 
-        void Write(size_t count, size_t offset, const std::vector<float> &input)
-        {
-            if (closed)
-            {
-                throw DelayLineClosedException();
-            }
-            while (count != 0)
-            {
-                size_t thisTime;
-                while (true)
-                {
-                    std::unique_lock lock{mutex};
-                    if (closed)
-                    {
-                        throw DelayLineClosedException();
-                    }
-                    if (writeCount == buffer.size())
-                    {
-                        readToWriteConditionVariable.wait(lock);
-                    }
-                    else
-                    {
-                        thisTime = buffer.size() - writeCount;
-                        break;
-                    }
-                }
-                if (thisTime > count)
-                {
-                    thisTime = count;
-                }
-                size_t start = writeHead;
-                size_t end = start + thisTime;
-                if (end < buffer.size())
-                {
-                    int writeHead = this->writeHead;
-                    for (size_t i = 0; i < thisTime; ++i)
-                    {
-                        buffer[writeHead++] = input[offset++];
-                    }
-                    this->writeHead = writeHead;
-                    count -= thisTime;
-                    this->writeHead = writeHead;
-                }
-                else
-                {
-                    size_t writeHead = this->writeHead;
-                    size_t count0 = buffer.size() - start;
-                    for (size_t i = 0; i < count0; ++i)
-                    {
-                        buffer[writeHead++] = input[offset++];
-                    }
-                    size_t count1 = end - buffer.size();
-                    writeHead = 0;
-                    for (size_t i = 0; i < count1; ++i)
-                    {
-                        buffer[writeHead++] = input[offset++];
-                    }
-                    count -= thisTime;
-                    this->writeHead = writeHead;
-                }
-                {
-                    std::lock_guard lock{mutex};
-                    if (closed)
-                    {
-                        throw DelayLineClosedException();
-                    }
-                    this->writeCount += thisTime;
-                    writeToReadConditionVariable.notify_all();
-                }
-            }
-        }
-        void Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input)
-        {
-            if (closed)
-            {
-                throw DelayLineClosedException();
-            }
-            while (count != 0)
-            {
-                size_t thisTime;
-                while (true)
-                {
-                    std::unique_lock lock{mutex};
-                    if (closed)
-                    {
-                        throw DelayLineClosedException();
-                    }
-                    if (writeCount == buffer.size())
-                    {
-                        readToWriteConditionVariable.wait(lock);
-                    }
-                    else
-                    {
-                        thisTime = buffer.size() - writeCount;
-                        break;
-                    }
-                }
-                if (thisTime > count)
-                {
-                    thisTime = count;
-                }
-                size_t start = writeHead;
-                size_t end = start + thisTime;
-                if (end < buffer.size())
-                {
-                    int writeHead = this->writeHead;
-                    for (size_t i = 0; i < thisTime; ++i)
-                    {
-                        buffer[writeHead++] = float(input[offset++].real());
-                    }
-                    this->writeHead = writeHead;
-                    count -= thisTime;
-                }
-                else
-                {
-                    size_t writeHead = this->writeHead;
-                    size_t count0 = buffer.size() - start;
-                    for (size_t i = 0; i < count0; ++i)
-                    {
-                        buffer[writeHead++] = float(input[offset++].real());
-                    }
-                    size_t count1 = end - buffer.size();
-                    writeHead = 0;
-                    for (size_t i = 0; i < count1; ++i)
-                    {
-                        buffer[writeHead++] = float(input[offset++].real());
-                    }
-                    count -= thisTime;
-                    this->writeHead = writeHead;
-                }
-                {
-                    std::lock_guard lock{mutex};
-                    if (closed)
-                    {
-                        throw DelayLineClosedException();
-                    }
-                    this->writeCount += thisTime;
-                    writeToReadConditionVariable.notify_all();
-                }
-            }
-        }
+        void Write(size_t count, size_t offset, const std::vector<float> &input);
+
+        void Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input);
 
         size_t GetReadWaits()
         {
@@ -372,6 +291,7 @@ namespace LsNumerics
         }
 
     private:
+        bool writeStalled = false;
         std::size_t readWaits = 0;
         bool closed = false;
         std::mutex mutex;

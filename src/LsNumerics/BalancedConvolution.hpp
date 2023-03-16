@@ -36,6 +36,7 @@
 #include <mutex>
 #include "StagedFft.hpp"
 #include "SynchronizedDelayLine.hpp"
+#include <atomic>
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -493,7 +494,7 @@ namespace LsNumerics
     ///    to cause execution plans to be loaded from disk instead of being generated at
     ///    runtime.
     ///
-    class BalancedConvolution
+    class BalancedConvolution : private SynchronizedSingleReaderDelayLine::IReadReadyCallback
     {
     public:
         BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, 
@@ -510,8 +511,10 @@ namespace LsNumerics
         {
             BalancedConvolutionSection::SetPlanFileDirectory(path);
         }
+        size_t GetUnderrunCount() const { return (size_t)underrunCount; }
 
     private:
+
         float TickUnsynchronized(float value)
         {
             delayLine.Write(value);
@@ -554,12 +557,18 @@ namespace LsNumerics
         void Close();
 
     private:
+        std::atomic<size_t> underrunCount;
+
+        virtual void OnSynchronizedSingleReaderDelayLineReady();
+        virtual void OnSynchronizedSingleReaderDelayLineUnderrun();
+
         void PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize);
         void PrepareThreads();
         class DirectSectionThread;
         DirectSectionThread*GetDirectSectionThreadBySize(size_t size);
 
     private:
+        using IReadReadyCallback = SynchronizedSingleReaderDelayLine::IReadReadyCallback;
         struct DirectSection
         {
             size_t sampleDelay;
@@ -575,6 +584,10 @@ namespace LsNumerics
 
             }
 
+            void SetWriteReadyCallback(IReadReadyCallback*callback)
+            {
+                outputDelayLine.SetWriteReadyCallback(callback);
+            }
             ThreadedDirectSection(DirectSection &section);
         public:
             size_t Size() const { return section->directSection.Size(); }
@@ -613,24 +626,7 @@ namespace LsNumerics
                 }
                 return result;
             }
-            void Execute(SynchronizedDelayLine&inputDelayLine)
-            {
-                while (true)
-                {
-                    bool processed = false;
-                    for (auto section: sections)
-                    {
-                        if (section->Execute(inputDelayLine))
-                        {
-                            processed = true;
-                        }
-                    }
-                    if (!processed)
-                    {
-                        inputDelayLine.ReadWait();
-                    }
-                }
-            }
+            void Execute(SynchronizedDelayLine&inputDelayLine);
             void Close()
             {
                 for (auto section: sections)

@@ -27,7 +27,7 @@
 #include <exception>
 #include <pthread.h> // for changing thread priorit.
 #include <sched.h>   // posix threads.
-#include <unistd.h> // for nice()
+#include <unistd.h>  // for nice()
 #include <iostream>
 
 using namespace LsNumerics;
@@ -55,7 +55,6 @@ void SynchronizedDelayLine::SetSize(size_t size, size_t paddingSize)
     readTail = 0;
 }
 
-
 inline bool SynchronizedDelayLine::IsReadReady_(size_t position, size_t size)
 {
     if (closed)
@@ -68,33 +67,31 @@ inline bool SynchronizedDelayLine::IsReadReady_(size_t position, size_t size)
     {
         throw DelayLineSynchException("SynchronizedDelayLine underrun.");
     }
-    if (end <= readTail) 
+    if (end <= readTail)
     {
         return true;
     }
     return false;
-
 }
 bool SynchronizedDelayLine::IsReadReady(size_t position, size_t size)
 {
     std::lock_guard guard{mutex};
 
-    return IsReadReady_(position,size);
+    return IsReadReady_(position, size);
 }
-        
+
 void SynchronizedDelayLine::ReadLock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
-    if (!IsReadReady_(position,count))
+    if (!IsReadReady_(position, count))
     {
         throw DelayLineSynchException("Read range not valid.");
     }
-
 }
 void SynchronizedDelayLine::ReadUnlock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
-    if (!IsReadReady_(position,count))
+    if (!IsReadReady_(position, count))
     {
         throw DelayLineSynchException("Read range not valid.");
     }
@@ -106,7 +103,7 @@ void SynchronizedDelayLine::WaitForRead(size_t position, size_t count)
     {
 
         std::unique_lock<std::mutex> lock{mutex};
-        if (IsReadReady_(position,count))
+        if (IsReadReady_(position, count))
         {
             return;
         }
@@ -153,8 +150,8 @@ void SynchronizedDelayLine::Close()
     {
         std::lock_guard guard{mutex};
         closed = true;
+        readConditionVariable.notify_all();
     }
-    readConditionVariable.notify_all();
 
     for (auto &thread : threads)
     {
@@ -165,9 +162,11 @@ void SynchronizedDelayLine::Close()
 
 SynchronizedDelayLine::~SynchronizedDelayLine()
 {
-    try {
+    try
+    {
         Close();
-    } catch (const std::exception&e)
+    }
+    catch (const std::exception &e)
     {
         std::cout << "FATAL ERROR: Unexpected error while closing SynchronizedDelayLine. (" << e.what() << ")" << std::endl;
         std::terminate();
@@ -195,14 +194,16 @@ void SynchronizedDelayLine::CreateThread(const std::function<void(void)> &thread
     schedParam.sched_priority += relativeThreadPriority;
 
     thread_ptr thread = std::make_unique<std::thread>(
-        [threadProc, relativeThreadPriority,schedPolicy, schedParam]()
+        [threadProc, relativeThreadPriority, schedPolicy, schedParam]()
         {
             auto currentThread = pthread_self();
 
             if (schedPolicy == SCHED_OTHER)
             {
                 nice(-relativeThreadPriority);
-            } else {
+            }
+            else
+            {
                 int priorityMin = sched_get_priority_min(schedPolicy);
                 if (schedParam.sched_priority < priorityMin)
                 {
@@ -229,7 +230,6 @@ void SynchronizedDelayLine::CreateThread(const std::function<void(void)> &thread
             }
         });
     this->threads.push_back(std::move(thread));
-
 }
 
 void SynchronizedSingleReaderDelayLine::ReadWait()
@@ -238,22 +238,31 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
     {
         std::unique_lock lock{mutex};
 
-        if (closed)
-        {
-            throw DelayLineClosedException();
-        }
-        writeCount -= borrowedReads;
         if (borrowedReads != 0)
         {
+            writeCount -= borrowedReads;
             readToWriteConditionVariable.notify_all();
+
             borrowedReads = 0;
+            if (writeStalled && writeCount <= this->lowWaterMark)
+            {
+                writeStalled = false;
+                if (writeReadyCallback != nullptr)
+                {
+                    writeReadyCallback->OnSynchronizedSingleReaderDelayLineReady();
+                }
+                else
+                {
+                    throw std::logic_error("Write stalled.");
+                }
+            }
         }
         size_t available = writeCount;
 
         // only synchronize every N samples for efficiency's sake.
         // The reader temporarily "borrows" n bytes from the buffer.
 
-        if (available > MAX_READ_BORROW) 
+        if (available > MAX_READ_BORROW)
         {
             available = MAX_READ_BORROW;
         }
@@ -269,13 +278,162 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
         {
             TraceDelayLineMessage("SynchronizedDelayLine: wait for read.");
         }
-        writeToReadConditionVariable.wait(lock);
+        writeReadyCallback->OnSynchronizedSingleReaderDelayLineUnderrun();
+        if (writeToReadConditionVariable.wait_for(lock, READ_TIMEOUT) == std::cv_status::timeout)
+        {
+            throw DelayLineSynchException("Read stalled.");
+            // writeReadyCallback->OnSynchronizedSingleReaderDelayLineReady();
+        }
     }
 }
 
 static std::mutex messageMutex;
-void LsNumerics::TraceDelayLineMessage(const std::string & message)
+void LsNumerics::TraceDelayLineMessage(const std::string &message)
 {
-    std::lock_guard lock { messageMutex};
+    std::lock_guard lock{messageMutex};
     std::cout << message << std::endl;
+}
+
+void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input)
+{
+    if (closed)
+    {
+        throw DelayLineClosedException();
+    }
+    while (count != 0)
+    {
+        size_t thisTime;
+        while (true)
+        {
+            std::unique_lock lock{mutex};
+            if (closed)
+            {
+                throw DelayLineClosedException();
+            }
+            if (writeCount == buffer.size())
+            {
+                writeStalled = true;
+                readToWriteConditionVariable.wait(lock);
+            }
+            else
+            {
+                thisTime = buffer.size() - writeCount;
+                break;
+            }
+        }
+        if (thisTime > count)
+        {
+            thisTime = count;
+        }
+        size_t start = writeHead;
+        size_t end = start + thisTime;
+        if (end < buffer.size())
+        {
+            int writeHead = this->writeHead;
+            for (size_t i = 0; i < thisTime; ++i)
+            {
+                buffer[writeHead++] = float(input[offset++].real());
+            }
+            this->writeHead = writeHead;
+            count -= thisTime;
+        }
+        else
+        {
+            size_t writeHead = this->writeHead;
+            size_t count0 = buffer.size() - start;
+            for (size_t i = 0; i < count0; ++i)
+            {
+                buffer[writeHead++] = float(input[offset++].real());
+            }
+            size_t count1 = end - buffer.size();
+            writeHead = 0;
+            for (size_t i = 0; i < count1; ++i)
+            {
+                buffer[writeHead++] = float(input[offset++].real());
+            }
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+        {
+            std::lock_guard lock{mutex};
+            if (closed)
+            {
+                throw DelayLineClosedException();
+            }
+            this->writeCount += thisTime;
+            writeToReadConditionVariable.notify_all();
+        }
+    }
+}
+void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const std::vector<float> &input)
+{
+    if (closed)
+    {
+        throw DelayLineClosedException();
+    }
+    while (count != 0)
+    {
+        size_t thisTime;
+        while (true)
+        {
+            std::unique_lock lock{mutex};
+            if (closed)
+            {
+                throw DelayLineClosedException();
+            }
+            if (writeCount == buffer.size())
+            {
+                writeStalled = true;
+                readToWriteConditionVariable.wait(lock);
+            }
+            else
+            {
+                thisTime = buffer.size() - writeCount;
+                break;
+            }
+        }
+        if (thisTime > count)
+        {
+            thisTime = count;
+        }
+        size_t start = writeHead;
+        size_t end = start + thisTime;
+        if (end < buffer.size())
+        {
+            int writeHead = this->writeHead;
+            for (size_t i = 0; i < thisTime; ++i)
+            {
+                buffer[writeHead++] = input[offset++];
+            }
+            this->writeHead = writeHead;
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+        else
+        {
+            size_t writeHead = this->writeHead;
+            size_t count0 = buffer.size() - start;
+            for (size_t i = 0; i < count0; ++i)
+            {
+                buffer[writeHead++] = input[offset++];
+            }
+            size_t count1 = end - buffer.size();
+            writeHead = 0;
+            for (size_t i = 0; i < count1; ++i)
+            {
+                buffer[writeHead++] = input[offset++];
+            }
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+        {
+            std::lock_guard lock{mutex};
+            if (closed)
+            {
+                throw DelayLineClosedException();
+            }
+            this->writeCount += thisTime;
+            writeToReadConditionVariable.notify_all();
+        }
+    }
 }
