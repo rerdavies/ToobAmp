@@ -5,7 +5,12 @@ cmake_minimum_required (VERSION 3.18)
 
 set (CMAKE_CXX_STANDARD 20)
 
-set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
+if (DEFINED BUILD_MACHINE)
+    message(STATUS "Google Profiler support disabled.}")
+    set (PROFILER 0) #no google-perf install on build machine.
+else()
+    set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
+endif()
 
 
 # message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
