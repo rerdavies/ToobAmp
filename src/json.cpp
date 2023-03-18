@@ -469,11 +469,11 @@ void json_reader::skip_string()
     while (true)
     {
         int c;
+        c = get();
         if (c == -1)
         {
             throw_format_error("Premature end of file.");
         }
-        c = get();
         if (c == '\"')
         {
             if (peek() == '\"')
