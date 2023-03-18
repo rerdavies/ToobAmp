@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,11 +33,11 @@
 #include "lv2/urid/urid.h"
 #include "lv2/atom/atom.h"
 #include "lv2/atom/forge.h"
+#include <iostream>
 
 using namespace TwoPlay;
 
 static std::vector<Lv2PluginFactory> descriptorFactories;
-
 
 Lv2LogLevel Lv2Plugin::logLevel = Lv2LogLevel::Error;
 
@@ -56,7 +56,13 @@ Lv2Plugin::instantiate(const LV2_Descriptor *descriptor,
     {
         if (strcmp(descriptorFactories[i].URI, descriptor->URI) == 0)
         {
+            try {
             return descriptorFactories[i].createPlugin(rate, bundle_path, features);
+            } catch (const std::exception &e)
+            {
+                // haven't establish a log feature yet. Just log as we can.
+                std::cout << "Error creating plugin: " << e.what() << std::endl;
+            }
         }
     }
     return (LV2_Handle)amp;
@@ -115,7 +121,7 @@ LV2_State_Status Lv2Plugin::save(
     const LV2_Feature *const *features)
 {
     Lv2Plugin *plugin = (Lv2Plugin *)instance;
-    return plugin->OnSave(store, handle, flags, features);
+    return plugin->OnSaveLv2State(store, handle, flags, features);
 }
 
 LV2_State_Status Lv2Plugin::restore(
@@ -126,7 +132,7 @@ LV2_State_Status Lv2Plugin::restore(
     const LV2_Feature *const *features)
 {
     Lv2Plugin *plugin = (Lv2Plugin *)instance;
-    return plugin->OnRestore(retrieve, handle, flags, features);
+    return plugin->OnRestoreLv2State(retrieve, handle, flags, features);
 }
 
 const void *Lv2Plugin::extension_data(const char *uri)
@@ -164,8 +170,10 @@ const LV2_Descriptor *const *Lv2Plugin::CreateDescriptors(const std::vector<Lv2P
     return descriptors;
 }
 
-Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features)
+Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
 {
+    this->hasState = hasState;
+
     this->logger.log = NULL;
     this->map = NULL;
     this->schedule = NULL;
@@ -183,6 +191,7 @@ Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features)
     } else {
         uris.Init(map);
         lv2_atom_forge_init(&this->inputForge, map);
+        lv2_atom_forge_init(&this->outputForge, map);
 
     }
 
@@ -295,4 +304,150 @@ void Lv2Plugin::HandleEvents(LV2_Atom_Sequence*controlInput)
             }
         }
     }
+}
+
+void Lv2Plugin::WorkerAction::Request()
+{
+    if (pPlugin->schedule)
+    {
+        pPlugin->schedule->schedule_work(
+            pPlugin->schedule->handle,
+            sizeof(pThis), &pThis); // must be POD!
+    }
+    else
+    {
+        // no scheduler. do it synchronously.
+        OnWork();
+        OnResponse();
+    }
+}
+
+
+void Lv2Plugin::WorkerAction::Work(LV2_Worker_Respond_Function respond, LV2_Worker_Respond_Handle handle)
+{
+    OnWork();
+    respond(handle, sizeof(pThis), &pThis);
+}
+void Lv2Plugin::WorkerAction::Response()
+{
+    OnResponse();
+}
+
+void Lv2Plugin::WorkerActionWithCleanup::CleanupWorker::OnWork()
+{
+    pThis->OnCleanup();
+}
+void Lv2Plugin::WorkerActionWithCleanup::CleanupWorker::OnResponse()
+{
+    pThis->OnCleanupComplete();
+}
+
+Lv2Plugin::WorkerActionWithCleanup::CleanupWorker::CleanupWorker(Lv2Plugin *plugin, WorkerActionWithCleanup *pThis) : WorkerAction(plugin), pThis(pThis)
+{
+}
+
+
+
+void Lv2Plugin::PatchPutString(int64_t frameTime,LV2_URID propertyUrid, const char*value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+    size_t len = strlen(value);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_string(&outputForge, value, len);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPutPath(int64_t frameTime,LV2_URID propertyUrid, const char*value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+    size_t len = strlen(value);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_path(&outputForge, value, len);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPut(int64_t frameTime,LV2_URID propertyUrid, float value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_float(&outputForge, value);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPut(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_vector(&outputForge, 
+        sizeof(float),
+        uris.atom_float,
+        (uint32_t)count,(void*)values);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPut(int64_t frameTime,LV2_URID propertyUrid, double value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_double(&outputForge, value);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPut(int64_t frameTime,LV2_URID propertyUrid, int32_t value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_int(&outputForge, value);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
+}
+void Lv2Plugin::PatchPut(int64_t frameTime,LV2_URID propertyUrid, int64_t value)
+{
+    lv2_atom_forge_frame_time(&outputForge, frameTime);
+
+    LV2_Atom_Forge_Frame frame;
+    lv2_atom_forge_object(&outputForge, &frame, 0, uris.patch_Set);
+
+    lv2_atom_forge_key(&outputForge, uris.patch_property);
+    lv2_atom_forge_urid(&outputForge, propertyUrid);
+    lv2_atom_forge_key(&outputForge, uris.patch_value);
+    lv2_atom_forge_long(&outputForge, value);
+    lv2_atom_forge_pop(&outputForge, &frame);
+
 }

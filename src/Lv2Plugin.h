@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -34,273 +34,305 @@
 #include <vector>
 #include <functional>
 
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-
-namespace TwoPlay {
+namespace TwoPlay
+{
 
 	class Lv2Plugin;
 
-    enum class Lv2LogLevel
-    {
-        Trace = 0,
-        Note = 1,
-        Warning = 2,
-        Error = 3,
-        None = 4,
-    };
+	enum class Lv2LogLevel
+	{
+		Trace = 0,
+		Note = 1,
+		Warning = 2,
+		Error = 3,
+		None = 4,
+	};
 
+	typedef Lv2Plugin *(*PFN_CREATE_PLUGIN)(double _rate,
+											const char *_bundle_path,
+											const LV2_Feature *const *features);
 
-
-	typedef Lv2Plugin* (*PFN_CREATE_PLUGIN)(double _rate,
-		const char* _bundle_path,
-		const LV2_Feature* const* features);
-
-	class Lv2PluginFactory {
+	class Lv2PluginFactory
+	{
 	public:
-		const char* URI;
+		const char *URI;
 		PFN_CREATE_PLUGIN createPlugin;
 	};
 
-
-
-
-	class Lv2Plugin {
+	class Lv2Plugin
+	{
 	protected:
-		LV2_URID_Map* map = NULL;
+		LV2_URID_Map *map = NULL;
+
 	private:
 		LV2_Log_Logger logger;
-		LV2_Worker_Schedule* schedule = NULL;
+		LV2_Worker_Schedule *schedule = NULL;
 		LV2_Atom_Forge inputForge;
+		LV2_Atom_Forge outputForge;
 
-        static Lv2LogLevel logLevel;
-
-
-
+		static Lv2LogLevel logLevel;
+		bool hasState = false;
 
 	public:
-        static void SetLogLevel(Lv2LogLevel level) {
-            Lv2Plugin::logLevel = level;
-        }
-		static const LV2_Descriptor* const* CreateDescriptors(const std::vector<Lv2PluginFactory>& pluginFactories);
+		static void SetLogLevel(Lv2LogLevel level)
+		{
+			Lv2Plugin::logLevel = level;
+		}
+		static const LV2_Descriptor *const *CreateDescriptors(const std::vector<Lv2PluginFactory> &pluginFactories);
 
 		friend class Lv2Plugin_Callbacks;
-	protected:
-		Lv2Plugin(const LV2_Feature* const* features);
 
-		virtual void ConnectPort(uint32_t port, void* data) = 0;
+	protected:
+		Lv2Plugin(const LV2_Feature *const *features, bool hasState = false);
+
+		virtual void ConnectPort(uint32_t port, void *data) = 0;
 		virtual void Activate() = 0;
 		virtual void Run(uint32_t n_samples) = 0;
 		virtual void Deactivate() = 0;
-		virtual ~Lv2Plugin() { }
-
-		template <typename INPUT, typename OUTPUT>
-		void DoInBackground(
-			INPUT input,
-			std::function<OUTPUT (INPUT)> action,
-			std::function<void (OUTPUT)> onComplete
-		);
+		virtual ~Lv2Plugin() {}
 
 	public:
 		// Map functions.
-		LV2_URID MapURI(const char* uri);
+		LV2_URID MapURI(const char *uri);
 
 		// Log functions
-		void LogError(const char* fmt, ...);
-		void LogWarning(const char* fmt, ...);
-		void LogNote(const char* fmt, ...);
-		void LogTrace(const char* fmt, ...);
+		void LogError(const char *fmt, ...);
+		void LogWarning(const char *fmt, ...);
+		void LogNote(const char *fmt, ...);
+		void LogTrace(const char *fmt, ...);
 
 	protected:
 		// State extension callbacks.
 		virtual LV2_State_Status
-			OnRestore(
-				LV2_State_Retrieve_Function retrieve,
-				LV2_State_Handle            handle,
-				uint32_t                    flags,
-				const LV2_Feature* const* features)
+		OnRestoreLv2State(
+			LV2_State_Retrieve_Function retrieve,
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features)
 		{
+			if (!hasState)
+			{
+				return LV2_STATE_ERR_NO_FEATURE;
+			}
 			return LV2_State_Status::LV2_STATE_SUCCESS;
 		}
 		virtual LV2_State_Status
-			OnSave(
-				LV2_State_Store_Function  store,
-				LV2_State_Handle          handle,
-				uint32_t                  flags,
-				const LV2_Feature* const* features)
+		OnSaveLv2State(
+			LV2_State_Store_Function store,
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features)
 		{
+			if (!hasState)
+			{
+				return LV2_STATE_ERR_NO_FEATURE;
+			}
 			return LV2_State_Status::LV2_STATE_SUCCESS;
 		}
 
-		void HandleEvents(LV2_Atom_Sequence*controlInput);
+		void HandleEvents(LV2_Atom_Sequence *controlInput);
+		void SetAtomOutput(LV2_Atom_Sequence*controlOutput);
 
-		virtual void OnPatchSet(LV2_URID propertyUrid,const LV2_Atom*value)
-		{
 
-		}
-
-		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
+		virtual void OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 		{
 		}
 
+		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object *object)
+		{
+		}
+
+		void PatchPutString(int64_t frameTime,LV2_URID propertyUrid, const char*value);
+		void PatchPutPath(int64_t frameTime,LV2_URID propertyUrid, const char*value);
+
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, LV2_URID propertyType, const char*value);
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, float value);
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values);
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, double value);
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, int32_t value);
+		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, int64_t value);
 
 		// Schedule extension callbacks.
 
-protected:
-		class WorkerActionBase {
+	protected:
+		/// @brief Implements execution of background tasks on the lv2 worker thread.
+		/// Use of WorkerAction is somewhat complicated because memory allocations are forbidden on the Audio thread.
+		/// WorkerAction implementations should be declared as members of the main LV2 plugin, and should not be 
+		/// dynamically allocated. Generally, there should not be more than one outstanding request, so the owning
+		/// plugin should manage its state so that only one request is outstanding at any given time.
+		///
+		/// Call @ref Request() to request an operation on the background thread. The virtual method @ref OnWork() will
+		/// be called on the LV2 host's worker thread, and after it completes, @Ref OnComplete will be called on the audio
+		/// thread. If the current LV2 host does not support schedule requests, the operations will be ececuted synchronously
+		/// on the audio thread (almost defintely causing an audio underrun)/
+		
+		class WorkerAction
+		{
 		private:
-			WorkerActionBase *pThis;
+			WorkerAction*pThis = nullptr;
 			Lv2Plugin *pPlugin;
+
 		protected:
-			WorkerActionBase(Lv2Plugin *pPlugin)
+			WorkerAction(Lv2Plugin *pPlugin)
 			{
 				pThis = this;
 				this->pPlugin = pPlugin;
 			}
+			virtual ~WorkerAction()
+			{
+			}
+
 		public:
-			void Request() {
-				pPlugin->schedule->schedule_work(
-					pPlugin->schedule->handle,
-					sizeof(pThis),&pThis); // must be POD!
-			}
-			void Work(LV2_Worker_Respond_Function respond,LV2_Worker_Respond_Handle   handle)
-			{
-				OnWork();
-				void* p = (void*)&pThis;
-				respond(handle,sizeof(pThis),p);
-			}
-			void Response()
-			{
-				OnResponse();
-			}
+			///@brief Request execution on the LV2 Hosts' background thread.
+			///
+			/// Must be called from the audo thread.
+			void Request();
 		protected:
 			virtual void OnWork() = 0;
 			virtual void OnResponse() = 0;
-		};
-
-		template<typename INPUT, typename OUTPUT>
-		class WorkerAction: protected WorkerActionBase {
-		public:
-
-			void Request(INPUT input)
-			{
-				this->input = input;
-				WorkerActionBase::Request();
-			}
-			INPUT input;
-			OUTPUT output;
 		private:
-			virtual void OnWork() {
-				output = Work(input);
-			}
-			virtual void OnResponse()
-			{
-				OnResponse(output);
-			}
-		protected:
-			virtual OUTPUT OnWork(INPUT input) = 0;
-			virtual void OnResponse(OUTPUT output) = 0;
-
+			friend class Lv2Plugin;
+			void Work(LV2_Worker_Respond_Function respond, LV2_Worker_Respond_Handle handle);
+			void Response();
 		};
+
+		/// @brief A worker action with provisions for deleting discarded objects from the audo thread on the background thread.
+		///
+		/// Similar to @ref WorkerAction, but with two additional callbacks, @ref OnCleanup (which
+		/// gets executed on the background thread, and @ref OnCleanupComplete (which gets executed
+		/// on the Audio thread).
+		///
+		/// Often background actions will deposit objects for use on the audio thread and must 
+		/// then de-allocated the previous object. WorkerActionWithCleanup is designed with this 
+		/// scenario in mind.
+		///
+		/// The intended use is something like this:
+		///
+		/// OnWork: - Build complex objects on the background thread.
+		///
+		/// OnComplete: - On the audio thread, install those objects for use on the audio thread, capturing old objects for subsequent deletion.
+		///
+		/// OnCleanup: On the background thread, delete the old objects.
+		///
+		/// OnCleanupComplete: On the audio thread, see if there are new pending requests, and start again if neccesary.
+
+		class WorkerActionWithCleanup : public WorkerAction
+		{
+		public:
+			WorkerActionWithCleanup(Lv2Plugin *plugin)
+				: WorkerAction(plugin),
+				  cleanupWorker(plugin, this)
+
+			{
+			}
+
+		protected:
+			virtual void OnCleanup() = 0;
+			virtual void OnCleanupComplete() = 0;
+
+		private:
+			class CleanupWorker : public WorkerAction
+			{
+			public:
+				CleanupWorker(Lv2Plugin *plugin, WorkerActionWithCleanup *pThis);
+			private:
+				virtual void OnWork();
+				virtual void OnResponse();
+			private:
+				WorkerActionWithCleanup *pThis;
+			};
+			CleanupWorker cleanupWorker;
+		};
+
 	private:
 		LV2_Worker_Status OnWork(
 			LV2_Worker_Respond_Function respond,
-			LV2_Worker_Respond_Handle   handle,
-			uint32_t                    size,
-			const void* data) 
+			LV2_Worker_Respond_Handle handle,
+			uint32_t size,
+			const void *data)
 		{
-			assert(size == sizeof(WorkerActionBase*));
-			WorkerActionBase*pWorker = *(WorkerActionBase**)data;
-			pWorker->Work(respond,handle);
+			assert(size == sizeof(WorkerAction *));
+			WorkerAction *pWorker = *(WorkerAction **)data;
+			pWorker->Work(respond, handle);
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
-		LV2_Worker_Status OnWorkResponse(uint32_t size, const void* data)
+		LV2_Worker_Status OnWorkResponse(uint32_t size, const void *data)
 		{
-			assert(size == sizeof(WorkerActionBase*));
-			WorkerActionBase*worker = *(WorkerActionBase**)data;
+			assert(size == sizeof(WorkerAction *));
+			WorkerAction *worker = *(WorkerAction **)data;
 			worker->Response();
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
 	private:
 		static LV2_Handle
-			instantiate(const LV2_Descriptor* descriptor,
-				double                    rate,
-				const char* bundle_path,
-				const LV2_Feature* const* features);
-		static void connect_port(LV2_Handle instance, uint32_t port, void* data);
+		instantiate(const LV2_Descriptor *descriptor,
+					double rate,
+					const char *bundle_path,
+					const LV2_Feature *const *features);
+		static void connect_port(LV2_Handle instance, uint32_t port, void *data);
 
 		static void activate(LV2_Handle instance);
 		static void run(LV2_Handle instance, uint32_t n_samples);
 		static void deactivate(LV2_Handle instance);
 		static void cleanup(LV2_Handle instance);
 
-		static LV2_Worker_Status work_response(LV2_Handle instance, uint32_t size, const void* data);
+		static LV2_Worker_Status work_response(LV2_Handle instance, uint32_t size, const void *data);
 
 		static LV2_Worker_Status work(
-			LV2_Handle                  instance,
+			LV2_Handle instance,
 			LV2_Worker_Respond_Function respond,
-			LV2_Worker_Respond_Handle   handle,
-			uint32_t                    size,
-			const void* data);
+			LV2_Worker_Respond_Handle handle,
+			uint32_t size,
+			const void *data);
 
 		static LV2_State_Status save(
-			LV2_Handle                instance,
-			LV2_State_Store_Function  store,
-			LV2_State_Handle          handle,
-			uint32_t                  flags,
-			const LV2_Feature* const* features);
+			LV2_Handle instance,
+			LV2_State_Store_Function store,
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features);
 
 		static LV2_State_Status restore(
-			LV2_Handle                  instance,
+			LV2_Handle instance,
 			LV2_State_Retrieve_Function retrieve,
-			LV2_State_Handle            handle,
-			uint32_t                    flags,
-			const LV2_Feature* const* features);
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features);
 
-		static const void* extension_data(const char* uri);
+		static const void *extension_data(const char *uri);
 
-		class PluginUris {
+		class PluginUris
+		{
 
 		public:
-
 			LV2_URID patch;
 			LV2_URID patch_Get;
 			LV2_URID patch_Set;
 			LV2_URID patch_property;
 			LV2_URID patch_value;
 			LV2_URID atom_URID;
+			LV2_URID atom_float;
 
-
-			void Init(LV2_URID_Map* map)
+			void Init(LV2_URID_Map *map)
 			{
-				patch = map->map(map->handle,LV2_PATCH_URI);
-				patch_Get = map->map(map->handle,LV2_PATCH__Get);
-				patch_Set = map->map(map->handle,LV2_PATCH__Set);
-				patch_property = map->map(map->handle,LV2_PATCH__property);
-				patch_value = map->map(map->handle,LV2_PATCH__value);
-				atom_URID = map->map(map->handle,LV2_ATOM__URID);
+				patch = map->map(map->handle, LV2_PATCH_URI);
+				patch_Get = map->map(map->handle, LV2_PATCH__Get);
+				patch_Set = map->map(map->handle, LV2_PATCH__Set);
+				patch_property = map->map(map->handle, LV2_PATCH__property);
+				patch_value = map->map(map->handle, LV2_PATCH__value);
+				atom_URID = map->map(map->handle, LV2_ATOM__URID);
+				atom_float = map->map(map->handle, LV2_ATOM__Float);
 			}
 		};
 
 		PluginUris uris;
-
 	};
 
-	template <typename INPUT, typename OUTPUT>
-	void Lv2Plugin::DoInBackground(
-		INPUT input,
-		std::function<OUTPUT (INPUT)> action,
-		std::function<void (OUTPUT)> onComplete
-	) {
-
-	}
-
-
 }
-
 
 #pragma GCC diagnostic pop

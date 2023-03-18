@@ -28,6 +28,7 @@
 #include <cmath>
 #include <functional>
 #include <iostream>
+#include "LsMath.hpp"
 
 
 
@@ -62,9 +63,7 @@ namespace LsNumerics
         {
 
         }
-#ifndef PI
-        const double PI = 3.1415926535897932384626433;
-#endif
+        const double PI = LsNumerics::Pi;
 
         ChebyshevApproximation(double minX, double maxX, const Polynomial& polynomial, const Polynomial& derivativePolynomial)
             : minX(minX),

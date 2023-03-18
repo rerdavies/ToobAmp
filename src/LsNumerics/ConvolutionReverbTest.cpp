@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-#include "ConvolutionReverb.hpp"
 #include "FftConvolution.hpp"
 #include "BalancedConvolution.hpp"
 #include <iostream>
@@ -35,6 +34,8 @@
 #include <sstream>
 #include "../ss.hpp"
 #include "../CommandLineParser.hpp"
+#include "LagrangeInterpolator.hpp"
+#include "../AudioData.hpp"
 
 #include <time.h> // for clock_nanosleep
 
@@ -767,7 +768,7 @@ void BenchmarkBalancedConvolution()
             inputBuffer[i] = i / (float)bufferSize;
         }
 
-        BalancedConvolution convolver(impulseData,48000,bufferSize);
+        BalancedConvolution convolver(impulseData, 48000, bufferSize);
 
         size_t nSamples = (size_t)(sampleRate * benchmarkTimeSeconds);
 
@@ -1152,12 +1153,11 @@ void TestDirectConvolutionSectionAllocations()
     }
 }
 
-
 static void RealtimeConvolutionCpuUse()
 {
     UsePlanCache();
     for (size_t N : {
-             48000     // buncha sections.
+             48000 // buncha sections.
          })
     {
         cout << "==== BenchmarkRealtimeConvolution n=" << N << endl;
@@ -1177,7 +1177,7 @@ static void RealtimeConvolutionCpuUse()
         inputData.resize(N);
         inputData[0] = 1;
 
-        BalancedConvolution convolution(impulse,SAMPLE_RATE,BUFFER_SAMPLES);
+        BalancedConvolution convolution(impulse, SAMPLE_RATE, BUFFER_SAMPLES);
 
         size_t inputIndex = 0;
         std::vector<float> inputBuffer;
@@ -1186,7 +1186,6 @@ static void RealtimeConvolutionCpuUse()
         outputBuffer.resize(BUFFER_SAMPLES);
 
         size_t sleepNanoseconds = 1000000000 * BUFFER_SAMPLES / SAMPLE_RATE;
-
 
         ClockSleeper clockSleeper;
 
@@ -1224,7 +1223,6 @@ static void RealtimeConvolutionCpuUse()
     DisablePlanCache();
 }
 
-
 static void TestRealtimeConvolution()
 {
     UsePlanCache();
@@ -1250,7 +1248,7 @@ static void TestRealtimeConvolution()
         inputData.resize(N);
         inputData[0] = 1;
 
-        BalancedConvolution convolution(impulse,SAMPLE_RATE,BUFFER_SAMPLES);
+        BalancedConvolution convolution(impulse, SAMPLE_RATE, BUFFER_SAMPLES);
 
         size_t inputIndex = 0;
         std::vector<float> inputBuffer;
@@ -1261,7 +1259,7 @@ static void TestRealtimeConvolution()
         size_t sleepNanoseconds = 1000000000 * BUFFER_SAMPLES / SAMPLE_RATE;
 
         double seconds = 5.0;
-        size_t nFrames = (size_t)((seconds *SAMPLE_RATE)/ BUFFER_SAMPLES);
+        size_t nFrames = (size_t)((seconds * SAMPLE_RATE) / BUFFER_SAMPLES);
 
         ClockSleeper clockSleeper;
 
@@ -1299,6 +1297,109 @@ static void TestRealtimeConvolution()
     }
     DisablePlanCache();
 }
+
+static void TestLagrangeInterpolator()
+{
+    cout << "=== TestLagrangeInterpolator =================" << endl;
+
+    {
+        LagrangeInterpolator interpolator{12};
+        std::vector<float> inputData(36);
+        inputData[10] = 1;
+        auto result = interpolator.Interpolate(&(inputData.at(0)), 10);
+        TEST_ASSERT(result == 1);
+        TEST_ASSERT(interpolator.Interpolate(&(inputData.at(0)), 9) == 0)
+        TEST_ASSERT(interpolator.Interpolate(&(inputData.at(0)), 11) == 0)
+    }
+
+    for (size_t inputSampleRate : {44100, 48000, 88200, 96000})
+    {
+        for (size_t outputSampleRate : {44100, 48000, 88200, 96000})
+        {
+            if (inputSampleRate != outputSampleRate)
+            {
+
+                double worstError = 0;
+                double worstPreambleError = 0;
+                double maxValue = 0;
+                for (double f0: {100,300,600,1000,2000, 4000,6000,8000,12000,13000,14000,15000,16000,17000,18000,19000})
+                {
+                    double f = f0;
+
+                    std::vector<float> inputBuffer(32768);
+                    double m = f * std::numbers::pi * 2 / inputSampleRate;
+                    for (size_t i = 0; i < inputBuffer.size(); ++i)
+                    {
+                        inputBuffer[i] = std::cos(i * m);
+                    }
+                    AudioData input(inputSampleRate, inputBuffer);
+                    AudioData output;
+                    input.Resample(outputSampleRate, output);
+
+                    // cursory analysis for reasonableness.
+                    double maxError = 0;
+                    double mOut = f * std::numbers::pi * 2 / outputSampleRate;
+                    for (size_t i = 50; i < output.getSize() - 50; ++i)
+                    {
+                        double expected = std::cos(i * mOut);
+                        double actual = output.getChannel(0)[i];
+                        double err = std::abs(expected - actual);
+                        if (err > maxError)
+                        {
+                            maxError = err;
+                        }
+                        if (std::abs(actual) > maxValue)
+                        {
+                            maxValue = std::abs(actual);
+                        }
+
+                    }
+
+                    std::vector<float> expected(output.getSize());
+                    for (size_t i = 0; i < expected.size(); ++i)
+                    {
+                        expected[i] = std::cos(i*mOut);
+                    }
+                    double preambleError = 0;
+                    for (size_t i = 0; i < 50; ++i)
+                    {
+                        double actual = output.getChannel(0)[i];
+                        double err = std::abs(expected[i] - actual);
+                        if (err > preambleError)
+                        {
+                            preambleError = err;
+                        }
+                        if (std::abs(actual) > maxValue)
+                        {
+                            maxValue = std::abs(actual);
+                        }
+                    }
+                    if (maxError > worstError)
+                    {
+                        worstError = maxError;
+                    }
+                    if (preambleError > worstPreambleError)
+                    {
+                        worstPreambleError = preambleError;
+                    }
+
+                    // // dump selected data for analysis.
+                    // for (size_t i = 100; i < 200; ++i)
+                    // {   
+                    //     cout << expected[i] << " " << output.getChannel(0)[i] << endl;
+                    // }
+                    std::cout << "   in: " << inputSampleRate << " out: " << outputSampleRate << " f: " << f << " err: " << maxError << " preamble error: " << preambleError << std::endl;
+                }
+            std::cout << "in: " << inputSampleRate << " out: " << outputSampleRate << " err: " << worstError << " preamble error: " << worstPreambleError << " max value: " << maxValue <<std::endl;
+
+            // Tests basic sanity.
+            // Further analysis was done using fourier analysis in an excel spreadsheet. Basic results: > 20db rejection of aliasing into audible range.
+            TEST_ASSERT(worstPreambleError < 1);
+            TEST_ASSERT(worstError < 1);
+            }
+        }
+    }
+}
 void TestFft()
 {
 
@@ -1306,7 +1407,7 @@ void TestFft()
     // of re-ordering tests here (in order to reduce potential merge conflicts).
     // see: ADD_TEST_NAME_HERE.
 
-
+    TestLagrangeInterpolator();
     TestBalancedConvolution();
 
     Implementation::SlotUsageTest();
@@ -1318,7 +1419,6 @@ void TestFft()
         TestBalancedConvolutionSection(true);
     }
     TestBalancedConvolutionSection(false);
-
 
     TestFftConvolution();
 
@@ -1333,7 +1433,6 @@ void TestFft()
     BenchmarkBalancedConvolution();
 
     BenchmarkFftConvolutionStep();
-
 
     // TestBalancedFft(FftDirection::Reverse);
     // TestBalancedFft(FftDirection::Forward);
@@ -1359,6 +1458,8 @@ static void PrintHelp()
          << "  -o ,--ouput <filename" << endl
          << "        Send test output to the specified file" << endl
          << "  -h, --help   Display this message." << endl
+         << "      --plans" << endl
+         << "        Display section plans." << endl
          << endl
          << "Tests: " << endl
          << "  section_benchmark:" << endl
@@ -1380,6 +1481,7 @@ int main(int argc, const char **argv)
 
     bool help = false;
     std::string testName;
+    bool displaySectionPlans = false;
 
     try
     {
@@ -1387,6 +1489,7 @@ int main(int argc, const char **argv)
         parser.AddOption("", "short", &shortTests);
         parser.AddOption("", "profile", &profilerFileName);
         parser.AddOption("", "build", &buildTests);
+        parser.AddOption("", "plans",&displaySectionPlans);
 
         parser.Parse(argc, argv);
 
@@ -1413,6 +1516,8 @@ int main(int argc, const char **argv)
 #pragma GCC diagnostic ignored "-Wdangling-else" // stupid error.
     try
     {
+        SetDisplaySectionPlans(displaySectionPlans);
+
         /*  ADD_TEST_NAME_HERE  (don't forget to revise PrintHelp()) )*/
         if (testName == "check_for_stalls")
         {

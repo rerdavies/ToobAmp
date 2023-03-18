@@ -152,7 +152,7 @@ namespace TwoPlay {
 
 		FilterResponse filterResponse;
 
-		class TunerWorker: public WorkerActionBase
+		class TunerWorker: public WorkerAction
 		{
 		private: 
 			ToobTuner*pThis;
@@ -164,7 +164,7 @@ namespace TwoPlay {
 			float thresholdValue = 0;
 
 			TunerWorker(ToobTuner *pThis)
-			:	WorkerActionBase(pThis),
+			:	WorkerAction(pThis),
 				pThis(pThis)
 			{
 			}
@@ -176,7 +176,7 @@ namespace TwoPlay {
 			void Request(const CircularBuffer<float>::LockResult & lockResult)
 			{
 				this->lockResult = lockResult;
-				this->WorkerActionBase::Request();
+				this->WorkerAction::Request();
 			}	
 		protected:
 			void OnWork() {

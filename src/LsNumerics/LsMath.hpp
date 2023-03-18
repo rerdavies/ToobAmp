@@ -32,7 +32,7 @@ namespace LsNumerics {
 
 
 	namespace MathInternal {
-		constexpr float log10 = std::log(10); // 2.302585093f; //std::log(10);
+		constexpr float log10 = 2.302585093f; //std::log(10);
 	}
 
 	// inputValue: a value between zero and one.

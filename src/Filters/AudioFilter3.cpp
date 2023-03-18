@@ -29,6 +29,7 @@
 #include <cmath>
 #include <cstring>
 #include <memory>
+#include "../LsNumerics/LsMath.hpp"
 
 using namespace std;
 
@@ -49,7 +50,7 @@ void AudioFilter3::Disable()
 
 }
 
-static constexpr double PI = 3.14159265358979323846;
+static constexpr double PI = LsNumerics::Pi;
 static constexpr double TWO_PI = PI*2;
 
 void AudioFilter3::BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result)

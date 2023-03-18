@@ -37,6 +37,7 @@
 #include "StagedFft.hpp"
 #include "SynchronizedDelayLine.hpp"
 #include <atomic>
+#include "FixedDelay.hpp"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -513,8 +514,6 @@ namespace LsNumerics
         }
         size_t GetUnderrunCount() const { return (size_t)underrunCount; }
 
-    private:
-
         float TickUnsynchronized(float value)
         {
             delayLine.Write(value);
@@ -533,8 +532,12 @@ namespace LsNumerics
             }
             return (float)result;
         }
+        void SynchWrite()
+        {
+            delayLine.SynchWrite();
+        }
 
-    public:
+        //[[deprecated( "Use Tick(size_t,float*,float*) instead." )]]	
         float Tick(float value)
         {
             float result = TickUnsynchronized(value);
@@ -664,5 +667,64 @@ namespace LsNumerics
         std::vector<Section> balancedSections;
         std::vector<DirectSection> directSections;
     };
+
+    class ConvolutionReverb {
+    public:
+        ConvolutionReverb(size_t size, const std::vector<float>&impulse)
+        : convolution(size,impulse)
+        {
+            delay.SetSize(size);
+        }
+    protected:
+        float TickUnsynchronized(float value)
+        {
+            float reverbTail = delay.Value();
+
+            float reverb = convolution.TickUnsynchronized(value+reverbTail);
+            delay.Put(reverb);
+
+            return value*directMix + reverb*reverbMix;
+        }
+    public:
+        void SetDirectMix(float value)
+        {
+            this->directMix = value;
+        }
+        void SetReverbMix(float value)
+        {
+            this->reverbMix = value;
+        }
+        float Tick(float value)
+        {
+            float result = TickUnsynchronized(value);
+            convolution.SynchWrite();
+            return result;
+        }
+
+        void Tick(size_t count, const float*input, float*output)
+        {
+            for (size_t i = 0; i < count; ++i)
+            {
+                output[i] = TickUnsynchronized(input[i]);
+            }
+            convolution.SynchWrite();
+        }
+        void Tick(size_t count, const std::vector<float> &input, std::vector<float>&output)
+        {
+            Tick(count,&input[0],&output[0]);
+        }
+    private:
+        FixedDelay delay;
+        BalancedConvolution convolution;
+        float reverbMix = 1.0;
+        float directMix = 0.0;
+    };
+
+    /// @brief Enable/display display of section plans
+    /// @param enable 
+    ///
+    /// Enable debug tracing of section plans. (Used by ConvolutionReverbTest).
+
+    void SetDisplaySectionPlans(bool enable);
 
 }

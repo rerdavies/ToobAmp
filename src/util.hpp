@@ -1,18 +1,18 @@
 /*
  * MIT License
- *
+ * 
  * Copyright (c) 2023 Robin E. R. Davies
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is furnished to do
  * so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,42 +22,12 @@
  * SOFTWARE.
  */
 
-#pragma once
+#pragma once 
 
-#include <cstddef>
-#include <vector>
-#include <memory>
-#include <complex>
-
-namespace LsNumerics
-{
-    namespace Implementation {
-
-    }
-    class ConvolutionReverb
+namespace TwoPlay {
+    inline bool endsWith(const std::string& str, const std::string& suffix)
     {
-    public:
-        using complex_t = std::complex<double>;
-
-        ConvolutionReverb();
-        ~ConvolutionReverb();
-
-        void SetImpulseResponse(size_t frames, size_t channels, float *samples);
-
-    private:
+        return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+    }
     
-        class Section {
-        public:
-            Section(size_t size, size_t offset, std::vector<float> &impulseResponse);
-        private:
-            std::vector<complex_t> impulseFft;
-            std::vector<float> output;
-
-        };
-
-        class ConvolutionChannel;
-
-        std::vector<std::shared_ptr<ConvolutionChannel>> convolutionChannels;
-    };
-
 }

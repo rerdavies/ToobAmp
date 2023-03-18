@@ -30,7 +30,7 @@
 #include <iostream>
 #include <unordered_set>
 #include <stdexcept>
-#include <numbers>
+#include "LsMath.hpp"
 #include <cstdint>
 #include <cstddef>
 #include "Fft.hpp"
@@ -52,6 +52,19 @@ using namespace LsNumerics;
 
 #define RECYCLE_SLOTS 1               // disable for test purposes only
 #define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
+
+#if DISPLAY_SECTION_ALLOCATIONS
+static bool gDisplaySectionPlans = false;
+#endif
+
+
+void LsNumerics::SetDisplaySectionPlans(bool value)
+{
+#if DISPLAY_SECTION_PLANS
+    gDisplaySectionPlans = value;
+#endif
+}
+
 
 static std::size_t Log2(std::size_t value)
 {
@@ -128,7 +141,7 @@ static int GetDirectSectionThreadId(size_t size)
 }
 std::vector<size_t> directSectionLeadTimes;
 
-static void UpdateDirectExecutionLeadTimes(size_t sampleRate,size_t maxAudioBufferSize)
+static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBufferSize)
 {
     // calculate the lead time in samples based on how long it takes to execute
     // a direction section of a particular size.
@@ -157,7 +170,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate,size_t maxAudioBuff
     {
         directSectionLeadTimes[i] = INVALID_EXECUTION_TIME;
     }
-    double schedulingJitterSeconds = 0.002;                                         // 2ms for scheduiling overhead.
+    double schedulingJitterSeconds = 0.002; // 2ms for scheduiling overhead.
 
     size_t schedulingJitter = (size_t)(schedulingJitterSeconds * sampleRate + maxAudioBufferSize);
 
@@ -727,7 +740,7 @@ namespace LsNumerics::Implementation
 
         static void GetOps(std::set<FftOp *> &set, FftOp *op)
         {
-            if (set.contains(op))
+            if (set.find(op) != set.end())
                 return;
             if (op->GetOpType() == FftOp::OpType::ButterflyOp)
             {
@@ -1093,7 +1106,7 @@ static std::vector<int> MakeReversedBits(std::size_t size)
 
 static inline fft_complex_t M(std::size_t k, std::size_t n, FftDirection direction)
 {
-    static constexpr double TWO_PI = (fft_float_t)(std::numbers::pi * 2);
+    static constexpr double TWO_PI = (fft_float_t)(LsNumerics::Pi * 2);
     // e^(2 PI k)/n
     std::complex<double> t = std::exp(std::complex<double>(0, ((int)(direction)) * (TWO_PI * k / n)));
     return fft_complex_t((fft_float_t)(t.real()), (fft_float_t)(t.imag()));
@@ -1123,7 +1136,7 @@ namespace LsNumerics::Implementation
 
         FftOp::op_ptr MakeConstant(const fft_complex_t &value)
         {
-            if (constantCache.contains(value))
+            if (constantCache.find(value) != constantCache.end())
             {
                 return constantCache[value];
             };
@@ -1624,7 +1637,7 @@ BalancedFft::plan_ptr BalancedFft::GetPlan(std::size_t size, FftDirection direct
 {
     PlanKey planKey{size, direction};
     plan_ptr plan;
-    if (planCache.contains(planKey))
+    if (planCache.find(planKey) != planCache.end())
     {
         plan = planCache[planKey];
     }
@@ -1791,9 +1804,9 @@ size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
 static size_t convolutionSampleRate = (size_t)-1;
 static size_t convolutionMaxAudioBufferSize = (size_t)-1;
 
-BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate,size_t maxAudioBufferSize)
+BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
 {
-    PrepareSections(size, impulseResponse, sampleRate,maxAudioBufferSize);
+    PrepareSections(size, impulseResponse, sampleRate, maxAudioBufferSize);
     PrepareThreads();
 }
 
@@ -1827,7 +1840,7 @@ void BalancedConvolution::PrepareThreads()
     {
         auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
         sectionThread->AddSection(threadedDirectSection.get());
-        threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IDelayLineCallback*>(this));
+        threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IDelayLineCallback *>(this));
     }
 
     for (size_t i = 0; i < directSectionThreads.size(); ++i)
@@ -1844,7 +1857,7 @@ void BalancedConvolution::PrepareThreads()
         }
     }
 }
-void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate,size_t maxAudioBufferSize)
+void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
 {
     constexpr size_t INITIAL_SECTION_SIZE = 128;
     constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
@@ -1859,7 +1872,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
         {
             convolutionSampleRate = sampleRate;
             convolutionMaxAudioBufferSize = maxAudioBufferSize;
-            UpdateDirectExecutionLeadTimes(sampleRate,maxAudioBufferSize);
+            UpdateDirectExecutionLeadTimes(sampleRate, maxAudioBufferSize);
         }
     }
     size_t delaySize = -1;
@@ -1968,12 +1981,15 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                 size_t inputDelay = sampleOffset - balancedSectionDelay;
 
 #if DISPLAY_SECTION_ALLOCATIONS
-                std::cout << "balanced "
-                          << "sampleOffset: " << sampleOffset
-                          << " SectionSize: " << balancedSectionSize
-                          << " sectionDelay: " << balancedSectionDelay
-                          << " input delay: " << inputDelay
-                          << std::endl;
+                if (gDisplaySectionPlans)
+                {
+                    std::cout << "balanced "
+                              << "sampleOffset: " << sampleOffset
+                              << " SectionSize: " << balancedSectionSize
+                              << " sectionDelay: " << balancedSectionDelay
+                              << " input delay: " << inputDelay
+                              << std::endl;
+                }
 #endif
 
                 if (inputDelay > delaySize)
@@ -1995,15 +2011,18 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                 size_t inputDelay = sampleOffset - directSectionDelay;
 
 #if DISPLAY_SECTION_ALLOCATIONS
-                std::cout << "direct   "
-                          << "sampleOffset: " << sampleOffset
-                          << " SectionSize: " << directSectionSize
-                          << " sectionDelay: " << directSectionDelay
-                          << " input delay: " << inputDelay
-                          << std::endl;
+                if (gDisplaySectionPlans)
+                {
+                    std::cout << "direct   "
+                              << "sampleOffset: " << sampleOffset
+                              << " SectionSize: " << directSectionSize
+                              << " sectionDelay: " << directSectionDelay
+                              << " input delay: " << inputDelay
+                              << std::endl;
+                }
 #endif
 
-                size_t myDelaySize = sampleOffset + directSectionSize + 256; //long enough to survive an underrun.
+                size_t myDelaySize = sampleOffset + directSectionSize + 256; // long enough to survive an underrun.
                 if (myDelaySize > delaySize)
                 {
                     delaySize = myDelaySize;
@@ -2270,7 +2289,6 @@ void Implementation::FftPlan::CheckForOverwrites()
 Implementation::CompiledButterflyOp::CompiledButterflyOp(BinaryReader &reader)
 {
 
-
     // undo compression optimizations.
     reader >> in0 >> in1 >> out >> M_index;
     in1 += in0;
@@ -2279,7 +2297,7 @@ Implementation::CompiledButterflyOp::CompiledButterflyOp(BinaryReader &reader)
 void Implementation::CompiledButterflyOp::Write(BinaryWriter &writer) const
 {
     // adjust values in an attempt to improve compressibility.
-    writer << in0 << (in1-in0) << out << M_index;
+    writer << in0 << (in1 - in0) << out << M_index;
 }
 
 Implementation::PlanStep::PlanStep(BinaryReader &reader)
@@ -2428,7 +2446,7 @@ void BalancedConvolutionSection::ClearPlanCache()
 BalancedFft::plan_ptr BalancedConvolutionSection::GetPlan(std::size_t size)
 {
     std::lock_guard lock(planCacheMutex);
-    if (planCache.contains(size))
+    if (planCache.find(size) != planCache.end())
     {
         return planCache[size];
     }
@@ -2482,7 +2500,7 @@ std::filesystem::path BalancedConvolutionSection::GetPlanFilePath(size_t size)
     {
         throw std::logic_error("PlanFileDirectory not set.");
     }
-    std::filesystem::path gzDirectory = BalancedConvolutionSection::planFileDirectory.string()+".gz";
+    std::filesystem::path gzDirectory = BalancedConvolutionSection::planFileDirectory.string() + ".gz";
     std::filesystem::path gzPath = gzDirectory / SS(size << ".convolutionPlan.gz");
     if (std::filesystem::exists(gzPath))
     {
@@ -2575,7 +2593,9 @@ bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &
             section->directSection.Execute(delayLine, currentSample, outputDelayLine);
             currentSample += size;
             processed = true;
-        } else {
+        }
+        else
+        {
             break;
         }
     }
@@ -2612,13 +2632,12 @@ BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection 
 
     this->currentSample = 0;
 
-    size_t delayLineSize = sampleOffset + sectionDelay+ 256;
-    outputDelayLine.SetSize(delayLineSize,delayLineSize-size);
+    size_t delayLineSize = sampleOffset + sectionDelay + 256;
+    outputDelayLine.SetSize(delayLineSize, delayLineSize - size);
     std::vector<float> tempBuffer;
     tempBuffer.resize(sampleOffset);
     outputDelayLine.Write(tempBuffer.size(), 0, tempBuffer);
 }
-
 
 void BalancedConvolution::OnSynchronizedSingleReaderDelayLineUnderrun()
 {
@@ -2627,20 +2646,19 @@ void BalancedConvolution::OnSynchronizedSingleReaderDelayLineUnderrun()
 void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
 {
     // hack to allow us to wait on a signle condition variable.
-    // If an output delay line writeStalled and now becomes ready, pump the main delay line once 
+    // If an output delay line writeStalled and now becomes ready, pump the main delay line once
     // to get Execute() to happen once more.
     this->delayLine.NotifyReadReady();
 }
 
-
-void BalancedConvolution::DirectSectionThread::Execute(SynchronizedDelayLine&inputDelayLine)
+void BalancedConvolution::DirectSectionThread::Execute(SynchronizedDelayLine &inputDelayLine)
 {
 
     size_t tailPosition = inputDelayLine.GetReadTailPosition();
     while (true)
     {
         bool processed = false;
-        for (auto section: sections)
+        for (auto section : sections)
         {
             if (section->Execute(inputDelayLine))
             {

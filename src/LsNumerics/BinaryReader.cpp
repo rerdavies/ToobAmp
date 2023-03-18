@@ -24,6 +24,7 @@
 
 #include "BinaryReader.hpp"
 #include "../ss.hpp"
+#include "../util.hpp"
 #include <sstream>
 #include <stdexcept>
 #include <boost/iostreams/filtering_streambuf.hpp>
@@ -32,6 +33,7 @@
 using namespace LsNumerics;
 using namespace std;
 using namespace boost::iostreams;
+using namespace TwoPlay;
 
 struct BinaryReader::Extra
 {
@@ -96,10 +98,12 @@ void BinaryReader::ThrowReadError()
     throw std::logic_error("Read error.");
 }
 
+
+static std::string gzSuffix("gz");
+
 BinaryReader::BinaryReader(const std::filesystem::path &path)
 {
-
-    if (path.string().ends_with(".gz"))
+    if (endsWith(path.string(),gzSuffix))
     {
         auto pExtra = new GzipExtra(path);
         ;

@@ -40,6 +40,7 @@
 #include "ToobFreeverb.h"
 #include "ToobDelay.h"
 #include "ToobChorus.h"
+#include "ToobConvolutionReverb.h"
 
 using namespace TwoPlay;
 
@@ -55,6 +56,7 @@ std::vector<Lv2PluginFactory> factories = {
     { ToobFreeverb::URI, ToobFreeverb::Create},
     { ToobDelay::URI, ToobDelay::Create},
     { ToobChorus::URI, ToobChorus::Create},
+    { ToobConvolutionReverb::URI, ToobConvolutionReverb::Create},
 };
 
 static const LV2_Descriptor*const* descriptors;

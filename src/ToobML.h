@@ -218,7 +218,7 @@ namespace TwoPlay {
 		ToobMlModel *pPendingLoad = nullptr;
 
 
-		class LoadWorker: public WorkerActionBase
+		class LoadWorker: public WorkerAction
 		{
 		private: 
 			ToobML*pThis;
@@ -226,7 +226,7 @@ namespace TwoPlay {
 			ToobMlModel*pModelResult = nullptr;
 		public:
 			LoadWorker(ToobML *pThis)
-			:	WorkerActionBase(pThis),
+			:	WorkerAction(pThis),
 				pThis(pThis)
 			{
 			}
@@ -235,7 +235,7 @@ namespace TwoPlay {
 			void Request(size_t modelIndex)
 			{
 				this->modelIndex = modelIndex;
-				this->WorkerActionBase::Request();
+				this->WorkerAction::Request();
 			}
 		protected:
 			void OnWork() {
@@ -250,14 +250,14 @@ namespace TwoPlay {
 
 		LoadWorker loadWorker;
 
-		class DeleteWorker: public WorkerActionBase
+		class DeleteWorker: public WorkerAction
 		{
 		private: 
 			ToobML*pThis;
 			ToobMlModel*pModel = nullptr;
 		public:
 			DeleteWorker(ToobML *pThis)
-			:	WorkerActionBase(pThis),
+			:	WorkerAction(pThis),
 				pThis(pThis)
 			{
 			}
@@ -266,7 +266,7 @@ namespace TwoPlay {
 			void Request(ToobMlModel *pModel)
 			{
 				this->pModel = pModel;
-				this->WorkerActionBase::Request();
+				this->WorkerAction::Request();
 			}
 		protected:
 			void OnWork();

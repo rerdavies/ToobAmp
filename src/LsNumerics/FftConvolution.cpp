@@ -27,6 +27,8 @@
 #include <map>
 #include <mutex>
 #include <iostream>
+#include "LsMath.hpp"
+
 
 using namespace LsNumerics;
 
@@ -102,7 +104,7 @@ void FftConvolution::FftPlan::Compute(const std::vector<complex_t> &input, std::
 
         complex_t wj(1, 0);
 
-        // complex_t wInc = std::exp(complex_t(0, std::numbers::pi / m2 * double(dir)));
+        // complex_t wInc = std::exp(complex_t(0, LsNumerics::Pi / m2 * double(dir)));
         complex_t &t = twiddleIncrements[i];
         complex_t wInc = complex_t(t.real(), t.imag() * (double)(dir));
 
@@ -150,7 +152,7 @@ void FftConvolution::FftPlan::SetSize(int size)
         int m2 = m >> 1; // butterfly width
 
         complex_t wj(1, 0);
-        complex_t wInc = std::exp(complex_t(0, std::numbers::pi / m2));
+        complex_t wInc = std::exp(complex_t(0, LsNumerics::Pi / m2));
         twiddleIncrements[i] = wInc;
     }
 }
@@ -160,7 +162,7 @@ std::map<size_t,FftConvolution::FftPlan::ptr> FftConvolution::FftPlan::planCache
 
 FftConvolution::FftPlan::ptr FftConvolution::FftPlan::GetCachedPlan(size_t size) {
     std::lock_guard<std::mutex> lock { cacheMutex };
-    if (planCache.contains(size))
+    if (planCache.find(size) != planCache.end())
     {
         return planCache[size];
     }

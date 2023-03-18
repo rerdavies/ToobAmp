@@ -43,7 +43,7 @@ static void PrintHelp()
         << endl
         << "If the directory name ends in '.gz', output files will be gzip-ed." << endl
         << endl
-        << "Generating plan files is currently at least O(N^2 Log(N)) in execution time and O(N^2) in memory use. " <<
+        << "Generating plan files is currently at least O(N^2 Log(N)) in execution time and O(N^2) in memory use. " << endl
         << "A full set of plan files requires at least 6GB of memory, to generate and it takes up to an hour and " << endl
         << "a half to do so. Close all other programs when generating plan files if you have 8GB of memory." << endl
         << endl

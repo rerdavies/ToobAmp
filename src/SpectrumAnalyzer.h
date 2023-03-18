@@ -87,7 +87,7 @@ namespace TwoPlay {
 		std::vector<float> captureBuffer;
 
 
-		class FftWorker: public WorkerActionBase
+		class FftWorker: public WorkerAction
 		{
 		private: 
 			SpectrumAnalyzer*pThis;
@@ -97,7 +97,7 @@ namespace TwoPlay {
 			float maxFrequency;
 		public:
 			FftWorker(SpectrumAnalyzer *pThis)
-			:	WorkerActionBase(pThis),
+			:	WorkerAction(pThis),
 				pThis(pThis)
 			{
 			}

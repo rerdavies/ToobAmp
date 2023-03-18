@@ -25,7 +25,7 @@
 #include "StagedFft.hpp"
 #include "CacheInfo.hpp"
 #include <iostream>
-#include <numbers>
+#include "LsMath.hpp"
 
 using namespace LsNumerics;
 using namespace LsNumerics::Implementation;
@@ -65,7 +65,7 @@ static uint32_t BitReverse(uint32_t value, size_t bits)
 
 static inline StagedFftPlan::complex_t Wn(size_t i, size_t n, StagedFftPlan::Direction dir)
 {
-    return std::exp(StagedFftPlan::complex_t(0, 2 * std::numbers::pi * i / n * (double)dir));
+    return std::exp(StagedFftPlan::complex_t(0, 2 * LsNumerics::Pi * i / n * (double)dir));
 }
 
 void StagedFftPlan::TransposeOutputs(InstanceData &instanceData,size_t cacheSize, size_t size, const VectorRange<complex_t> &outputs, Direction dir)

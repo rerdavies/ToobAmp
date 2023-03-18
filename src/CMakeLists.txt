@@ -16,7 +16,7 @@ set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
 if (CMAKE_COMPILER_IS_GNUCXX)
     set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=200000")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -33,13 +33,33 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 # Add resource files.
 add_custom_target(copy-files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2 ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2 ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
     )
 
 
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED 
+        LsNumerics/BinaryReader.hpp
+        LsNumerics/BinaryReader.cpp
+        LsNumerics/BinaryWriter.cpp
+        LsNumerics/BinaryWriter.hpp
+
+        LsNumerics/FftConvolution.cpp
+        LsNumerics/FftConvolution.hpp
+        LsNumerics/StagedFft.cpp
+        LsNumerics/StagedFft.hpp
+        LsNumerics/BalancedConvolution.cpp
+        LsNumerics/BalancedConvolution.hpp
+
+        LsNumerics/SynchronizedDelayLine.hpp
+        LsNumerics/SynchronizedDelayLine.cpp
+        LsNumerics/FixedDelay.hpp
+
+
+
+        ToobConvolutionReverb.cpp
+        ToobConvolutionReverb.h
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
         ToobDelay.cpp ToobDelay.h
@@ -47,7 +67,15 @@ add_library(ToobAmp  SHARED
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
-
+        WavReader.hpp
+        WavReader.cpp
+        WavWriter.hpp
+        WavWriter.cpp
+        WavGuid.hpp
+        WavGuid.cpp
+        WavConstants.hpp
+        AudioData.cpp
+        AudioData.hpp
 
         LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
         Ce2Chorus.cpp Ce2Chorus.hpp
@@ -117,9 +145,9 @@ add_library(ToobAmp  SHARED
          
          )
 
-target_link_libraries(ToobAmp RTNeural dl)
+target_link_libraries(ToobAmp RTNeural dl pthread boost_iostreams z)
 target_include_directories(ToobAmp PRIVATE
-    ../modules/RTNeural
+    ../modules/RTNeural 
 )
 
 # Tests.
@@ -157,13 +185,12 @@ add_library(BalancedConvolution STATIC
     LsNumerics/FftConvolution.hpp
     LsNumerics/StagedFft.cpp
     LsNumerics/StagedFft.hpp
-    LsNumerics/ConvolutionReverb.cpp
-    LsNumerics/ConvolutionReverb.hpp
     LsNumerics/BalancedConvolution.cpp
     LsNumerics/BalancedConvolution.hpp
 
     LsNumerics/SynchronizedDelayLine.hpp
     LsNumerics/SynchronizedDelayLine.cpp
+    LsNumerics/FixedDelay.hpp
 )
 
 target_link_libraries(BalancedConvolution pthread boost_iostreams.a z.a)
@@ -183,7 +210,17 @@ target_link_libraries(GenerateFftPlans
 add_executable(ConvolutionReverbTest
     TestAssert.hpp
     CommandLineParser.hpp
+    LsNumerics/LagrangeInterpolator.hpp
+    AudioData.hpp
+    AudioData.cpp
+    iir/ChebyshevI.cpp
+    iir/ChebyshevI.h
+    iir/ChebyshevI.cpp
+    iir/Cascade.cpp
+    iir/Biquad.cpp
+    Filters/ChebyshevDownsamplingFilter.cpp
     LsNumerics/ConvolutionReverbTest.cpp
+    iir/PoleFilter.cpp
     
 )
 
@@ -275,7 +312,8 @@ install(TARGETS ToobAmp
     LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
     )
 # Copy all assets to resources file
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2
-        )
+INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/fftplans.gz/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/fftplans.gz)
+        
 
 # TODO: Add tests if needed.
