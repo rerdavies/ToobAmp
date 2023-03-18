@@ -200,7 +200,12 @@ void SynchronizedDelayLine::CreateThread(const std::function<void(void)> &thread
 
             if (schedPolicy == SCHED_OTHER)
             {
-                nice(-relativeThreadPriority);
+                errno = 0;
+                int ret = nice(-relativeThreadPriority);
+                if (ret < 0 && errno != 0)
+                {
+                    throw std::logic_error("Can't reduce priority of BalancedConvolution thread.");
+                }
             }
             else
             {
