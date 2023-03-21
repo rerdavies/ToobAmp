@@ -1,0 +1,51 @@
+Sample Convolution Reverb impulse files were provided by the OpenAir project.
+https://www.openair.hosted.york.ac.uk/?page_id=571
+
+The files are provided under the following licensing terms.
+
+Jack Lyons Hall, University of York.wav
+---------------------------------------
+Copyright www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
+
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=571
+
+
+
+
+Koli National Park - Winter.wav
+---------------------------------------
+Copyright www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
+
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=584
+
+
+
+St. Margaret’s Church.wav
+---------------------------------------
+Copyright www.openairlib.net, AudioLab University of York, www.ncem.co.uk
+
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+https://creativecommons.org/licenses/by/4.0/
+
+www.openairlib.net
+AudioLab, University of York
+www.ncem.co.uk
+ 
+Source: https://www.openair.hosted.york.ac.uk/?page_id=702
+
+
+
+Genesis 6 Studio – Live Room
+---------------------------------------
+Copyright www.openairlib.net
+
+This work is licensed under a Creative Commons Attribution 4.0 International License.
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=483

@@ -14,6 +14,7 @@
 @prefix param:   <http://lv2plug.in/ns/ext/parameters#> .
 @prefix work:  <http://lv2plug.in/ns/ext/worker#> .
 @prefix pg:      <http://lv2plug.in/ns/ext/port-groups#> .
+@prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
@@ -24,7 +25,7 @@
 
 
 @prefix toobConvolutionReverb: <http://two-play.com/plugins/toob-convolution-reverb#> .
-@prefix toobImpulse: <http://two-play.com/impulseFile> .
+@prefix toobImpulse: <http://two-play.com/impulseFile#> .
 
 toobImpulse:#impulseFile
         a rdf:property;
@@ -38,9 +39,10 @@ toobImpulse:#impulseFile
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <http://two-play.com/> .
 
+
 <http://two-play.com/plugins/toob-convolution-reverb>
         a lv2:Plugin ,
-                lv2:ChorusPlugin ;
+                lv2:ReverbPlugin ;
         doap:name "TooB Convolution Reverb" ,
                 "TooB Convolution Reverb"@en-gb 
                 ;
@@ -71,6 +73,7 @@ may cause odd audio artifacts.
         lv2:requiredFeature urid:map ;
         lv2:extensionData state:interface;
 
+
         lv2:optionalFeature lv2:hardRTCapable;
         patch:readable 
                 toobImpulse:#impulseFile
@@ -94,7 +97,7 @@ may cause odd audio artifacts.
                 lv2:portProperty epp:notAutomatic ;
                 lv2:portProperty epp:expensive ;
 
-                units:unit units:seconds ;
+                units:unit units:s ;
 
                 rdfs:comment "Maximum length of impulse data to use." ;
 
@@ -204,3 +207,29 @@ may cause odd audio artifacts.
         .
 
 
+<http://two-play.com/plugins/toob-convolution-reverb>  pipedal_ui:ui toobConvolutionReverb:ui .
+
+toobConvolutionReverb:ui 
+        a pipedal_ui:ui ;
+        pipedal_ui:fileProperties 
+        [
+                a pipedal_ui:fileProperty;
+                lv2:name "Impulse File" ;
+                pipedal_ui:patchProperty toobImpulse:impulseFile ;
+                pipedal_ui:defaultFile "Genesis 6 Studio – Live Room.wav";
+                pipedal_ui:directory "ReverbImpulseFiles";
+                pipedal_ui:fileTypes 
+                [
+                        a pipedal_ui:fileType;
+                        lv2:name "WAV File";
+                        pipedal_ui:fileExtension ".wav";
+                ];
+        ];
+        pipedal_ui:outputPorts
+        [
+                lv2:symbol "loading_state" ;
+                pipedal_ui:style pipedal_ui:text ;
+                pipedal_ui:redLevel 0;
+                pipedal_ui:yellowLevel -12;
+        ]
+        .
