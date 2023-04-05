@@ -9,7 +9,8 @@ if (DEFINED BUILD_MACHINE)
     message(STATUS "Google Profiler support disabled.}")
     set (PROFILER 0) #no google-perf install on build machine.
 else()
-    set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
+    #set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
+    set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest
 endif()
 
 
