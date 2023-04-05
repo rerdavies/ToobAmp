@@ -42,21 +42,22 @@
 #include "ToobChorus.h"
 #include "ToobConvolutionReverb.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 std::vector<Lv2PluginFactory> factories = {
-    { InputStage::URI, InputStage::Create},
-    { PowerStage2::URI, PowerStage2::Create},
-    { CabSim::URI, CabSim::Create},
-    { ToneStack::URI, ToneStack::Create},
-    { SpectrumAnalyzer::URI, SpectrumAnalyzer::Create},
-    { ToobML::URI, ToobML::Create},
-    { ToobTuner::URI, ToobTuner::Create},
-    { ToobFreeverb::URI, ToobFreeverb::Create},
-    { ToobDelay::URI, ToobDelay::Create},
-    { ToobChorus::URI, ToobChorus::Create},
-    { ToobConvolutionReverb::URI, ToobConvolutionReverb::Create},
+    Lv2PluginFactory::Create<InputStage>(),
+    Lv2PluginFactory::Create<PowerStage2>(),
+    Lv2PluginFactory::Create<CabSim>(),
+    Lv2PluginFactory::Create<ToneStack>(),
+    Lv2PluginFactory::Create<SpectrumAnalyzer>(),
+    Lv2PluginFactory::Create<CabSim>(),
+    Lv2PluginFactory::Create<ToobML>(),
+    Lv2PluginFactory::Create<ToobTuner>(),
+    Lv2PluginFactory::Create<ToobFreeverb>(),
+    Lv2PluginFactory::Create<ToobDelay>(),
+    Lv2PluginFactory::Create<ToobChorus>(),
+    Lv2PluginFactory::Create<ToobConvolutionReverb>(),
 };
 
 static const LV2_Descriptor*const* descriptors;

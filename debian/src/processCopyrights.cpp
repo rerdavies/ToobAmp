@@ -9,7 +9,7 @@
 #include "ss.hpp"
 #include <algorithm>
 
-using namespace TwoPlay;
+using namespace toob;
 using namespace std;
 
 #define UNKNOWN_LICENSE "~unknown" // primary purpose: show this group last, not first.

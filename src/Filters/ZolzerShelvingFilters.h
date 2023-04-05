@@ -26,7 +26,7 @@
 #include <cmath>
 #include <complex>
 
-namespace TwoPlay
+namespace toob
 {
 
     class ZolzerFilter

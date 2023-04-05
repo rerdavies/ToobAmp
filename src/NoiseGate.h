@@ -26,7 +26,7 @@
 #include "std.h"
 #include <cmath>
 
-namespace TwoPlay {
+namespace toob {
     class NoiseGate {
     public:
         enum class EState {

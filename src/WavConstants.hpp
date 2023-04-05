@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2022 Robin Davies
+ Copyright (c) 2023 Robin Davies
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -19,10 +19,12 @@
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#pragma once
 #include <cstddef>
 #include "WavGuid.hpp"
+#include <stdexcept>
 
-namespace TwoPlay
+namespace toob
 {
 
     // Redeclaration of Windows types.
@@ -53,14 +55,14 @@ namespace TwoPlay
             uint32_t nAvgBytesPerSec;
             uint16_t nBlockAlign;
             uint16_t wBitsPerSample;
-            uint16_t cbSize;
+            uint16_t cbSize = 22;
             union
             {
                 uint16_t wValidBitsPerSample;
                 uint16_t wSamplesPerBlock;
-                uint16_t wReserved;
-            } Samples;
-            uint32_t dwChannelMask;
+                uint16_t wReserved = 0;
+            };
+            uint32_t dwChannelMask = 0;
             WavGuid SubFormat;
         };
         struct WaveFormat
@@ -73,8 +75,36 @@ namespace TwoPlay
             uint16_t wBitsPerSample;
         };
 
+        // GUIDs in Microsoft order. (little-endian,little-endian,little-endian,big-endian!,bytes)
         static WavGuid WAVE_FORMAT_PCM("00000001-0000-0010-8000-00aa00389b71");
         static WavGuid WAVE_FORMAT_IEEE_FLOAT("00000003-0000-0010-8000-00aa00389b71");
 
     } // namespace private_use
-} // namespace ampsim
+
+    enum class ChannelMask
+    {
+        ZERO = 0x0,
+        SPEAKER_FRONT_LEFT = 0x1,
+        SPEAKER_FRONT_RIGHT = 0x2,
+        SPEAKER_FRONT_CENTER = 0x4,
+        SPEAKER_LOW_FREQUENCY = 0x8,
+        SPEAKER_BACK_LEFT = 0x10,
+        SPEAKER_BACK_RIGHT = 0x20,
+        SPEAKER_FRONT_LEFT_OF_CENTER = 0x40,
+        SPEAKER_FRONT_RIGHT_OF_CENTER = 0x80,
+        SPEAKER_BACK_CENTER = 0x100,
+        SPEAKER_SIDE_LEFT = 0x200,
+        SPEAKER_SIDE_RIGHT = 0x400,
+        SPEAKER_TOP_CENTER = 0x800,
+        SPEAKER_TOP_FRONT_LEFT = 0x1000,
+        SPEAKER_TOP_FRONT_CENTER = 0x2000,
+        SPEAKER_TOP_FRONT_RIGHT = 0x4000,
+        SPEAKER_TOP_BACK_LEFT = 0x8000,
+        SPEAKER_TOP_BACK_CENTER = 0x10000,
+        SPEAKER_TOP_BACK_RIGHT = 0x20000,
+    };
+
+    // return's the mask of the n-th channel in the ChannelMask.
+    ChannelMask GetChannel(size_t channel,ChannelMask channelMask);
+
+} // namespace toob

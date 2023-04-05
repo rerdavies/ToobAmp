@@ -46,9 +46,9 @@
 
 
 
-namespace TwoPlay {
+namespace toob {
 
-	class ToobConvolutionReverb : public Lv2Plugin {
+	class ToobConvolutionReverb : public Lv2PluginWithState {
 	private:
 		enum class PortId {
 			TIME = 0,
@@ -98,14 +98,16 @@ namespace TwoPlay {
 			{
 				 propertyFileName = plugin->MapURI("http://two-play.com/impulseFile#impulseFile");
 				 atom_path = plugin->MapURI(LV2_ATOM__Path);
+				 convolution__state = plugin->MapURI("http://two-play.com/plugins/toob-convolution-reverb#state");
 			}
 			LV2_URID propertyFileName;
 			LV2_URID atom_path;
+			LV2_URID convolution__state;
 		};
 		Urids urids;
 
 		void clear();
-		void updateControls();
+		void UpdateControls();
 	public:
 		static Lv2Plugin* Create(double rate,
 			const char* bundle_path,
@@ -129,12 +131,33 @@ namespace TwoPlay {
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();
 	protected:
-		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object);
+		virtual void OnPatchGet(LV2_URID propertyUrid);
+		virtual void OnPatchGetAll();
 		virtual void OnPatchSet(LV2_URID propertyUrid,const LV2_Atom*atom);
 
 
 
 	private: 
+		static constexpr const char*VERSION_FILENAME = "ToobAmp.lv2.version";
+		static constexpr uint32_t SAMPLE_FILES_VERSION = 1;
+
+		void MaybeCreateSampleDirectory(const std::filesystem::path &targetDirectory);
+
+			// State extension callbacks.
+		virtual LV2_State_Status
+		OnRestoreLv2State(
+			LV2_State_Retrieve_Function retrieve,
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features);
+
+		virtual LV2_State_Status
+		OnSaveLv2State(
+			LV2_State_Store_Function store,
+			LV2_State_Handle handle,
+			uint32_t flags,
+			const LV2_Feature *const *features);
+	private:
 		void SetLoadingState(float state)
 		{
 			this->loadingState = state;
@@ -151,12 +174,14 @@ namespace TwoPlay {
 				CleaningUp = 4,
 				
 			};
+			ToobConvolutionReverb *pThis;
 		public:
 			using base = WorkerActionWithCleanup;
 			
 			LoadWorker(Lv2Plugin *pPlugin);
 			void Initialize(size_t sampleRate, ToobConvolutionReverb *pReverb);
-			void SetFileName(const char*szName);
+			bool SetTime(float timeInSeconds);
+			bool SetFileName(const char*szName);
 			const char*GetFileName() const { return this->fileName; }
 			bool Changed() const { return this->changed;}
 
@@ -171,6 +196,7 @@ namespace TwoPlay {
 				}
 			}
 		private:
+
 			void SetState(State state);
 			void Request();
 			virtual void OnWork();
@@ -180,6 +206,8 @@ namespace TwoPlay {
 
 
 		private:
+			float tailScale = 0;
+			float timeInSeconds = -1;
 			State state = State::Idle;
 
 			bool hasWorkError = false;
@@ -192,6 +220,7 @@ namespace TwoPlay {
 			char fileName[MAX_FILENAME];
 			char requestFileName[MAX_FILENAME];
 			convolution_reverb_ptr convolutionReverbResult;
+			convolution_reverb_ptr oldConvolutionReverb;
 
 		};
 
@@ -207,4 +236,4 @@ namespace TwoPlay {
 
     };
 
-}// namespace TwoPlay
+}// namespace toob

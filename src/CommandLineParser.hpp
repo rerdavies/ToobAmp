@@ -23,7 +23,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace TwoPlay
+namespace toob
 {
 
     class CommandLineException: public std::logic_error

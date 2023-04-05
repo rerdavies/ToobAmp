@@ -28,8 +28,8 @@
 
 namespace LsNumerics {
 
-    class ToneStackFilter : public TwoPlay::AudioFilter3 {
-        using FilterCoefficients3 = TwoPlay::FilterCoefficients3;
+    class ToneStackFilter : public toob::AudioFilter3 {
+        using FilterCoefficients3 = toob::FilterCoefficients3;
     public:
         enum class AmpModel { Bassman, JCM800};
     private:

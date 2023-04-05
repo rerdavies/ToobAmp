@@ -23,7 +23,7 @@
 
 #pragma once
 #include "../iir/ChebyshevI.h"
-namespace TwoPlay {
+namespace toob {
 
     class ChebyshevDownsamplingFilter {
     private:

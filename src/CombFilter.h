@@ -30,7 +30,7 @@
 #include <cmath>
 #include <complex>
 
-namespace TwoPlay {
+namespace toob {
     class CombFilter {
     private:
         double sampleRate;

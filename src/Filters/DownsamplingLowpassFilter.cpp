@@ -23,7 +23,7 @@
 
 #include "DownsamplingLowPassFilter.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 

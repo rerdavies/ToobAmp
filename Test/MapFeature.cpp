@@ -24,7 +24,7 @@
 #include "MapFeature.h"
 #include <mutex>
 
-using namespace TwoPlay;
+using namespace toob;
 
 static LV2_URID mapFn(LV2_URID_Map_Handle handle, const char* uri)
 {

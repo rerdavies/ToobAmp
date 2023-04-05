@@ -38,7 +38,7 @@
 #include <mutex>
 
 
-namespace TwoPlay {
+namespace toob {
 	class MapFeature {
 
 	private:

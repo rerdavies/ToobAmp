@@ -23,13 +23,14 @@
 #include <stdexcept>
 #include "ss.hpp"
 #include "WavGuid.hpp"
+#include <limits>
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 #include "WavConstants.hpp"
 
-using namespace TwoPlay::private_use;
+using namespace toob::private_use;
 
 int32_t WavReader::ReadInt32()
 {
@@ -134,6 +135,9 @@ void WavReader::ReadFormat()
             case 16:
                 this->audioFormat = AudioFormat::Int16;
                 break;
+            case 24:    
+                this->audioFormat = AudioFormat::Int24;
+                break;
             case 32:
                 this->audioFormat = AudioFormat::Int32;
                 break;
@@ -149,16 +153,18 @@ void WavReader::ReadFormat()
     else
     {
         wf.cbSize = ReadUint16();
-        if (wf.cbSize == 22)
+        if (wf.cbSize < 22)
         {
-            wf.Samples.wValidBitsPerSample = ReadUint16();
+            throw std::domain_error("Invalid file format.");
         }
+        wf.wValidBitsPerSample = ReadUint16();
+
         wf.dwChannelMask = ReadUint32();
 
         wf.SubFormat.data0 = ReadUint32();
         wf.SubFormat.data1 = ReadUint16();
         wf.SubFormat.data2 = ReadUint16();
-        wf.SubFormat.data3 = ReadUint16();
+        wf.SubFormat.data3 = ReadUint8()*256 + ReadUint8(); // bizarre microsoft ordering thing. this field is big-endian.
         for (size_t i = 0; i < sizeof(wf.SubFormat.data4); ++i)
         {
             wf.SubFormat.data4[i] = ReadUint8();
@@ -173,6 +179,9 @@ void WavReader::ReadFormat()
                 break;
             case 16:
                 this->audioFormat = AudioFormat::Int16;
+                break;
+            case 24:
+                this->audioFormat = AudioFormat::Int24;
                 break;
             case 32:
                 this->audioFormat = AudioFormat::Int32;
@@ -199,6 +208,7 @@ void WavReader::ReadFormat()
     this->m_sampleRate = wf.nSamplesPerSec;
     this->m_channels = wf.nChannels;
     this->m_frameSize = wf.nBlockAlign;
+    this->m_channelMask = (ChannelMask)wf.dwChannelMask;
 }
 void WavReader::ReadChunks()
 {
@@ -223,7 +233,7 @@ void WavReader::ReadChunks()
             datachunk = true;
             dataStart = f.tellg();
             dataEnd = dataStart + chunkSize;
-            return;
+            break;
         default:
             break;
         }
@@ -234,6 +244,7 @@ void WavReader::ReadChunks()
         }
         f.seekg(chunkEnd);
     }
+    f.seekg(dataStart);
 }
 
 size_t WavReader::NumberOfFrames() const {
@@ -245,13 +256,13 @@ inline float AudioInputConvert(float value) { return value; }
 
 inline float AudioInputConvert(double value) { return (float)value; }
 
-constexpr float CVT32 = 1.0f/(32768.0f*65536.0);
+constexpr float CVT32 = 1.0f/float((int64_t)(std::numeric_limits<int32_t>::max())+(int64_t)1);
 
 
 static inline float AudioInputConvert(int32_t value) { 
     return CVT32*value; 
 }
-constexpr float CVT16 = 1.0f/32768.0f;
+constexpr float CVT16 = 1.0f/float((int32_t)std::numeric_limits<int16_t>::max() + (int32_t)1);
 
 static inline float AudioInputConvert(int16_t value) { 
     return CVT16*value; 
@@ -266,8 +277,9 @@ static inline float AudioInputConvert(uint8_t value) {
 template<typename T>
 void WavReader::ReadTypedData(float**channels,size_t offset,size_t length)
 {
-    size_t maxLength = 64*1024/m_frameSize;
-    size_t bufferSize = maxLength*this->Channels()*sizeof(T);
+    size_t frameSize = this->Channels()*sizeof(T);
+    size_t maxLength = 64*1024/frameSize;
+    size_t bufferSize = maxLength*frameSize;
 
     if (this->readBuffer.size() < bufferSize) 
     {
@@ -299,6 +311,47 @@ void WavReader::ReadTypedData(float**channels,size_t offset,size_t length)
 }
 
 
+void WavReader::ReadInt24Data(float**channels,size_t offset,size_t length)
+{
+    size_t frameSize = this->Channels()*3;
+    size_t maxLength = 64*1024/frameSize;
+    size_t bufferSize = maxLength*frameSize;
+
+    if (this->readBuffer.size() < bufferSize) 
+    {
+        this->readBuffer.resize(bufferSize);
+    }
+    uint8_t*buffer = (uint8_t*)(void*)(&this->readBuffer[0]);
+    while (length != 0)
+    {
+        size_t thisTime = std::min(maxLength,length);
+        f.read((char*)(void*)buffer,thisTime*this->m_frameSize);
+        if (!f)
+        {
+            ThrowFileFormatException();
+        }
+        uint8_t*p = buffer;
+
+        constexpr float scale = 1.0f/((int64_t)(std::numeric_limits<int32_t>::max())+(int64_t)1);
+
+        for (size_t i = 0; i < thisTime; ++i)
+        {
+            size_t ix = offset+i;
+            for (size_t chan = 0; chan < this->Channels(); ++chan)
+            {
+                int32_t v = (p[0] << 8)| (p[1] << 16) | (p[2] << 24);
+                p += 3;
+
+                channels[chan][ix] = (float)(v*scale);
+            }
+        }
+
+        length -= thisTime;
+        offset += thisTime;
+    }
+}
+
+
 
 void WavReader::ReadData(float**channels,size_t offset, size_t length)
 {
@@ -309,6 +362,9 @@ void WavReader::ReadData(float**channels,size_t offset, size_t length)
             break;
         case AudioFormat::Float64:
             ReadTypedData<double>(channels,offset,length);
+            break;
+        case AudioFormat::Int24:
+            ReadInt24Data(channels,offset,length);
             break;
         case AudioFormat::Int16:
             ReadTypedData<int16_t>(channels,offset,length);
@@ -345,4 +401,5 @@ void WavReader::Read(AudioData&audioData)
 
     std::vector<std::vector<float>> data = ReadData();
     audioData.setData(std::move(data));
+    audioData.setChannelMask(m_channelMask);
 }

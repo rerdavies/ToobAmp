@@ -120,6 +120,27 @@ namespace LsNumerics
             }
             return window;
         }
+
+        // Poor skirt, but shows prominent peaks for sin waves in source.
+        template<typename T> 
+        static std::vector<T> FlatTop(int size)
+        {
+            std::vector<T> window;
+            window.resize(size);
+            // source https://en.wikipedia.org/wiki/Window_function#:~:text=0Flat%20top%20window
+            constexpr double a_0=0.21557895;
+            constexpr double a_1=0.41663158;
+            constexpr double a_2=0.277263158;
+            constexpr double a_3=0.083578947;
+            constexpr double a_4=0.006947368;
+
+            double w = LsNumerics::Pi * 2 / (size-1);
+            for (int n = 0; n < size; ++n)
+            {
+                window[n] = a_0 - a_1*std::cos(w*n)+ a_2*std::cos(2*w*n) - a_3*std::cos(3*w*n) + a_4*std::cos(4*w*n);
+            }
+            return window;
+        }
     };
 
 } // namespace

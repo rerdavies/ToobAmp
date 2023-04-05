@@ -23,7 +23,7 @@
 
 #include "DbDezipper.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 static const int SEGMENT_SIZE = 64;

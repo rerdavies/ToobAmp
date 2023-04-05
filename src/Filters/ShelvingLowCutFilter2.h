@@ -25,7 +25,7 @@
 #include "../LsNumerics/LsMath.hpp"
 #include <cmath>
 
-namespace TwoPlay {
+namespace toob {
     using namespace LsNumerics;
 
     class ShelvingLowCutFilter2: public AudioFilter2 {

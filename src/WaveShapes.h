@@ -23,7 +23,7 @@
 #pragma once
 #include <cmath>
 
-namespace TwoPlay {
+namespace toob {
 
 
 // Atan approximating valid in range -1 to 1.

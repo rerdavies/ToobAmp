@@ -39,7 +39,7 @@
 #include <string>
 #include <mutex>
 
-namespace TwoPlay {
+namespace toob {
 	class ScheduleFeature {
 
 	private:

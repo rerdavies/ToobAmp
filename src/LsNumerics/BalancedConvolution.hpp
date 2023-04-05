@@ -35,9 +35,10 @@
 #include <filesystem>
 #include <mutex>
 #include "StagedFft.hpp"
-#include "SynchronizedDelayLine.hpp"
+#include "BackgroundConvolutionTask.hpp"
 #include <atomic>
 #include "FixedDelay.hpp"
+#include "SectionExecutionTrace.hpp"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -121,8 +122,7 @@ namespace LsNumerics
                 return result;
             }
 
-
-            void Execute(SynchronizedDelayLine&input,size_t time, SynchronizedSingleReaderDelayLine &output);
+            void Execute(BackgroundConvolutionTask &input, size_t time, SynchronizedSingleReaderDelayLine &output);
 
             bool IsL1Optimized() const
             {
@@ -132,6 +132,17 @@ namespace LsNumerics
             {
                 return fftPlan.IsL2Optimized();
             }
+#if EXECUTION_TRACE
+        public:
+            void SetTraceInfo(SectionExecutionTrace *pTrace, size_t threadNumber)
+            {
+                this->pTrace = pTrace;
+                this->threadNumber = threadNumber;
+            }
+
+        private:
+            SectionExecutionTrace *pTrace = nullptr;
+#endif
 
         private:
             using Fft = StagedFft;
@@ -144,6 +155,7 @@ namespace LsNumerics
             size_t bufferIndex;
             std::vector<float> inputBuffer;
             std::vector<fft_complex_t> buffer;
+            size_t threadNumber;
         };
         class CompiledButterflyOp
         {
@@ -498,12 +510,44 @@ namespace LsNumerics
     class BalancedConvolution : private SynchronizedSingleReaderDelayLine::IDelayLineCallback
     {
     public:
-        BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, 
+        /// @brief Convolution reverb with balanced execution cost per cycle.
+        /// @param schedulerPolicy Scheduler policy. See remarks.
+        /// @param size numer of samples of the impulse response to use.
+        /// @param impulseResponse Impulse samples
+        /// @param sampleRate Sample rate at which the audio thread will run (NOT the sample rate of the impulse response!)
+        /// @param maxAudioBufferSize  Size of the largest value of frames passed to Tick(frames,input,output).
+        ///
+        /// @remarks
+        /// BalancedConvolution uses a set of service threads to calcualte large convolution sections. The priority
+        /// of the service threads must be below that of audio thread (but still very high). The scheduler policty
+        /// determines how the thread priority is set. If Scheduler::Realtime, the worker threads' scheduler policy
+        /// is set to SCHED_RR (realtime), and the prioriy of the threads are set to basePrioriy+1, basePriority+2,
+        /// &c. If Scheduler::Normal, the thread priorities are set using nice (3).
+        ///
+        /// Note that when running in realtime, the schedulerPolicy should always be SchedulerPolicy::Realtime.
+        /// SchedulerPolicy::Normal allows unit testing in an environment where the running process may not have
+        /// suffieienctprivileges to set a realtime thread priority.
+        ///
+        /// The sampleRate and maxAudioBufferSize parameters are used to control scheduling of the background convolution
+        /// sections. Note that sampleRate is the sample rate at which the audio thread is running, NOT the sample
+        /// rate of the impulse data (although ideally, the two should be the same). maxAudioBufferSize should be
+        /// set to a modest value (e.g. 16..256), since the cost of running balanced convolution sections on the
+        /// audio thread is significantly higher than running convolution sections in the background, but the
+        /// realtime audio thread mut build up a lead-time significant enough to survive scheduling jitter on
+        /// the background audio threads. A high value of maxAudioBufferSize increases the lead-time required.
+        ///
+        BalancedConvolution(
+            SchedulerPolicy schedulerPolicy,
+            size_t size, const std::vector<float> &impulseResponse,
             size_t sampleRate = 44100,
             size_t maxAudioBufferSize = 128);
 
-        BalancedConvolution(const std::vector<float> &impulseResponse, size_t sampleRate = 44100, size_t maxAudioBufferSize = 128)
-            : BalancedConvolution(impulseResponse.size(), impulseResponse, sampleRate,maxAudioBufferSize)
+        BalancedConvolution(
+            SchedulerPolicy schedulerPolicy,
+            const std::vector<float> &impulseResponse,
+            size_t sampleRate = 44100,
+            size_t maxAudioBufferSize = 128)
+            : BalancedConvolution(schedulerPolicy, impulseResponse.size(), impulseResponse, sampleRate, maxAudioBufferSize)
         {
         }
 
@@ -516,15 +560,15 @@ namespace LsNumerics
 
         float TickUnsynchronized(float value)
         {
-            delayLine.Write(value);
+            backgroundConvolutionTask.Write(value);
             double result = 0;
             for (size_t i = 0; i < directConvolutionLength; ++i)
             {
-                result += delayLine[i] * (double)directImpulse[i];
+                result += backgroundConvolutionTask[i] * (double)directImpulse[i];
             }
             for (auto &section : balancedSections)
             {
-                result += section.fftSection.Tick(delayLine[section.sampleDelay]);
+                result += section.fftSection.Tick(backgroundConvolutionTask[section.sampleDelay]);
             }
             for (auto &sectionThread : directSectionThreads)
             {
@@ -534,14 +578,14 @@ namespace LsNumerics
         }
         void SynchWrite()
         {
-            delayLine.SynchWrite();
+            backgroundConvolutionTask.SynchWrite();
         }
 
-        //[[deprecated( "Use Tick(size_t,float*,float*) instead." )]]	
+        //[[deprecated( "Use Tick(size_t,float*,float*) instead." )]]
         float Tick(float value)
         {
             float result = TickUnsynchronized(value);
-            delayLine.SynchWrite();
+            backgroundConvolutionTask.SynchWrite();
             return result;
         }
 
@@ -551,7 +595,7 @@ namespace LsNumerics
             {
                 output[i] = TickUnsynchronized(input[i]);
             }
-            delayLine.SynchWrite();
+            backgroundConvolutionTask.SynchWrite();
         }
         void Tick(std::vector<float> &input, std::vector<float> &output)
         {
@@ -560,7 +604,11 @@ namespace LsNumerics
         void Close();
 
     private:
+#if EXECUTION_TRACE
+        SectionExecutionTrace executionTrace;
+#endif
         std::atomic<size_t> underrunCount;
+        SchedulerPolicy schedulerPolicy;
 
         virtual void OnSynchronizedSingleReaderDelayLineReady();
         virtual void OnSynchronizedSingleReaderDelayLineUnderrun();
@@ -568,7 +616,7 @@ namespace LsNumerics
         void PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize);
         void PrepareThreads();
         class DirectSectionThread;
-        DirectSectionThread*GetDirectSectionThreadBySize(size_t size);
+        DirectSectionThread *GetDirectSectionThreadBySize(size_t size);
 
     private:
         using IDelayLineCallback = SynchronizedSingleReaderDelayLine::IDelayLineCallback;
@@ -578,31 +626,47 @@ namespace LsNumerics
             Implementation::DirectConvolutionSection directSection;
         };
 
-        class ThreadedDirectSection {
+        class ThreadedDirectSection
+        {
         public:
             using DirectConvolutionSection = Implementation::DirectConvolutionSection;
             ThreadedDirectSection()
-            :   section(nullptr)
+                : section(nullptr)
             {
-
             }
 
-            void SetWriteReadyCallback(IDelayLineCallback*callback)
+            void SetWriteReadyCallback(IDelayLineCallback *callback)
             {
                 outputDelayLine.SetWriteReadyCallback(callback);
             }
             ThreadedDirectSection(DirectSection &section);
+
         public:
             size_t Size() const { return section->directSection.Size(); }
-            bool Execute(SynchronizedDelayLine& inputDelayLine);
+            bool Execute(BackgroundConvolutionTask &inputDelayLine);
 
             void Close() { outputDelayLine.Close(); }
 
             float Tick() { return outputDelayLine.Read(); }
+
+#if EXECUTION_TRACE
+        public:
+            void SetTraceInfo(SectionExecutionTrace*pTrace,size_t threadNumber)
+            {
+                this->threadNumber = threadNumber;
+                if (section)
+                {
+                    section->directSection.SetTraceInfo(pTrace,threadNumber);
+                }
+            }
+        private:
+            size_t threadNumber = -1;
+#endif
+
         private:
             size_t currentSample = 0;
             SynchronizedSingleReaderDelayLine outputDelayLine;
-            DirectSection* section;
+            DirectSection *section;
         };
         std::vector<std::unique_ptr<ThreadedDirectSection>> threadedDirectSections;
 
@@ -610,52 +674,50 @@ namespace LsNumerics
         {
         public:
             DirectSectionThread()
-            :threadNumber(-1)
+                : threadNumber(-1)
             {
-
             }
             DirectSectionThread(int threadNumber)
-            :threadNumber(threadNumber)
+                : threadNumber(threadNumber)
             {
-
             }
-            int GetThreadNumber() const { return threadNumber; } 
+            int GetThreadNumber() const { return threadNumber; }
 
-            float Tick() {
+            float Tick()
+            {
                 double result = 0;
-                for (auto section: sections)
+                for (auto section : sections)
                 {
                     result += section->Tick();
                 }
                 return result;
             }
-            void Execute(SynchronizedDelayLine&inputDelayLine);
+            void Execute(BackgroundConvolutionTask &inputDelayLine);
             void Close()
             {
-                for (auto section: sections)
+                for (auto section : sections)
                 {
                     section->Close();
                 }
             }
-            void AddSection(ThreadedDirectSection*threadedSection)
+            void AddSection(ThreadedDirectSection *threadedSection)
             {
                 sections.push_back(threadedSection);
             }
 
         private:
             int threadNumber = -1;
-            std::vector<ThreadedDirectSection*>sections;
+            std::vector<ThreadedDirectSection *> sections;
         };
 
         using section_thread_ptr = std::unique_ptr<DirectSectionThread>;
         std::vector<section_thread_ptr> directSectionThreads;
 
         static std::mutex globalMutex;
-        
 
         size_t sampleRate = 48000;
         std::vector<float> directImpulse;
-        SynchronizedDelayLine delayLine;
+        BackgroundConvolutionTask backgroundConvolutionTask;
         size_t directConvolutionLength;
 
         struct Section
@@ -668,23 +730,54 @@ namespace LsNumerics
         std::vector<DirectSection> directSections;
     };
 
-    class ConvolutionReverb {
+    class ConvolutionReverb
+    {
     public:
-        ConvolutionReverb(size_t size, const std::vector<float>&impulse)
-        : convolution(size,impulse)
+        ConvolutionReverb(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulse)
+            : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulse) // the last value is recirculated.
         {
-            delay.SetSize(size);
+            if (size != 0)
+            {
+                feedbackScale = impulse[size - 1];
+                feedbackDelay.SetSize(size - 1);
+                // guard against overflow.
+                if (feedbackScale > 0.1)
+                    feedbackScale = 0.1;
+                if (feedbackScale < -0.1)
+                    feedbackScale = -0.1;
+            }
+            else
+            {
+                feedbackDelay.SetSize(1);
+                feedbackScale = 0;
+            }
         }
+        void SetFeedback(float feedback, size_t tapPosition)
+        {
+            feedbackDelay.SetSize(tapPosition);
+            feedbackScale = feedback;
+            hasFeedback = feedbackScale != 0;
+        }
+
     protected:
-        float TickUnsynchronized(float value)
+        float TickUnsynchronizedWithFeedback(float value)
         {
-            float reverbTail = delay.Value();
+            float recirculationValue = feedbackDelay.Value() * feedbackScale;
 
-            float reverb = convolution.TickUnsynchronized(value+reverbTail);
-            delay.Put(reverb);
+            float reverb = convolution.TickUnsynchronized(value + recirculationValue);
+            feedbackDelay.Put(reverb);
 
-            return value*directMix + reverb*reverbMix;
+            return value * directMix + (reverb)*reverbMix;
         }
+
+        float TickUnsynchronizedWithoutFeedback(float value)
+        {
+
+            float reverb = convolution.TickUnsynchronized(value);
+
+            return value * directMix + (reverb)*reverbMix;
+        }
+
     public:
         void SetDirectMix(float value)
         {
@@ -696,32 +789,53 @@ namespace LsNumerics
         }
         float Tick(float value)
         {
-            float result = TickUnsynchronized(value);
+            float result;
+            if (hasFeedback)
+            {
+                result = TickUnsynchronizedWithFeedback(value);
+            }
+            else
+            {
+                result = TickUnsynchronizedWithoutFeedback(value);
+            }
             convolution.SynchWrite();
             return result;
         }
 
-        void Tick(size_t count, const float*input, float*output)
+        void Tick(size_t count, const float *input, float *output)
         {
-            for (size_t i = 0; i < count; ++i)
+            if (hasFeedback)
             {
-                output[i] = TickUnsynchronized(input[i]);
+                for (size_t i = 0; i < count; ++i)
+                {
+                    output[i] = TickUnsynchronizedWithFeedback(input[i]);
+                }
+            }
+            else
+            {
+                for (size_t i = 0; i < count; ++i)
+                {
+                    output[i] = TickUnsynchronizedWithoutFeedback(input[i]);
+                }
             }
             convolution.SynchWrite();
         }
-        void Tick(size_t count, const std::vector<float> &input, std::vector<float>&output)
+        void Tick(size_t count, const std::vector<float> &input, std::vector<float> &output)
         {
-            Tick(count,&input[0],&output[0]);
+            Tick(count, &input[0], &output[0]);
         }
+
     private:
-        FixedDelay delay;
+        bool hasFeedback = false;
+        float feedbackScale = 0;
+        FixedDelay feedbackDelay;
         BalancedConvolution convolution;
         float reverbMix = 1.0;
         float directMix = 0.0;
     };
 
     /// @brief Enable/display display of section plans
-    /// @param enable 
+    /// @param enable
     ///
     /// Enable debug tracing of section plans. (Used by ConvolutionReverbTest).
 

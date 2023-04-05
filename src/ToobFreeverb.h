@@ -51,7 +51,7 @@
 
 
 
-namespace TwoPlay {
+namespace toob {
 
 	class ToobFreeverb : public Lv2Plugin {
 	private:
@@ -107,4 +107,4 @@ namespace TwoPlay {
 
     };
 
-}// namespace TwoPlay
+}// namespace toob

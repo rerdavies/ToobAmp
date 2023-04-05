@@ -27,7 +27,7 @@
 #include "Filters/LowPassFilter.h"
 #include "Filters/ChebyshevDownsamplingFilter.h"
 
-namespace TwoPlay
+namespace toob
 {
     using namespace LsNumerics;
 

@@ -42,7 +42,7 @@
 #include <string.h>
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 using namespace LsNumerics;
 
 #ifndef _MSC_VER
@@ -51,7 +51,7 @@ using namespace LsNumerics;
 #include <csignal>
 #endif
 
-using namespace TwoPlay;
+using namespace toob;
 
 static const int MAX_UPDATES_PER_SECOND = 15;
 
@@ -158,7 +158,7 @@ void ToobTuner::Run(uint32_t n_samples)
 	// Start a sequence in the notify output port.
 	LV2_Atom_Forge_Frame out_frame;
 
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
+	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
 
 
 	HandleEvents(this->controlIn);
@@ -232,9 +232,8 @@ void ToobTuner::OnPitchReceived(float value) {
 
 
 
-void ToobTuner::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
+void ToobTuner::OnPatchGet(LV2_URID propertyUrid)
 {
-	UNUSED(object);
 	if (propertyUrid == uris.param_frequencyResponseVector)
 	{
 	}

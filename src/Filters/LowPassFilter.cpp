@@ -25,7 +25,7 @@
 
 #include "LowPassFilter.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 FilterCoefficients2 LowPassFilter::LOWPASS_PROTOTYPE = FilterCoefficients2(

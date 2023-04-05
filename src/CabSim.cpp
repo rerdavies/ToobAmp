@@ -40,7 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 #ifndef _MSC_VER
 #include <unistd.h>
@@ -175,7 +175,7 @@ void CabSim::Run(uint32_t n_samples)
 	// Start a sequence in the notify output port.
 	LV2_Atom_Forge_Frame out_frame;
 
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
+	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
 
 	this->HandleEvents(this->controlIn);
 
@@ -259,13 +259,13 @@ void CabSim::Run(uint32_t n_samples)
 			WriteFrequencyResponse();
 		}
 	}
-	this->peakDelay -= n_samples;
-	if (this->peakDelay < 0)
-	{
-		this->peakDelay = this->updateSampleDelay;
-		WriteUiState();
-		this->peakValueL = 0;
-	}
+	// this->peakDelay -= n_samples;
+	// if (this->peakDelay < 0)
+	// {
+	// 	this->peakDelay = this->updateSampleDelay;
+	// 	WriteUiState();
+	// 	this->peakValueL = 0;
+	// }
 	lv2_atom_forge_pop(&forge, &out_frame);
 }
 
@@ -283,28 +283,28 @@ float CabSim::CalculateFrequencyResponse(float f)
 
 void CabSim::WriteUiState()
 {
-	lv2_atom_forge_frame_time(&forge, frameTime);
+	// lv2_atom_forge_frame_time(&forge, frameTime);
 
-	LV2_Atom_Forge_Frame objectFrame;
+	// LV2_Atom_Forge_Frame objectFrame;
 
-	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+	// lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
 
-    lv2_atom_forge_key(&forge, uris.patch_property);		
-	lv2_atom_forge_urid(&forge, uris.param_uiState);
-	lv2_atom_forge_key(&forge, uris.patch_value);
+    // lv2_atom_forge_key(&forge, uris.patch__property);		
+	// lv2_atom_forge_urid(&forge, uris.param_uiState);
+	// lv2_atom_forge_key(&forge, uris.patch__value);
 
-	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+	// LV2_Atom_Forge_Frame vectorFrame;
+	// lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 
-	lv2_atom_forge_float(&forge,this->peakValueL);
+	// lv2_atom_forge_float(&forge,this->peakValueL);
 
-	lv2_atom_forge_pop(&forge, &vectorFrame);
+	// lv2_atom_forge_pop(&forge, &vectorFrame);
 
-	lv2_atom_forge_pop(&forge, &objectFrame);
+	// lv2_atom_forge_pop(&forge, &objectFrame);
 
 }
 
-LV2_Atom_Forge_Ref CabSim::WriteFrequencyResponse()
+void CabSim::WriteFrequencyResponse()
 {
 
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
@@ -320,15 +320,14 @@ LV2_Atom_Forge_Ref CabSim::WriteFrequencyResponse()
 	lv2_atom_forge_frame_time(&forge, frameTime);
 
 	LV2_Atom_Forge_Frame objectFrame;
-	LV2_Atom_Forge_Ref   set =
-		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
 
-    lv2_atom_forge_key(&forge, uris.patch_property);		
-	lv2_atom_forge_urid(&forge, uris.param_frequencyResponseVector);
-	lv2_atom_forge_key(&forge, uris.patch_value);
+	lv2_atom_forge_key(&forge, uris.patch__property);		
+	lv2_atom_forge_urid(&forge, uris.patchProp__frequencyResponseVector);
+	lv2_atom_forge_key(&forge, uris.patch__value);
 
 	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 
 	
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
@@ -339,7 +338,6 @@ LV2_Atom_Forge_Ref CabSim::WriteFrequencyResponse()
 	lv2_atom_forge_pop(&forge, &vectorFrame);
 
 	lv2_atom_forge_pop(&forge, &objectFrame);
-	return set;
 }
 
 
@@ -358,57 +356,15 @@ void CabSim::OnMidiCommand(int cmd0, int cmd1, int cmd2)
 	}
 }
 
-void CabSim::HandleEvent(LV2_Atom_Event* event)
+void CabSim::OnPatchGet(LV2_URID propertyUrid)
 {
-	const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&event->body;
-	if (lv2_atom_forge_is_object_type(&forge, event->body.type)) {
-		if (obj->body.otype == uris.patch_Set) {
+	if (propertyUrid == uris.frequencyRequest)
+	{
+		patchGet = true;
 
-			// const LV2_Atom* property = NULL;
-			// const LV2_Atom* value = NULL;
-
-			// lv2_atom_object_get(obj,
-			// 	uris.patch_property, &property,
-			// 	uris.patch_value, &value,
-			// 	0);
-			// if (!property) {
-			// 	LogError("Set message with no property\n");
-			// 	return;
-			// }
-			// else if (property->type != uris.atom_URID) {
-			// 	LogError("Set property is not a URID\n");
-			// 	return;
-			// }
-			// uint32_t key = ((const LV2_Atom_URID*)property)->body;
-			// if (key == uris.frequencyRequest) {
-			// 	const LV2_Atom_URID* accept = NULL;
-			// 	const LV2_Atom_Int* n_peaks = NULL;
-			// }
-		}
-		else if (obj->body.otype == uris.patch_Get)
-		{
-			const LV2_Atom_URID* accept = NULL;
-			const LV2_Atom_Float* value = NULL;
-
-			// clang-format off
-			lv2_atom_object_get_typed(
-				obj,
-				uris.patch_accept, &accept, uris.atom_URID,
-				uris.frequencyRequest, &value, uris.atom_float,
-				0);
-			if (accept && accept->body == uris.frequencyRequest) {
-				// Received a request for peaks, prepare for transmission
-				WriteFrequencyResponse();
-			}
-		}
 	}
 }
-void CabSim::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
-{
-	UNUSED(object);
-	if (propertyUrid == uris.param_frequencyResponseVector)
-	{
-		this->patchGet = true; // start a potentially delayed update
-	}
 
+void CabSim::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value) 
+{
 }

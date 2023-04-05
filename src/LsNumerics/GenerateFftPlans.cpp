@@ -32,7 +32,7 @@
 
 using namespace std;
 using namespace LsNumerics;
-using namespace TwoPlay;
+using namespace toob;
 
 static void PrintHelp()
 {

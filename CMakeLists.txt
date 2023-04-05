@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.9)
 
 
-set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "ON")
+set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "OFF")
 
 project(ToobAmp VERSION 0.1.7 DESCRIPTION "TooBAmp LV2 Plugin")
 

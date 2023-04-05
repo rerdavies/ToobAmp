@@ -23,7 +23,7 @@
 
 #include "GainSection.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 // Chebyshev HP I, 0.2db ripple, -3db at 1
 FilterCoefficients2 GainSection::HIPASS_PROTOTYPE = FilterCoefficients2(
@@ -114,14 +114,14 @@ void GainSection::WriteShapeCurve(
 
     LV2_Atom_Forge_Frame objectFrame;
     
-        lv2_atom_forge_object(forge, &objectFrame, 0, gainStageUris.patch_Set);
+        lv2_atom_forge_object(forge, &objectFrame, 0, gainStageUris.patch__Set);
 
-    lv2_atom_forge_key(forge, gainStageUris.patch_property);
+    lv2_atom_forge_key(forge, gainStageUris.patch__property);
     lv2_atom_forge_urid(forge, propertyUrid);
-    lv2_atom_forge_key(forge, gainStageUris.patch_value);
+    lv2_atom_forge_key(forge, gainStageUris.patch__value);
 
     LV2_Atom_Forge_Frame vectorFrame;
-    lv2_atom_forge_vector_head(forge, &vectorFrame, sizeof(float), gainStageUris.atom_float);
+    lv2_atom_forge_vector_head(forge, &vectorFrame, sizeof(float), gainStageUris.atom__float);
     for (int i = 0; i < NSAMPLES; ++i)
     {
         lv2_atom_forge_float(forge, data[i]);

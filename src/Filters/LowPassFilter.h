@@ -26,7 +26,7 @@
 #include "AudioFilter2.h"
 
 
-namespace TwoPlay {
+namespace toob {
     class  LowPassFilter: public AudioFilter2 {
     private:
         static FilterCoefficients2 LOWPASS_PROTOTYPE;

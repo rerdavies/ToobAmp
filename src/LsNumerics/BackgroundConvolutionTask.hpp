@@ -36,12 +36,14 @@
 #include <limits>
 #include <complex>
 #include <chrono>
+#include <atomic>
+#include "SectionExecutionTrace.hpp"
 
 namespace LsNumerics
 {
-    constexpr bool TRACE_DELAY_LINE_MESSAGES = false;
+    constexpr bool TRACE_BACKGROUND_CONVOLUTION_MESSAGES = false;
 
-    void TraceDelayLineMessage(const std::string &message);
+    void TraceBackgroundConvolutionMessage(const std::string &message);
 
     class DelayLineClosedException : public std::logic_error
     {
@@ -60,21 +62,31 @@ namespace LsNumerics
         }
     };
 
+
+    enum class SchedulerPolicy { 
+        Realtime, // schedule with sufficiently high SCHED_RR priority.
+        UnitTest  // set relative priority using nice (3) -- for when the running process may not have sufficient privileges to set a realtime thread priority.
+    };
+
     /// @brief Single-writer multiple-reader delay line
-    class SynchronizedDelayLine
+    class BackgroundConvolutionTask
     {
     public:
-        SynchronizedDelayLine() { SetSize(0, 0); }
-        SynchronizedDelayLine(
+        SchedulerPolicy schedulerPolicy = SchedulerPolicy::UnitTest;
+
+        BackgroundConvolutionTask() :BackgroundConvolutionTask(0,0,SchedulerPolicy::UnitTest){ }
+        BackgroundConvolutionTask(
             size_t size,
-            size_t audioBufferSize // maximum number of times push can be called before synch is called.
+            size_t audioBufferSize, // maximum number of times push can be called before synch is called.
+            SchedulerPolicy schedulerPolicy
+
         )
         {
-            SetSize(size, audioBufferSize);
+            SetSize(size, audioBufferSize,schedulerPolicy);
         }
-        ~SynchronizedDelayLine();
+        ~BackgroundConvolutionTask();
 
-        void SetSize(size_t size, size_t padEntries);
+        void SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy);
 
         void Write(float value)
         {
@@ -159,8 +171,14 @@ namespace LsNumerics
             this->readConditionVariable.notify_all();
         }
 
-    private:
+    #if EXECUTION_TRACE
+    public:
+        void SetExecutionTrace(SectionExecutionTrace*pTrace) { this->pTrace = pTrace; }
+        SectionExecutionTrace& GetExecutionTrace() { return *pTrace;}
+        SectionExecutionTrace *pTrace;
+    #endif
 
+    private:
         static constexpr size_t MAX_READ_BORROW = 16;
         bool IsReadReady_(size_t position, size_t count);
         bool closed = false;
@@ -204,6 +222,11 @@ namespace LsNumerics
         ~SynchronizedSingleReaderDelayLine()
         {
             Close();
+        }
+
+        uint32_t GetWriteCount()
+        {
+            return this->writeCount.load();
         }
         void SetWriteReadyCallback(IDelayLineCallback *callback)
         {
@@ -259,15 +282,17 @@ namespace LsNumerics
 
         bool CanWrite(size_t size)
         {
-            std::unique_lock lock{mutex};
-            if (closed)
             {
-                throw DelayLineClosedException();
+                std::unique_lock lock{mutex};
+                if (closed)
+                {
+                    throw DelayLineClosedException();
+                }
             }
-            bool result =  writeCount + size <= buffer.size();
+            bool result =  writeCount.load() + size <= buffer.size();
             if (!result)
             {
-                writeStalled = true;
+                writeStalled.store(true);
             }
             return result;
         }
@@ -291,16 +316,17 @@ namespace LsNumerics
         }
 
     private:
-        bool writeStalled = false;
+        std::atomic<bool> writeStalled = false;
+        std::atomic<uint32_t> writeCount = 0;
+
         std::size_t readWaits = 0;
         bool closed = false;
         std::mutex mutex;
-        std::size_t writeHead = 0;
-        std::size_t readHead = 0;
-        std::size_t writeCount = 0;
-        std::size_t readCount = 0;
-        std::size_t borrowedReads = 0;
-        std::size_t lowWaterMark = 0;
+        std::uint32_t writeHead = 0;
+        std::uint32_t readHead = 0;
+        std::uint32_t readCount = 0;
+        std::uint32_t borrowedReads = 0;
+        std::uint32_t lowWaterMark = 0;
 
         std::condition_variable readToWriteConditionVariable;
         std::condition_variable writeToReadConditionVariable;

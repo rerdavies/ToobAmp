@@ -27,7 +27,7 @@
 #include "../InputPort.h"
 
 
-namespace TwoPlay {
+namespace toob {
 
 	class AudioFilter3 {
 	protected:

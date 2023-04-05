@@ -61,7 +61,7 @@
 #endif
 #define WAVESHAPE_REQUEST_URI TOOB_URI "#waveShape"
 
-namespace TwoPlay {
+namespace toob {
 	class PowerStage2 : public Lv2Plugin {
 	private:
 		enum class PortId {
@@ -145,20 +145,20 @@ namespace TwoPlay {
 				pluginUri = plugin->MapURI(POWER_STAGE_2_URI);
 
 				atom_Path = plugin->MapURI(LV2_ATOM__Path);
-				atom_float = plugin->MapURI(LV2_ATOM__Float);
+				atom__float = plugin->MapURI(LV2_ATOM__Float);
 				atom_Int = plugin->MapURI(LV2_ATOM__Int);
 				atom_Sequence = plugin->MapURI(LV2_ATOM__Sequence);
-				atom_URID = plugin->MapURI(LV2_ATOM__URID);
+				atom__URID = plugin->MapURI(LV2_ATOM__URID);
 				atom_eventTransfer = plugin->MapURI(LV2_ATOM__eventTransfer);
-				patch_Get = plugin->MapURI(LV2_PATCH__Get);
-				patch_Set = plugin->MapURI(LV2_PATCH__Set);
+				patch__Get = plugin->MapURI(LV2_PATCH__Get);
+				patch__Set = plugin->MapURI(LV2_PATCH__Set);
 				patch_Put = plugin->MapURI(LV2_PATCH__Put);
 				patch_body = plugin->MapURI(LV2_PATCH__body);
 				patch_subject = plugin->MapURI(LV2_PATCH__subject);
-				patch_property = plugin->MapURI(LV2_PATCH__property);
+				patch__property = plugin->MapURI(LV2_PATCH__property);
 				patch_accept = plugin->MapURI(LV2_PATCH__accept);
-				patch_value = plugin->MapURI(LV2_PATCH__value);
-				unitsFrame = plugin->MapURI(LV2_UNITS__frame);
+				patch__value = plugin->MapURI(LV2_PATCH__value);
+				units__Frame = plugin->MapURI(LV2_UNITS__frame);
 				param_uiState = plugin->MapURI(POWER_STAGE_2_URI  "#uiState");
 				param_uiData = plugin->MapURI(POWER_STAGE_2_URI  "#data");
 				waveShapeRequest1 = plugin->MapURI(WAVESHAPE_REQUEST_URI "1");
@@ -167,22 +167,22 @@ namespace TwoPlay {
 			}
 			LV2_URID patch_accept;
 
-			LV2_URID unitsFrame;
+			LV2_URID units__Frame;
 			LV2_URID pluginUri;
-			LV2_URID atom_float;
+			LV2_URID atom__float;
 			LV2_URID atom_Int;
 			LV2_URID atom_Path;
 			LV2_URID atom_Sequence;
-			LV2_URID atom_URID;
+			LV2_URID atom__URID;
 			LV2_URID atom_eventTransfer;
 			LV2_URID midi_Event;
-			LV2_URID patch_Get;
-			LV2_URID patch_Set;
+			LV2_URID patch__Get;
+			LV2_URID patch__Set;
 			LV2_URID patch_Put;
 			LV2_URID patch_body;
 			LV2_URID patch_subject;
-			LV2_URID patch_property;
-			LV2_URID patch_value;
+			LV2_URID patch__property;
+			LV2_URID patch__value;
 			LV2_URID param_uiState;
 			LV2_URID param_uiData;
 			LV2_URID waveShapeRequest1;
@@ -197,7 +197,7 @@ namespace TwoPlay {
 	private:
 		LV2_Atom_Forge_Ref WriteWaveShape(LV2_URID propertyUrid,GainSection *pGain);
 
-		void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object);
+		void OnPatchGet(LV2_URID propertyUrid);
 
 		float CalculateFrequencyResponse(float f);
 

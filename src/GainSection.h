@@ -48,7 +48,7 @@
 #define RESPONSE_CURVE__instanceId_URI RESPONSE_CURVE_URI "#instanceId"
 #define RESPONSE_CURVE__data_URI RESPONSE_CURVE_URI "#data"
 
-namespace TwoPlay 
+namespace toob 
 {
 
     class GainSection {
@@ -68,20 +68,20 @@ namespace TwoPlay
                     responseCurve_instanceId = plugin->MapURI(RESPONSE_CURVE__instanceId_URI);
                     responseCurve_data = plugin->MapURI(RESPONSE_CURVE__data_URI);
                     atom_Float = plugin->MapURI(LV2_ATOM__Float);
-                    patch_Set = plugin->MapURI(LV2_PATCH__Set);
-                    atom_float = plugin->MapURI(LV2_ATOM__Float);
-                    patch_value = plugin->MapURI(LV2_PATCH__value);
-                    patch_property = plugin->MapURI(LV2_PATCH__property);
+                    patch__Set = plugin->MapURI(LV2_PATCH__Set);
+                    atom__float = plugin->MapURI(LV2_ATOM__Float);
+                    patch__value = plugin->MapURI(LV2_PATCH__value);
+                    patch__property = plugin->MapURI(LV2_PATCH__property);
                 }
 
                 LV2_URID ResponseCurve;
                 LV2_URID responseCurve_instanceId;
                 LV2_URID responseCurve_data;
                 LV2_URID atom_Float;
-                LV2_URID patch_Set;
-                LV2_URID atom_float;
-                LV2_URID patch_value;
-                LV2_URID patch_property;
+                LV2_URID patch__Set;
+                LV2_URID atom__float;
+                LV2_URID patch__value;
+                LV2_URID patch__property;
 
 
             };

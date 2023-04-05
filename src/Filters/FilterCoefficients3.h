@@ -24,7 +24,7 @@
 #pragma once
 
 
-namespace TwoPlay {
+namespace toob {
 	class FilterCoefficients3 {
 	public:
 		FilterCoefficients3()

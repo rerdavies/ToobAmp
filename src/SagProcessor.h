@@ -27,7 +27,7 @@
 #include <cmath>
 #include "LsNumerics/LsMath.hpp"
 
-namespace TwoPlay{
+namespace toob{
     using namespace LsNumerics;
 
     class SagProcessor {

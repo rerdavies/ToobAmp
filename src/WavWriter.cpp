@@ -22,12 +22,13 @@
 #include "WavWriter.hpp"
 #include <limits>
 #include <cmath>
+#include "AudioData.hpp"
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 #include "WavConstants.hpp"
-using namespace TwoPlay::private_use;
+using namespace toob::private_use;
 
 inline size_t WavWriter::tell()
 {
@@ -47,9 +48,7 @@ void WavWriter::Open(const std::string &fileName)
     {
         throw invalid_argument("Can't open file " + fileName);
     }
-    WriteHeader(0,0);
-    EnterChunk(0);
-    this->dataChunkStart = tell();
+    WriteHeader();
     this->isOpen = true;
 }
 
@@ -58,10 +57,10 @@ void WavWriter::Close()
     if (this->isOpen)
     {
         this->isOpen = false;
-        size_t dataSize = tell()-dataChunkStart;
-        seek(0);
-        WriteHeader(dataSize,channels);
-        EnterChunk(dataSize);
+        ExitChunk();
+        ExitRiff();
+        f.seekp(this->waveFormatStart);
+        WriteWavFormat(this->channels);
         f.close();        
     }
 }
@@ -105,15 +104,52 @@ inline void WavWriter::WriteSample(float value)
     f.write((const char*)&value,sizeof(value));
 }
 
-void WavWriter::Write(uint32_t sampleRate, const std::vector<float> &data)
+void WavWriter::Write(uint32_t sampleRate, const std::vector<float> &data, bool normalize)
 {
     SetSampleRate(sampleRate);
-    float max = MaxValue(data);
+    float scale = 1.0;
+    this->channels = 1;
+    if (normalize)
+    {
+        float max = MaxValue(data);
+        scale = 1/(2*max);
+    }
     const float *channelData[1];
     channelData[0] = &(data[0]);
 
-    Write(data.size(),1, channelData, 1 / (max * 4));
+    Write(data.size(),1, channelData, scale);
 }
+
+void WavWriter::Write(const AudioData &audioData, bool normalize)
+{
+    SetSampleRate(audioData.getSampleRate());
+    this->channels = audioData.getChannelCount();
+    float scale = 1.0f;
+    if (normalize)
+    {
+        float max = 0;
+        for (size_t c = 0; c < audioData.getChannelCount(); ++c)
+        {
+            float t = MaxValue(audioData.getChannel(c));
+            if (t > max)
+            {
+                max = t;
+            }
+        }
+        scale = 1/(max*2);
+    } 
+
+    std::vector<const float*> channelPointers;
+    channelPointers.reserve(audioData.getChannelCount());
+    for (size_t c = 0; c < audioData.getChannelCount(); ++c)
+    {
+        auto&channel = audioData.getChannel(c);
+        channelPointers.push_back(&(channel[0]));
+    }
+
+    Write(audioData.getSize(),audioData.getChannelCount(), &(channelPointers[0]), scale);
+}
+
 void WavWriter::Write(size_t count, size_t channels,const float **channelData, float scale)
 {
     if (this->channels == 0)
@@ -122,7 +158,7 @@ void WavWriter::Write(size_t count, size_t channels,const float **channelData, f
     } else {
         if (this->channels != channels)
         {   
-            throw  invalid_argument("Invalid number of channels.");
+            throw  invalid_argument("Number of channels changed.");
         }
     }
     for (size_t i = 0; i < count; ++i)
@@ -135,29 +171,86 @@ void WavWriter::Write(size_t count, size_t channels,const float **channelData, f
 }
 
 
-void WavWriter::WriteHeader(size_t dataSize,size_t channels)
+void WavWriter::EnterRiff(private_use::ChunkIds chunkId)
 {
     Write((uint32_t)ChunkIds::Riff);
-    Write((uint32_t)(dataSize + 8 + sizeof(WaveFormat) + 8));
-    Write((uint32_t)ChunkIds::WaveRiff);
+    Write((uint32_t)(0));
+    Write((uint32_t)chunkId);
+    this->riffOffset = f.tellp();
+}
+void WavWriter::ExitRiff()
+{
+    uint32_t riffSize = f.tellp()-this->riffOffset;
+    f.seekp(riffOffset-2*sizeof(uint32_t));
+    Write(riffSize);
+}
 
-    WaveFormat wf;
-    wf.wFormatTag = (uint16_t)WavFormat::IEEEFloatingPoint;
+
+void WavWriter::WriteHeader()
+{
+    EnterRiff(ChunkIds::WaveRiff);
+
+    EnterChunk(ChunkIds::Format);
+    this->waveFormatStart = this->f.tellp();
+
+    WriteWavFormat(0);
+    ExitChunk();
+    EnterChunk(ChunkIds::Data);
+}
+
+void WavWriter::WriteWavFormat(size_t channels)
+{
+
+    WaveFormatExtensible wf;
+    wf.wFormatTag = (uint16_t)WavFormat::Extensible;
     wf.nSamplesPerSec = sampleRate;
     wf.nChannels = channels;
     wf.wBitsPerSample = sizeof(float)*8;
     wf.nBlockAlign = sizeof(float)*channels;
     wf.nAvgBytesPerSec = wf.nBlockAlign*sampleRate;
+    wf.wReserved = 0;
+    wf.dwChannelMask = 0;
+    wf.SubFormat = WAVE_FORMAT_IEEE_FLOAT;
 
+    // have to write field-by-field becase Windows version densely packed (DWORD dwChannelMask is not 8-bit-aligned)
+    Write(wf.wFormatTag);
+    Write(wf.nChannels);
+    Write(wf.nSamplesPerSec);
+    Write(wf.nAvgBytesPerSec);
+    Write(wf.nBlockAlign);
+    Write(wf.wBitsPerSample);
+    Write(wf.cbSize);
+    Write(wf.wReserved);
+    Write(wf.dwChannelMask);
 
-    Write((uint32_t)ChunkIds::Format);
-    Write((uint32_t)sizeof(WaveFormat));
-
-    f.write((char*)&wf,sizeof(wf));
+    Write(wf.SubFormat.data0);
+    Write(wf.SubFormat.data1);
+    Write(wf.SubFormat.data2);
+    Write((uint8_t)(wf.SubFormat.data3 >> 8));
+    Write((uint8_t)(wf.SubFormat.data3));
+    for (size_t i = 0; i < sizeof(wf.SubFormat.data4); ++i)
+    {
+        Write(wf.SubFormat.data4[i]);
+    }
 }
-void WavWriter::EnterChunk(size_t dataSize)
+void WavWriter::EnterChunk(private_use::ChunkIds chunkId)
 {
-    Write((uint32_t)ChunkIds::Data);
-    Write((uint32_t)dataSize);
+    Write((uint32_t)chunkId);
+    Write((uint32_t)0);
+    this->chunkOffset = f.tellp();
 }
+
+void WavWriter::ExitChunk()
+{
+    size_t size = f.tellp()-chunkOffset;
+    if (size & 1)
+    {
+        Write((uint8_t)0);
+    }
+    auto currentPosition = f.tellp();
+    f.seekp(chunkOffset-(std::streampos)(sizeof(uint32_t)));
+    Write((uint32_t)size);
+    f.seekp(currentPosition);
+}
+
 

@@ -22,7 +22,7 @@
  */
 #include "ToobFreeverb.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 ToobFreeverb::ToobFreeverb(
     double rate,

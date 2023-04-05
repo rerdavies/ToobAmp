@@ -25,7 +25,7 @@
 #include <mutex>
 
 
-using namespace TwoPlay;
+using namespace toob;
 
 static LV2_Worker_Status scheduleWorkFn(
 	LV2_Worker_Schedule_Handle handle,

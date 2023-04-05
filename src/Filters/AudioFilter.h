@@ -29,7 +29,7 @@
 #include "Polynomial.h"
 
 
-namespace TwoPlay {
+namespace toob {
 
 	class AudioFilter {
 	protected:
@@ -40,7 +40,7 @@ namespace TwoPlay {
 		double T = 1;
 		float referenceFrequency;
 		size_t length;
-		std::vector<TwoPlay::Polynomial> bilinearTransformCoefficients;
+		std::vector<toob::Polynomial> bilinearTransformCoefficients;
 		double *x;
 		double *y;
 		double *xR;

@@ -23,7 +23,7 @@
 #pragma once
 #include <cmath>
 
-namespace TwoPlay {
+namespace toob {
     constexpr float _MIN_DB = -200;
     constexpr float MIN_AMPLITUDE = 1.0e-10f;
 

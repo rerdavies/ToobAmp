@@ -24,7 +24,7 @@
 #include <cmath>
 #include <exception>
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 static double a2db(double amplitude)

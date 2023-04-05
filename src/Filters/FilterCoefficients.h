@@ -25,7 +25,7 @@
 #include "../std.h"
 #include <stddef.h>
 
-namespace TwoPlay {
+namespace toob {
 	class FilterCoefficients {
 	public:
 		FilterCoefficients()

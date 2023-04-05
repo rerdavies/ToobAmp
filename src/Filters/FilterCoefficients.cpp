@@ -23,7 +23,7 @@
 
 #include "FilterCoefficients.h"
 
-using namespace TwoPlay;
+using namespace toob;
 
 void FilterCoefficients::Copy(const FilterCoefficients&other)
 {

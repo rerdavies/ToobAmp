@@ -50,7 +50,7 @@
 
 
 
-namespace TwoPlay {
+namespace toob {
 
 	class ToobDelay : public Lv2Plugin {
 	private:
@@ -120,4 +120,4 @@ namespace TwoPlay {
 
     };
 
-}// namespace TwoPlay
+}// namespace toob

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2022 Robin Davies
+ Copyright (c) 2023 Robin Davies
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -18,22 +18,26 @@
  IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include "WavConstants.hpp"
 
-#pragma once
-#include <cstdint>
+using namespace toob;
 
-namespace toob {
-    struct WavGuid {
-        WavGuid();
-        WavGuid(const char*strGuid);
+ChannelMask toob::GetChannel(size_t channel, ChannelMask channelMask)
+{
+    uint32_t mask = (uint32_t)channelMask;
+    uint32_t result = 1;
 
-        bool operator == (const WavGuid& other);
-
-        uint32_t data0;
-        uint16_t data1;
-        uint16_t data2;
-        uint16_t data3;
-        uint8_t data4[6];
-
-    };
+    while (result <= (uint32_t)ChannelMask::SPEAKER_TOP_BACK_RIGHT)
+    {
+        if ((mask & result) != 0)
+        {
+            if (channel == 0)
+            {
+                return (ChannelMask)result;
+            }
+            --channel;
+        }
+        result <<= 1;
+    }
+    throw std::logic_error("Channel mask does not match number of channels.");
 }

@@ -25,7 +25,7 @@
 #include "Lv2Exception.h"
 
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 HostedLv2Plugin::~HostedLv2Plugin()

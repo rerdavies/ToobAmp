@@ -46,7 +46,7 @@
 #endif
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 #include "NeuralModel.h"
 
@@ -62,7 +62,7 @@ const char* ToobML::URI= TOOB_ML_URI;
 #include "RTNeural/RTNeural.h"
 
 
-namespace TwoPlay {
+namespace toob {
 
 
 class MLException: public std::exception {
@@ -422,14 +422,14 @@ LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 
 	LV2_Atom_Forge_Frame objectFrame;
 	LV2_Atom_Forge_Ref   set =
-		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
 
-    lv2_atom_forge_key(&forge, uris.patch_property);		
+    lv2_atom_forge_key(&forge, uris.patch__property);		
 	lv2_atom_forge_urid(&forge, uris.param_frequencyResponseVector);
-	lv2_atom_forge_key(&forge, uris.patch_value);
+	lv2_atom_forge_key(&forge, uris.patch__value);
 
 	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
 		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
@@ -452,9 +452,8 @@ void ToobML::OnMidiCommand(int , int , int )
 {
 }
 
-void ToobML::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
+void ToobML::OnPatchGet(LV2_URID propertyUrid)
 {
-	UNUSED(object);
 	if (propertyUrid == uris.param_frequencyResponseVector)
 	{
         this->patchGet = true; // 
@@ -561,7 +560,7 @@ void ToobML::Run(uint32_t n_samples)
 	// Start a sequence in the notify output port.
 	LV2_Atom_Forge_Frame out_frame;
 
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
+	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
 
 
 	HandleEvents(this->controlIn);

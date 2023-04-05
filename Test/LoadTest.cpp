@@ -30,7 +30,7 @@
 #include "HostedLv2Plugin.h"
 #include <memory>
 
-using namespace TwoPlay;
+using namespace toob;
 
 void LoadTest::Execute()
 {

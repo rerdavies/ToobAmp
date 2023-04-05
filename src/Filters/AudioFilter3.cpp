@@ -33,7 +33,7 @@
 
 using namespace std;
 
-using namespace TwoPlay;
+using namespace toob;
 
 void AudioFilter3::Reset()
 {

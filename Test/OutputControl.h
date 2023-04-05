@@ -23,7 +23,7 @@
 
 #pragma once
 
-namespace TwoPlay {
+namespace toob {
 	class OutputControl {
 		friend class HostedLv2Plugin;
 	private:

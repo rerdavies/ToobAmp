@@ -26,7 +26,7 @@
 #include <fstream>
 #include <filesystem>
 
-using namespace TwoPlay;
+using namespace toob;
 using namespace std;
 
 int main(int argc, char**argv)

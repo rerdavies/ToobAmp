@@ -26,7 +26,7 @@
 #include "std.h"
 #include "LsNumerics/LsMath.hpp"
 
-namespace TwoPlay {
+namespace toob {
     class DbDezipper {
     private:
         float targetDb = -96;

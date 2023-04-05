@@ -27,7 +27,7 @@
 #include "../InputPort.h"
 
 
-namespace TwoPlay {
+namespace toob {
 	using namespace ::LsNumerics;
 
 	class AudioFilter2 {

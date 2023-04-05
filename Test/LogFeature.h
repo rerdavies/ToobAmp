@@ -39,7 +39,7 @@
 #include <mutex>
 
 
-namespace TwoPlay {
+namespace toob {
 	class LogFeature {
 
 	private:

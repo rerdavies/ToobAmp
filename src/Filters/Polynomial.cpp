@@ -24,7 +24,7 @@
 #include "Polynomial.h"
 #include <cmath>
 
-using namespace TwoPlay;
+using namespace toob;
 
 const Polynomial Polynomial::ONE(1.0);
 const Polynomial Polynomial::ZERO;

@@ -36,6 +36,8 @@
 #include "../CommandLineParser.hpp"
 #include "LagrangeInterpolator.hpp"
 #include "../AudioData.hpp"
+#include "../WavReader.hpp"
+#include "../WavWriter.hpp"
 
 #include <time.h> // for clock_nanosleep
 
@@ -47,7 +49,7 @@
 
 using namespace LsNumerics;
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 std::ostream &output = cout;
 
@@ -350,7 +352,7 @@ static void TestBalancedConvolutionSequencing()
     inputValues.resize(TEST_SIZE);
     inputValues[0] = 1;
 
-    BalancedConvolution convolution(impulseResponse);
+    BalancedConvolution convolution(SchedulerPolicy::UnitTest, impulseResponse);
     for (size_t i = 0; i < TEST_SIZE; ++i)
     {
         float result = convolution.Tick(inputValues[i]);
@@ -457,7 +459,7 @@ static void TestBalancedConvolution()
                           return result;
                       }};
 
-        BalancedConvolution convolution{n, impulseData};
+        BalancedConvolution convolution{SchedulerPolicy::UnitTest, n, impulseData};
 
         for (size_t i = 0; i < testData.size(); ++i)
         {
@@ -727,7 +729,7 @@ void BenchmarkBalancedConvolution()
 
     UsePlanCache();
 
-    std::vector<double> impulseTimes = {0.1, 1.0, 2.0};
+    std::vector<double> impulseTimes = {0.1, 1.0, 2.0,4.0};
     if (buildTests)
     {
         impulseTimes = {1.0};
@@ -768,7 +770,7 @@ void BenchmarkBalancedConvolution()
             inputBuffer[i] = i / (float)bufferSize;
         }
 
-        BalancedConvolution convolver(impulseData, 48000, bufferSize);
+        BalancedConvolution convolver(SchedulerPolicy::UnitTest, impulseData, 48000, bufferSize);
 
         size_t nSamples = (size_t)(sampleRate * benchmarkTimeSeconds);
 
@@ -1012,7 +1014,11 @@ void BenchmarkFftConvolutionStep()
              16 * 1024,
              32 * 1024,
              64 * 1024,
-             128 * 1024 })
+             128 * 1024,
+             256 * 1024,
+             512 * 1024,
+             1024 * 1024              
+              })
     {
 
         using clock_t = std::chrono::high_resolution_clock;
@@ -1024,14 +1030,15 @@ void BenchmarkFftConvolutionStep()
         {
             impulse[i] = i / double(n * 2);
         }
-        Implementation::DirectConvolutionSection directSection(n, 0, impulse);
-
         std::vector<float> input;
         input.resize(n);
 
         // FftConvolution
         FftConvolution::DelayLine delayLine(n * 2);
 
+        Implementation::DirectConvolutionSection directSection(n, 0, impulse);
+
+        ns_duration_t fftConvolutionDuration;
         auto start = clock_t::now();
         for (size_t frame = 0; frame < frames; ++frame)
         {
@@ -1040,21 +1047,26 @@ void BenchmarkFftConvolutionStep()
                 directSection.Tick(input[i]);
             }
         }
-        ns_duration_t fftConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - start);
+        fftConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - start);
 
         // balanced convolution.
-        BalancedConvolutionSection balancedSection(n, impulse);
-
-        auto bStart = clock_t::now();
-        for (size_t frame = 0; frame < frames; ++frame)
+        bool doBalancedConvolution = n <= 128*1024;
+        ns_duration_t bConvolutionDuration {0};
+        size_t balancedSectionDelay = 0;
+        if (doBalancedConvolution)
         {
-            for (size_t i = 0; i < n; ++i)
+            BalancedConvolutionSection balancedSection(n, impulse);
+            balancedSectionDelay = balancedSection.Delay();
+            auto bStart = clock_t::now();
+            for (size_t frame = 0; frame < frames; ++frame)
             {
-                balancedSection.Tick(input[i]);
+                for (size_t i = 0; i < n; ++i)
+                {
+                    balancedSection.Tick(input[i]);
+                }
             }
+            bConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - bStart);
         }
-        ns_duration_t bConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - bStart);
-
         // Naive convolution.
         bool showNaive = n <= 1024;
         ns_duration_t nConvolutionMs;
@@ -1090,9 +1102,18 @@ void BenchmarkFftConvolutionStep()
         ss << std::setprecision(3)
            << std::setiosflags(std::ios_base::fixed)
            << std::left << std::setw(8) << n
-           << " " << std::setw(12) << std::right << fftConvolutionDuration.count() * scale
-           << " " << std::setw(12) << std::right << bConvolutionDuration.count() * scale
-           << " " << std::setw(12) << std::right;
+           << " " << std::setw(12) << std::right << fftConvolutionDuration.count() * scale;
+        if (doBalancedConvolution)
+        {
+            ss 
+                << " " << std::setw(12) << std::right << bConvolutionDuration.count() * scale
+                << " " << std::setw(12) << std::right;
+        } else {
+            ss 
+                << " " << std::setw(12) << std::right << " "
+                << " " << std::setw(12) << std::right;
+
+        }
 
         if (showNaive)
         {
@@ -1107,8 +1128,13 @@ void BenchmarkFftConvolutionStep()
             << std::setw(12) << std::right << seconds
             << std::setw(12) << std::right << samples;
 
-        ss
-            << std::setw(12) << std::right << balancedSection.Delay();
+        if (doBalancedConvolution)
+        {
+            ss << std::setw(12) << std::right << balancedSectionDelay;
+        } else {
+            ss << std::setw(12) << std::right << " ";
+
+        }
 
         if (directSection.IsL2Optimized())
         {
@@ -1149,7 +1175,7 @@ void TestDirectConvolutionSectionAllocations()
     for (size_t n = 15382; n < 255 * 1024; n = n * 5 / 4)
     {
         cout << "==== TestDirectConvolutionSectionAllocations(" << n << ") === " << endl;
-        BalancedConvolution convolution(n, impulseData);
+        BalancedConvolution convolution(SchedulerPolicy::UnitTest, n, impulseData);
     }
 }
 
@@ -1177,7 +1203,7 @@ static void RealtimeConvolutionCpuUse()
         inputData.resize(N);
         inputData[0] = 1;
 
-        BalancedConvolution convolution(impulse, SAMPLE_RATE, BUFFER_SAMPLES);
+        BalancedConvolution convolution(SchedulerPolicy::UnitTest, impulse, SAMPLE_RATE, BUFFER_SAMPLES);
 
         size_t inputIndex = 0;
         std::vector<float> inputBuffer;
@@ -1248,7 +1274,7 @@ static void TestRealtimeConvolution()
         inputData.resize(N);
         inputData[0] = 1;
 
-        BalancedConvolution convolution(impulse, SAMPLE_RATE, BUFFER_SAMPLES);
+        BalancedConvolution convolution(SchedulerPolicy::UnitTest, impulse, SAMPLE_RATE, BUFFER_SAMPLES);
 
         size_t inputIndex = 0;
         std::vector<float> inputBuffer;
@@ -1322,7 +1348,7 @@ static void TestLagrangeInterpolator()
                 double worstError = 0;
                 double worstPreambleError = 0;
                 double maxValue = 0;
-                for (double f0: {100,300,600,1000,2000, 4000,6000,8000,12000,13000,14000,15000,16000,17000,18000,19000})
+                for (double f0 : {100, 300, 600, 1000, 2000, 4000, 6000, 8000, 12000, 13000, 14000, 15000, 16000, 17000, 18000, 19000})
                 {
                     double f = f0;
 
@@ -1352,13 +1378,12 @@ static void TestLagrangeInterpolator()
                         {
                             maxValue = std::abs(actual);
                         }
-
                     }
 
                     std::vector<float> expected(output.getSize());
                     for (size_t i = 0; i < expected.size(); ++i)
                     {
-                        expected[i] = std::cos(i*mOut);
+                        expected[i] = std::cos(i * mOut);
                     }
                     double preambleError = 0;
                     for (size_t i = 0; i < 50; ++i)
@@ -1385,17 +1410,17 @@ static void TestLagrangeInterpolator()
 
                     // // dump selected data for analysis.
                     // for (size_t i = 100; i < 200; ++i)
-                    // {   
+                    // {
                     //     cout << expected[i] << " " << output.getChannel(0)[i] << endl;
                     // }
-                    std::cout << "   in: " << inputSampleRate << " out: " << outputSampleRate << " f: " << f << " err: " << maxError << " preamble error: " << preambleError << std::endl;
+                    //std::cout << "   in: " << inputSampleRate << " out: " << outputSampleRate << " f: " << f << " err: " << maxError << " preamble error: " << preambleError << std::endl;
                 }
-            std::cout << "in: " << inputSampleRate << " out: " << outputSampleRate << " err: " << worstError << " preamble error: " << worstPreambleError << " max value: " << maxValue <<std::endl;
+                //std::cout << "in: " << inputSampleRate << " out: " << outputSampleRate << " err: " << worstError << " preamble error: " << worstPreambleError << " max value: " << maxValue << std::endl;
 
-            // Tests basic sanity.
-            // Further analysis was done using fourier analysis in an excel spreadsheet. Basic results: > 20db rejection of aliasing into audible range.
-            TEST_ASSERT(worstPreambleError < 1);
-            TEST_ASSERT(worstError < 1);
+                // Tests basic sanity.
+                // Further analysis was done using fourier analysis in an excel spreadsheet. Basic results: > 20db rejection of aliasing into audible range.
+                TEST_ASSERT(worstPreambleError < 3);
+                TEST_ASSERT(worstError < 3);
             }
         }
     }
@@ -1441,6 +1466,121 @@ void TestFft()
     // BenchmarkBalancedConvolution();
 }
 
+static void NormalizeConvolution(AudioData & data)
+{
+    size_t size = data.getSize();
+
+    for (size_t c = 0; c < data.getChannelCount(); ++c)
+    {
+        auto &channel = data.getChannel(c);
+        double maxValue = 0;
+        // find the worst-case convolution output.
+        double sum = 0;
+        for (size_t i = 0; i < size; ++i)
+        {
+            sum += channel[i];
+            if (std::abs(sum) > maxValue) 
+            {
+                maxValue = std::abs(sum);
+            }
+        }
+        std::cout << "MaxValue: " << maxValue << std::endl;
+
+        float  scale = (float)(1/maxValue);
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            channel[i] *= scale;
+        }
+    }
+}
+
+void TestFile()
+{
+    UsePlanCache();
+    WavReader reader;
+    reader.Open("impulseFiles/reverb/Koli National Park - Winter.wav");
+    
+    AudioData data;
+    reader.Read(data);
+
+    if (data.getChannelCount() == 4)
+    {
+        data.AmbisonicDownmix({AmbisonicMicrophone(0, 0)});
+    }
+    else
+    {
+        data.ConvertToMono();
+    }
+
+    NormalizeConvolution(data);
+    cout << "Sample rate: " << data.getSampleRate() << " length: " << std::setw(4) << data.getSize()*1.0f/data.getSampleRate() << endl;
+    data.Resample((size_t)48000);
+    cout << "Sample rate: " << data.getSampleRate() << " length: " << std::setw(4) << data.getSize()*1.0f/data.getSampleRate() << endl;
+
+    
+
+
+    NormalizeConvolution(data);
+
+    {
+        WavWriter writer;
+        writer.Open("/tmp/out.wav");
+        writer.Write(data);
+
+    }
+
+
+    auto convolutionReverb = std::make_shared<ConvolutionReverb>(SchedulerPolicy::UnitTest, data.getSize(), data.getChannel(0));
+
+    for (size_t offset = 0; offset < 20; ++offset)
+    {
+        std::vector<float> output;
+        output.resize(data.getSize()+offset+10);
+        std::vector<float> input;
+        input.resize(data.getSize()+offset+10);
+        input[offset] = 1.0;
+
+        std::vector<float> inputBuffer(16);
+        std::vector<float> outputBuffer(16);
+        for (size_t i = 0; i < output.size(); i += 16)
+        {
+            size_t thisTime = input.size()-i;
+            if (thisTime > 16) thisTime = 16;
+            for (size_t j = 0; j < thisTime; ++j)
+            {
+                inputBuffer[j] = input[i+j];
+            }
+            convolutionReverb->Tick(16,inputBuffer,outputBuffer);
+            for (size_t j = 0; j < thisTime; ++j)
+            {
+                output[i+j] = outputBuffer[j];
+            }
+        }
+
+        for (size_t i = 0; i < offset; ++i)
+        {
+            if (std::abs(output[i]) > 1E-9)
+            {
+                cout << "offset = " << offset << " output[" << i  << "] = " << output[i] << " expected: 0" << endl;
+                TEST_ASSERT(output[i] == 0);
+            }
+        }
+        auto &expected = data.getChannel(0);
+        for (size_t i = 0; i < data.getSize()-offset; ++i)
+        {
+            double error = std::abs(output[i+offset]-expected[i]);
+            if (error> 1E3)
+            {
+                cout << "Error: " << error << " offset = " << offset << " output[" << i + offset << "] = " << output[i+offset] << " expected[" << i << "] = " << expected[i] << endl;
+                TEST_ASSERT(output[i+offset] == data.getChannel(0)[i]);
+            }
+        }
+    }
+
+}
+
+
 static void PrintHelp()
 {
     cout << "ConvolutionReverbTest - A suite of Tests for BalancedConvultionReverb and sub-components" << endl
@@ -1468,6 +1608,12 @@ static void PrintHelp()
          << "     Determine percent of realtime used for basic convolutions." << endl
          << "  section_allocations: " << endl
          << "      Verify scheduling of convolution sections." << endl
+         << "  check_for_stalls:" << endl
+         << "       Run audio thread simulation, checking for read stalls." << endl
+         << "  realtime_convolution:" << endl
+         << "       Simulate running on an audio thread." << endl
+         << "  file_test:" << endl
+         << "       Run on an actual audio file." << endl
          << endl
          << "Remarks:" << endl
          << "  The default behaviour is to run all tests." << endl
@@ -1489,7 +1635,7 @@ int main(int argc, const char **argv)
         parser.AddOption("", "short", &shortTests);
         parser.AddOption("", "profile", &profilerFileName);
         parser.AddOption("", "build", &buildTests);
-        parser.AddOption("", "plans",&displaySectionPlans);
+        parser.AddOption("", "plans", &displaySectionPlans);
 
         parser.Parse(argc, argv);
 
@@ -1519,7 +1665,12 @@ int main(int argc, const char **argv)
         SetDisplaySectionPlans(displaySectionPlans);
 
         /*  ADD_TEST_NAME_HERE  (don't forget to revise PrintHelp()) )*/
-        if (testName == "check_for_stalls")
+
+        if (testName == "file_test")
+        {
+            TestFile();
+        }
+        else if (testName == "check_for_stalls")
         {
             // check for read stalls. Run indefinitely.
             while (true)

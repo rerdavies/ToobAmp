@@ -63,6 +63,10 @@ namespace LsNumerics
                 {
                     workingBuffer.resize(size);
                 }
+                void SetSize(size_t size)
+                {
+                    workingBuffer.resize(size);
+                }
                 std::vector<complex_t> &GetWorkingBuffer() { return workingBuffer; }
 
             private:
@@ -184,21 +188,39 @@ namespace LsNumerics
         using Direction = Implementation::StagedFftPlan::Direction;
 
         StagedFft(size_t size)
-            : plan(Implementation::StagedFftPlan::GetCachedInstance(size)),
+            : plan(&Implementation::StagedFftPlan::GetCachedInstance(size)),
               instanceData(size)
 
         {
         }
+        StagedFft() 
+        :plan(nullptr),
+         instanceData(0)
+        {
+
+        }
+        void SetSize(size_t size)
+        {
+            plan = &Implementation::StagedFftPlan::GetCachedInstance(size);
+            instanceData.SetSize(size);
+        }        
         size_t GetSize() const {
-            return plan.GetSize();
+            if (!plan) return 0;
+            return plan->GetSize();
         }
         void Compute(const std::vector<float> &input, std::vector<complex_t> &output, Direction direction)
         {
-            plan.Compute(instanceData, input, output, direction);
+            if (plan) // zero-length Compute does nothing.
+            {
+                plan->Compute(instanceData, input, output, direction);
+            }
         }
         void Compute(const std::vector<complex_t> &input, std::vector<complex_t> &output, Direction direction)
         {
-            plan.Compute(instanceData, input, output, direction);
+            if (plan)
+            {
+                plan->Compute(instanceData, input, output, direction);
+            }
         }
 
         void Forward(const std::vector<complex_t> &input, std::vector<complex_t> &output)
@@ -210,12 +232,12 @@ namespace LsNumerics
             Compute(input,output,Direction::Backward);
         }
 
-        bool IsL1Optimized() const { return plan.IsL1Optimized(); }
-        bool IsL2Optimized() const { return plan.IsL2Optimized(); }
+        bool IsL1Optimized() const { return plan->IsL1Optimized(); }
+        bool IsL2Optimized() const { return plan->IsL2Optimized(); }
 
     private:
         using InstanceData = Implementation::StagedFftPlan::InstanceData;
-        Implementation::StagedFftPlan &plan;
+        Implementation::StagedFftPlan *plan;
         InstanceData instanceData;
     };
 

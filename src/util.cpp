@@ -22,14 +22,17 @@
  * SOFTWARE.
  */
 
-#pragma once 
+#include "util.hpp"
+using namespace toob;
 
-#include <string>
-namespace toob {
-    inline bool endsWith(const std::string& str, const std::string& suffix)
+void toob::SetThreadName(const std::string &name)
+{
+    std::string threadName = "crvb_" + name;
+    if (threadName.length () > 15)
     {
-        return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+        threadName = threadName.substr(0,15);
     }
-
-    void SetThreadName(const std::string&name);
+    pthread_t pid = pthread_self();
+    pthread_setname_np(pid,threadName.c_str());
 }
+

@@ -31,7 +31,7 @@
 #include "Lv2Exception.h"
 
 
-namespace TwoPlay {
+namespace toob {
 
 	enum class PortType {
 		InputAudio,

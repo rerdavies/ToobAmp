@@ -54,9 +54,8 @@ using namespace LsNumerics;
 #define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
 
 #if DISPLAY_SECTION_ALLOCATIONS
-static bool gDisplaySectionPlans = false;
+static bool gDisplaySectionPlans = true;
 #endif
-
 
 void LsNumerics::SetDisplaySectionPlans(bool value)
 {
@@ -64,7 +63,6 @@ void LsNumerics::SetDisplaySectionPlans(bool value)
     gDisplaySectionPlans = value;
 #endif
 }
-
 
 static std::size_t Log2(std::size_t value)
 {
@@ -104,7 +102,10 @@ constexpr int INVALID_THREAD_ID = -1; // DirectionSections with this size are no
 std::mutex BalancedConvolution::globalMutex;
 
 static std::vector<ExecutionEntry> executionTimePerSampleNs{
-    // n	direct
+    // Impossible, or directly executed.
+    {0, 0, INVALID_THREAD_ID},
+    {1, 0, INVALID_THREAD_ID},
+    {2, 0, INVALID_THREAD_ID},
     {4, 82.402, INVALID_THREAD_ID},
     {8, 75.522, INVALID_THREAD_ID},
     {16, 78.877, INVALID_THREAD_ID},
@@ -118,14 +119,19 @@ static std::vector<ExecutionEntry> executionTimePerSampleNs{
     {1024, 164.186, 2},
     // executed on thread 2
     {2048, 192.041, 2},
-    {4096, 206.026, 2},
-    {8192, 241.912, 3},
-    {16384, 285.395, 3},
-    {32768, 448.843, 4},
-    {65536, 575.380, 4},
-    {131072, 668.226, 5},
+    {4096, 206.026, 3},
+    {8192, 241.912, 4},
+
+    {16384, 285.395, 5},
+    {32768, 448.843, 6},
+    {65536, 575.380, 7},
+    {131072, 668.226, 8},
+    {262144, 773.148, 9},
+    {524288, 834.376, 10},
+    {1048576, 870.363, 11},
 };
-constexpr int MAX_THREAD_ID = 6;
+constexpr int MAX_THREAD_ID = 11;
+
 constexpr size_t INVALID_EXECUTION_TIME = std::numeric_limits<size_t>::max();
 
 static int GetDirectSectionThreadId(size_t size)
@@ -165,7 +171,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
         }
     }
 
-    directSectionLeadTimes.resize(executionTimePerSampleNs.size() + 3);
+    directSectionLeadTimes.resize(executionTimePerSampleNs.size());
     for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
     {
         directSectionLeadTimes[i] = INVALID_EXECUTION_TIME;
@@ -1804,7 +1810,8 @@ size_t BalancedConvolutionSection::GetSectionDelay(size_t size)
 static size_t convolutionSampleRate = (size_t)-1;
 static size_t convolutionMaxAudioBufferSize = (size_t)-1;
 
-BalancedConvolution::BalancedConvolution(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
+BalancedConvolution::BalancedConvolution(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
+    : schedulerPolicy(schedulerPolicy)
 {
     PrepareSections(size, impulseResponse, sampleRate, maxAudioBufferSize);
     PrepareThreads();
@@ -1840,6 +1847,9 @@ void BalancedConvolution::PrepareThreads()
     {
         auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
         sectionThread->AddSection(threadedDirectSection.get());
+#if EXECUTION_TRACE
+        threadedDirectSection->SetTraceInfo(&executionTrace,sectionThread->GetThreadNumber());
+#endif
         threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IDelayLineCallback *>(this));
     }
 
@@ -1848,10 +1858,10 @@ void BalancedConvolution::PrepareThreads()
         DirectSectionThread *thread = directSectionThreads[i].get();
         if (thread)
         {
-            delayLine.CreateThread(
+            backgroundConvolutionTask.CreateThread(
                 [this, thread]()
                 {
-                    thread->Execute(this->delayLine);
+                    thread->Execute(this->backgroundConvolutionTask);
                 },
                 -(int)thread->GetThreadNumber());
         }
@@ -2044,7 +2054,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
     {
         directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
     }
-    delayLine.SetSize(delaySize + 1, 256);
+    backgroundConvolutionTask.SetSize(delaySize + 1, 256, this->schedulerPolicy);
 }
 static int NextPowerOf2(size_t value)
 {
@@ -2579,10 +2589,10 @@ void BalancedConvolution::Close()
     {
         thread->Close(); // close the thread's delay line.
     }
-    delayLine.Close(); // shut down all delayLine threads.
+    backgroundConvolutionTask.Close(); // shut down all delayLine threads.
 }
 
-bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &delayLine)
+bool BalancedConvolution::ThreadedDirectSection::Execute(BackgroundConvolutionTask &delayLine)
 {
     size_t size = section->directSection.Size();
     bool processed = false;
@@ -2591,6 +2601,7 @@ bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &
         if (outputDelayLine.CanWrite(size))
         {
             section->directSection.Execute(delayLine, currentSample, outputDelayLine);
+
             currentSample += size;
             processed = true;
         }
@@ -2602,21 +2613,31 @@ bool BalancedConvolution::ThreadedDirectSection::Execute(SynchronizedDelayLine &
     return processed;
 }
 
-void DirectConvolutionSection::Execute(SynchronizedDelayLine &input, size_t time, SynchronizedSingleReaderDelayLine &output)
+void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t time, SynchronizedSingleReaderDelayLine &output)
 {
-    size_t size = Size();
-    for (size_t i = 0; i < size; ++i)
-    {
-        inputBuffer[i] = inputBuffer[i + size];
-    }
-    input.ReadRange(time, size, size, inputBuffer);
-    UpdateBuffer();
 
-    // if (TRACE_DELAY_LINE_MESSAGES)
-    // {
-    //     TraceDelayLineMessage(SS("Write buffer[" << size << "] t=" << time ));
-    // }
-    output.Write(size, 0, this->buffer);
+#if EXECUTION_TRACE
+    SectionExecutionTrace::time_point start = SectionExecutionTrace::clock::now();
+#endif
+
+    {
+        size_t size = Size();
+        for (size_t i = 0; i < size; ++i)
+        {
+            inputBuffer[i] = inputBuffer[i + size];
+        }
+        input.ReadRange(time, size, size, inputBuffer);
+        UpdateBuffer();
+
+        output.Write(size, 0, this->buffer);
+    }
+#if EXECUTION_TRACE
+    SectionExecutionTrace::time_point end = SectionExecutionTrace::clock::now();
+    auto writeCount = output.GetWriteCount();
+
+    input.GetExecutionTrace().Trace(threadNumber, this->Size(), start, end, writeCount, this->schedulerDelay);
+
+#endif
 }
 
 BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection &section)
@@ -2648,10 +2669,10 @@ void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
     // hack to allow us to wait on a signle condition variable.
     // If an output delay line writeStalled and now becomes ready, pump the main delay line once
     // to get Execute() to happen once more.
-    this->delayLine.NotifyReadReady();
+    this->backgroundConvolutionTask.NotifyReadReady();
 }
 
-void BalancedConvolution::DirectSectionThread::Execute(SynchronizedDelayLine &inputDelayLine)
+void BalancedConvolution::DirectSectionThread::Execute(BackgroundConvolutionTask &inputDelayLine)
 {
 
     size_t tailPosition = inputDelayLine.GetReadTailPosition();

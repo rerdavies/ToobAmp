@@ -24,7 +24,7 @@
 #include <exception>
 #include <utility>
 
-namespace TwoPlay
+namespace toob
 {
 
     class CommandLineException: std::exception {

@@ -54,7 +54,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define TOOB_URI "http://two-play.com/plugins/toob"
 #endif
 
-namespace TwoPlay {
+namespace toob {
 	class CabSim : public Lv2Plugin {
 	private:
 		enum class PortId {
@@ -118,47 +118,50 @@ namespace TwoPlay {
 				pluginUri = plugin->MapURI(CAB_SIM_URI);
 
 				atom_Path = plugin->MapURI(LV2_ATOM__Path);
-				atom_float = plugin->MapURI(LV2_ATOM__Float);
+				atom__float = plugin->MapURI(LV2_ATOM__Float);
+				atom__Bool = plugin->MapURI(LV2_ATOM__Bool);
+
 				atom_Int = plugin->MapURI(LV2_ATOM__Int);
 				atom_Sequence = plugin->MapURI(LV2_ATOM__Sequence);
-				atom_URID = plugin->MapURI(LV2_ATOM__URID);
+				atom__URID = plugin->MapURI(LV2_ATOM__URID);
 				atom_eventTransfer = plugin->MapURI(LV2_ATOM__eventTransfer);
-				patch_Get = plugin->MapURI(LV2_PATCH__Get);
-				patch_Set = plugin->MapURI(LV2_PATCH__Set);
+				patch__Get = plugin->MapURI(LV2_PATCH__Get);
+				patch__Set = plugin->MapURI(LV2_PATCH__Set);
 				patch_Put = plugin->MapURI(LV2_PATCH__Put);
 				patch_body = plugin->MapURI(LV2_PATCH__body);
 				patch_subject = plugin->MapURI(LV2_PATCH__subject);
-				patch_property = plugin->MapURI(LV2_PATCH__property);
+				patch__property = plugin->MapURI(LV2_PATCH__property);
 				patch_accept = plugin->MapURI(LV2_PATCH__accept);
-				patch_value = plugin->MapURI(LV2_PATCH__value);
+				patch__value = plugin->MapURI(LV2_PATCH__value);
 				param_gain = plugin->MapURI(LV2_PARAMETERS__gain);
-				unitsFrame = plugin->MapURI(LV2_UNITS__frame);
-				param_frequencyResponseVector = plugin->MapURI(TOOB_URI  "#frequencyResponseVector");
-				param_uiState = plugin->MapURI(CAB_SIM_URI  "#uiState");
+				units__Frame = plugin->MapURI(LV2_UNITS__frame);
+				patchProp__frequencyResponseVector = plugin->MapURI(TOOB_URI  "#frequencyResponseVector");
 			}
+
+			LV2_URID atom__Bool;
 			LV2_URID patch_accept;
 
 			LV2_URID frequencyRequest;
 			LV2_URID frequencyResponseUri;
-			LV2_URID unitsFrame;
+			LV2_URID units__Frame;
 			LV2_URID pluginUri;
-			LV2_URID atom_float;
+			LV2_URID atom__float;
 			LV2_URID atom_Int;
 			LV2_URID atom_Path;
 			LV2_URID atom_Sequence;
-			LV2_URID atom_URID;
+			LV2_URID atom__URID;
 			LV2_URID atom_eventTransfer;
 			LV2_URID midi_Event;
-			LV2_URID patch_Get;
-			LV2_URID patch_Set;
+			LV2_URID patch__Get;
+			LV2_URID patch__Set;
 			LV2_URID patch_Put;
 			LV2_URID patch_body;
 			LV2_URID patch_subject;
-			LV2_URID patch_property;
-			LV2_URID patch_value;
+			LV2_URID patch__property;
+			LV2_URID patch__value;
 			LV2_URID param_gain;
-			LV2_URID param_frequencyResponseVector;
-			LV2_URID param_uiState;
+			LV2_URID patchProp__frequencyResponseVector;
+			LV2_URID patchProp__enableOutput;
 		};
 
 		Uris uris;
@@ -172,10 +175,10 @@ namespace TwoPlay {
 		float CalculateFrequencyResponse(float f);
 
 		void SetProgram(uint8_t programNumber);
-		LV2_Atom_Forge_Ref WriteFrequencyResponse();
+		void WriteFrequencyResponse();
 		void WriteUiState();
 	protected:
-		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object);
+		virtual void OnPatchGet(LV2_URID propertyUrid);
 		double getRate() { return rate; }
 		std::string getBundlePath() { return bundle_path.c_str(); }
 	public:
@@ -200,9 +203,10 @@ namespace TwoPlay {
 	public:
 		static const char* URI;
 	protected:
-		virtual void ConnectPort(uint32_t port, void* data);
-		virtual void Activate();
-		virtual void Run(uint32_t n_samples);
-		virtual void Deactivate();
+		virtual void ConnectPort(uint32_t port, void* data) override;
+		virtual void Activate() override;
+		virtual void Run(uint32_t n_samples) override;
+		virtual void Deactivate() override;
+		virtual void OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value) override;
 	};
 }

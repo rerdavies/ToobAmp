@@ -33,7 +33,7 @@
 using namespace LsNumerics;
 using namespace std;
 using namespace boost::iostreams;
-using namespace TwoPlay;
+using namespace toob;
 
 struct BinaryReader::Extra
 {

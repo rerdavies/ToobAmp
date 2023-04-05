@@ -22,13 +22,16 @@
  * SOFTWARE.
  */
 
-#include "SynchronizedDelayLine.hpp"
+#include "BackgroundConvolutionTask.hpp"
 #include <iostream>
 #include <exception>
 #include <pthread.h> // for changing thread priorit.
 #include <sched.h>   // posix threads.
 #include <unistd.h>  // for nice()
 #include <iostream>
+#include <cstring> // for memset.
+#include "../util.hpp"
+#include "../ss.hpp"
 
 using namespace LsNumerics;
 
@@ -42,8 +45,9 @@ static int NextPowerOf2(size_t value)
     return result;
 }
 
-void SynchronizedDelayLine::SetSize(size_t size, size_t paddingSize)
+void BackgroundConvolutionTask::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
 {
+    this->schedulerPolicy = schedulerPolicy;
     size = NextPowerOf2(size);
     this->size = size;
     this->sizeMask = size - 1;
@@ -55,7 +59,7 @@ void SynchronizedDelayLine::SetSize(size_t size, size_t paddingSize)
     readTail = 0;
 }
 
-inline bool SynchronizedDelayLine::IsReadReady_(size_t position, size_t size)
+inline bool BackgroundConvolutionTask::IsReadReady_(size_t position, size_t size)
 {
     if (closed)
     {
@@ -65,7 +69,7 @@ inline bool SynchronizedDelayLine::IsReadReady_(size_t position, size_t size)
     size_t end = position + size;
     if (position < readHead)
     {
-        throw DelayLineSynchException("SynchronizedDelayLine underrun.");
+        throw DelayLineSynchException("BackgroundConvolutionTask underrun.");
     }
     if (end <= readTail)
     {
@@ -73,14 +77,14 @@ inline bool SynchronizedDelayLine::IsReadReady_(size_t position, size_t size)
     }
     return false;
 }
-bool SynchronizedDelayLine::IsReadReady(size_t position, size_t size)
+bool BackgroundConvolutionTask::IsReadReady(size_t position, size_t size)
 {
     std::lock_guard guard{mutex};
 
     return IsReadReady_(position, size);
 }
 
-void SynchronizedDelayLine::ReadLock(size_t position, size_t count)
+void BackgroundConvolutionTask::ReadLock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
     if (!IsReadReady_(position, count))
@@ -88,7 +92,7 @@ void SynchronizedDelayLine::ReadLock(size_t position, size_t count)
         throw DelayLineSynchException("Read range not valid.");
     }
 }
-void SynchronizedDelayLine::ReadUnlock(size_t position, size_t count)
+void BackgroundConvolutionTask::ReadUnlock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
     if (!IsReadReady_(position, count))
@@ -97,7 +101,7 @@ void SynchronizedDelayLine::ReadUnlock(size_t position, size_t count)
     }
 }
 
-void SynchronizedDelayLine::WaitForRead(size_t position, size_t count)
+void BackgroundConvolutionTask::WaitForRead(size_t position, size_t count)
 {
     while (true)
     {
@@ -107,16 +111,16 @@ void SynchronizedDelayLine::WaitForRead(size_t position, size_t count)
         {
             return;
         }
-        if (TRACE_DELAY_LINE_MESSAGES)
+        if (TRACE_BACKGROUND_CONVOLUTION_MESSAGES)
         {
-            TraceDelayLineMessage("SynchronizedDelayLine: wait for read.");
+            TraceBackgroundConvolutionMessage("BackgroundConvolutionTask: wait for read.");
         }
 
         this->readConditionVariable.wait(lock);
     }
 }
 
-void SynchronizedDelayLine::ReadRange(size_t position, size_t size, size_t offset, std::vector<float> &output)
+void BackgroundConvolutionTask::ReadRange(size_t position, size_t size, size_t offset, std::vector<float> &output)
 {
     WaitForRead(position, size);
 
@@ -145,7 +149,7 @@ void SynchronizedDelayLine::ReadRange(size_t position, size_t size, size_t offse
     ReadUnlock(position, size);
 }
 
-void SynchronizedDelayLine::Close()
+void BackgroundConvolutionTask::Close()
 {
     {
         std::lock_guard guard{mutex};
@@ -160,7 +164,7 @@ void SynchronizedDelayLine::Close()
     threads.resize(0);
 }
 
-SynchronizedDelayLine::~SynchronizedDelayLine()
+BackgroundConvolutionTask::~BackgroundConvolutionTask()
 {
     try
     {
@@ -168,40 +172,22 @@ SynchronizedDelayLine::~SynchronizedDelayLine()
     }
     catch (const std::exception &e)
     {
-        std::cout << "FATAL ERROR: Unexpected error while closing SynchronizedDelayLine. (" << e.what() << ")" << std::endl;
+        std::cout << "FATAL ERROR: Unexpected error while closing BackgroundConvolutionTask. (" << e.what() << ")" << std::endl;
         std::terminate();
     }
 }
-void SynchronizedDelayLine::CreateThread(const std::function<void(void)> &threadProc, int relativeThreadPriority)
+void BackgroundConvolutionTask::CreateThread(const std::function<void(void)> &threadProc, int relativeThreadPriority)
 {
 
-    sched_param schedParam;
-    int schedPolicy;
-
-    auto currentThread = pthread_self();
-    int ret = pthread_getschedparam(currentThread, &schedPolicy, &schedParam);
-    if (ret != 0)
-    {
-        throw std::logic_error("pthread_getschedparam failed.");
-    }
-
-#ifdef WIN32
-#error I think priority is inverted for Windows. For XNIX POSIX, decreasing the value increases thread priority.
-    // please let the author know which way this goes so the comment can be removed.
-    schedParam.sched_priority += (sched_priority)relativeThreadPriority;
-    ?
-#endif
-    schedParam.sched_priority += relativeThreadPriority;
-
     thread_ptr thread = std::make_unique<std::thread>(
-        [threadProc, relativeThreadPriority, schedPolicy, schedParam]()
+        [this, threadProc, relativeThreadPriority]()
         {
-            auto currentThread = pthread_self();
+            toob::SetThreadName(SS("rvb" << -relativeThreadPriority));
 
-            if (schedPolicy == SCHED_OTHER)
+            if (this->schedulerPolicy == SchedulerPolicy::UnitTest)
             {
                 errno = 0;
-                int ret = nice(-relativeThreadPriority);
+                int ret = nice(1 - relativeThreadPriority / 3);
                 if (ret < 0 && errno != 0)
                 {
                     throw std::logic_error("Can't reduce priority of BalancedConvolution thread.");
@@ -209,12 +195,26 @@ void SynchronizedDelayLine::CreateThread(const std::function<void(void)> &thread
             }
             else
             {
+                int schedPolicy = SCHED_RR;
                 int priorityMin = sched_get_priority_min(schedPolicy);
-                if (schedParam.sched_priority < priorityMin)
+                int priorityMax = sched_get_priority_max(schedPolicy);
+                constexpr int USB_SERVICE_THREAD_PRIORITY = 5;
+                int schedPriority = USB_SERVICE_THREAD_PRIORITY - 1 + relativeThreadPriority / 3;
+
+                if (schedPriority < priorityMin)
                 {
-                    throw std::logic_error("BalancedConvolution thread priority below minimum value.");
+                    schedPriority = priorityMin;
                 }
-                int ret = pthread_setschedparam(currentThread, schedPolicy, &schedParam);
+                if (schedPriority >= priorityMax)
+                {
+                    throw std::logic_error(SS("BalancedConvolution thread priority above maximum value. (" << priorityMax << ")"));
+                }
+
+                sched_param schedParam;
+                memset(&schedParam, 0, sizeof(schedParam));
+                schedParam.sched_priority = schedPriority;
+
+                int ret = sched_setscheduler(0, schedPolicy, &schedParam);
                 if (ret != 0)
                 {
                     throw std::logic_error("pthread_setschedparam failed.");
@@ -241,28 +241,22 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
 {
     while (readCount == 0)
     {
-        std::unique_lock lock{mutex};
-
         if (borrowedReads != 0)
         {
-            writeCount -= borrowedReads;
-            readToWriteConditionVariable.notify_all();
-
+            auto previousValue = writeCount.fetch_sub(borrowedReads);
+            auto currentValue = previousValue - borrowedReads;
             borrowedReads = 0;
-            if (writeStalled && writeCount <= this->lowWaterMark)
+            if (previousValue > this->lowWaterMark && currentValue <= this->lowWaterMark)
             {
-                writeStalled = false;
-                if (writeReadyCallback != nullptr)
+                bool writeStalled = this->writeStalled.exchange(false);
+                if (writeStalled)
                 {
-                    writeReadyCallback->OnSynchronizedSingleReaderDelayLineReady();
-                }
-                else
-                {
-                    throw std::logic_error("Write stalled.");
+                    this->readToWriteConditionVariable.notify_all();
                 }
             }
         }
-        size_t available = writeCount;
+
+        size_t available = writeCount.load();
 
         // only synchronize every N samples for efficiency's sake.
         // The reader temporarily "borrows" n bytes from the buffer.
@@ -277,23 +271,40 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
             readCount = available;
             break;
         }
+
+        // Everything after this point should never happen on a realtime audio thread.
+        // Either (1), we're running a unit test, and the test thread is *pulling* data,
+        // or (2) The audio thread has underrun.
+        // If an underrun, the right thing to do is wait (and cause the audio thread to
+        // underrun, because if we drop, sync is permanently lost.
+
         ++readWaits; // should never happen in our application.
 
-        if (TRACE_DELAY_LINE_MESSAGES)
+        if (TRACE_BACKGROUND_CONVOLUTION_MESSAGES)
         {
-            TraceDelayLineMessage("SynchronizedDelayLine: wait for read.");
+            TraceBackgroundConvolutionMessage("BackgroundConvolutionTask: wait for read.");
         }
         writeReadyCallback->OnSynchronizedSingleReaderDelayLineUnderrun();
-        if (writeToReadConditionVariable.wait_for(lock, READ_TIMEOUT) == std::cv_status::timeout)
         {
-            throw DelayLineSynchException("Read stalled.");
-            // writeReadyCallback->OnSynchronizedSingleReaderDelayLineReady();
+            readToWriteConditionVariable.notify_all();
+            writeReadyCallback->OnSynchronizedSingleReaderDelayLineReady();
+            {
+                std::unique_lock lock{mutex};
+
+                if (writeCount == 0) // TODO: WHY DOES THIS WORK? (We deadlock without it)
+                {
+                    if (writeToReadConditionVariable.wait_for(lock, READ_TIMEOUT) == std::cv_status::timeout)
+                    {
+                        throw DelayLineSynchException("Read stalled.");
+                    }
+                }
+            }
         }
     }
 }
 
 static std::mutex messageMutex;
-void LsNumerics::TraceDelayLineMessage(const std::string &message)
+void LsNumerics::TraceBackgroundConvolutionMessage(const std::string &message)
 {
     std::lock_guard lock{messageMutex};
     std::cout << message << std::endl;
@@ -301,10 +312,6 @@ void LsNumerics::TraceDelayLineMessage(const std::string &message)
 
 void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input)
 {
-    if (closed)
-    {
-        throw DelayLineClosedException();
-    }
     while (count != 0)
     {
         size_t thisTime;
@@ -315,6 +322,7 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
             {
                 throw DelayLineClosedException();
             }
+            auto writeCount = this->writeCount.load();
             if (writeCount == buffer.size())
             {
                 writeStalled = true;
@@ -372,10 +380,6 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
 }
 void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const std::vector<float> &input)
 {
-    if (closed)
-    {
-        throw DelayLineClosedException();
-    }
     while (count != 0)
     {
         size_t thisTime;
@@ -386,6 +390,7 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
             {
                 throw DelayLineClosedException();
             }
+            auto writeCount = this->writeCount.load();
             if (writeCount == buffer.size())
             {
                 writeStalled = true;
@@ -431,14 +436,8 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
             count -= thisTime;
             this->writeHead = writeHead;
         }
-        {
-            std::lock_guard lock{mutex};
-            if (closed)
-            {
-                throw DelayLineClosedException();
-            }
-            this->writeCount += thisTime;
-            writeToReadConditionVariable.notify_all();
-        }
+
+        this->writeCount += thisTime;
+        writeToReadConditionVariable.notify_all();
     }
 }

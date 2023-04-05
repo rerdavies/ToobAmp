@@ -25,7 +25,7 @@
 #include <vector>
 #include <cstddef>
 
-namespace TwoPlay {
+namespace toob {
     class Polynomial {
     private:
         std::vector<double> values;

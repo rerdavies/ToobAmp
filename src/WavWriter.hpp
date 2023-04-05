@@ -26,24 +26,30 @@
 #include <vector>
 #include <fstream>
 #include <cstddef>
+#include "WavConstants.hpp"
 
-namespace TwoPlay {
+
+namespace toob {
+    class AudioData;
+
     class WavWriter {
     public:
-        WavWriter();
+        WavWriter() {}
         WavWriter(const std::string &fileName) { Open(fileName);}
         ~WavWriter() { Close(); }
         void Open(const std::string & fileName);
         void Close();
 
-        void Write(uint32_t sampleRate, const std::vector<float> &data);
+        void Write(uint32_t sampleRate, const std::vector<float> &data, bool normalize = false);
+        void Write(const AudioData &data, bool normalize = false);
 
-        void SetSampleRate(uint32_t sampleRate) {
-            this->sampleRate = sampleRate;
-        }
         void Write(size_t count,size_t channels, const float**data, float scale=1.0);
 
     private:
+        void SetSampleRate(uint32_t sampleRate) {
+            this->sampleRate = sampleRate;
+        }
+
         void Write(uint8_t v);
         void Write(int32_t v);
         void Write(int16_t v);
@@ -54,15 +60,21 @@ namespace TwoPlay {
         size_t tell();
         void seek(size_t size);
 
-        void WriteHeader(size_t dataSize,size_t channels);
-        void EnterChunk(size_t dataSize);
+        void WriteHeader();
+        void WriteWavFormat(size_t channels);
 
-        void WriteDataChunkHeader(size_t dataSize);
+        void EnterRiff(private_use::ChunkIds chunkId);
+        void EnterChunk(private_use::ChunkIds chunkId);
+        void ExitChunk();
+        void ExitRiff();
+
     private:
         uint32_t sampleRate = 44100;
         bool isOpen = false;
         size_t channels = 0;
-        size_t dataChunkStart;
+        std::streamoff waveFormatStart;
+        std::streamoff riffOffset;
+        std::streamoff chunkOffset;
         std::ofstream f;
     };
 }

@@ -30,7 +30,7 @@
 
 #define OLD_GAIN_FILTER 0
 
-namespace TwoPlay {
+namespace toob {
     class GainStage {
     public:
         enum class EShape {

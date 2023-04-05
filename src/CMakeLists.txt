@@ -20,11 +20,11 @@ endif()
 
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=200000")
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=400000")
 
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_ASSERTS")
     #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_DEBUG")
@@ -32,6 +32,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
 endif()
+
 
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -43,9 +44,16 @@ add_custom_target(copy-files ALL
     )
 
 
+# disable vartracking for TubeStageApproximation to avoid insane compile times.
+set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 
 # Add source to this project's executable.
-add_library(ToobAmp  SHARED 
+add_library(ToobAmp  SHARED
+        LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
+        util.hpp util.cpp
+        SvgPathWriter.hpp
+        SvgPathWriter.cpp
+
         LsNumerics/BinaryReader.hpp
         LsNumerics/BinaryReader.cpp
         LsNumerics/BinaryWriter.cpp
@@ -58,8 +66,8 @@ add_library(ToobAmp  SHARED
         LsNumerics/BalancedConvolution.cpp
         LsNumerics/BalancedConvolution.hpp
 
-        LsNumerics/SynchronizedDelayLine.hpp
-        LsNumerics/SynchronizedDelayLine.cpp
+        LsNumerics/BackgroundConvolutionTask.hpp
+        LsNumerics/BackgroundConvolutionTask.cpp
         LsNumerics/FixedDelay.hpp
 
 
@@ -79,7 +87,7 @@ add_library(ToobAmp  SHARED
         WavWriter.cpp
         WavGuid.hpp
         WavGuid.cpp
-        WavConstants.hpp
+        WavConstants.hpp WavConstants.cpp
         AudioData.cpp
         AudioData.hpp
 
@@ -182,6 +190,8 @@ add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
 
 add_library(BalancedConvolution STATIC
+    LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
+
     LsNumerics/BinaryReader.hpp
     LsNumerics/BinaryReader.cpp
     LsNumerics/BinaryWriter.cpp
@@ -194,15 +204,19 @@ add_library(BalancedConvolution STATIC
     LsNumerics/BalancedConvolution.cpp
     LsNumerics/BalancedConvolution.hpp
 
-    LsNumerics/SynchronizedDelayLine.hpp
-    LsNumerics/SynchronizedDelayLine.cpp
+    LsNumerics/BackgroundConvolutionTask.hpp
+    LsNumerics/BackgroundConvolutionTask.cpp
     LsNumerics/FixedDelay.hpp
+
+    
 )
 
 target_link_libraries(BalancedConvolution pthread boost_iostreams.a z.a)
 
 
 add_executable(GenerateFftPlans
+    util.hpp
+    util.cpp
     LsNumerics/GenerateFftPlans.cpp
     CommandLineParser.hpp
 )
@@ -214,11 +228,16 @@ target_link_libraries(GenerateFftPlans
 
 
 add_executable(ConvolutionReverbTest
+    LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
+
+    util.hpp util.cpp
     TestAssert.hpp
     CommandLineParser.hpp
     LsNumerics/LagrangeInterpolator.hpp
     AudioData.hpp
     AudioData.cpp
+    WavConstants.hpp WavConstants.cpp
+    WavGuid.hpp WavGuid.cpp
     iir/ChebyshevI.cpp
     iir/ChebyshevI.h
     iir/ChebyshevI.cpp
@@ -227,6 +246,8 @@ add_executable(ConvolutionReverbTest
     Filters/ChebyshevDownsamplingFilter.cpp
     LsNumerics/ConvolutionReverbTest.cpp
     iir/PoleFilter.cpp
+    WavReader.hpp WavReader.cpp
+    WavWriter.hpp WavWriter.cpp
     
 )
 
@@ -320,6 +341,7 @@ install(TARGETS ToobAmp
 # Copy all assets to resources file
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/fftplans.gz/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/fftplans.gz)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/reverb/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/reverb)
         
 
 # TODO: Add tests if needed.

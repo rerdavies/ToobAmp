@@ -40,7 +40,7 @@
 #include <string.h>
 
 using namespace std;
-using namespace TwoPlay;
+using namespace toob;
 
 #ifndef _MSC_VER
 #include <unistd.h>
@@ -225,7 +225,7 @@ void PowerStage2::Run(uint32_t n_samples)
 	// Start a sequence in the notify output port.
 	LV2_Atom_Forge_Frame out_frame;
 
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.unitsFrame);
+	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
 
 	this->gain2.Enable = this->gain2_enable.GetValue() > 0.5f;
 	this->gain3.Enable = this->gain3_enable.GetValue() > 0.5f;
@@ -303,14 +303,14 @@ LV2_Atom_Forge_Ref PowerStage2::WriteWaveShape(LV2_URID propertyUrid,GainSection
 
 	LV2_Atom_Forge_Frame objectFrame;
 	LV2_Atom_Forge_Ref   set =
-		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch_Set);
+		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
 
-    lv2_atom_forge_key(&forge, uris.patch_property);		
+    lv2_atom_forge_key(&forge, uris.patch__property);		
 	lv2_atom_forge_urid(&forge, propertyUrid);
-	lv2_atom_forge_key(&forge, uris.patch_value);
+	lv2_atom_forge_key(&forge, uris.patch__value);
 
 	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 
 	
 	for (int i = 0; i < NUMBER_OF_POINTS; ++i)
@@ -333,12 +333,13 @@ void PowerStage2::WriteUiState()
 
 	LV2_Atom_Forge_Frame objectFrame;
 
-	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.param_uiState);
+	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
+    lv2_atom_forge_key(&forge, uris.patch__property);
+	lv2_atom_forge_urid(&forge,uris.param_uiState);
 
-    lv2_atom_forge_key(&forge, uris.param_uiData);		
-
+    lv2_atom_forge_key(&forge, uris.patch__value);		
 	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom_float);
+	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 
 
 	lv2_atom_forge_float(&forge,this->gain1.GetPeakMin());
@@ -367,9 +368,12 @@ void PowerStage2::WriteUiState()
 }
 
 
-void PowerStage2::OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object*object)
+void PowerStage2::OnPatchGet(LV2_URID propertyUrid)
 {
-	UNUSED(object);
+	if (propertyUrid == uris.param_uiState)
+	{
+		this->WriteUiState();
+	}
 	if (propertyUrid == uris.waveShapeRequest1)
 	{
 		gain1.WriteShapeCurve(&(this->forge), uris.waveShapeRequest1);
@@ -389,9 +393,9 @@ void PowerStage2::HandleEvent(LV2_Atom_Event* event)
 {
 	const LV2_Atom_Object* obj = (const LV2_Atom_Object*)&event->body;
 	if (lv2_atom_forge_is_object_type(&forge, event->body.type)) {
-		if (obj->body.otype == uris.patch_Set) {
+		if (obj->body.otype == uris.patch__Set) {
 		}
-		else if (obj->body.otype == uris.patch_Get)
+		else if (obj->body.otype == uris.patch__Get)
 		{
 			const LV2_Atom_URID* accept = NULL;
 			const LV2_Atom_Float* value = NULL;
@@ -399,8 +403,8 @@ void PowerStage2::HandleEvent(LV2_Atom_Event* event)
 			// clang-format off
 			lv2_atom_object_get_typed(
 				obj,
-				uris.patch_accept, &accept, uris.atom_URID,
-				uris.waveShapeRequest1, &value, uris.atom_float,
+				uris.patch_accept, &accept, uris.atom__URID,
+				uris.waveShapeRequest1, &value, uris.atom__float,
 				0);
 			if (accept) {
 				if (accept->body == uris.waveShapeRequest1) {

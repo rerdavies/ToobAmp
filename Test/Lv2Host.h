@@ -32,7 +32,7 @@
 
 
 
-namespace TwoPlay {
+namespace toob {
 
 	class HostedLv2Plugin;
 

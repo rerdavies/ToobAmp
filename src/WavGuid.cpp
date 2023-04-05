@@ -22,7 +22,7 @@
 #include "WavGuid.hpp"
 #include <sstream>
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 WavGuid::WavGuid()

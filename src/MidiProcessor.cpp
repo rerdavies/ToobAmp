@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-using namespace TwoPlay;
+using namespace toob;
 
 
 MidiProcessor::MidiProcessor(const LV2_Feature* const* _features, IMidiCallback* callback)

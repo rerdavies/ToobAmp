@@ -24,7 +24,7 @@
 #include "Ce2Chorus.hpp"
 #include "Filters/LowPassFilter.h"
 
-using namespace TwoPlay;
+using namespace toob;
 using namespace LsNumerics;
 
 constexpr float LFO_V0 = 4.5; // volts.

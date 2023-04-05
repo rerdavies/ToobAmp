@@ -27,8 +27,9 @@
 #include <vector>
 #include <stdexcept>
 #include "AudioData.hpp"
+#include "WavConstants.hpp"
 
-namespace TwoPlay
+namespace toob
 {
 
     class WavReaderException: public std::logic_error{
@@ -46,6 +47,7 @@ namespace TwoPlay
             Invalid,
             Uint8,
             Int16,
+            Int24,
             Int32,
             Float32,
             Float64,
@@ -64,9 +66,11 @@ namespace TwoPlay
         std::vector<std::vector<float>> ReadData();
 
         void ReadData(float**channels,size_t offset, size_t length);
+        ChannelMask GetChannelMask() const { return m_channelMask; }
 
     private:
-
+        void ReadInt24Data(float**channels,size_t offset,size_t length);
+        
         template<typename T>
         void ReadTypedData(float**channels,size_t offset,size_t length);
 
@@ -77,7 +81,6 @@ namespace TwoPlay
         void EnterRiff();
         void ReadChunks();
         void ReadFormat();
-        void ExitRiff();
 
         uint8_t ReadUint8() {
             char b;
@@ -99,6 +102,7 @@ namespace TwoPlay
         uint32_t m_channels = 0;
         uint32_t m_sampleRate = 0;
         size_t m_frameSize = 0;
+        ChannelMask m_channelMask = ChannelMask::ZERO;
 
         size_t riffStart = 0;
         size_t riffEnd = 0;

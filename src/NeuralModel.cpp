@@ -24,7 +24,7 @@
 #include "NeuralModel.h"
 #include <fstream>
 
-using namespace TwoPlay;
+using namespace toob;
 using namespace std;
 
 

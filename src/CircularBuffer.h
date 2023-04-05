@@ -26,7 +26,7 @@
 #include <cstddef>
 #include <cassert>
 
-namespace TwoPlay {
+namespace toob {
     template<typename T>
     class CircularBuffer {
     public:

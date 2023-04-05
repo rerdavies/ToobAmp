@@ -31,13 +31,15 @@
 #include "lv2/atom/forge.h"
 #include "lv2/urid/urid.h"
 #include "lv2/patch/patch.h"
+#include "lv2/units/units.h"
+
 #include <vector>
 #include <functional>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 
-namespace TwoPlay
+namespace toob
 {
 
 	class Lv2Plugin;
@@ -57,26 +59,49 @@ namespace TwoPlay
 
 	class Lv2PluginFactory
 	{
+	private:
+		Lv2PluginFactory() { }
 	public:
+		template <typename T>
+		static Lv2PluginFactory Create() {
+			Lv2PluginFactory result;
+			
+			result.URI = T::URI;
+			result.createPlugin = T::Create;
+			result.hasState = T::HasState();
+			return result;
+		}
 		const char *URI;
 		PFN_CREATE_PLUGIN createPlugin;
+		bool hasState = false;
 	};
 
 	class Lv2Plugin
 	{
-	protected:
-		LV2_URID_Map *map = NULL;
-
 	private:
-		LV2_Log_Logger logger;
-		LV2_Worker_Schedule *schedule = NULL;
-		LV2_Atom_Forge inputForge;
-		LV2_Atom_Forge outputForge;
+		friend class Lv2PluginWithState;
+		Lv2Plugin(const LV2_Feature *const *features, bool hasState);
+	protected:
+		Lv2Plugin(const LV2_Feature *const *features): Lv2Plugin(features,false) { }
+	public:
+		static bool HasState() { return false; }
+		virtual void ConnectPort(uint32_t port, void *data) = 0;
+		virtual void Activate() = 0;
+		virtual void Run(uint32_t n_samples) = 0;
+		virtual void Deactivate() = 0;
+		// Map functions.
+		LV2_URID MapURI(const char *uri);
+		const char*UnmapUri(LV2_URID urid);
 
-		static Lv2LogLevel logLevel;
-		bool hasState = false;
+		// Log functions
+		void LogError(const char *fmt, ...);
+		void LogWarning(const char *fmt, ...);
+		void LogNote(const char *fmt, ...);
+		void LogTrace(const char *fmt, ...);
 
 	public:
+		virtual ~Lv2Plugin() {}
+
 		static void SetLogLevel(Lv2LogLevel level)
 		{
 			Lv2Plugin::logLevel = level;
@@ -86,23 +111,9 @@ namespace TwoPlay
 		friend class Lv2Plugin_Callbacks;
 
 	protected:
-		Lv2Plugin(const LV2_Feature *const *features, bool hasState = false);
-
-		virtual void ConnectPort(uint32_t port, void *data) = 0;
-		virtual void Activate() = 0;
-		virtual void Run(uint32_t n_samples) = 0;
-		virtual void Deactivate() = 0;
-		virtual ~Lv2Plugin() {}
-
-	public:
-		// Map functions.
-		LV2_URID MapURI(const char *uri);
-
-		// Log functions
-		void LogError(const char *fmt, ...);
-		void LogWarning(const char *fmt, ...);
-		void LogNote(const char *fmt, ...);
-		void LogTrace(const char *fmt, ...);
+		LV2_URID_Map *map = nullptr;
+		LV2_URID_Unmap *unmap = nullptr;
+		LV2_Atom_Forge outputForge;
 
 	protected:
 		// State extension callbacks.
@@ -134,27 +145,34 @@ namespace TwoPlay
 		}
 
 		void HandleEvents(LV2_Atom_Sequence *controlInput);
-		void SetAtomOutput(LV2_Atom_Sequence*controlOutput);
+		void BeginAtomOutput(LV2_Atom_Sequence*controlOutput);
+		void EndAtomOutput();
 
 
 		virtual void OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 		{
 		}
 
-		virtual void OnPatchGet(LV2_URID propertyUrid, const LV2_Atom_Object *object)
+		virtual void OnPatchGet(LV2_URID propertyUrid)
+		{
+		}
+		virtual void OnPatchGetAll()
 		{
 		}
 
-		void PatchPutString(int64_t frameTime,LV2_URID propertyUrid, const char*value);
-		void PatchPutPath(int64_t frameTime,LV2_URID propertyUrid, const char*value);
+	protected:
+		void PutPatchPropertyString(int64_t frameTime,LV2_URID propertyUrid, const char*value);
+		void PutPatchPropertyPath(int64_t frameTime,LV2_URID propertyUrid, const char*value);
+		void PutPatchPropertyUri(int64_t frameTime,LV2_URID propertyUrid, const char*value);
 
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, LV2_URID propertyType, const char*value);
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, float value);
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values);
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, double value);
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, int32_t value);
-		void PatchPut(int64_t frameTime,LV2_URID propertyUrid, int64_t value);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, bool value);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, float value);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, double value);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int32_t value);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int64_t value);
 
+		void PutStateChanged(int64_t frameTime);
 		// Schedule extension callbacks.
 
 	protected:
@@ -196,7 +214,7 @@ namespace TwoPlay
 		private:
 			friend class Lv2Plugin;
 			void Work(LV2_Worker_Respond_Function respond, LV2_Worker_Respond_Handle handle);
-			void Response();
+			virtual void Response();
 		};
 
 		/// @brief A worker action with provisions for deleting discarded objects from the audo thread on the background thread.
@@ -245,6 +263,11 @@ namespace TwoPlay
 				WorkerActionWithCleanup *pThis;
 			};
 			CleanupWorker cleanupWorker;
+
+			void Response() {
+				WorkerAction::Response();
+				cleanupWorker.Request();
+			}
 		};
 
 	private:
@@ -269,6 +292,15 @@ namespace TwoPlay
 		}
 
 	private:
+	private:
+		LV2_Log_Logger logger;
+		LV2_Worker_Schedule *schedule = nullptr;
+		LV2_Atom_Forge_Frame outputFrame;
+		LV2_Atom_Forge inputForge;
+
+		static Lv2LogLevel logLevel;
+		bool hasState = false;
+
 		static LV2_Handle
 		instantiate(const LV2_Descriptor *descriptor,
 					double rate,
@@ -305,34 +337,45 @@ namespace TwoPlay
 			const LV2_Feature *const *features);
 
 		static const void *extension_data(const char *uri);
-
-		class PluginUris
+		static const void *extension_data_with_state(const char *uri);
+		
+		class PluginUrids
 		{
 
 		public:
 			LV2_URID patch;
-			LV2_URID patch_Get;
-			LV2_URID patch_Set;
-			LV2_URID patch_property;
-			LV2_URID patch_value;
-			LV2_URID atom_URID;
-			LV2_URID atom_float;
+			LV2_URID patch__Get;
+			LV2_URID patch__Set;
+			LV2_URID patch__property;
+			LV2_URID patch__value;
+			LV2_URID atom__URID;
+			LV2_URID atom__float;
+			LV2_URID units__Frame;
+			LV2_URID state__StateChanged;
 
 			void Init(LV2_URID_Map *map)
 			{
 				patch = map->map(map->handle, LV2_PATCH_URI);
-				patch_Get = map->map(map->handle, LV2_PATCH__Get);
-				patch_Set = map->map(map->handle, LV2_PATCH__Set);
-				patch_property = map->map(map->handle, LV2_PATCH__property);
-				patch_value = map->map(map->handle, LV2_PATCH__value);
-				atom_URID = map->map(map->handle, LV2_ATOM__URID);
-				atom_float = map->map(map->handle, LV2_ATOM__Float);
+				patch__Get = map->map(map->handle, LV2_PATCH__Get);
+				patch__Set = map->map(map->handle, LV2_PATCH__Set);
+				patch__property = map->map(map->handle, LV2_PATCH__property);
+				patch__value = map->map(map->handle, LV2_PATCH__value);
+				atom__URID = map->map(map->handle, LV2_ATOM__URID);
+				atom__float = map->map(map->handle, LV2_ATOM__Float);
+				units__Frame = map->map(map->handle,LV2_UNITS__frame);
+				state__StateChanged = map->map(map->handle,LV2_STATE__StateChanged);
 			}
 		};
 
-		PluginUris uris;
+		PluginUrids urids;
 	};
 
+	class Lv2PluginWithState: public Lv2Plugin
+	{
+		public:
+			Lv2PluginWithState(const LV2_Feature *const *features) : Lv2Plugin(features,true) { }
+			static bool HasState() { return true; }
+	};
 }
 
 #pragma GCC diagnostic pop

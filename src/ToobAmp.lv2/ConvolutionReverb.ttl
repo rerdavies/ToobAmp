@@ -15,6 +15,7 @@
 @prefix work:  <http://lv2plug.in/ns/ext/worker#> .
 @prefix pg:      <http://lv2plug.in/ns/ext/port-groups#> .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
+@prefix ui: <http://lv2plug.in/ns/extensions/ui#> .
 
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
@@ -69,7 +70,6 @@ may cause odd audio artifacts.
 
         mod:brand "TooB";
         mod:label "Convolution Reverb";
-        lv2:requiredFeature state:loadDefaultState;
         lv2:requiredFeature urid:map ;
         lv2:extensionData state:interface;
 
@@ -81,6 +81,8 @@ may cause odd audio artifacts.
         patch:writable 
                 toobImpulse:#impulseFile
                 ;
+        lv2:extensionData state:interface,
+                work:interface;
 
         lv2:port
         [
@@ -111,7 +113,7 @@ may cause odd audio artifacts.
                 lv2:name "Direct";
                 lv2:default -30.0 ;
                 lv2:minimum -30.0 ;
-                lv2:maximum 20.0 ;    
+                lv2:maximum 30.0 ;    
                 units:unit units:db ;
 
                 lv2:scalePoint [
@@ -129,14 +131,14 @@ may cause odd audio artifacts.
                 lv2:symbol "reverb_mix" ;
                 lv2:name "Reverb";
 
-                lv2:default 0.0 ;
-                lv2:minimum -30.0 ;
+                lv2:default -30.0 ;
+                lv2:minimum -60.0 ;
                 lv2:maximum 20.0 ;    
                 units:unit units:db ;
 
                 lv2:scalePoint [
                         rdfs:label "-INF" ;
-                        rdf:value -30.0
+                        rdf:value -60.0
                 ];
                 rdfs:comment "Reverb mix. Set to minimum to disable." ;
         ],  
@@ -148,7 +150,6 @@ may cause odd audio artifacts.
                 lv2:symbol "loading_state" ;
                 lv2:name "Loading";
 
-                lv2:portProperty lv2:integer ;
                 lv2:portProperty lv2:enumeration ;
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
@@ -216,7 +217,6 @@ toobConvolutionReverb:ui
                 a pipedal_ui:fileProperty;
                 lv2:name "Impulse File" ;
                 pipedal_ui:patchProperty toobImpulse:impulseFile ;
-                pipedal_ui:defaultFile "Genesis 6 Studio – Live Room.wav";
                 pipedal_ui:directory "ReverbImpulseFiles";
                 pipedal_ui:fileTypes 
                 [
@@ -225,11 +225,15 @@ toobConvolutionReverb:ui
                         pipedal_ui:fileExtension ".wav";
                 ];
         ];
-        pipedal_ui:outputPorts
+        ui:portNotification 
         [
-                lv2:symbol "loading_state" ;
-                pipedal_ui:style pipedal_ui:text ;
-                pipedal_ui:redLevel 0;
-                pipedal_ui:yellowLevel -12;
+                lv2:symbol "loading_state";
+                ui:plugin <http://two-play.com/plugins/toob-convolution-reverb>;
+                ui:protocol ui:floatProtocol;
+                # pipedal_ui:style pipedal_ui:text ;
+                # pipedal_ui:redLevel 0;
+                # pipedal_ui:yellowLevel -12;
+                # ui:portIndex 3;
+
         ]
         .

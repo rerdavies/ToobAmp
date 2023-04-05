@@ -26,7 +26,7 @@
 #include <vector>
 #include <cmath>
 
-namespace TwoPlay {
+namespace toob {
     class FilterResponse {
     private:
         std::vector<float> frequencies;
