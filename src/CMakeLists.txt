@@ -4,6 +4,7 @@
 cmake_minimum_required (VERSION 3.18)
 
 set (CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (DEFINED BUILD_MACHINE)
     message(STATUS "Google Profiler support disabled.}")
@@ -18,13 +19,12 @@ endif()
 # message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 # message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
-
 if (CMAKE_COMPILER_IS_GNUCXX)
     set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=400000")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -mtune=cortex-a72 ")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g -mtune=cortex-a72")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_ASSERTS")
     #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_DEBUG")
@@ -46,6 +46,8 @@ add_custom_target(copy-files ALL
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+
+set (CMAKE_CXX_STANDARD 20)
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
@@ -159,10 +161,13 @@ add_library(ToobAmp  SHARED
          
          )
 
-target_link_libraries(ToobAmp RTNeural dl pthread boost_iostreams z)
+target_link_libraries(ToobAmp 
+    RTNeural 
+    dl pthread boost_iostreams z)
 target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
 )
+set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
 # Tests.
 add_executable(FftTest 

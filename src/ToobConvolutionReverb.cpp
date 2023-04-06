@@ -47,7 +47,7 @@ ToobConvolutionReverb::ToobConvolutionReverb(
     const char *bundle_path,
     const LV2_Feature *const *features)
     : Lv2PluginWithState(features),
-      rate(rate),
+      sampleRate(rate),
       bundle_path(bundle_path),
       loadWorker(this)
 
@@ -73,6 +73,9 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
         break;
     case PortId::REVERB_MIX:
         this->pReverbMix = (float *)data;
+        break;
+    case PortId::PREDELAY:
+        this->pPredelay = (float*)data;
         break;
     case PortId::LOADING_STATE:
         break;
@@ -112,32 +115,37 @@ void ToobConvolutionReverb::UpdateControls()
         lastDirectMix = *pDirectMix;
         if (lastDirectMix <= -30)
         {
-            directMix = 0;
+            directMixDb = -96;
         }
         else
         {
-            directMix = db2a(lastDirectMix);
+            directMixDb = lastDirectMix;
         }
-        if (pConvolutionReverb)
+        if (!this->loadWorker.IsChanging())
         {
-            pConvolutionReverb->SetDirectMix(directMix);
+            directMixDezipper.SetTarget(directMixDb);
         }
     }
     if (lastReverbMix != *pReverbMix)
     {
         lastReverbMix = *pReverbMix;
-        if (lastReverbMix <= -60)
+        if (lastReverbMix <= -30)
         {
-            reverbMix = 0;
+            reverbMixDb = -96;
         }
         else
         {
-            reverbMix = db2a(lastReverbMix);
+            reverbMixDb = lastReverbMix;
         }
-        if (pConvolutionReverb)
+        if (!loadWorker.IsChanging())
         {
-            pConvolutionReverb->SetReverbMix(reverbMix);
+            reverbMixDezipper.SetTarget(reverbMixDb);
         }
+    }
+    if (lastPredelay != *pPredelay)
+    {
+        lastPredelay = *pPredelay;
+        loadWorker.SetPredelay(lastPredelay != 0);
     }
 }
 void ToobConvolutionReverb::Activate()
@@ -145,6 +153,11 @@ void ToobConvolutionReverb::Activate()
     activated = true;
     lastReverbMix = lastDirectMix = lastTime = std::numeric_limits<float>::min(); // force updates
     UpdateControls();
+    directMixDezipper.SetSampleRate(getSampleRate());
+    reverbMixDezipper.SetSampleRate(getSampleRate());
+    directMixDezipper.SetTarget(0);
+    reverbMixDezipper.SetTarget(-96);
+    
     clear();
 }
 
@@ -155,16 +168,42 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
     UpdateControls();
     if (n_samples != 0) // prevent acccidentally triggering heavy work during pre-load.
     {
-        loadWorker.Tick();
+        if (loadWorker.Changed() && loadWorker.IsIdle())
+        {
+            if (!preChangeVolumeZip)
+            {
+                preChangeVolumeZip = true;
+                directMixDezipper.SetTarget(0);
+                reverbMixDezipper.SetTarget(-96);
+            } 
+            if (directMixDezipper.IsIdle() && reverbMixDezipper.IsIdle())
+            {
+                preChangeVolumeZip = false;
+                loadWorker.Tick();
+            }
+        }
         if (pConvolutionReverb)
         {
-            pConvolutionReverb->Tick(n_samples, inL, outL);
+            if (reverbMixDezipper.IsIdle() && directMixDezipper.IsIdle())
+            {
+                pConvolutionReverb->SetDirectMix(directMixDezipper.Tick());
+                pConvolutionReverb->SetReverbMix(reverbMixDezipper.Tick());
+                pConvolutionReverb->Tick(n_samples, inL, outL);
+            } else {
+                for (size_t n = 0; n < n_samples; ++n)
+                {
+                    pConvolutionReverb->SetDirectMix(directMixDezipper.Tick());
+                    pConvolutionReverb->SetReverbMix(reverbMixDezipper.Tick());
+                    outL[n] = pConvolutionReverb->Tick(inL[n]);
+                }
+                pConvolutionReverb->TickSynchronize();
+            }
         }
         else
         {
             for (uint32_t i = 0; i < n_samples; ++i)
             {
-                this->outL[i] = this->inL[i];
+                this->outL[i] = directMixDezipper.Tick()* this->inL[i];
             }
         }
     }
@@ -236,6 +275,16 @@ bool ToobConvolutionReverb::LoadWorker::SetTime(float timeInSeconds)
     }
     return false;
 }
+bool ToobConvolutionReverb::LoadWorker::SetPredelay(bool usePredelay)
+{
+    if (this->predelay != usePredelay)
+    {
+        this->predelay = usePredelay;
+        this->changed = true;
+        return true;
+    }
+    return false;
+}
 bool ToobConvolutionReverb::LoadWorker::SetFileName(const char *szName)
 {
     size_t length = strlen(szName);
@@ -271,6 +320,8 @@ void ToobConvolutionReverb::LoadWorker::Request()
 
     // take the existing convolution reverb off the main thread.
     this->oldConvolutionReverb = std::move(pReverb->pConvolutionReverb);
+    this->workingPredelay = predelay; // capture a copy
+    this->workingTimeInSeconds = this->timeInSeconds;
 
     WorkerAction::Request();
 }
@@ -304,6 +355,48 @@ static void NormalizeConvolution(AudioData & data)
     }
 }
 
+static void RemovePredelay(AudioData &audioData)
+{
+    std::vector<float> &channel = audioData.getChannel(0);
+    float db60 = LsNumerics::Db2Af(-60);
+    float db30 = LsNumerics::Db2Af(-30);
+
+    size_t db60Index = 0;
+    size_t db30Index = 0;
+    bool seenDb60 = false;
+    for (size_t i = 0; i < channel.size(); ++i)
+    {
+        float value = std::abs(channel[i]);
+        if (value > db30)
+        {
+            db30Index = i;
+            break;
+        }
+        if (value < db60 && !seenDb60)
+        {
+            db60Index = i;
+        } else {
+            seenDb60 = true;
+        }
+    }
+    if (db30Index == 0) 
+    {
+        return;
+    }
+    constexpr size_t MAX_LEADIN = 30; 
+    if (db30Index-db60Index > MAX_LEADIN)
+    {
+        db60Index = db30Index-MAX_LEADIN;
+    }
+    for (size_t i = db60Index; i < db30Index; ++i)
+    {
+        // ramped leadin.
+        float blend = (i-db60Index)/(float)(db30Index-db60Index);
+        channel[i] *= blend;
+    }
+    std::cout << "Removing predelay. db60Index: " << db60Index << " db30Index: " << db30Index << std::endl;
+    audioData.Erase(0,db60Index);
+}
 static float GetTailScale(const std::vector<float> &data, size_t tailPosition)
 {
     double max = 0;
@@ -350,13 +443,18 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
         }
 
         NormalizeConvolution(data);
+        if (!predelay) // bbetter to do it on the pristine un-filtered data.
+        {
+            RemovePredelay(data);
+        }
 
-        data.Resample((size_t)pReverb->getRate());
+
+        data.Resample((size_t)pReverb->getSampleRate());
 
         NormalizeConvolution(data);
 
 
-        size_t maxSize = (size_t)std::ceil(pReverb->getTime() * pReverb->getRate());
+        size_t maxSize = (size_t)std::ceil(workingTimeInSeconds * pReverb->getSampleRate());
         this->tailScale = 0;
         if (maxSize < data.getSize())
         {
@@ -392,9 +490,9 @@ void ToobConvolutionReverb::LoadWorker::OnResponse()
     }
     else
     {
-        convolutionReverbResult->SetDirectMix(pReverb->directMix);
-        convolutionReverbResult->SetReverbMix(pReverb->reverbMix);
         pReverb->pConvolutionReverb = std::move(convolutionReverbResult);
+        pReverb->directMixDezipper.SetTarget(pReverb->directMixDb);
+        pReverb->reverbMixDezipper.SetTarget(pReverb->reverbMixDb);
         // pConvolutionReverb now contains the old convolution, which we must dispose of
         // off the audio thread.
         SetState(State::CleaningUp);

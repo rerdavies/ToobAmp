@@ -59,8 +59,11 @@ const int MAX_UPDATES_PER_SECOND = 10;
 const char* ToobML::URI= TOOB_ML_URI;
 
 #include <limits>
-#include "RTNeural/RTNeural.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include "RTNeural/RTNeural.h"
+#pragma GCC diagnostic pop
 
 namespace toob {
 

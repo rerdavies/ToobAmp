@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,15 +25,12 @@
 
 using namespace toob;
 
-
 static const int SEGMENT_SIZE = 64;
-static const float DB_PER_SECOND = 9600.0; // 0...1 in 1/10 sec. 
-
+static const float DB_PER_SECOND = 9600.0; // 0...1 in 1/10 sec.
 
 void DbDezipper::SetSampleRate(double rate)
 {
-    this->dbPerSegment = DB_PER_SECOND*SEGMENT_SIZE/rate;
-
+    this->dbPerSegment = DB_PER_SECOND * SEGMENT_SIZE / rate;
 }
 void DbDezipper::NextSegment()
 {
@@ -47,14 +44,17 @@ void DbDezipper::NextSegment()
         }
         count = -1;
         return;
-    } else if (targetDb < currentDb)
+    }
+    else if (targetDb < currentDb)
     {
         currentDb -= dbPerSegment;
         if (currentDb < targetDb)
         {
             currentDb = targetDb;
         }
-    } else {
+    }
+    else
+    {
         currentDb += dbPerSegment;
         if (currentDb > targetDb)
         {
@@ -62,7 +62,22 @@ void DbDezipper::NextSegment()
         }
     }
     this->targetX = LsNumerics::Db2Af(currentDb);
-    this->dx = (targetX-x)/SEGMENT_SIZE;
+    this->dx = (targetX - x) / SEGMENT_SIZE;
     this->count = SEGMENT_SIZE;
+}
 
+void DbDezipper::Reset(float db)
+{
+    float value;
+    if (db <= -96)
+    {
+        value = 0;
+    } else {
+        value = LsNumerics::Db2Af(db);
+    }
+    x = targetX = value;
+    dx = 0;
+    currentDb = db;
+    targetDb = db;
+    count = -1;
 }

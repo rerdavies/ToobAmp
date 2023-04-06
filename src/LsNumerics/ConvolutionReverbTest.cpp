@@ -1499,7 +1499,7 @@ void TestFile()
 {
     UsePlanCache();
     WavReader reader;
-    reader.Open("impulseFiles/reverb/Koli National Park - Winter.wav");
+    reader.Open("impulseFiles/reverb/Arthur Sykes Rymer Auditorium.wav");
     
     AudioData data;
     reader.Read(data);

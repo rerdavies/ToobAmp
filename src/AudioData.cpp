@@ -305,4 +305,15 @@ void AudioData::AmbisonicDownmix(const std::vector<AmbisonicMicrophone> &micPara
     }
     this->data = std::move(outputData);
 }
+
+void AudioData::Erase(size_t start, size_t end)
+{
+    if (end <= start) return;
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        std::vector<float>&channel = getChannel(c);
+        channel.erase(channel.begin()+start, channel.begin()+end);
+    }
+
+}
         

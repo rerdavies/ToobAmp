@@ -777,7 +777,6 @@ namespace LsNumerics
 
             return value * directMix + (reverb)*reverbMix;
         }
-
     public:
         void SetDirectMix(float value)
         {
@@ -801,6 +800,26 @@ namespace LsNumerics
             convolution.SynchWrite();
             return result;
         }
+
+        float TickUnsynchronized(float value)
+        {
+            float result;
+            if (hasFeedback)
+            {
+                result = TickUnsynchronizedWithFeedback(value);
+            }
+            else
+            {
+                result = TickUnsynchronizedWithoutFeedback(value);
+            }
+            return result;
+        }
+        void TickSynchronize()
+        {
+            convolution.SynchWrite();
+        }
+
+
 
         void Tick(size_t count, const float *input, float *output)
         {

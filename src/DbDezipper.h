@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,38 +26,28 @@
 #include "std.h"
 #include "LsNumerics/LsMath.hpp"
 
-namespace toob {
-    class DbDezipper {
-    private:
-        float targetDb = -96;
-        float currentDb = -96;
-        float targetX = 0;
-        float x = 0;
-        float dx = 0;
-        int32_t count = -1;
-        float dbPerSegment;
-        void NextSegment();
+namespace toob
+{
+    class DbDezipper
+    {
     public:
         void SetSampleRate(double rate);
-        void Reset()
-        {
-            x = targetX = 0;
-            dx = 0;
-            currentDb = -96;
-            targetDb = -96;
-            count = -1;
-        }
+        void Reset(float db = -96);
 
         void SetTarget(float db)
         {
-            if (db < -96) db  = -96;
-            if (db != targetDb) {
+            if (db < -96)
+                db = -96;
+            if (db != targetDb)
+            {
                 targetDb = db;
                 count = 0;
             }
         }
 
-        inline float Tick() { 
+        bool IsIdle() const { return count < 0;}
+        inline float Tick()
+        {
             if (count >= 0)
             {
                 if (count-- <= 0)
@@ -71,5 +61,15 @@ namespace toob {
             }
             return x;
         }
+
+    private:
+        float targetDb = -96;
+        float currentDb = -96;
+        float targetX = 0;
+        float x = 0;
+        float dx = 0;
+        int32_t count = -1;
+        float dbPerSegment;
+        void NextSegment();
     };
 }

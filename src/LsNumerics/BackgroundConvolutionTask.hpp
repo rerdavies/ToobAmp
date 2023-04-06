@@ -171,12 +171,6 @@ namespace LsNumerics
             this->readConditionVariable.notify_all();
         }
 
-    #if EXECUTION_TRACE
-    public:
-        void SetExecutionTrace(SectionExecutionTrace*pTrace) { this->pTrace = pTrace; }
-        SectionExecutionTrace& GetExecutionTrace() { return *pTrace;}
-        SectionExecutionTrace *pTrace;
-    #endif
 
     private:
         static constexpr size_t MAX_READ_BORROW = 16;
@@ -226,7 +220,7 @@ namespace LsNumerics
 
         uint32_t GetWriteCount()
         {
-            return this->writeCount.load();
+            return this->atomicWriteCount.load();
         }
         void SetWriteReadyCallback(IDelayLineCallback *callback)
         {
@@ -249,7 +243,7 @@ namespace LsNumerics
         void Close()
         {
             std::lock_guard lock{mutex};
-            closed = true;
+            atomicClosed = true;
             writeStalled = false;
             writeToReadConditionVariable.notify_all();
             readToWriteConditionVariable.notify_all();
@@ -262,7 +256,7 @@ namespace LsNumerics
     public:
         float Read()
         {
-            if (closed)
+            if (atomicClosed)
             {
                 throw DelayLineClosedException();
             }
@@ -282,14 +276,13 @@ namespace LsNumerics
 
         bool CanWrite(size_t size)
         {
+            if (atomicClosed.load())
             {
-                std::unique_lock lock{mutex};
-                if (closed)
-                {
-                    throw DelayLineClosedException();
-                }
+                throw DelayLineClosedException();
             }
-            bool result =  writeCount.load() + size <= buffer.size();
+            if (wWriteCount + size <= buffer.size()) return true;
+            wWriteCount = atomicWriteCount.load();
+            bool result =  wWriteCount + size <= buffer.size();
             if (!result)
             {
                 writeStalled.store(true);
@@ -317,10 +310,12 @@ namespace LsNumerics
 
     private:
         std::atomic<bool> writeStalled = false;
-        std::atomic<uint32_t> writeCount = 0;
+        std::atomic<uint32_t> atomicWriteCount = 0;
+        uint32_t rWriteCount = 0;
+        uint32_t wWriteCount = 0;
+        std::atomic<bool> atomicClosed = false;
 
         std::size_t readWaits = 0;
-        bool closed = false;
         std::mutex mutex;
         std::uint32_t writeHead = 0;
         std::uint32_t readHead = 0;

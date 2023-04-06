@@ -186,12 +186,25 @@ namespace toob
         void AmbisonicDownmix(const std::vector<AmbisonicMicrophone> &micParameters);
 
 
+        /// @brief Resample the audio data.
+        /// @param outputSampleRate The new sample rate.
+        /// @param output The AudioData object in which to store the result.
+
         void Resample(size_t outputSampleRate, AudioData &output);
+
+        /// @brief Resample the audio data.
+        /// @param outputSampleRate The new sample rate.
         void Resample(size_t outputSampleRate);
 
-        static std::vector<float> Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values);
+
+        /// @brief Remove samples from the audio data.
+        /// @param start The start of samples to remove.
+        /// @param end The end of samples to remove.
+        void Erase(size_t start, size_t end);
 
     private:
+        static std::vector<float> Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values);
+
         static ChebyshevDownsamplingFilter DesignFilter(size_t inputSampleRate, size_t outputSampleRate);
         static std::vector<float> Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values,ChebyshevDownsamplingFilter*downsamplingFilter);
         ChannelMask channelMask = ChannelMask::ZERO;

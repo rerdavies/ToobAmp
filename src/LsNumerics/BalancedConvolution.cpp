@@ -67,7 +67,7 @@ void LsNumerics::SetDisplaySectionPlans(bool value)
 static std::size_t Log2(std::size_t value)
 {
     int log = 0;
-    while (value > 0)
+    while (value > 1)
     {
         ++log;
         value >>= 1;
@@ -93,8 +93,9 @@ static const fft_index_t ToIndex(size_t value)
 struct ExecutionEntry
 {
     size_t n;
-    double nanosecondsPerSample;
+    double microsecondsPerExecution;
     int threadNumber;
+    int schedulingOffset = 0;
 };
 
 constexpr int INVALID_THREAD_ID = -1; // DirectionSections with this size are not encounered in normal use.
@@ -113,22 +114,38 @@ static std::vector<ExecutionEntry> executionTimePerSampleNs{
     {64, 92.286, INVALID_THREAD_ID},
 
     // executed on thread 1.
-    {128, 100.439, 1},
-    {256, 107.703, 1},
-    {512, 155.486, 1},
-    {1024, 164.186, 2},
+    {128, 235, 1,0},  // execution times in microseconds measured under real-time conditions.
+    {256, 306, 1,0},
+    {512, 368, 1,0},
+    {1024, 500, 2,0},
     // executed on thread 2
-    {2048, 192.041, 2},
-    {4096, 206.026, 3},
-    {8192, 241.912, 4},
+    {2048, 788, 2,0},
+    {4096, 1112, 2,0},
+    {8192, 2731, 3,0},
 
-    {16384, 285.395, 5},
-    {32768, 448.843, 6},
-    {65536, 575.380, 7},
-    {131072, 668.226, 8},
-    {262144, 773.148, 9},
-    {524288, 834.376, 10},
-    {1048576, 870.363, 11},
+    {16384, 9646, 3,},
+    {32768, 27606, 4},
+    {65536, 27606*2.2, 4},
+    {131072, 27606*2.2*2.2, 5},
+    {262144, 27606*2.2*2.2*2.2, 6},
+    {524288,  27606*2.2*2.2*2.2*2.2, 6},
+
+};
+
+int convolutionThreadPriorities[] = 
+{
+    -1,
+    31,
+    30,
+    5,
+    4,
+    3,
+    2,
+    1,
+    1,
+    1,
+    1,
+    1,
 };
 constexpr int MAX_THREAD_ID = 11;
 
@@ -153,24 +170,29 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
     // a direction section of a particular size.
 
     // Calculate per-thread worst execution times.
-    // (Service threads handle groups of block sizes.)
-    std::vector<int> basicExecutionTime;
-    basicExecutionTime.resize(MAX_THREAD_ID + 1);
+    // (Service threads handle groups of block sizes.) 
+    std::vector<int> pooledExecutionTime;
+    pooledExecutionTime.resize(MAX_THREAD_ID + 1);
     for (const auto &entry : executionTimePerSampleNs)
     {
         if (entry.threadNumber != INVALID_THREAD_ID)
         {
-            double executionTimeSeconds = entry.n * entry.nanosecondsPerSample * 1E-9;
-            executionTimeSeconds *= ((double)sampleRate) / 44100; // benchmarks were for 44100.
+            double executionTimeSeconds = entry.microsecondsPerExecution * 1E-6;
+            executionTimeSeconds *= ((double)sampleRate) / 48000; // benchmarks were for 48000.
             executionTimeSeconds *= 1.8 / 1.5;                    // in case we're running on 1.5Ghz pi.
-            executionTimeSeconds *= 2;                            // competing for cache space.
-            executionTimeSeconds *= 1.5;                          // because there may be duplicates
+            executionTimeSeconds *= 2;                          // because there may be duplicates
             size_t samplesLeadTime = (std::ceil(executionTimeSeconds * sampleRate));
 
-            basicExecutionTime[entry.threadNumber] += samplesLeadTime;
+            pooledExecutionTime[entry.threadNumber] += samplesLeadTime;
         }
     }
 
+    std::cout << "Thread pool execution times" << std::endl;
+    for (size_t i = 0; i < pooledExecutionTime.size(); ++i)
+    {
+         std::cout << std::setw(12) << std::right << i << std::setw(12) << std::right << pooledExecutionTime[i] << std::endl;
+    }
+    std::cout <<  std::endl;
     directSectionLeadTimes.resize(executionTimePerSampleNs.size());
     for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
     {
@@ -185,7 +207,15 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
         size_t log2N = Log2(entry.n);
         if (entry.threadNumber != INVALID_THREAD_ID)
         {
-            directSectionLeadTimes[log2N] = basicExecutionTime[entry.threadNumber] + schedulingJitter + entry.n;
+            directSectionLeadTimes[log2N] = pooledExecutionTime[entry.threadNumber] + schedulingJitter + entry.n;
+        }
+    }
+    std::cout << "Direct Section Lead Times" << std::endl;
+    for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
+    {
+        if (directSectionLeadTimes[i] != INVALID_EXECUTION_TIME)
+        {
+            std::cout << std::setw(12) << std::right << (1 << i) << std::setw(12) << std::right << directSectionLeadTimes[i] << std::endl;
         }
     }
 }
@@ -2618,6 +2648,8 @@ void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t 
 
 #if EXECUTION_TRACE
     SectionExecutionTrace::time_point start = SectionExecutionTrace::clock::now();
+    auto writeCount = output.GetWriteCount();
+
 #endif
 
     {
@@ -2633,9 +2665,11 @@ void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t 
     }
 #if EXECUTION_TRACE
     SectionExecutionTrace::time_point end = SectionExecutionTrace::clock::now();
-    auto writeCount = output.GetWriteCount();
 
-    input.GetExecutionTrace().Trace(threadNumber, this->Size(), start, end, writeCount, this->schedulerDelay);
+    if (this->pTrace)
+    {
+        this->pTrace->Trace(threadNumber, this->Size(), start, end, writeCount, this->schedulerDelay);
+    }
 
 #endif
 }

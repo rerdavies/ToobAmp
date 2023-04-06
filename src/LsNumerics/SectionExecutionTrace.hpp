@@ -43,7 +43,7 @@ namespace LsNumerics
     class SectionExecutionTrace
     {
     public:
-        static constexpr size_t MAX_SIZE = 500;
+        static constexpr size_t MAX_SIZE = 2000;
         using clock = std::chrono::high_resolution_clock;
         using time_point = clock::time_point;
 
@@ -54,8 +54,9 @@ namespace LsNumerics
         void WriteRecord(const std::filesystem::path fileName = std::filesystem::path("/tmp/sectionTrace.txt"));
 
     private:
-        double ToDisplayTime(const time_point& t);
+        uint64_t ToDisplayTime(const time_point& t);
         std::mutex mutex;
+        bool started = false;
         time_point startTime;
         struct TraceEntry
         {
@@ -66,13 +67,19 @@ namespace LsNumerics
             size_t writeCount;
             size_t inputOffset;
         };
-        bool dumped;
+        bool dumped = false;
         std::vector<TraceEntry> record;
     };
 
     inline void SectionExecutionTrace::Trace(size_t threadNumber, size_t size, time_point start, time_point end, size_t writeCount, size_t inputOffset)
     {
         std::lock_guard<std::mutex> lock{mutex};
+        if (!started)
+        {
+            started = true;
+            startTime = start;
+
+        }
         if (record.size() < MAX_SIZE)
         {
             record.push_back(TraceEntry{threadNumber, size, start, end, inputOffset});

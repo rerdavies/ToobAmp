@@ -27,6 +27,7 @@
 using namespace LsNumerics;
 using namespace std;
 
+#if EXECUTION_TRACE
 SectionExecutionTrace::SectionExecutionTrace()
 {
     record.reserve(MAX_SIZE);
@@ -38,11 +39,11 @@ SectionExecutionTrace::~SectionExecutionTrace()
     WriteRecord();
 }
 
-double SectionExecutionTrace::ToDisplayTime(const time_point& time)
+uint64_t SectionExecutionTrace::ToDisplayTime(const time_point& time)
 {
     clock::duration t = time-startTime;
 
-    return std::chrono::duration_cast<std::chrono::seconds>(t).count()*1000;
+    return std::chrono::duration_cast<std::chrono::microseconds>(t).count();
 
 }
 
@@ -54,7 +55,11 @@ void SectionExecutionTrace::WriteRecord(const std::filesystem::path fileName)
 
     if (record.size() == 0) return;
 
-    std::fstream f(fileName);
+    std::ofstream f(fileName,std::ios_base::trunc);
+    if (!f.is_open())
+    {
+        return;
+    }
 
     // header row for Excel.
     f << "threadNumber"
@@ -64,6 +69,8 @@ void SectionExecutionTrace::WriteRecord(const std::filesystem::path fileName)
       << "start"
       << ","
       << "end"
+      << ","
+      << "t"
       << ","
       << "writeCount"
       << ","
@@ -76,8 +83,11 @@ void SectionExecutionTrace::WriteRecord(const std::filesystem::path fileName)
           << "," << entry.size
           << "," << ToDisplayTime(entry.start)
           << "," << ToDisplayTime(entry.end)
+          << "," << ToDisplayTime(entry.end)-ToDisplayTime(entry.start)          
           << "," << entry.writeCount
           << "," << entry.inputOffset
           << endl;
     }
 }
+
+#endif

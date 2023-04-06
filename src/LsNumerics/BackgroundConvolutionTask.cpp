@@ -32,8 +32,25 @@
 #include <cstring> // for memset.
 #include "../util.hpp"
 #include "../ss.hpp"
+#include <semaphore>
+
 
 using namespace LsNumerics;
+
+//#define WRITE_BARRIER() __dmb(14)
+//#define READ_BARRIER() __dmb(15)
+
+
+// #define READ_BARRIER() std::atomic_thread_fence(std::memory_order_acquire)
+// #define WRITE_BARRIER() std::atomic_thread_fence(std::memory_order_release); // Ensure that data in the buffer is flushed.
+
+
+#define READ_BARRIER() ((void)0)
+#define WRITE_BARRIER() ((void)0)
+
+
+
+//std::atomic_thread_fence(std::memory_order_release); // flush buffer data.
 
 static int NextPowerOf2(size_t value)
 {
@@ -195,11 +212,13 @@ void BackgroundConvolutionTask::CreateThread(const std::function<void(void)> &th
             }
             else
             {
+                nice(0);
                 int schedPolicy = SCHED_RR;
                 int priorityMin = sched_get_priority_min(schedPolicy);
                 int priorityMax = sched_get_priority_max(schedPolicy);
-                constexpr int USB_SERVICE_THREAD_PRIORITY = 5;
-                int schedPriority = USB_SERVICE_THREAD_PRIORITY - 1 + relativeThreadPriority / 3;
+                // constexpr int USB_SERVICE_THREAD_PRIORITY = 5;
+                constexpr int BASE_THREAD_PRIORITY = 25;
+                int schedPriority = BASE_THREAD_PRIORITY - 1 + relativeThreadPriority /2;
 
                 if (schedPriority < priorityMin)
                 {
@@ -243,7 +262,8 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
     {
         if (borrowedReads != 0)
         {
-            auto previousValue = writeCount.fetch_sub(borrowedReads);
+            auto previousValue = atomicWriteCount.fetch_sub(borrowedReads);
+            rWriteCount -= borrowedReads; // don't update rWriteCount. rWriteCount controls when we have to do ultra-expensive READ_BARRIER() calls.
             auto currentValue = previousValue - borrowedReads;
             borrowedReads = 0;
             if (previousValue > this->lowWaterMark && currentValue <= this->lowWaterMark)
@@ -255,8 +275,15 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
                 }
             }
         }
-
-        size_t available = writeCount.load();
+        if (rWriteCount  < MAX_READ_BORROW)
+        {
+            rWriteCount = atomicWriteCount.load();
+            if (rWriteCount != 0)
+            {
+                READ_BARRIER(); // read barrier for buffer memory.
+            }
+        }
+        size_t available = rWriteCount;
 
         // only synchronize every N samples for efficiency's sake.
         // The reader temporarily "borrows" n bytes from the buffer.
@@ -284,6 +311,7 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
         {
             TraceBackgroundConvolutionMessage("BackgroundConvolutionTask: wait for read.");
         }
+        std::cout << "BackgroundConvolutionTask read underrun." << std::endl;
         writeReadyCallback->OnSynchronizedSingleReaderDelayLineUnderrun();
         {
             readToWriteConditionVariable.notify_all();
@@ -291,7 +319,7 @@ void SynchronizedSingleReaderDelayLine::ReadWait()
             {
                 std::unique_lock lock{mutex};
 
-                if (writeCount == 0) // TODO: WHY DOES THIS WORK? (We deadlock without it)
+                if (atomicWriteCount.load() == 0) // TODO: WHY DOES THIS WORK? (We deadlock without it)
                 {
                     if (writeToReadConditionVariable.wait_for(lock, READ_TIMEOUT) == std::cv_status::timeout)
                     {
@@ -317,20 +345,26 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
         size_t thisTime;
         while (true)
         {
-            std::unique_lock lock{mutex};
-            if (closed)
+            if (atomicClosed)
             {
                 throw DelayLineClosedException();
             }
-            auto writeCount = this->writeCount.load();
-            if (writeCount == buffer.size())
+            if (wWriteCount+ count >= buffer.size())
+            {
+                wWriteCount = atomicWriteCount.load();
+            }
+            if (wWriteCount == buffer.size())
             {
                 writeStalled = true;
-                readToWriteConditionVariable.wait(lock);
+                {
+                    std::unique_lock<std::mutex> lock{mutex};
+                    readToWriteConditionVariable.wait(lock);
+                }
             }
             else
             {
-                thisTime = buffer.size() - writeCount;
+                thisTime = buffer.size() - wWriteCount;
+
                 break;
             }
         }
@@ -368,12 +402,15 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
             this->writeHead = writeHead;
         }
         {
-            std::lock_guard lock{mutex};
-            if (closed)
+            
+            if (atomicClosed.load())
             {
                 throw DelayLineClosedException();
             }
-            this->writeCount += thisTime;
+            WRITE_BARRIER();
+            this->atomicWriteCount += thisTime; // and release the reader with an atomic operation.
+            wWriteCount += thisTime;
+
             writeToReadConditionVariable.notify_all();
         }
     }
@@ -386,19 +423,24 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
         while (true)
         {
             std::unique_lock lock{mutex};
-            if (closed)
+            if (atomicClosed.load())
             {
                 throw DelayLineClosedException();
             }
-            auto writeCount = this->writeCount.load();
-            if (writeCount == buffer.size())
+            if (wWriteCount+count < buffer.size())
+            {
+                thisTime = count;
+                break;
+            }
+            wWriteCount = this->atomicWriteCount.load();
+            if (wWriteCount == buffer.size())
             {
                 writeStalled = true;
                 readToWriteConditionVariable.wait(lock);
             }
             else
             {
-                thisTime = buffer.size() - writeCount;
+                thisTime = buffer.size() - wWriteCount;
                 break;
             }
         }
@@ -437,7 +479,10 @@ void SynchronizedSingleReaderDelayLine::Write(size_t count, size_t offset, const
             this->writeHead = writeHead;
         }
 
-        this->writeCount += thisTime;
+        WRITE_BARRIER(); 
+        this->atomicWriteCount += thisTime; // and release the reader (atomic operation)
+        this->wWriteCount += thisTime;
+
         writeToReadConditionVariable.notify_all();
     }
 }
