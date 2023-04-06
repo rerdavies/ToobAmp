@@ -32,7 +32,7 @@
 #include <cstring> // for memset.
 #include "../util.hpp"
 #include "../ss.hpp"
-#include <semaphore>
+//#include <semaphore>
 
 
 using namespace LsNumerics;
