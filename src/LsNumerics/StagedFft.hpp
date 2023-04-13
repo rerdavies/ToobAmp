@@ -41,17 +41,68 @@
 #ifndef RESTRICT
 #define RESTRICT __restrict // equivalent of C99 restrict keyword. Valid for MSVC,GCC and CLANG.
 #endif
+
 namespace LsNumerics
 {
     namespace Implementation
     {
+        // minimal implementation of the subrange of a vector.
+        template <typename T>
+        class VectorRange
+        {
+        public:
+            VectorRange(size_t start, size_t end, std::vector<T> &vector)
+            {
+                assert(start < vector.size());
+                assert(end <= vector.size());
+                assert(start <= end);
+                p = (&vector[0]) + start;
+                _size = end - start;
+            }
+            VectorRange(size_t start, size_t end, const VectorRange<T> &vector)
+            {
+                assert(start < vector.size());
+                assert(end <= vector.size());
+                assert(start <= end);
+                p = const_cast<T *>(vector.p) + start;
+                _size = end - start;
+            }
+
+            // conversion constructor.
+            VectorRange(std::vector<T> &vector)
+                : VectorRange(0, vector.size(), vector)
+            {
+            }
+
+            size_t size() const { return _size; }
+            T &at(size_t index) const
+            {
+                assert(index < _size);
+                return const_cast<T *>(p)[index];
+            }
+            T &operator[](size_t index) const
+            {
+                return at(index);
+            }
+
+            using iterator_t = T *;
+
+            iterator_t begin() { return p; }
+            iterator_t end() { return p + size; }
+
+        private:
+            size_t _size;
+            const T *p;
+        };
+
         class StagedFftPlan
         {
         public:
             // FFT direction specifier
             using complex_t = std::complex<double>;
 
-            enum class Direction {
+            enum class Direction
+            {
                 Forward = +1,
                 Backward = -1
             };
@@ -92,76 +143,33 @@ namespace LsNumerics
 
             void Compute(InstanceData &instanceData, const std::vector<float> &input, std::vector<complex_t> &output, Direction dir);
 
-            bool IsL1Optimized() const {
+            bool IsL1Optimized() const
+            {
                 return isL1Optimized;
             }
-            bool IsL2Optimized() const {
+            bool IsL2Optimized() const
+            {
                 return isL2Optimized;
+            }
+            bool IsShuffleOptimized() const {
+                return isShuffleOptimized;
             }
 
         private:
             bool isL1Optimized = false;
+            bool isShuffleOptimized = false;
             bool isL2Optimized = false;
             static std::recursive_mutex cacheMutex;
             static std::vector<std::unique_ptr<StagedFftPlan>> cache;
+            std::vector<std::vector<complex_t>> stageFactors;
 
-            // minimal implementation of the subrange of a vector.
-            template <typename T>
-            class VectorRange
-            {
-            public:
-                VectorRange(size_t start, size_t end, std::vector<T> &vector)
-                {
-                    assert(start < vector.size());
-                    assert(end <= vector.size());
-                    assert(start <= end);
-                    p = (&vector[0]) + start;
-                    _size = end - start;
-                }
-                VectorRange(size_t start, size_t end, const VectorRange<T> &vector)
-                {
-                    assert(start < vector.size());
-                    assert(end <= vector.size());
-                    assert(start <= end);
-                    p = const_cast<T *>(vector.p) + start;
-                    _size = end - start;
-                }
 
-                // conversion constructor.
-                VectorRange(std::vector<T> &vector)
-                    : VectorRange(0, vector.size(), vector)
-                {
-                }
-
-                size_t size() const { return _size; }
-                T &at(size_t index) const
-                {
-                    assert(index < _size);
-                    return const_cast<T *>(p)[index];
-                }
-                T &operator[](size_t index) const
-                {
-                    return at(index);
-                }
-
-                using iterator_t = T *;
-
-                iterator_t begin() { return p; }
-                iterator_t end() { return p + size; }
-
-            private:
-                size_t _size;
-                const T *p;
-            };
-
-            void ComputePass(size_t pass, const VectorRange<complex_t> &output, Direction dir);
-            void ComputeInnerLarge(size_t pass, const VectorRange<complex_t> &output, Direction dir);
-            void ComputeInner0(const VectorRange<complex_t> &output, Direction dir);
-            void ComputeInner(InstanceData &instanceData, const VectorRange<complex_t> &output, Direction dir);
-            void TransposeOutputs(InstanceData &instanceData, size_t cacheSize, size_t size, const VectorRange<complex_t> &outputs, Direction dir);
-
+            void ComputePass(size_t pass, VectorRange<complex_t> &output, Direction dir);
+            void ComputePassLarge(size_t pass, VectorRange<complex_t> &output, Direction dir);
+            void ComputeInner0(VectorRange<complex_t> &output, Direction dir);
+            void ComputeInner(InstanceData &instanceData, VectorRange<complex_t> &output, Direction dir);
         private:
-            using FftOp = std::function<void(InstanceData &instanceData, const VectorRange<complex_t> &output, Direction dir)>;
+            using FftOp = std::function<void(InstanceData &instanceData, VectorRange<complex_t> &output, Direction dir)>;
 
             StagedFftPlan *cacheEfficientFft = nullptr;
 
@@ -178,6 +186,7 @@ namespace LsNumerics
             size_t fftSize = UNINITIALIZED_VALUE;
 
             void CalculateTwiddleFactors(Direction dir, std::vector<complex_t> &twiddles);
+            size_t AddShuffleOps(size_t currentPass, size_t fftSize);
         };
     }
 
@@ -193,19 +202,20 @@ namespace LsNumerics
 
         {
         }
-        StagedFft() 
-        :plan(nullptr),
-         instanceData(0)
+        StagedFft()
+            : plan(nullptr),
+              instanceData(0)
         {
-
         }
         void SetSize(size_t size)
         {
             plan = &Implementation::StagedFftPlan::GetCachedInstance(size);
             instanceData.SetSize(size);
-        }        
-        size_t GetSize() const {
-            if (!plan) return 0;
+        }
+        size_t GetSize() const
+        {
+            if (!plan)
+                return 0;
             return plan->GetSize();
         }
         void Compute(const std::vector<float> &input, std::vector<complex_t> &output, Direction direction)
@@ -225,15 +235,16 @@ namespace LsNumerics
 
         void Forward(const std::vector<complex_t> &input, std::vector<complex_t> &output)
         {
-            Compute(input,output,Direction::Forward);
+            Compute(input, output, Direction::Forward);
         }
         void Backward(const std::vector<complex_t> &input, std::vector<complex_t> &output)
         {
-            Compute(input,output,Direction::Backward);
+            Compute(input, output, Direction::Backward);
         }
 
         bool IsL1Optimized() const { return plan->IsL1Optimized(); }
         bool IsL2Optimized() const { return plan->IsL2Optimized(); }
+        bool IsShuffleOptimized() const { return plan->IsShuffleOptimized(); }
 
     private:
         using InstanceData = Implementation::StagedFftPlan::InstanceData;

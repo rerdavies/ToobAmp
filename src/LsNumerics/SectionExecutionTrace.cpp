@@ -23,6 +23,7 @@
  */
 #include "SectionExecutionTrace.hpp"
 #include <fstream>
+#include <algorithm>
 
 using namespace LsNumerics;
 using namespace std;
@@ -77,6 +78,13 @@ void SectionExecutionTrace::WriteRecord(const std::filesystem::path fileName)
       << "inputOffset"
       << endl;
 
+    std::sort(
+        record.begin(),
+        record.end(),
+        [](const TraceEntry&left,const TraceEntry& right) {
+            return left.start < right.start;
+        }
+    );
     for (auto &entry : record)
     {
         f << entry.threadNumber

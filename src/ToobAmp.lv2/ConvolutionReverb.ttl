@@ -31,7 +31,7 @@
 toobImpulse:#impulseFile
         a rdf:property;
         rdfs:label "File";
-        rdfs:range atom:Path .
+        rdfs:range atom:Path.
 
 
 <http://two-play.com/rerdavies#me>
@@ -53,18 +53,103 @@ toobImpulse:#impulseFile
         lv2:microVersion 1 ;
         rdfs:comment """
 
-Convolution reverb is a notoriously compute-intensive effect. For best results, use the Time control to constrain the length of the impulse file to
+Convolution reverb is a notoriously compute-intensive effect. For best results, use the Max T control to constrain the length of the impulse file to
 under two seconds.
 
-The time control affects how much of the impulse file is used. If the length of the impulse file is longer than the specified time, samples occuring after 
-the specified time are discarded, and the tail of the impulse convolution is fed back into the imput of the convolution. This ensures a smooth reverb tail. 
-If the impulse file is shorter than the specified time, then all samples are used.
+The Max T control affects how much of the impulse file is used. If the length of the impulse file is longer than the specified time, samples occuring after 
+the specified time are discarded, and the tail of the impulse convolution is fed back into the imput of the convolution. This ensures a smooth reverb tail, 
+and has little effect on the quality of the resulting reverb. If the impulse file is shorter than the specified time, then all samples in the impulse 
+file are used.
 
-Because reverb impulse files typically include the original sound, the direct mix control should typically be set to -inf dB, and the 
-reverb mix control should be set to zero dB. Results of varying the mix controls may be unpredictable if the reverb impulse file does 
-contain the orginal sound, as the original signal will be output twice: once from the direct mix, and once from the input signal as 
-it appears in the impulse file. Because the original signal may be delayed or filtered in the impulse file, the two copies of the input signal
-may cause odd audio artifacts.
+Because reverb impulse files typically include the original sound, you will sometimes get strange comb filter effects if you use the Direct mix control;
+but this varies depending on the impulse file in question. Usually, the Direct mix control should be set to -INF.
+
+The Predelay control determines whether Toob Convolution Reverb will strip leading silence from the impulse data. Turning it on preserves silence in the
+impulse signal; turning it off removes leading silence. If the the Direct mix control is set to
+-INF dB, there's no real point in delaying the convolution reverb output; you want responses as quickly as possible. The leading silence in impulse files can 
+sometimes be quite significant. 
+
+If the input file has 4 channels, Toob Convolution Reverb assumes the signal is in Ambisonic b-format, and downmixes the channels accordingly. Unfortunately,
+it currently dowmixes the Ambisonic audio to mono. Exepct a stereo version of Toob Convolution Reverb in the near future, which will make better use of
+Ambisonic source material. 
+
+Toob Convolution Reverb comes with a nominal set of reverb impulse files to get you started. You are strongly encouraged to seek out reverb impulse files 
+on the internet. 
+
+Special thanks are extended to the the OpenAir project, wich graciously provided the base set of impulse files distributed with Toob Convolution Reverb under 
+licensing terms that are compatible with the Toob Amp project's licensing terms.
+
+---
+
+Toob Convolution Reverb's impulse files were provided by the OpenAir project.
+https://www.openair.hosted.york.ac.uk, under CC-By-4.0 licenses.
+
+
+
+Arthur Sykes Rymer Auditorium.wav
+
+---------------------------------------
+
+By: www.openairlib.net, University of York
+
+This work is provided under a Creative Commons Attribution 4.0 International License.
+
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=425
+
+
+Jack Lyons Hall, University of York.wav
+
+---------------------------------------
+
+By: www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
+
+This work is provided under a Creative Commons Attribution 4.0 International License.
+
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=571
+
+
+
+Koli National Park - Winter.wav
+
+---------------------------------------
+
+By: www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
+
+This work is provided under a Creative Commons Attribution 4.0 International License.
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=584
+
+
+
+St. Margaret’s Church.wav
+
+---------------------------------------
+
+By: www.openairlib.net, AudioLab University of York, www.ncem.co.uk
+
+This work is provided under a Creative Commons Attribution 4.0 International License.
+
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=702
+
+
+Genesis 6 Studio Live Room.wav
+
+---------------------------------------
+
+By: www.openairlib.net
+
+This work is provided under a Creative Commons Attribution 4.0 International License.
+
+https://creativecommons.org/licenses/by/4.0/
+
+Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
 """ ;
 
@@ -111,14 +196,14 @@ may cause odd audio artifacts.
                 lv2:index  1;
                 lv2:symbol "direct_mix" ;
                 lv2:name "Direct";
-                lv2:default -30.0 ;
-                lv2:minimum -30.0 ;
-                lv2:maximum 30.0 ;    
+                lv2:default -40.0 ;
+                lv2:minimum -40.0 ;
+                lv2:maximum 20.0 ;    
                 units:unit units:db ;
 
                 lv2:scalePoint [
                         rdfs:label "-INF" ;
-                        rdf:value -30.0
+                        rdf:value -40.0
                 ];
                 rdfs:comment "Direct mix. Set to minimum to disable." ;
 
@@ -131,14 +216,14 @@ may cause odd audio artifacts.
                 lv2:symbol "reverb_mix" ;
                 lv2:name "Reverb";
 
-                lv2:default -30.0 ;
-                lv2:minimum -30.0 ;
+                lv2:default -40.0 ;
+                lv2:minimum -10.0 ;
                 lv2:maximum 20.0 ;    
                 units:unit units:db ;
 
                 lv2:scalePoint [
                         rdfs:label "-INF" ;
-                        rdf:value -30.0
+                        rdf:value -40.0
                 ];
                 rdfs:comment "Reverb mix. Set to minimum to disable." ;
         ],  
@@ -154,7 +239,7 @@ may cause odd audio artifacts.
                 lv2:minimum 0 ;
                 lv2:maximum 1 ;    
                 
-                lv2:portProperty lv2:toggled ;
+                lv2:portProperty lv2:enumeration ;
 
                 lv2:scalePoint [
                         rdfs:label "Remove" ;
@@ -173,25 +258,38 @@ may cause odd audio artifacts.
 
                 lv2:index 4 ;
                 lv2:symbol "loading_state" ;
-                lv2:name "Loading";
+                lv2:name "Status";
 
                 lv2:portProperty lv2:enumeration ;
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 3.0 ;    
+                lv2:maximum 5.0 ;    
+
+				# NotLoaded = 0,
+				# Idle = 1,
+				# Error = 2,
+				# SentRequest = 3,
+				# GotResponse = 4,
+				# CleaningUp = 5,
 
                 lv2:scalePoint [
-                        rdfs:label "Not loaded." ;
+                        rdfs:label "Not loaded" ;
                         rdf:value 0.0
                 ],[
-                        rdfs:label "Error." ;
+                        rdfs:label "Ready" ;
                         rdf:value 1.0
                 ],[
-                        rdfs:label "Loading..." ;
+                        rdfs:label "Error" ;
                         rdf:value 2.0
                 ],[
-                        rdfs:label "Loaded" ;
+                        rdfs:label "Loading" ;
                         rdf:value 3.0
+                ],[
+                        rdfs:label "Loading" ;
+                        rdf:value 4.0
+                ],[
+                        rdfs:label "Loading" ;
+                        rdf:value 5.0
                 ];
                 rdfs:comment "Load state." ;
         ],  
@@ -240,14 +338,14 @@ toobConvolutionReverb:ui
         pipedal_ui:fileProperties 
         [
                 a pipedal_ui:fileProperty;
-                lv2:name "Impulse File" ;
-                lv2:index 3 ;
+                rdfs:label "Impulse File" ;
+                lv2:index 4 ;
                 pipedal_ui:patchProperty toobImpulse:impulseFile ;
                 pipedal_ui:directory "ReverbImpulseFiles";
                 pipedal_ui:fileTypes 
                 [
                         a pipedal_ui:fileType;
-                        lv2:name "WAV File";
+                        rdfs:label "WAV File";
                         pipedal_ui:fileExtension ".wav";
                 ];
         ];

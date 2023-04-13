@@ -39,10 +39,6 @@ By: www.openairlib.net, AudioLab University of York, www.ncem.co.uk
 This work is provided under a Creative Commons Attribution 4.0 International License.
 https://creativecommons.org/licenses/by/4.0/
 
-www.openairlib.net
-AudioLab, University of York
-www.ncem.co.uk
- 
 Source: https://www.openair.hosted.york.ac.uk/?page_id=702
 
 

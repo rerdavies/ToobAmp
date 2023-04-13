@@ -114,39 +114,24 @@ static std::vector<ExecutionEntry> executionTimePerSampleNs{
     {64, 92.286, INVALID_THREAD_ID},
 
     // executed on thread 1.
-    {128, 235, 1,0},  // execution times in microseconds measured under real-time conditions.
-    {256, 306, 1,0},
+    {128, 244, 1,0},  // execution times in microseconds measured under real-time conditions (with write barrier)
+    {256, 244, 1,0},
     {512, 368, 1,0},
-    {1024, 500, 2,0},
+    {1024, 594, 2,0},
     // executed on thread 2
-    {2048, 788, 2,0},
-    {4096, 1112, 2,0},
-    {8192, 2731, 3,0},
+    {2048, 977, 2,0},
+    {4096, 2093, 2,0},
+    {8192, 3662, 3,0},
 
-    {16384, 9646, 3,},
-    {32768, 27606, 4},
-    {65536, 27606*2.2, 4},
-    {131072, 27606*2.2*2.2, 5},
-    {262144, 27606*2.2*2.2*2.2, 6},
-    {524288,  27606*2.2*2.2*2.2*2.2, 6},
+    {16384, 15174, 3,},
+    {32768, 36324, 4},
+    {65536, 60926,5},
+    {131072, 60926*2.2, 6},
+    {262144, 60926*2.2*2.2, 7},
+    {524288,  60926*2.2*2.2*2.2, 8},
 
 };
 
-int convolutionThreadPriorities[] = 
-{
-    -1,
-    31,
-    30,
-    5,
-    4,
-    3,
-    2,
-    1,
-    1,
-    1,
-    1,
-    1,
-};
 constexpr int MAX_THREAD_ID = 11;
 
 constexpr size_t INVALID_EXECUTION_TIME = std::numeric_limits<size_t>::max();
@@ -163,6 +148,18 @@ static int GetDirectSectionThreadId(size_t size)
     return INVALID_THREAD_ID;
 }
 std::vector<size_t> directSectionLeadTimes;
+
+size_t BalancedConvolution::GetDirectSectionExecutionTimeInSamples(size_t directSectionSize)
+{
+    for (const auto &entry : executionTimePerSampleNs)
+    {
+        if (entry.n == directSectionSize)
+        {
+            return (size_t)std::ceil(entry.n*1E-6*sampleRate);
+        }
+    }
+    throw std::invalid_argument("invalid directSectionSize.");
+}
 
 static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBufferSize)
 {
@@ -187,11 +184,12 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
         }
     }
 
-    std::cout << "Thread pool execution times" << std::endl;
-    for (size_t i = 0; i < pooledExecutionTime.size(); ++i)
-    {
-         std::cout << std::setw(12) << std::right << i << std::setw(12) << std::right << pooledExecutionTime[i] << std::endl;
-    }
+    // std::cout << "Thread pool execution times" << std::endl;
+    // for (size_t i = 0; i < pooledExecutionTime.size(); ++i)
+    // {
+    //      std::cout << std::setw(12) << std::right << i << std::setw(12) << std::right << pooledExecutionTime[i] << std::endl;
+    // }
+
     std::cout <<  std::endl;
     directSectionLeadTimes.resize(executionTimePerSampleNs.size());
     for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
@@ -210,14 +208,15 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
             directSectionLeadTimes[log2N] = pooledExecutionTime[entry.threadNumber] + schedulingJitter + entry.n;
         }
     }
-    std::cout << "Direct Section Lead Times" << std::endl;
-    for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
-    {
-        if (directSectionLeadTimes[i] != INVALID_EXECUTION_TIME)
-        {
-            std::cout << std::setw(12) << std::right << (1 << i) << std::setw(12) << std::right << directSectionLeadTimes[i] << std::endl;
-        }
-    }
+    
+    // std::cout << "Direct Section Lead Times" << std::endl;
+    // for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
+    // {
+    //     if (directSectionLeadTimes[i] != INVALID_EXECUTION_TIME)
+    //     {
+    //         std::cout << std::setw(12) << std::right << (1 << i) << std::setw(12) << std::right << directSectionLeadTimes[i] << std::endl;
+    //     }
+    // }
 }
 static size_t GetDirectSectionLeadTime(size_t directSectionSize)
 {
@@ -246,7 +245,6 @@ std::string MaxString(const std::string &s, size_t maxLen)
 }
 // When enabled, reduces workingMemory size as much as possible
 // by re-using slots in workingMemory whenever possible.
-#ifndef JUNK
 namespace LsNumerics::Implementation
 {
     class SlotUsage
@@ -441,183 +439,7 @@ namespace LsNumerics::Implementation
         slotUsage.Print(o);
         return o;
     }
-#else
-namespace LsNumerics::Implementation
-{
-    class SlotUsage
-    {
-    private:
-        fft_index_t planSize;
 
-        std::vector<uint64_t> bitMask;
-
-        static constexpr size_t BITCOUNT = sizeof(uint64_t) * 8;
-        static constexpr size_t ALL_ONES = (size_t)-1;
-
-    public:
-        SlotUsage()
-        {
-        }
-        SlotUsage(size_t planSize)
-        {
-            SetPlanSize(planSize);
-        }
-        void SetPlanSize(size_t planSize)
-        {
-            bitMask.resize((planSize + BITCOUNT - 1) / BITCOUNT);
-            this->planSize = ToIndex(planSize);
-        }
-
-        fft_index_t borrowedSlot = -1;
-        // range: [from,to)
-        void Add(fft_index_t from, fft_index_t to)
-        {
-            if (from == to)
-            {
-                borrowedSlot = from;
-                ++to;
-            }
-            else
-            {
-                borrowedSlot = -1;
-            }
-            if (from >= planSize)
-            {
-                from -= planSize;
-                to -= planSize;
-            }
-            else if (to > planSize)
-            {
-                to -= planSize;
-                Add(0, to);
-                Add(from, planSize);
-                return;
-            }
-            size_t firstSlot = ((size_t)from) / BITCOUNT;
-            size_t lastSlot = ((size_t)to - 1) / BITCOUNT;
-            size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
-            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to) % BITCOUNT);
-
-            if (firstSlot == lastSlot)
-            {
-                bitMask[firstSlot] |= (firstMask & lastMask);
-            }
-            else
-            {
-                bitMask[firstSlot] |= (firstMask);
-                for (size_t i = firstSlot + 1; i < lastSlot; ++i)
-                {
-                    bitMask[i] = ALL_ONES;
-                }
-                if (lastMask != 0)
-                {
-                    bitMask[lastSlot] |= (lastMask);
-                }
-            }
-        }
-        bool contains(fft_index_t time) const
-        {
-            return contains_any(time, time + 1);
-        }
-        bool contains_any(fft_index_t from, fft_index_t to) const
-        {
-            if (from >= planSize)
-            {
-                if (from == to)
-                {
-                    to %= planSize;
-                }
-                from %= planSize;
-            }
-            if (to > planSize)
-            {
-                to = to % planSize;
-            }
-            if (from == to)
-            {
-                if (borrowedSlot == from)
-                {
-                    return false;
-                }
-                ++to;
-            }
-
-            size_t firstSlot = ((size_t)from) / BITCOUNT;
-            size_t lastSlot = ((size_t)to - 1) / BITCOUNT;
-            size_t firstMask = ALL_ONES << ((size_t)from % BITCOUNT);
-            size_t lastMask = ALL_ONES >> (BITCOUNT - ((size_t)to) % BITCOUNT);
-
-            if (firstSlot == lastSlot)
-            {
-                return (bitMask[firstSlot] & firstMask & lastMask) != 0;
-            }
-            else
-            {
-                if ((bitMask[firstSlot] & firstMask) != 0)
-                {
-                    return true;
-                }
-                if ((lastSlot != bitMask.size() && bitMask[lastSlot] & lastMask) != 0)
-                {
-                    return true;
-                }
-                for (size_t i = firstSlot + 1; i < lastSlot; ++i)
-                {
-                    if (bitMask[i] != 0)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return false;
-        }
-        void Print(std::ostream &o) const
-        {
-            o << '[';
-            fft_index_t count = ToIndex(bitMask.size() * sizeof(std::uint64_t));
-
-            for (fft_index_t i = 0; i < count; /**/)
-            {
-                if (contains(i))
-                {
-                    auto start = i;
-                    ++i;
-                    while (i < count && contains(i))
-                    {
-                        ++i;
-                    }
-                    auto end = i;
-                    o << '[' << start << ',' << end << ')';
-                }
-                else
-                {
-                    ++i;
-                }
-            }
-            o << ']';
-        }
-        void Print() const
-        {
-            Print(std::cout);
-            std::cout << std::endl;
-        }
-        std::string ToString() const;
-    };
-
-    std::string SlotUsage::ToString() const
-    {
-        std::stringstream s;
-        Print(s);
-        return s.str();
-    }
-    std::ostream &operator<<(std::ostream &o, const SlotUsage &slotUsage)
-    {
-        slotUsage.Print(o);
-        return o;
-    }
-
-#endif
     class FftOp;
 
     class IndexAllocator
@@ -1847,13 +1669,8 @@ BalancedConvolution::BalancedConvolution(SchedulerPolicy schedulerPolicy, size_t
     PrepareThreads();
 }
 
-BalancedConvolution::DirectSectionThread *BalancedConvolution::GetDirectSectionThreadBySize(size_t size)
+BalancedConvolution::DirectSectionThread *BalancedConvolution::GetDirectSectionThread(int threadNumber)
 {
-    int threadNumber = GetDirectSectionThreadId(size);
-    if (threadNumber == INVALID_THREAD_ID)
-    {
-        throw std::logic_error("Invalide thread id.");
-    }
     for (auto &thread : directSectionThreads)
     {
         if (thread->GetThreadNumber() == threadNumber)
@@ -1875,7 +1692,7 @@ void BalancedConvolution::PrepareThreads()
 
     for (auto &threadedDirectSection : threadedDirectSections)
     {
-        auto sectionThread = GetDirectSectionThreadBySize(threadedDirectSection->Size());
+        auto sectionThread = GetDirectSectionThread(threadedDirectSection->GetDirectSection()->directSection.ThreadNumber());
         sectionThread->AddSection(threadedDirectSection.get());
 #if EXECUTION_TRACE
         threadedDirectSection->SetTraceInfo(&executionTrace,sectionThread->GetThreadNumber());
@@ -1893,7 +1710,7 @@ void BalancedConvolution::PrepareThreads()
                 {
                     thread->Execute(this->backgroundConvolutionTask);
                 },
-                -(int)thread->GetThreadNumber());
+                (int)thread->GetThreadNumber());
         }
     }
 }
@@ -1901,9 +1718,8 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
 {
     constexpr size_t INITIAL_SECTION_SIZE = 128;
     constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
-    constexpr size_t MAX_BALANCED_SECTION = 132 * 1024;                                // calculating balanced sections larger than this requires too much memory. Can't go larger than this.
+    constexpr size_t MAXIMUM_USABLE_BALANCED_SECTION = 132 * 1024;                                // calculating balanced sections larger than this requires too much memory. Can't go larger than this.
     constexpr size_t DIRECT_SECTION_CUTOFF_LIMIT = std::numeric_limits<size_t>::max(); // the point at which balanced sections become faster than direct sections.
-
     // nb: global data, but constructor is always protected by the cache mutex.
 
     {
@@ -1943,26 +1759,32 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
         balancedSections.reserve(16);
         directSections.reserve(16);
 
+        int threadNumber = 0;
+        size_t executionOffsetInSamples = 0;
+        bool considerBalancedSections = true;
         while (sampleOffset < size)
         {
 
             size_t remaining = size - sampleOffset;
 
-            size_t nextBalancedSectionDelay = std::numeric_limits<size_t>::max();
-            if (balancedSectionSize < MAX_BALANCED_SECTION) // don't even consider balanced section sizes larger than this. Don't even ask.
+            if (considerBalancedSections)
             {
-                nextBalancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize * 2);
-            }
-            // Update balanced section size.
-            if (sampleOffset >= nextBalancedSectionDelay)
-            {
-                balancedSectionSize *= 2;
-                balancedSectionDelay = nextBalancedSectionDelay;
-            }
-            while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
-            {
-                balancedSectionSize = balancedSectionSize / 2;
-                balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+                size_t nextBalancedSectionDelay = std::numeric_limits<size_t>::max();
+                if (balancedSectionSize < MAXIMUM_USABLE_BALANCED_SECTION) // don't even consider balanced section sizes larger than this. Don't even ask.
+                {
+                    nextBalancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize * 2);
+                }
+                // Update balanced section size.
+                if (sampleOffset >= nextBalancedSectionDelay)
+                {
+                    balancedSectionSize *= 2;
+                    balancedSectionDelay = nextBalancedSectionDelay;
+                }
+                while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
+                {
+                    balancedSectionSize = balancedSectionSize / 2;
+                    balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+                }
             }
 
             size_t directSectionDelay;
@@ -1972,7 +1794,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             bool canUseDirectSection = false;
             while (true)
             {
-                directSectionDelay = GetDirectSectionLeadTime(directSectionSize);
+                directSectionDelay = GetDirectSectionLeadTime(directSectionSize) + executionOffsetInSamples;
                 if (directSectionDelay == std::numeric_limits<size_t>::max())
                 {
                     throw std::logic_error("Failed to schedule direct section.");
@@ -1985,13 +1807,15 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
 
                 canUseDirectSection = true;
 
+                considerBalancedSections = false; // once we have one direct section, stop considering balanced sections.
+
                 // don't increase direct section size if we can reach the end with the current size.
                 if (directSectionSize >= remaining)
                 {
                     break;
                 }
                 // don't increase the direct section size if we don't have enough samples.
-                size_t nextDirectSectionDelay = GetDirectSectionLeadTime(directSectionSize * 2);
+                size_t nextDirectSectionDelay = GetDirectSectionLeadTime(directSectionSize * 2) + executionOffsetInSamples;
                 if (nextDirectSectionDelay > sampleOffset)
                 {
                     break;
@@ -2000,10 +1824,13 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             }
 
             // if we can use a shorter section size for the last section, do so.
-            while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
+            if (considerBalancedSections)
             {
-                balancedSectionSize = balancedSectionSize / 2;
-                balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+                while (remaining <= balancedSectionSize / 2 && balancedSectionSize > INITIAL_SECTION_SIZE)
+                {
+                    balancedSectionSize = balancedSectionSize / 2;
+                    balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
+                }
             }
             while (remaining <= directSectionSize / 2 && directSectionSize > INITIAL_SECTION_SIZE)
             {
@@ -2018,7 +1845,11 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             }
             if (useBalancedSection)
             {
+                assert(considerBalancedSections); // should not ever generate a balanced section after having genreated a direct section.
+
+
                 size_t inputDelay = sampleOffset - balancedSectionDelay;
+
 
 #if DISPLAY_SECTION_ALLOCATIONS
                 if (gDisplaySectionPlans)
@@ -2048,7 +1879,12 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             else
             {
 
-                size_t inputDelay = sampleOffset - directSectionDelay;
+                size_t inputDelay = executionOffsetInSamples & (directSectionSize-1);
+
+                if (inputDelay > sampleOffset-balancedSectionDelay)
+                {
+                    inputDelay = ((sampleOffset-balancedSectionDelay)*2/3) & (directSectionSize-1); // just do what we can. Effectively, a random placement.
+                }
 
 #if DISPLAY_SECTION_ALLOCATIONS
                 if (gDisplaySectionPlans)
@@ -2067,6 +1903,15 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                 {
                     delaySize = myDelaySize;
                 }
+                
+                // sections get their assigned thread number, except for the size-reduced last section, which goes on the same thread as
+                // its predecessor.
+
+                int t = GetDirectSectionThreadId(directSectionSize);
+                if (t > threadNumber) 
+                {
+                    threadNumber = t;
+                }
 
                 directSections.emplace_back(
                     DirectSection{
@@ -2074,8 +1919,13 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                         DirectConvolutionSection(
                             directSectionSize,
                             sampleOffset,
-                            impulseResponse, directSectionDelay)});
+                            impulseResponse, 
+                            directSectionDelay,
+                            inputDelay,
+                            threadNumber)});
                 sampleOffset += directSectionSize;
+                executionOffsetInSamples += this->GetDirectSectionExecutionTimeInSamples(directSectionSize);
+
             }
         }
     }
@@ -2562,15 +2412,18 @@ bool BalancedConvolutionSection::PlanFileExists(size_t size)
 
 Implementation::DirectConvolutionSection::DirectConvolutionSection(
     size_t size,
-    size_t offset, const std::vector<float> &impulseData,
-    size_t schedulerDelay)
+    size_t sampleOffset, const std::vector<float> &impulseData,
+    size_t sectionDelay,
+    size_t inputDelay,
+    size_t threadNumber)
     : fftPlan(size * 2),
-      size(size)
+      size(size),
+      threadNumber(threadNumber),
+      sampleOffset(sampleOffset),
+      sectionDelay(sectionDelay),
+      inputDelay(inputDelay)
+
 {
-    this->offset = offset;
-    if (schedulerDelay == 0)
-        schedulerDelay = size;
-    this->schedulerDelay = schedulerDelay;
     buffer.resize(size * 2);
     inputBuffer.resize(size * 2);
     impulseFft.resize(size * 2);
@@ -2578,18 +2431,18 @@ Implementation::DirectConvolutionSection::DirectConvolutionSection(
 
     const float norm = (float)(std::sqrt(2 * size));
 
-    if (offset >= impulseData.size())
+    if (sampleOffset >= impulseData.size())
     {
         len = 0;
     }
-    else if (offset + len > impulseData.size())
+    else if (sampleOffset + len > impulseData.size())
     {
-        len = impulseData.size() - offset;
+        len = impulseData.size() - sampleOffset;
     }
 
     for (size_t i = 0; i < len; ++i)
     {
-        impulseFft[i + size] = norm * impulseData[i + offset];
+        impulseFft[i + size] = norm * impulseData[i + sampleOffset];
     }
     fftPlan.Compute(impulseFft, impulseFft, Fft::Direction::Forward);
     bufferIndex = 0;
@@ -2643,7 +2496,7 @@ bool BalancedConvolution::ThreadedDirectSection::Execute(BackgroundConvolutionTa
     return processed;
 }
 
-void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t time, SynchronizedSingleReaderDelayLine &output)
+void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t time, LocklessQueue &output)
 {
 
 #if EXECUTION_TRACE
@@ -2663,12 +2516,13 @@ void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t 
 
         output.Write(size, 0, this->buffer);
     }
+    
 #if EXECUTION_TRACE
     SectionExecutionTrace::time_point end = SectionExecutionTrace::clock::now();
 
     if (this->pTrace)
     {
-        this->pTrace->Trace(threadNumber, this->Size(), start, end, writeCount, this->schedulerDelay);
+        this->pTrace->Trace(threadNumber, this->Size(), start, end, writeCount, this->inputDelay);
     }
 
 #endif
@@ -2677,20 +2531,23 @@ void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t 
 BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection &section)
     : section(&section)
 {
+    // degree of freedom: inputDelay is as long as possible. We can reduce input delay down to zero, and should do so to distribute compute time.
     auto &directSection = section.directSection;
     size_t size = directSection.Size();
     (void)size;
     size_t sampleOffset = directSection.SampleOffset();
-    size_t sectionDelay = directSection.Delay();
-    size_t inputDelay = sampleOffset - sectionDelay;
-    (void)inputDelay;
+    size_t sectionDelay = directSection.SectionDelay();
+    size_t inputDelay = directSection.InputDelay();
 
-    this->currentSample = 0;
+    this->currentSample = inputDelay-size;
 
     size_t delayLineSize = sampleOffset + sectionDelay + 256;
     outputDelayLine.SetSize(delayLineSize, delayLineSize - size);
+
+
     std::vector<float> tempBuffer;
-    tempBuffer.resize(sampleOffset);
+    assert (inputDelay <= size);
+    tempBuffer.resize(sampleOffset-(size-inputDelay));
     outputDelayLine.Write(tempBuffer.size(), 0, tempBuffer);
 }
 

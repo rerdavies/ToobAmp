@@ -47,8 +47,6 @@ add_custom_target(copy-files ALL
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 
-set (CMAKE_CXX_STANDARD 20)
-
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
         LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
@@ -70,6 +68,9 @@ add_library(ToobAmp  SHARED
 
         LsNumerics/BackgroundConvolutionTask.hpp
         LsNumerics/BackgroundConvolutionTask.cpp
+        LsNumerics/LocklessQueue.hpp
+        LsNumerics/LocklessQueue.cpp
+    
         LsNumerics/FixedDelay.hpp
 
 
@@ -140,7 +141,9 @@ add_library(ToobAmp  SHARED
          LsNumerics/ToneStackFilter.cpp LsNumerics/ToneStackFilter.h
          LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
          LsNumerics/PiecewiseChebyshevApproximation.hpp
+         LsNumerics/PiecewiseChebyshevApproximation.cpp
          LsNumerics/LsChebyshevApproximation.hpp
+         LsNumerics/LsChebyshevApproximation.cpp
          LsNumerics/LsPolynomial.hpp
          LsNumerics/InPlaceBilinearFilter.h
          LsNumerics/BaxandallToneStack.hpp
@@ -163,7 +166,9 @@ add_library(ToobAmp  SHARED
 
 target_link_libraries(ToobAmp 
     RTNeural 
-    dl pthread boost_iostreams z)
+    dl pthread
+    boost_iostreams 
+    z)
 target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
 )
@@ -211,6 +216,9 @@ add_library(BalancedConvolution STATIC
 
     LsNumerics/BackgroundConvolutionTask.hpp
     LsNumerics/BackgroundConvolutionTask.cpp
+    LsNumerics/LocklessQueue.hpp
+    LsNumerics/LocklessQueue.cpp
+
     LsNumerics/FixedDelay.hpp
 
     
@@ -334,7 +342,6 @@ set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 set_target_properties(ToobAmp PROPERTIES PREFIX "")
-set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 17)
 
 include(GNUInstallDirs)
 

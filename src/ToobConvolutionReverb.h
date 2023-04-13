@@ -118,6 +118,10 @@ namespace toob
 		void SetLoadingState(float state)
 		{
 			this->loadingState = state;
+			if (this->pLoadingState)
+			{
+				*(pLoadingState) = state;
+			}
 		}
 
 		class LoadWorker : public WorkerActionWithCleanup
@@ -126,11 +130,12 @@ namespace toob
 			// must aggree with TTL values for State propery.
 			enum class State
 			{
-				Idle = 0,
-				Error = 1,
-				SentRequest = 2,
-				GotResponse = 3,
-				CleaningUp = 4,
+				NotLoaded = 0,
+				Idle = 1,
+				Error = 2,
+				SentRequest = 3,
+				GotResponse = 4,
+				CleaningUp = 5,
 
 			};
 			ToobConvolutionReverb *pThis;
@@ -145,12 +150,12 @@ namespace toob
 			bool SetPredelay(bool usePredelay);
 			const char *GetFileName() const { return this->fileName; }
 			bool Changed() const { return this->changed; }
-			bool IsChanging() const { return this->changed || this->state != State::Idle; };
-			bool IsIdle() const { return this->state == State::Idle; }
+			bool IsIdle() const { return this->state == State::Idle || this->state == State::Error || this->state == State::NotLoaded; }
+			bool IsChanging() const { return this->changed || !IsIdle(); };
 
 			void Tick()
-			{ // on audio thread.
-				if (state == State::Idle)
+			{ // on audio thread. Don't start loading unless audio is actually running.
+				if (IsIdle())
 				{
 					if (changed)
 					{
@@ -175,7 +180,7 @@ namespace toob
 			float tailScale = 0;
 			float timeInSeconds = -1;
 			float workingTimeInSeconds = -1;
-			State state = State::Idle;
+			State state = State::NotLoaded;
 
 			bool hasWorkError = false;
 			std::string workError;

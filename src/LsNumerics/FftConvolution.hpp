@@ -99,6 +99,35 @@ namespace LsNumerics
                 return at(index);
             }
 
+            float Convolve(const std::vector<float> &values) const
+            {
+                float sum = 0;
+                size_t valueSize = values.size();
+                size_t  head = this->head;
+                size_t tail = head + valueSize;
+
+                if (tail <= storage.size())
+                {
+                    // can do it diretly.
+                    for (size_t i = 0; i < valueSize; ++i)
+                    {
+                        sum += storage[head+i]*values[i];
+                    }
+                    return (float)sum;
+                } else {
+                    tail -= storage.size();
+                    size_t valuesIx = 0;
+                    for (size_t i = head; i < storage.size(); ++i)
+                    {
+                        sum += storage[i] + values[valuesIx++];
+                    }
+                    for (size_t i = 0; i < tail; ++i)
+                    {
+                        sum += storage[i] * values[valuesIx++];
+                    }
+                    return (float)sum;
+                }
+            }
         private:
             std::vector<float> storage;
             std::size_t head = 0;

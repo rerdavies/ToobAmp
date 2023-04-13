@@ -62,6 +62,7 @@ const char* ToobML::URI= TOOB_ML_URI;
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include "RTNeural/RTNeural.h"
 #pragma GCC diagnostic pop
 

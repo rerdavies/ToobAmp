@@ -43,7 +43,7 @@ namespace LsNumerics
     class SectionExecutionTrace
     {
     public:
-        static constexpr size_t MAX_SIZE = 2000;
+        static constexpr size_t MAX_SIZE = 4000;
         using clock = std::chrono::high_resolution_clock;
         using time_point = clock::time_point;
 

@@ -49,34 +49,12 @@ namespace LsNumerics {
 
 	public:
 		PiecewiseChebyshevApproximation(
-			std::function<double(double)> function, double minValue, double maxValue, size_t segmentCount, int chebyshevOrder = 5, bool checkMaxError = true)
-			:function(function),
-			maxIndex(segmentCount),
-			minValue(minValue),
-			maxValue(maxValue),
-			chebyshevOrder(chebyshevOrder),
-			checkMaxError(checkMaxError)
-		{
-			this->valueToIndexSlope = this->maxIndex / (this->maxValue - this->minValue);
-			this->indexToValueSlope = (this->maxValue - this->minValue) / maxIndex;
-			this->interpolators.reserve(maxIndex+1);
-			for (size_t i = 0; i <= maxIndex; ++i)
-			{
-				this->interpolators.push_back(CreateApproximant(i));
-			}
-		}
+			std::function<double(double)> function, double minValue, double maxValue, size_t segmentCount, int chebyshevOrder = 5, bool checkMaxError = true);
+
+
 		PiecewiseChebyshevApproximation(double minValue, double maxValue, size_t maxIndex, int chebyshevOrder,
-			const std::vector<ChebyshevApproximation>& interpolators)
-			:maxIndex(maxIndex),
-			minValue(minValue),
-			maxValue(maxValue),
-			chebyshevOrder(chebyshevOrder),
-			interpolators(interpolators),
-			checkMaxError(false)
-		{
-			this->valueToIndexSlope = this->maxIndex / (this->maxValue - this->minValue);
-			this->indexToValueSlope = (this->maxValue - this->minValue) / maxIndex;
-		}
+			const std::vector<ChebyshevApproximation>& interpolators);
+
 
 	private:
 		ChebyshevApproximation CreateApproximant(size_t index)

@@ -60,6 +60,12 @@ namespace LsNumerics
         Reverse = -1
     };
 
+    inline float UndenormalizeValue(float value)
+    {
+        return 1.0f+value - 1.0f;
+    }
+
+
     namespace Implementation
     {
         void SlotUsageTest();
@@ -100,12 +106,16 @@ namespace LsNumerics
         public:
             DirectConvolutionSection(
                 size_t size,
-                size_t offset, const std::vector<float> &impulseData,
-                size_t sectionDelay = 0);
+                size_t sampleOffset, const std::vector<float> &impulseData,
+                size_t directSectionDelay = 0,
+                size_t inputDelay = 0,
+                size_t threadNumber = -1);
 
             size_t Size() const { return size; }
-            size_t SampleOffset() const { return offset; }
-            size_t Delay() const { return schedulerDelay; }
+            size_t SampleOffset() const { return sampleOffset; }
+            size_t InputDelay() const { return inputDelay; };
+            size_t SectionDelay() const { return sectionDelay; }
+            size_t ThreadNumber() const { return threadNumber; }
             static size_t GetSectionDelay(size_t size) { return size; }
             float Tick(float input)
             {
@@ -122,7 +132,7 @@ namespace LsNumerics
                 return result;
             }
 
-            void Execute(BackgroundConvolutionTask &input, size_t time, SynchronizedSingleReaderDelayLine &output);
+            void Execute(BackgroundConvolutionTask &input, size_t time, LocklessQueue &output);
 
             bool IsL1Optimized() const
             {
@@ -131,6 +141,10 @@ namespace LsNumerics
             bool IsL2Optimized() const
             {
                 return fftPlan.IsL2Optimized();
+            }
+            bool IsShuffleOptimized()
+            {
+                return fftPlan.IsShuffleOptimized();
             }
 #if EXECUTION_TRACE
         public:
@@ -147,15 +161,16 @@ namespace LsNumerics
         private:
             using Fft = StagedFft;
             void UpdateBuffer();
-            size_t schedulerDelay;
+            size_t sectionDelay;
+            size_t threadNumber;
             Fft fftPlan;
             size_t size;
-            size_t offset;
+            size_t sampleOffset;
+            size_t inputDelay;
             std::vector<fft_complex_t> impulseFft;
             size_t bufferIndex;
             std::vector<float> inputBuffer;
             std::vector<fft_complex_t> buffer;
-            size_t threadNumber;
         };
         class CompiledButterflyOp
         {
@@ -507,7 +522,7 @@ namespace LsNumerics
     ///    to cause execution plans to be loaded from disk instead of being generated at
     ///    runtime.
     ///
-    class BalancedConvolution : private SynchronizedSingleReaderDelayLine::IDelayLineCallback
+    class BalancedConvolution : private LocklessQueue::IDelayLineCallback
     {
     public:
         /// @brief Convolution reverb with balanced execution cost per cycle.
@@ -518,7 +533,7 @@ namespace LsNumerics
         /// @param maxAudioBufferSize  Size of the largest value of frames passed to Tick(frames,input,output).
         ///
         /// @remarks
-        /// BalancedConvolution uses a set of service threads to calcualte large convolution sections. The priority
+        /// BalancedConvolution uses a set of service threads to calculate large convolution sections. The priority
         /// of the service threads must be below that of audio thread (but still very high). The scheduler policty
         /// determines how the thread priority is set. If Scheduler::Realtime, the worker threads' scheduler policy
         /// is set to SCHED_RR (realtime), and the prioriy of the threads are set to basePrioriy+1, basePriority+2,
@@ -610,16 +625,17 @@ namespace LsNumerics
         std::atomic<size_t> underrunCount;
         SchedulerPolicy schedulerPolicy;
 
+        size_t GetDirectSectionExecutionTimeInSamples(size_t directSectionSize);
         virtual void OnSynchronizedSingleReaderDelayLineReady();
         virtual void OnSynchronizedSingleReaderDelayLineUnderrun();
 
         void PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize);
         void PrepareThreads();
         class DirectSectionThread;
-        DirectSectionThread *GetDirectSectionThreadBySize(size_t size);
+        DirectSectionThread *GetDirectSectionThread(int threadNumber);
 
     private:
-        using IDelayLineCallback = SynchronizedSingleReaderDelayLine::IDelayLineCallback;
+        using IDelayLineCallback = LocklessQueue::IDelayLineCallback;
         struct DirectSection
         {
             size_t sampleDelay;
@@ -648,6 +664,8 @@ namespace LsNumerics
             void Close() { outputDelayLine.Close(); }
 
             float Tick() { return outputDelayLine.Read(); }
+            DirectSection *GetDirectSection() { return this->section; }
+            const DirectSection *GetDirectSection() const { return this->section; }
 
 #if EXECUTION_TRACE
         public:
@@ -665,7 +683,7 @@ namespace LsNumerics
 
         private:
             size_t currentSample = 0;
-            SynchronizedSingleReaderDelayLine outputDelayLine;
+            LocklessQueue outputDelayLine;
             DirectSection *section;
         };
         std::vector<std::unique_ptr<ThreadedDirectSection>> threadedDirectSections;
@@ -763,8 +781,8 @@ namespace LsNumerics
         float TickUnsynchronizedWithFeedback(float value)
         {
             float recirculationValue = feedbackDelay.Value() * feedbackScale;
-
-            float reverb = convolution.TickUnsynchronized(value + recirculationValue);
+            float input = Undenormalize(value + recirculationValue);
+            float reverb = convolution.TickUnsynchronized(input);
             feedbackDelay.Put(reverb);
 
             return value * directMix + (reverb)*reverbMix;
@@ -773,6 +791,7 @@ namespace LsNumerics
         float TickUnsynchronizedWithoutFeedback(float value)
         {
 
+            value  = Undenormalize(value);
             float reverb = convolution.TickUnsynchronized(value);
 
             return value * directMix + (reverb)*reverbMix;

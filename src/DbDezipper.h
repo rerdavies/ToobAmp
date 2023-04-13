@@ -32,6 +32,7 @@ namespace toob
     {
     public:
         void SetSampleRate(double rate);
+        void SetRate(float seconds);
         void Reset(float db = -96);
 
         void SetTarget(float db)
@@ -63,6 +64,8 @@ namespace toob
         }
 
     private:
+        double sampleRate = 44100;
+        float rate = 0.1;
         float targetDb = -96;
         float currentDb = -96;
         float targetX = 0;

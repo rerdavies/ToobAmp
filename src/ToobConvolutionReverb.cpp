@@ -78,6 +78,11 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
         this->pPredelay = (float*)data;
         break;
     case PortId::LOADING_STATE:
+        this->pLoadingState = (float*)data;
+        if (this->pLoadingState)
+        {
+            *(this->pLoadingState) = this->loadingState;
+        }
         break;
 
     case PortId::AUDIO_INL:
@@ -113,7 +118,7 @@ void ToobConvolutionReverb::UpdateControls()
     if (lastDirectMix != *pDirectMix)
     {
         lastDirectMix = *pDirectMix;
-        if (lastDirectMix <= -30)
+        if (lastDirectMix <= -40)
         {
             directMixDb = -96;
         }
@@ -129,7 +134,7 @@ void ToobConvolutionReverb::UpdateControls()
     if (lastReverbMix != *pReverbMix)
     {
         lastReverbMix = *pReverbMix;
-        if (lastReverbMix <= -30)
+        if (lastReverbMix <= -40)
         {
             reverbMixDb = -96;
         }
@@ -155,8 +160,10 @@ void ToobConvolutionReverb::Activate()
     UpdateControls();
     directMixDezipper.SetSampleRate(getSampleRate());
     reverbMixDezipper.SetSampleRate(getSampleRate());
-    directMixDezipper.SetTarget(0);
-    reverbMixDezipper.SetTarget(-96);
+    reverbMixDezipper.SetRate(0.3);
+    directMixDezipper.Reset(-96);
+    reverbMixDezipper.SetRate(0.3);
+    reverbMixDezipper.Reset(-96);
     
     clear();
 }
@@ -173,7 +180,7 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
             if (!preChangeVolumeZip)
             {
                 preChangeVolumeZip = true;
-                directMixDezipper.SetTarget(0);
+                directMixDezipper.SetTarget(-96);
                 reverbMixDezipper.SetTarget(-96);
             } 
             if (directMixDezipper.IsIdle() && reverbMixDezipper.IsIdle())
@@ -359,7 +366,7 @@ static void RemovePredelay(AudioData &audioData)
 {
     std::vector<float> &channel = audioData.getChannel(0);
     float db60 = LsNumerics::Db2Af(-60);
-    float db30 = LsNumerics::Db2Af(-30);
+    float db40 = LsNumerics::Db2Af(-40);
 
     size_t db60Index = 0;
     size_t db30Index = 0;
@@ -367,7 +374,7 @@ static void RemovePredelay(AudioData &audioData)
     for (size_t i = 0; i < channel.size(); ++i)
     {
         float value = std::abs(channel[i]);
-        if (value > db30)
+        if (value > db40)
         {
             db30Index = i;
             break;

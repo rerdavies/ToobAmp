@@ -25,6 +25,7 @@
 #include <vector>
 #include <cstddef>
 #include <cassert>
+#include <atomic>
 
 namespace toob {
     template<typename T>
@@ -164,6 +165,8 @@ namespace toob {
         bool locked = false;
         bool overrun = false;
         std::vector<T> buffer;
-        volatile size_t head, count;
+
+        // TODO: Originally written with volatile. Re-write with appropriate mem barriers.
+        std::atomic<size_t> head, count;
     };
 } // namespace

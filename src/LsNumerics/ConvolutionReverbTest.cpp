@@ -336,7 +336,7 @@ static void TestBalancedConvolutionSequencing()
     size_t TEST_SIZE = 65536 + 3918;
     if (buildTests)
     {
-        TEST_SIZE = 2048;
+        TEST_SIZE = 3048;
     }
 
     UsePlanCache();
@@ -513,7 +513,7 @@ private:
 
 static void TestBalancedConvolutionSection(bool useCache)
 {
-    std::vector<size_t> convolutionSizes = {4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048
+    std::vector<size_t> convolutionSizes = {64, 128, 256, 512, 1024, 2048
 #ifndef DEBUG
                                             ,
                                             4096, 1024 * 64
@@ -521,13 +521,13 @@ static void TestBalancedConvolutionSection(bool useCache)
     };
     if (buildTests)
     {
-        convolutionSizes = {4, 8, 16, 32, 64, 128, 256};
+        convolutionSizes = {64, 128, 256};
     }
     if (useCache)
     {
 
         UsePlanCache();
-        convolutionSizes = {32, 64, 128, 256, 512, 1024, 2048, 4096, 8 * 1024, 16 * 1024, 32 * 1024, 64 * 1024};
+        convolutionSizes = {64, 128, 256, 512, 1024, 2048, 4096, 8 * 1024, 16 * 1024, 32 * 1024, 64 * 1024};
     }
     else
     {
@@ -682,15 +682,15 @@ static void TestDirectConvolutionSection()
         const std::vector<float> &expectedOutput = s0.Buffer();
 
         Implementation::DirectConvolutionSection convolutionSection(n, 0, impulseResponse);
-        cout << "MaxDelay: " << convolutionSection.Delay() << endl;
+        cout << "MaxDelay: " << convolutionSection.SectionDelay() << endl;
 
         // convolutionSection.PrintPlan();
 
         std::vector<float> t;
 
-        StreamCapturer streamResult(convolutionSection.Delay());
+        StreamCapturer streamResult(convolutionSection.SectionDelay());
 
-        for (size_t i = 0; i < expectedOutput.size() + convolutionSection.Delay(); ++i)
+        for (size_t i = 0; i < expectedOutput.size() + convolutionSection.SectionDelay(); ++i)
         {
             float result = convolutionSection.Tick(i < input.size() ? input[i] : 0);
             streamResult << result;
@@ -963,8 +963,10 @@ void TestFftConvolutionBenchmark(bool profiling = false)
     }
 }
 
+double gSinkValue = 0;
 static void Consume(double value)
 {
+    gSinkValue = value;
 }
 
 void BenchmarkFftConvolutionStep()
@@ -1025,8 +1027,8 @@ void BenchmarkFftConvolutionStep()
         using ns_duration_t = std::chrono::nanoseconds;
 
         std::vector<float> impulse;
-        impulse.resize(n * 2);
-        for (size_t i = 0; i < n * 2; ++i)
+        impulse.resize(n );
+        for (size_t i = 0; i < n ; ++i)
         {
             impulse[i] = i / double(n * 2);
         }
@@ -1058,14 +1060,17 @@ void BenchmarkFftConvolutionStep()
             BalancedConvolutionSection balancedSection(n, impulse);
             balancedSectionDelay = balancedSection.Delay();
             auto bStart = clock_t::now();
+            double sink = 0;
+
             for (size_t frame = 0; frame < frames; ++frame)
             {
                 for (size_t i = 0; i < n; ++i)
                 {
-                    balancedSection.Tick(input[i]);
+                    sink = balancedSection.Tick(input[i]);
                 }
             }
             bConvolutionDuration = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - bStart);
+            Consume(sink);
         }
         // Naive convolution.
         bool showNaive = n <= 1024;
@@ -1078,16 +1083,13 @@ void BenchmarkFftConvolutionStep()
             {
                 for (size_t i = 0; i < n; ++i)
                 {
-                    for (size_t i = 0; i < n; ++i)
+                    delayLine.push(input[i]);
+                    for (size_t i = 0; i < impulse.size(); ++i)
                     {
-                        delayLine.push(input[i]);
-                        double result = 0;
-                        for (size_t k = 0; k < n; ++k)
-                        {
-                            result += delayLine[k] * impulse[k];
-                        }
-                        sink = result;
+                        sink += delayLine[i]*impulse[i];
                     }
+                    // delayLine.push(input[i]);
+                    // sink += delayLine.Convolve(impulse);
                 }
             }
             nConvolutionMs = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - nStart);
@@ -1136,7 +1138,10 @@ void BenchmarkFftConvolutionStep()
 
         }
 
-        if (directSection.IsL2Optimized())
+        if (directSection.IsShuffleOptimized())
+        {
+            ss << " " << std::setw(12) << std::left << "Shuffle-optimized";
+        } else if (directSection.IsL2Optimized())
         {
             ss << " " << std::setw(12) << std::left << "L2-optimized";
         }

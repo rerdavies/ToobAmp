@@ -26,12 +26,20 @@
 using namespace toob;
 
 static const int SEGMENT_SIZE = 64;
-static const float DB_PER_SECOND = 9600.0; // 0...1 in 1/10 sec.
 
-void DbDezipper::SetSampleRate(double rate)
+void DbDezipper::SetSampleRate(double sampleRate)
 {
-    this->dbPerSegment = DB_PER_SECOND * SEGMENT_SIZE / rate;
+    this->sampleRate = sampleRate;
+    this->dbPerSegment = 96/rate * SEGMENT_SIZE / sampleRate;
 }
+
+void DbDezipper::SetRate(float seconds)
+{
+    this->rate = seconds;
+    this->dbPerSegment = 96/rate * SEGMENT_SIZE / sampleRate;
+    
+}
+
 void DbDezipper::NextSegment()
 {
     if (targetDb == currentDb)

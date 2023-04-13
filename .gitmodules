@@ -1,3 +1,4 @@
 [submodule "modules/RTNeural"]
 	path = modules/RTNeural
 	url = https://github.com/jatinchowdhury18/RTNeural
+	branch = main

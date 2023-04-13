@@ -39,29 +39,10 @@
 #include <atomic>
 #include "SectionExecutionTrace.hpp"
 
+#include "LocklessQueue.hpp"
+
 namespace LsNumerics
 {
-    constexpr bool TRACE_BACKGROUND_CONVOLUTION_MESSAGES = false;
-
-    void TraceBackgroundConvolutionMessage(const std::string &message);
-
-    class DelayLineClosedException : public std::logic_error
-    {
-    public:
-        DelayLineClosedException()
-            : std::logic_error("Closed.")
-        {
-        }
-    };
-    class DelayLineSynchException : public std::logic_error
-    {
-    public:
-        DelayLineSynchException(const std::string &message)
-            : std::logic_error(message)
-        {
-        }
-    };
-
 
     enum class SchedulerPolicy { 
         Realtime, // schedule with sufficiently high SCHED_RR priority.
@@ -98,7 +79,7 @@ namespace LsNumerics
         {
             std::lock_guard lock{mutex};
             readTail = head;
-            if (readTail < size)
+            if (readTail < (ptrdiff_t)size)
             {
                 readHead = 0;
             }
@@ -115,7 +96,7 @@ namespace LsNumerics
             return readTail;
         }
 
-        size_t WaitForMoreReadData(size_t previousTailPosition)
+        size_t WaitForMoreReadData(ptrdiff_t previousTailPosition)
         {
             while (true)
             {
@@ -152,18 +133,18 @@ namespace LsNumerics
             }
             readConditionVariable.wait(lock);
         }
-        void ReadRange(size_t position, size_t size, size_t outputOffset, std::vector<float> &output);
-        void ReadRange(size_t position, size_t count, std::vector<float> &output)
+        void ReadRange(ptrdiff_t position, size_t size, size_t outputOffset, std::vector<float> &output);
+        void ReadRange(ptrdiff_t position, size_t count, std::vector<float> &output)
         {
             ReadRange(position, count, 0, output);
         }
 
-        bool IsReadReady(size_t position, size_t count);
-        void WaitForRead(size_t position, size_t count);
+        bool IsReadReady(ptrdiff_t position, size_t count);
+        void WaitForRead(ptrdiff_t position, size_t count);
 
         void Close();
 
-        void CreateThread(const std::function<void(void)> &threadProc, int relativeThreadPriority);
+        void CreateThread(const std::function<void(void)> &threadProc, int threadNumber);
 
         void NotifyReadReady()
         {
@@ -174,7 +155,7 @@ namespace LsNumerics
 
     private:
         static constexpr size_t MAX_READ_BORROW = 16;
-        bool IsReadReady_(size_t position, size_t count);
+        bool IsReadReady_(ptrdiff_t position, size_t count);
         bool closed = false;
         std::mutex mutex;
         std::condition_variable readConditionVariable;
@@ -183,149 +164,11 @@ namespace LsNumerics
         std::size_t size = 0;
         std::size_t paddingSize = 0;
         std::size_t sizeMask = 0;
-        std::size_t readHead = 0;
-        std::size_t readTail = 0;
+        std::ptrdiff_t readHead = 0;
+        std::ptrdiff_t readTail = 0;
         using thread_ptr = std::unique_ptr<std::thread>;
 
         std::vector<thread_ptr> threads;
-    };
-
-    class SynchronizedSingleReaderDelayLine
-    {
-    private:
-
-        static constexpr size_t MAX_READ_BORROW = 16;
-        static constexpr std::chrono::milliseconds READ_TIMEOUT{10000};
-    public:
-        static constexpr size_t DEFAULT_LOW_WATER_MARK = std::numeric_limits<size_t>::max();
-
-        class IDelayLineCallback {
-        public:
-            virtual void OnSynchronizedSingleReaderDelayLineReady() = 0;
-            virtual void OnSynchronizedSingleReaderDelayLineUnderrun() = 0;
-        };
-
-        SynchronizedSingleReaderDelayLine(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
-        {
-            SetSize(size, lowWaterMark);
-        }
-        SynchronizedSingleReaderDelayLine()
-            : SynchronizedSingleReaderDelayLine(0, 0) 
-        {
-        }
-        ~SynchronizedSingleReaderDelayLine()
-        {
-            Close();
-        }
-
-        uint32_t GetWriteCount()
-        {
-            return this->atomicWriteCount.load();
-        }
-        void SetWriteReadyCallback(IDelayLineCallback *callback)
-        {
-            this->writeReadyCallback = callback;
-        }
-
-        void SetSize(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
-        {
-            if (lowWaterMark == DEFAULT_LOW_WATER_MARK)
-            {
-                lowWaterMark = size / 2;
-            }
-            this->lowWaterMark = lowWaterMark+MAX_READ_BORROW;
-            if (size != 0)
-            {
-                buffer.resize(size+ MAX_READ_BORROW);
-            }
-        }
-
-        void Close()
-        {
-            std::lock_guard lock{mutex};
-            atomicClosed = true;
-            writeStalled = false;
-            writeToReadConditionVariable.notify_all();
-            readToWriteConditionVariable.notify_all();
-        }
-
-    private:
-        IDelayLineCallback *writeReadyCallback = nullptr;
-        void ReadWait();
-
-    public:
-        float Read()
-        {
-            if (atomicClosed)
-            {
-                throw DelayLineClosedException();
-            }
-            if (readCount == 0)
-            {
-                ReadWait();
-            }
-            --readCount;
-            float result = buffer[readHead++];
-            if (readHead == buffer.size())
-            {
-                readHead = 0;
-            }
-            return result;
-        }
-
-
-        bool CanWrite(size_t size)
-        {
-            if (atomicClosed.load())
-            {
-                throw DelayLineClosedException();
-            }
-            if (wWriteCount + size <= buffer.size()) return true;
-            wWriteCount = atomicWriteCount.load();
-            bool result =  wWriteCount + size <= buffer.size();
-            if (!result)
-            {
-                writeStalled.store(true);
-            }
-            return result;
-        }
-
-        void WriteWait()
-        {
-            std::unique_lock lock{mutex};
-            writeStalled = true;
-            this->readToWriteConditionVariable.wait(lock);
-        }
-
-        void Write(size_t count, size_t offset, const std::vector<float> &input);
-
-        void Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input);
-
-        size_t GetReadWaits()
-        {
-            size_t result = readWaits;
-            readWaits = 0;
-            return result;
-        }
-
-    private:
-        std::atomic<bool> writeStalled = false;
-        std::atomic<uint32_t> atomicWriteCount = 0;
-        uint32_t rWriteCount = 0;
-        uint32_t wWriteCount = 0;
-        std::atomic<bool> atomicClosed = false;
-
-        std::size_t readWaits = 0;
-        std::mutex mutex;
-        std::uint32_t writeHead = 0;
-        std::uint32_t readHead = 0;
-        std::uint32_t readCount = 0;
-        std::uint32_t borrowedReads = 0;
-        std::uint32_t lowWaterMark = 0;
-
-        std::condition_variable readToWriteConditionVariable;
-        std::condition_variable writeToReadConditionVariable;
-        std::vector<float> buffer;
     };
 }
 

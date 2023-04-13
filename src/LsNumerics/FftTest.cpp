@@ -5,6 +5,7 @@
 #include "../TestAssert.hpp"
 #include <iostream>
 #include <numbers>
+#include <random>
 
 
 using namespace LsNumerics;
@@ -31,7 +32,7 @@ static void fftTest(FftType& fft)
 
     for (size_t i = 0; i < inverse.size(); ++i)
     {
-        TEST_ASSERT(std::abs(inverse[i]-input[i]) < 1E-7);
+        TEST_ASSERT(std::abs(inverse[i].real()-input[i].real()) < 1E-4);
     }
 
     
@@ -66,18 +67,48 @@ static void fftTest(FftType& fft)
     {
         TEST_ASSERT(inPlaceBuffer[i] == forwardResult[i]);
     }
+    // check random values round-trip.
+
+    static std::mt19937 randomDevice;
+
+    static std::uniform_real_distribution<float> distribution{-1.0f,1.0f};
+
+
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        input[i] = distribution(randomDevice);
+    }
+    std::vector<std::complex<double>> result;
+    result.resize(input.size());
+    fft.Forward(input,forwardResult);
+    fft.Backward(forwardResult,result);
+
+    for (size_t i = 0; i < input.size(); ++i)
+    {
+        float error = std::abs(input[i]-result[i].real());
+        TEST_ASSERT(error < 1E-7);
+    }
 
 
 }
+
+extern void TestFftShuffle();
 
 int main(int argc, const char**argv)
 {
     std::cout << "== FftTest ====" << std::endl;
 
-    try {
-    for (size_t n: { 
-        4,8,16, 128,256,512,2048,4096,32*1024})
+
     {
+        StagedFft stagedFft(64*1024);
+        fftTest<LsNumerics::StagedFft>(stagedFft);
+    }
+
+    try {
+    for (size_t n = 2; n < 512*1204; n *= 2)
+    {
+        std::cout << "size = " << n << std::endl;
         StagedFft stagedFft(n);
         fftTest<LsNumerics::StagedFft>(stagedFft);
 

@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,8 +25,7 @@
 
 using namespace LsNumerics;
 
-
-void PiecewiseChebyshevApproximation::CalculateError(const ChebyshevApproximation& result, double minValue, double maxValue)
+void PiecewiseChebyshevApproximation::CalculateError(const ChebyshevApproximation &result, double minValue, double maxValue)
 {
     const int LOOPS = 100;
     for (int i = 0; i <= LOOPS; ++i)
@@ -35,7 +34,8 @@ void PiecewiseChebyshevApproximation::CalculateError(const ChebyshevApproximatio
         double expected = function(x);
         double actual = result.At(x);
         double error;
-        if (std::abs(expected) > 1) {
+        if (std::abs(expected) > 1)
+        {
             error = std::abs((actual - expected) / expected);
         }
         else
@@ -48,14 +48,15 @@ void PiecewiseChebyshevApproximation::CalculateError(const ChebyshevApproximatio
             errorX = x;
             if (error > 1E-7)
             {
-               // throw std::exception("Chebyshev approximation failed.");
+                // throw std::exception("Chebyshev approximation failed.");
             }
         }
     }
 }
-void PiecewiseChebyshevApproximation::CalculateDerivativeError(const ChebyshevApproximation& result, double minValue, double maxValue)
+void PiecewiseChebyshevApproximation::CalculateDerivativeError(const ChebyshevApproximation &result, double minValue, double maxValue)
 {
-    if (!derivative) return;
+    if (!derivative)
+        return;
 
     const int LOOPS = 1000;
     for (int i = 0; i <= LOOPS; ++i)
@@ -64,7 +65,8 @@ void PiecewiseChebyshevApproximation::CalculateDerivativeError(const ChebyshevAp
         double expected = derivative(x);
         double actual = result.DerivativeAt(x);
         double error;
-        if (std::abs(expected) > 1) {
+        if (std::abs(expected) > 1)
+        {
             error = std::abs((actual - expected) / expected);
         }
         else
@@ -80,5 +82,36 @@ void PiecewiseChebyshevApproximation::CalculateDerivativeError(const ChebyshevAp
                 throw std::invalid_argument("Chebyshev derivative approximation failed.");
             }
         }
+    }
+}
+
+PiecewiseChebyshevApproximation::PiecewiseChebyshevApproximation(double minValue, double maxValue, size_t maxIndex, int chebyshevOrder,
+                                                                 const std::vector<ChebyshevApproximation> &interpolators)
+    : maxIndex(maxIndex),
+      minValue(minValue),
+      maxValue(maxValue),
+      chebyshevOrder(chebyshevOrder),
+      interpolators(interpolators),
+      checkMaxError(false)
+{
+    this->valueToIndexSlope = this->maxIndex / (this->maxValue - this->minValue);
+    this->indexToValueSlope = (this->maxValue - this->minValue) / maxIndex;
+}
+
+PiecewiseChebyshevApproximation::PiecewiseChebyshevApproximation(
+    std::function<double(double)> function, double minValue, double maxValue, size_t segmentCount, int chebyshevOrder, bool checkMaxError)
+    : function(function),
+      maxIndex(segmentCount),
+      minValue(minValue),
+      maxValue(maxValue),
+      chebyshevOrder(chebyshevOrder),
+      checkMaxError(checkMaxError)
+{
+    this->valueToIndexSlope = this->maxIndex / (this->maxValue - this->minValue);
+    this->indexToValueSlope = (this->maxValue - this->minValue) / maxIndex;
+    this->interpolators.reserve(maxIndex + 1);
+    for (size_t i = 0; i <= maxIndex; ++i)
+    {
+        this->interpolators.push_back(CreateApproximant(i));
     }
 }

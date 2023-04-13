@@ -58,11 +58,8 @@ namespace LsNumerics
             return ((maxX - minX) * u + maxX + minX) * 0.5;
         }
     public:
-        ChebyshevApproximation(const std::function<double(double)>* originalFunction, double minX, double maxX, int N)
-            :ChebyshevApproximation(originalFunction,nullptr,minX,maxX,N)
-        {
+        ChebyshevApproximation(const std::function<double(double)>* originalFunction, double minX, double maxX, int N);
 
-        }
         const double PI = LsNumerics::Pi;
 
         ChebyshevApproximation(double minX, double maxX, const Polynomial& polynomial, const Polynomial& derivativePolynomial)
