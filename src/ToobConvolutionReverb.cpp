@@ -351,7 +351,7 @@ static void NormalizeConvolution(AudioData & data)
                 maxValue = std::abs(sum);
             }
         }
-        std::cout << "MaxValue: " << maxValue << std::endl;
+        //std::cout << "MaxValue: " << maxValue << std::endl;
 
         float  scale = (float)(1/maxValue);
 
@@ -401,7 +401,7 @@ static void RemovePredelay(AudioData &audioData)
         float blend = (i-db60Index)/(float)(db30Index-db60Index);
         channel[i] *= blend;
     }
-    std::cout << "Removing predelay. db60Index: " << db60Index << " db30Index: " << db30Index << std::endl;
+    //std::cout << "Removing predelay. db60Index: " << db60Index << " db30Index: " << db30Index << std::endl;
     audioData.Erase(0,db60Index);
 }
 static float GetTailScale(const std::vector<float> &data, size_t tailPosition)

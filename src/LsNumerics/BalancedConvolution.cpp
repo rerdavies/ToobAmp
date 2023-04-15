@@ -190,7 +190,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
     //      std::cout << std::setw(12) << std::right << i << std::setw(12) << std::right << pooledExecutionTime[i] << std::endl;
     // }
 
-    std::cout <<  std::endl;
+    // std::cout <<  std::endl;
     directSectionLeadTimes.resize(executionTimePerSampleNs.size());
     for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
     {

@@ -141,8 +141,6 @@ namespace toob {
 			LV2_URID atom__Bool;
 			LV2_URID patch_accept;
 
-			LV2_URID frequencyRequest;
-			LV2_URID frequencyResponseUri;
 			LV2_URID units__Frame;
 			LV2_URID pluginUri;
 			LV2_URID atom__float;

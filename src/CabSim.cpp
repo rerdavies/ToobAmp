@@ -358,7 +358,7 @@ void CabSim::OnMidiCommand(int cmd0, int cmd1, int cmd2)
 
 void CabSim::OnPatchGet(LV2_URID propertyUrid)
 {
-	if (propertyUrid == uris.frequencyRequest)
+	if (propertyUrid == uris.patchProp__frequencyResponseVector)
 	{
 		patchGet = true;
 

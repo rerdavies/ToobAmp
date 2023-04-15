@@ -51,7 +51,6 @@ std::vector<Lv2PluginFactory> factories = {
     Lv2PluginFactory::Create<CabSim>(),
     Lv2PluginFactory::Create<ToneStack>(),
     Lv2PluginFactory::Create<SpectrumAnalyzer>(),
-    Lv2PluginFactory::Create<CabSim>(),
     Lv2PluginFactory::Create<ToobML>(),
     Lv2PluginFactory::Create<ToobTuner>(),
     Lv2PluginFactory::Create<ToobFreeverb>(),

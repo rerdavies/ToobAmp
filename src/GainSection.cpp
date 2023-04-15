@@ -114,7 +114,7 @@ void GainSection::WriteShapeCurve(
 
     LV2_Atom_Forge_Frame objectFrame;
     
-        lv2_atom_forge_object(forge, &objectFrame, 0, gainStageUris.patch__Set);
+    lv2_atom_forge_object(forge, &objectFrame, 0, gainStageUris.patch__Set);
 
     lv2_atom_forge_key(forge, gainStageUris.patch__property);
     lv2_atom_forge_urid(forge, propertyUrid);
