@@ -23,7 +23,7 @@ jobs:
     - name: Install pre-requisites
       run: |
         sudo apt-get update
-        sudo apt install libboost-all-dev lv2-dev
+        sudo apt install libboost-all-dev lv2-dev libflac++-dev
         git submodule init
         git submodule update --init --recursive
 
