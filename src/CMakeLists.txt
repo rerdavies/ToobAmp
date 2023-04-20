@@ -14,20 +14,33 @@ else()
     set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest
 endif()
 
+execute_process(COMMAND
+  dpkg-architecture
+    -qDEB_HOST_ARCH
+  OUTPUT_VARIABLE
+    CMAKE_DEB_HOST_ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
 
-# message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
-# message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-# message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO: ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 if (CMAKE_COMPILER_IS_GNUCXX)
+
+    if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+        set(CXX_ARCH_FLAGS -mtune=cortex-a72) # raspberry pi 4.
+    else()
+        # enable MMX, SSE, SSE2 (covers pretty much all desktops, and most mini-pcs). We want SSE2 (and would use  AVX if given the chance.)
+        set(CXX_ARCH_FLAGS -march=pentium4 -mtune=pentium4 )  
+        # Minimum architecture for AVX: May exclude pentium4 mini-pcs, and core2 machines.
+        # set(CXX_ARCH_FLAGS -arch=sandybridge -mtune=sandybridge)  
+    endif()
+
+
     set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=400000")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -mtune=cortex-a72 ")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${CXX_ARCH_FLAGS} ")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g -mtune=cortex-a72")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS}")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_ASSERTS")
-    #set(GCC_EXTRA_FLAGS "${GCC_EXTRA_FLAGS} -D_GLIBCXX_DEBUG")
     endif()
 
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
