@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v0.1.7-beta.3
+v1.0.8
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
@@ -14,17 +14,39 @@ Currently supported platforms:
 
 Download the current install package for your platform:
 
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v0.1.7-beta.3/toobamp_.0.1.7_arm64.deb)
+* [Raspberry Pi OS 64-bit](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.8/toobamp_.1.0.8_arm64.deb)
 
 Run the following shell commands:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install ./toobamp_0.1.7_arm64.deb
+    sudo apt-get install ./toobamp_1.0.8_arm64.deb
     
 --------------------
 
 &nbsp;
+
+*   **TooB Convolution Reverb (NEW!)**
+
+    Convolution reverb. Simulated reverb from recorded impulse response files.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverb-ss.png)
+
+    &nbsp;
+
+
+*   **TooB Cab IR (NEW!)**
+
+    Cabinet impulse response filer, for simulating guitar cabinet frequency responses from impulse files.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/CabIR-ss.png)
+
+    &nbsp;
+
 
 
 *   **TooB Input Stage**
@@ -125,6 +147,7 @@ In the project directory, run:
      sudo apt update
      sudo apt install lv2-dev
      sudo apt install libboost-iostreams-dev
+     sudo apt install libflac++-dev
 
 	
 If you have not installed Visual Studio Code, you will need to install CMake:

@@ -71,6 +71,13 @@ namespace toob
 			result.hasState = T::HasState();
 			return result;
 		}
+		Lv2PluginFactory(const char*uri, PFN_CREATE_PLUGIN pfnCreate, bool hasState) {
+			
+			this->URI = uri;
+			this->createPlugin = pfnCreate;
+			this->hasState = hasState;
+		}
+
 		const char *URI;
 		PFN_CREATE_PLUGIN createPlugin;
 		bool hasState = false;

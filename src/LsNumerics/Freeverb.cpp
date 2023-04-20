@@ -1,5 +1,7 @@
 /*
 Copyright (c) 1995-2021 Perry R. Cook and Gary P. Scavone
+Copyright (c) 2022 Robin E. R. Davies
+Copyright (c) 2012 Gregory Burlet
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -28,8 +30,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /*
    Ported from STK source by Robin Davies.
-   Copyright (c) 2022 Robin E. R. Davies
-   Changes licensed under the terms of the original STK license.
+   Changes to this file by Robin Davies licensed under the terms of the original STK license.
     
    https://github.com/thestk/stk
 */

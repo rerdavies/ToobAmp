@@ -28,22 +28,24 @@
 #include <stdexcept>
 #include "AudioData.hpp"
 #include "WavConstants.hpp"
+#include <filesystem>
 
 namespace toob
 {
 
-    class WavReaderException: public std::logic_error{
-        public:
-        WavReaderException(const std::string&message)
-        :std::logic_error(message)
+    class WavReaderException : public std::logic_error
+    {
+    public:
+        WavReaderException(const std::string &message)
+            : std::logic_error(message)
         {
-            
         }
     };
     class WavReader
     {
     public:
-        enum class AudioFormat {
+        enum class AudioFormat
+        {
             Invalid,
             Uint8,
             Int16,
@@ -53,26 +55,26 @@ namespace toob
             Float64,
         };
 
+        static AudioData Load(const std::filesystem::path &path);
 
-        void Open(const std::string &path);
+        void Open(const std::filesystem::path &path);
 
         uint32_t Channels() const { return m_channels; }
         uint32_t SampleRate() const { return m_sampleRate; }
         size_t NumberOfFrames() const;
-        
-        void Read(AudioData&audioData);
 
+        void Read(AudioData &audioData);
 
         std::vector<std::vector<float>> ReadData();
 
-        void ReadData(float**channels,size_t offset, size_t length);
+        void ReadData(float **channels, size_t offset, size_t length);
         ChannelMask GetChannelMask() const { return m_channelMask; }
 
     private:
-        void ReadInt24Data(float**channels,size_t offset,size_t length);
-        
-        template<typename T>
-        void ReadTypedData(float**channels,size_t offset,size_t length);
+        void ReadInt24Data(float **channels, size_t offset, size_t length);
+
+        template <typename T>
+        void ReadTypedData(float **channels, size_t offset, size_t length);
 
         std::vector<uint8_t> readBuffer;
         std::ifstream f;
@@ -82,21 +84,11 @@ namespace toob
         void ReadChunks();
         void ReadFormat();
 
-        uint8_t ReadUint8() {
-            char b;
-            f.read(&b,1);
-            if (!f)
-            {
-                throw std::domain_error("End of file.");
-            }
-            return (uint8_t)b;
-
-        }
+        uint8_t ReadUint8();
         int32_t ReadInt32();
         int16_t ReadInt16();
         uint32_t ReadUint32();
         uint16_t ReadUint16();
-
 
     private:
         uint32_t m_channels = 0;
@@ -109,6 +101,17 @@ namespace toob
 
         size_t dataStart = 0;
         size_t dataEnd = 0;
-
     };
+
+    inline uint8_t WavReader::ReadUint8()
+    {
+        char b;
+        f.read(&b, 1);
+        if (!f)
+        {
+            throw std::domain_error("End of file.");
+        }
+        return (uint8_t)b;
+    }
+
 }

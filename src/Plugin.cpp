@@ -56,7 +56,8 @@ std::vector<Lv2PluginFactory> factories = {
     Lv2PluginFactory::Create<ToobFreeverb>(),
     Lv2PluginFactory::Create<ToobDelay>(),
     Lv2PluginFactory::Create<ToobChorus>(),
-    Lv2PluginFactory::Create<ToobConvolutionReverb>(),
+    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_URI,&ToobConvolutionReverb::CreateConvolutionReverb,true),
+    Lv2PluginFactory(ToobConvolutionReverb::CAB_IR_URI,&ToobConvolutionReverb::CreateCabIR,true),
 };
 
 static const LV2_Descriptor*const* descriptors;

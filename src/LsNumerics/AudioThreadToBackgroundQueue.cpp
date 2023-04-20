@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-#include "BackgroundConvolutionTask.hpp"
+#include "AudioThreadToBackgroundQueue.hpp"
 #include <iostream>
 #include <exception>
 #include <pthread.h> // for changing thread priorit.
@@ -61,7 +61,7 @@ static int NextPowerOf2(size_t value)
     return result;
 }
 
-void BackgroundConvolutionTask::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
+void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
 {
     this->schedulerPolicy = schedulerPolicy;
     size = NextPowerOf2(size);
@@ -75,7 +75,7 @@ void BackgroundConvolutionTask::SetSize(size_t size, size_t padEntries, Schedule
     readTail = 0;
 }
 
-inline bool BackgroundConvolutionTask::IsReadReady_(ptrdiff_t position, size_t size)
+inline bool AudioThreadToBackgroundQueue::IsReadReady_(ptrdiff_t position, size_t size)
 {
     if (closed)
     {
@@ -85,7 +85,7 @@ inline bool BackgroundConvolutionTask::IsReadReady_(ptrdiff_t position, size_t s
     ptrdiff_t end = position + (ptrdiff_t) size;
     if (position < readHead && position >= 0)
     {
-        throw DelayLineSynchException("BackgroundConvolutionTask underrun.");
+        throw DelayLineSynchException("AudioThreadToBackgroundQueue underrun.");
     }
     if (end <= readTail)
     {
@@ -93,14 +93,14 @@ inline bool BackgroundConvolutionTask::IsReadReady_(ptrdiff_t position, size_t s
     }
     return false;
 }
-bool BackgroundConvolutionTask::IsReadReady(ptrdiff_t position, size_t size)
+bool AudioThreadToBackgroundQueue::IsReadReady(ptrdiff_t position, size_t size)
 {
     std::lock_guard guard{mutex};
 
     return IsReadReady_(position, size);
 }
 
-void BackgroundConvolutionTask::ReadLock(size_t position, size_t count)
+void AudioThreadToBackgroundQueue::ReadLock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
     if (!IsReadReady_(position, count))
@@ -108,7 +108,7 @@ void BackgroundConvolutionTask::ReadLock(size_t position, size_t count)
         throw DelayLineSynchException("Read range not valid.");
     }
 }
-void BackgroundConvolutionTask::ReadUnlock(size_t position, size_t count)
+void AudioThreadToBackgroundQueue::ReadUnlock(size_t position, size_t count)
 {
     std::lock_guard guard{mutex};
     if (!IsReadReady_(position, count))
@@ -117,7 +117,7 @@ void BackgroundConvolutionTask::ReadUnlock(size_t position, size_t count)
     }
 }
 
-void BackgroundConvolutionTask::WaitForRead(ptrdiff_t position, size_t count)
+void AudioThreadToBackgroundQueue::WaitForRead(ptrdiff_t position, size_t count)
 {
     while (true)
     {
@@ -131,7 +131,7 @@ void BackgroundConvolutionTask::WaitForRead(ptrdiff_t position, size_t count)
     }
 }
 
-void BackgroundConvolutionTask::ReadRange(ptrdiff_t position, size_t size, size_t offset, std::vector<float> &output)
+void AudioThreadToBackgroundQueue::ReadRange(ptrdiff_t position, size_t size, size_t offset, std::vector<float> &output)
 {
     WaitForRead(position, size);
 
@@ -160,7 +160,7 @@ void BackgroundConvolutionTask::ReadRange(ptrdiff_t position, size_t size, size_
     ReadUnlock(position, size);
 }
 
-void BackgroundConvolutionTask::Close()
+void AudioThreadToBackgroundQueue::Close()
 {
     {
         std::lock_guard guard{mutex};
@@ -175,7 +175,7 @@ void BackgroundConvolutionTask::Close()
     threads.resize(0);
 }
 
-BackgroundConvolutionTask::~BackgroundConvolutionTask()
+AudioThreadToBackgroundQueue::~AudioThreadToBackgroundQueue()
 {
     try
     {
@@ -183,7 +183,7 @@ BackgroundConvolutionTask::~BackgroundConvolutionTask()
     }
     catch (const std::exception &e)
     {
-        std::cout << "FATAL ERROR: Unexpected error while closing BackgroundConvolutionTask. (" << e.what() << ")" << std::endl;
+        std::cout << "FATAL ERROR: Unexpected error while closing AudioThreadToBackgroundQueue. (" << e.what() << ")" << std::endl;
         std::terminate();
     }
 }
@@ -204,7 +204,7 @@ static int convolutionThreadPriorities[] =
     1,
 };
 
-void BackgroundConvolutionTask::CreateThread(const std::function<void(void)> &threadProc, int threadNumber)
+void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> &threadProc, int threadNumber)
 {
     if ((size_t)threadNumber > sizeof(convolutionThreadPriorities)/sizeof(convolutionThreadPriorities[0]) || threadNumber == 0)
     {

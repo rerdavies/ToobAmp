@@ -50,13 +50,13 @@ namespace LsNumerics
     };
 
     /// @brief Single-writer multiple-reader delay line
-    class BackgroundConvolutionTask
+    class AudioThreadToBackgroundQueue
     {
     public:
         SchedulerPolicy schedulerPolicy = SchedulerPolicy::UnitTest;
 
-        BackgroundConvolutionTask() :BackgroundConvolutionTask(0,0,SchedulerPolicy::UnitTest){ }
-        BackgroundConvolutionTask(
+        AudioThreadToBackgroundQueue() :AudioThreadToBackgroundQueue(0,0,SchedulerPolicy::UnitTest){ }
+        AudioThreadToBackgroundQueue(
             size_t size,
             size_t audioBufferSize, // maximum number of times push can be called before synch is called.
             SchedulerPolicy schedulerPolicy
@@ -65,7 +65,7 @@ namespace LsNumerics
         {
             SetSize(size, audioBufferSize,schedulerPolicy);
         }
-        ~BackgroundConvolutionTask();
+        ~AudioThreadToBackgroundQueue();
 
         void SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy);
 
@@ -77,15 +77,19 @@ namespace LsNumerics
 
         void SynchWrite()
         {
-            std::lock_guard lock{mutex};
-            readTail = head;
-            if (readTail < (ptrdiff_t)size)
             {
-                readHead = 0;
-            }
-            else
-            {
-                readHead = readTail - size;
+                // head is used unsynchronized by the writer.
+                // readTail and readHead are communicated under mutex to the reader.
+                std::lock_guard lock{mutex};
+                readTail = head;
+                if (readTail < (ptrdiff_t)size)
+                {
+                    readHead = 0;  // data is valid from 0 to readTail.
+                }
+                else
+                {
+                    readHead = readTail - size; // data is valid from readTail-size to readTail.
+                }
             }
             readConditionVariable.notify_all();
         }

@@ -35,7 +35,7 @@
 #include <filesystem>
 #include <mutex>
 #include "StagedFft.hpp"
-#include "BackgroundConvolutionTask.hpp"
+#include "AudioThreadToBackgroundQueue.hpp"
 #include <atomic>
 #include "FixedDelay.hpp"
 #include "SectionExecutionTrace.hpp"
@@ -132,7 +132,7 @@ namespace LsNumerics
                 return result;
             }
 
-            void Execute(BackgroundConvolutionTask &input, size_t time, LocklessQueue &output);
+            void Execute(AudioThreadToBackgroundQueue &input, size_t time, LocklessQueue &output);
 
             bool IsL1Optimized() const
             {
@@ -659,7 +659,7 @@ namespace LsNumerics
 
         public:
             size_t Size() const { return section->directSection.Size(); }
-            bool Execute(BackgroundConvolutionTask &inputDelayLine);
+            bool Execute(AudioThreadToBackgroundQueue &inputDelayLine);
 
             void Close() { outputDelayLine.Close(); }
 
@@ -710,7 +710,7 @@ namespace LsNumerics
                 }
                 return result;
             }
-            void Execute(BackgroundConvolutionTask &inputDelayLine);
+            void Execute(AudioThreadToBackgroundQueue &inputDelayLine);
             void Close()
             {
                 for (auto section : sections)
@@ -735,7 +735,7 @@ namespace LsNumerics
 
         size_t sampleRate = 48000;
         std::vector<float> directImpulse;
-        BackgroundConvolutionTask backgroundConvolutionTask;
+        AudioThreadToBackgroundQueue backgroundConvolutionTask;
         size_t directConvolutionLength;
 
         struct Section
@@ -772,6 +772,7 @@ namespace LsNumerics
         }
         void SetFeedback(float feedback, size_t tapPosition)
         {
+            
             feedbackDelay.SetSize(tapPosition);
             feedbackScale = feedback;
             hasFeedback = feedbackScale != 0;

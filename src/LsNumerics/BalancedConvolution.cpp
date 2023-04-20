@@ -2475,7 +2475,7 @@ void BalancedConvolution::Close()
     backgroundConvolutionTask.Close(); // shut down all delayLine threads.
 }
 
-bool BalancedConvolution::ThreadedDirectSection::Execute(BackgroundConvolutionTask &delayLine)
+bool BalancedConvolution::ThreadedDirectSection::Execute(AudioThreadToBackgroundQueue &delayLine)
 {
     size_t size = section->directSection.Size();
     bool processed = false;
@@ -2496,7 +2496,7 @@ bool BalancedConvolution::ThreadedDirectSection::Execute(BackgroundConvolutionTa
     return processed;
 }
 
-void DirectConvolutionSection::Execute(BackgroundConvolutionTask &input, size_t time, LocklessQueue &output)
+void DirectConvolutionSection::Execute(AudioThreadToBackgroundQueue &input, size_t time, LocklessQueue &output)
 {
 
 #if EXECUTION_TRACE
@@ -2563,7 +2563,7 @@ void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
     this->backgroundConvolutionTask.NotifyReadReady();
 }
 
-void BalancedConvolution::DirectSectionThread::Execute(BackgroundConvolutionTask &inputDelayLine)
+void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQueue &inputDelayLine)
 {
 
     size_t tailPosition = inputDelayLine.GetReadTailPosition();

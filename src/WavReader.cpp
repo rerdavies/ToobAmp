@@ -24,6 +24,7 @@
 #include "ss.hpp"
 #include "WavGuid.hpp"
 #include <limits>
+#include "ss.hpp"
 
 using namespace std;
 using namespace toob;
@@ -77,12 +78,12 @@ uint16_t WavReader::ReadUint16()
         bytes[0] | (bytes[1] << 8));
 }
 
-void WavReader::Open(const std::string &filename)
+void WavReader::Open(const std::filesystem::path &filename)
 {
     f.open(filename, ios::binary | ios::in);
     if (!f.is_open())
     {
-        throw invalid_argument(SS("Can't open file. (" << filename));
+        throw WavReaderException(SS("Can't open file. (" << filename));
     }
     EnterRiff();
     ReadChunks();
@@ -92,7 +93,7 @@ void WavReader::Open(const std::string &filename)
 
 static void ThrowFileFormatException()
 {
-    throw domain_error("Invalid file format.");
+    throw WavReaderException("Invalid file format.");
 }
 void WavReader::EnterRiff()
 {
@@ -142,12 +143,24 @@ void WavReader::ReadFormat()
                 this->audioFormat = AudioFormat::Int32;
                 break;
             default:
-                throw domain_error("Unsupported sample format.");
+                throw WavReaderException("Unsupported sample format.");
             }
         }
-        else
+        else if (wf.wFormatTag == (uint16_t)WavFormat::IEEEFloatingPoint)
         {
-            throw domain_error("Unsupported sample format.");
+            switch (wf.wBitsPerSample)
+            { 
+            case 32:
+                this->audioFormat = AudioFormat::Float32;
+                break;
+            case 64:
+                this->audioFormat = AudioFormat::Float64;
+            default:
+                throw WavReaderException("Unsupported sample format.");
+            }
+
+        } else {
+            throw WavReaderException("Unsupported sample format.");
         }
     }
     else
@@ -155,7 +168,7 @@ void WavReader::ReadFormat()
         wf.cbSize = ReadUint16();
         if (wf.cbSize < 22)
         {
-            throw std::domain_error("Invalid file format.");
+            throw WavReaderException("Invalid file format.");
         }
         wf.wValidBitsPerSample = ReadUint16();
 
@@ -187,7 +200,7 @@ void WavReader::ReadFormat()
                 this->audioFormat = AudioFormat::Int32;
                 break;
             default:
-                throw domain_error("Unsupported sample format.");
+                throw WavReaderException("Unsupported sample format.");
             }
         }
         else if (wf.SubFormat == WAVE_FORMAT_IEEE_FLOAT)
@@ -201,7 +214,7 @@ void WavReader::ReadFormat()
                 this->audioFormat = AudioFormat::Float64;
                 break;
             default:
-                throw domain_error("Unsupported sample format.");
+                throw WavReaderException("Unsupported sample format.");
             }
         }
     }
@@ -402,4 +415,19 @@ void WavReader::Read(AudioData&audioData)
     std::vector<std::vector<float>> data = ReadData();
     audioData.setData(std::move(data));
     audioData.setChannelMask(m_channelMask);
+}
+
+
+/*static*/AudioData WavReader::Load(const std::filesystem::path&path)
+{
+    AudioData data;
+    WavReader reader;
+    try {
+        reader.Open(path);
+    }  catch (const std::exception &e)
+    {
+        throw std::logic_error(SS("Can't open file " << path));
+    }
+    reader.Read(data);
+    return data;
 }

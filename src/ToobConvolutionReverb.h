@@ -36,6 +36,7 @@
 #include "FilterResponse.h"
 #include <string>
 #include "DbDezipper.h"
+#include "AudioData.hpp"
 
 #include "Lv2Plugin.h"
 
@@ -51,11 +52,27 @@ namespace toob
 	class ToobConvolutionReverb : public Lv2PluginWithState
 	{
 	private:
-		enum class PortId
+		enum class ReverbPortId
 		{
 			TIME = 0,
 			DIRECT_MIX,
 			REVERB_MIX,
+			REVERB2_MIX,
+			REVERB3_MIX,
+			PREDELAY,
+			LOADING_STATE,
+			AUDIO_INL,
+			AUDIO_OUTL,
+			CONTROL_IN,
+			CONTROL_OUT
+		};
+		enum class CabIrPortId
+		{
+			REVERB_MIX = 0,
+			REVERB2_MIX,
+			REVERB3_MIX,
+			TIME,
+			DIRECT_MIX,
 			PREDELAY,
 			LOADING_STATE,
 			AUDIO_INL,
@@ -68,21 +85,30 @@ namespace toob
 		static constexpr uint32_t SAMPLE_FILES_VERSION = 1;
 
 	public:
-		static Lv2Plugin *Create(double rate,
-								 const char *bundle_path,
-								 const LV2_Feature *const *features)
+		static Lv2Plugin *CreateConvolutionReverb(double rate,
+												  const char *bundle_path,
+												  const LV2_Feature *const *features)
 		{
-			return new ToobConvolutionReverb(rate, bundle_path, features);
+			return new ToobConvolutionReverb(true, rate, bundle_path, features);
 		}
-		ToobConvolutionReverb(double rate,
-							  const char *bundle_path,
-							  const LV2_Feature *const *features);
+		static Lv2Plugin *CreateCabIR(double rate,
+									  const char *bundle_path,
+									  const LV2_Feature *const *features)
+		{
+			return new ToobConvolutionReverb(false, rate, bundle_path, features);
+		}
+		ToobConvolutionReverb(
+			bool isConvolutionReverb,
+			double rate,
+			const char *bundle_path,
+			const LV2_Feature *const *features);
 		~ToobConvolutionReverb()
 		{
 		}
 
 	public:
-		static const char *URI;
+		static const char *CONVOLUTION_REVERB_URI;
+		static const char *CAB_IR_URI;
 
 	protected:
 		virtual void ConnectPort(uint32_t port, void *data);
@@ -147,8 +173,16 @@ namespace toob
 			void Initialize(size_t sampleRate, ToobConvolutionReverb *pReverb);
 			bool SetTime(float timeInSeconds);
 			bool SetFileName(const char *szName);
+			bool SetFileName2(const char *szName);
+			bool SetFileName3(const char *szName);
+			bool SetMix(float mix);
+			bool SetMix2(float mix);
+			bool SetMix3(float mix);
+
 			bool SetPredelay(bool usePredelay);
 			const char *GetFileName() const { return this->fileName; }
+			const char *GetFileName2() const { return this->fileName2; }
+			const char *GetFileName3() const { return this->fileName3; }
 			bool Changed() const { return this->changed; }
 			bool IsIdle() const { return this->state == State::Idle || this->state == State::Error || this->state == State::NotLoaded; }
 			bool IsChanging() const { return this->changed || !IsIdle(); };
@@ -174,6 +208,8 @@ namespace toob
 			virtual void OnCleanupComplete();
 
 		private:
+			AudioData LoadFile(const std::filesystem::path &fileName, float level);
+
 			double getRate() { return rate; }
 			bool predelay = true;
 			bool workingPredelay = true;
@@ -191,7 +227,17 @@ namespace toob
 			static constexpr size_t MAX_FILENAME = 1024;
 			size_t sampleRate = 48000;
 			char fileName[MAX_FILENAME];
+			char fileName2[MAX_FILENAME];
+			char fileName3[MAX_FILENAME];
+			float mix = 1;
+			float mix2 = 0;
+			float mix3 = 0;
 			char requestFileName[MAX_FILENAME];
+			char requestFileName2[MAX_FILENAME];
+			char requestFileName3[MAX_FILENAME];
+			float requestMix = 1;
+			float requestMix2 = 0;
+			float requestMix3 = 0;
 			convolution_reverb_ptr convolutionReverbResult;
 			convolution_reverb_ptr oldConvolutionReverb;
 		};
@@ -202,18 +248,33 @@ namespace toob
 		void CancelLoad();
 
 	private:
+		bool IsConvolutionReverb() const { return isConvolutionReverb; }
+		bool isConvolutionReverb = false;
+		LV2_State_Status PublishResourceFiles(const LV2_Feature *const *features);
+		LV2_State_Status GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path*path);
+
+		std::string StringFromAtomPath(const LV2_Atom*pAtom);
+
 		class Urids
 		{
 		public:
 			void Init(Lv2Plugin *plugin)
 			{
-				propertyFileName = plugin->MapURI("http://two-play.com/impulseFile#impulseFile");
+				#define TOOB_Impulse__Prefix "http://two-play.com/plugins/toob-impulse#"
+				#define TOOB_CABIR__Prefix "http://two-play.com/plugins/toob-cab-ir#"
+				reverb__propertyFileName = plugin->MapURI(TOOB_Impulse__Prefix "impulseFile");
+				cabir__propertyFileName = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile");
+				cabir__propertyFileName2 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile2");
+				cabir__propertyFileName3 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile3");
 				atom_path = plugin->MapURI(LV2_ATOM__Path);
-				convolution__state = plugin->MapURI("http://two-play.com/plugins/toob-convolution-reverb#state");
+				//convolution__state = plugin->MapURI(TOOB_Impulse__Prefix "state");
 			}
-			LV2_URID propertyFileName;
+			LV2_URID reverb__propertyFileName;
+			LV2_URID cabir__propertyFileName;
+			LV2_URID cabir__propertyFileName2;
+			LV2_URID cabir__propertyFileName3;
 			LV2_URID atom_path;
-			LV2_URID convolution__state;
+			//LV2_URID convolution__state;
 		};
 		Urids urids;
 
@@ -237,6 +298,8 @@ namespace toob
 		float *pTime = nullptr;
 		float *pDirectMix = nullptr;
 		float *pReverbMix = nullptr;
+		float *pReverb2Mix = nullptr;
+		float *pReverb3Mix = nullptr;
 		float *pPredelay = nullptr;
 		float *pLoadingState = nullptr;
 		const float *inL = nullptr;
@@ -247,8 +310,14 @@ namespace toob
 		float lastTime = -1;
 		float lastDirectMix = -999;
 		float lastReverbMix = -999;
+		float lastReverb2Mix = -999;
+		float lastReverb3Mix = -999;
 		float lastPredelay = -999;
 		float lastLoadingState = 0;
+
+		float reverbMixAf = 1;
+		float reverb2MixAf = 0;
+		float reverb3MixAf = 0;
 
 		float loadingState = 0.0;
 
@@ -256,6 +325,8 @@ namespace toob
 
 		class Loader;
 		Loader *pLoader = nullptr;
+		void SetDefaultFile(const LV2_Feature *const *features);
+
 	};
 
 } // namespace toob

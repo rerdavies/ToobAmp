@@ -169,6 +169,9 @@ namespace toob
 
         void ConvertToMono();
 
+        void Scale(float value);
+
+        AudioData&operator+=(const AudioData&other);
 
 
         

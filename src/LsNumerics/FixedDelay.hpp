@@ -37,7 +37,10 @@ namespace LsNumerics {
         }
         void SetSize(size_t size)
         {
-            assert(size != 0);
+            if (size == 0)
+            {
+                size = 1;
+            }
             index = 0;
             buffer.resize(0);
             buffer.resize(size);

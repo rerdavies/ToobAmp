@@ -316,4 +316,40 @@ void AudioData::Erase(size_t start, size_t end)
     }
 
 }
-        
+
+void AudioData::Scale(float value)
+{
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        auto &channel = this->data[c];
+        for (size_t i = 0; i < channel.size(); ++i)
+        {
+            channel[i] *= value;
+        }
+    }
+}
+
+
+AudioData& AudioData::operator+=(const AudioData&other) 
+{
+    assert(this->getChannelCount() == other.getChannelCount());
+
+    if (other.getSize() > this->getSize())
+    {
+        this->setSize(other.getSize());
+    }
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        auto &myChannel = data[c];
+        const auto &theirChannel = other.getChannel(c);
+
+        for (size_t i = 0; i < theirChannel.size(); ++i)
+        {
+            myChannel[i] += theirChannel[i];
+        }
+    }
+
+    return *this;
+
+}
+

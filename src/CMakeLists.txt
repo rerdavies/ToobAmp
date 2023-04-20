@@ -44,11 +44,13 @@ add_custom_target(copy-files ALL
     )
 
 
+
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
+        FlacReader.cpp FlacReader.hpp
         LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
         util.hpp util.cpp
         SvgPathWriter.hpp
@@ -66,8 +68,8 @@ add_library(ToobAmp  SHARED
         LsNumerics/BalancedConvolution.cpp
         LsNumerics/BalancedConvolution.hpp
 
-        LsNumerics/BackgroundConvolutionTask.hpp
-        LsNumerics/BackgroundConvolutionTask.cpp
+        LsNumerics/AudioThreadToBackgroundQueue.hpp
+        LsNumerics/AudioThreadToBackgroundQueue.cpp
         LsNumerics/LocklessQueue.hpp
         LsNumerics/LocklessQueue.cpp
     
@@ -168,6 +170,7 @@ target_link_libraries(ToobAmp
     RTNeural 
     dl pthread
     boost_iostreams 
+    FLAC++
     z)
 target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
@@ -214,8 +217,8 @@ add_library(BalancedConvolution STATIC
     LsNumerics/BalancedConvolution.cpp
     LsNumerics/BalancedConvolution.hpp
 
-    LsNumerics/BackgroundConvolutionTask.hpp
-    LsNumerics/BackgroundConvolutionTask.cpp
+    LsNumerics/AudioThreadToBackgroundQueue.hpp
+    LsNumerics/AudioThreadToBackgroundQueue.cpp
     LsNumerics/LocklessQueue.hpp
     LsNumerics/LocklessQueue.cpp
 
@@ -310,7 +313,7 @@ add_test(Ce2ChorusTest Ce2ChorusTest)
 add_executable(linkageTest 
     linkageTest.cpp )
 
-target_link_libraries(linkageTest ToobAmp)
+target_link_libraries(linkageTest ToobAmp FLAC++)
 
 
 
@@ -354,6 +357,7 @@ install(TARGETS ToobAmp
 INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/fftplans.gz/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/fftplans.gz)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/reverb/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/reverb)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/CabIR)
         
 
 # TODO: Add tests if needed.
