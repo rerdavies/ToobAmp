@@ -14,7 +14,7 @@ Currently supported platforms:
 
 Download the current install package for your platform:
 
-* [Raspberry Pi OS 64-bit](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.8/toobamp_.1.0.8_arm64.deb)
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v0.1.7-beta.3/toobamp_0.1.7_arm64.deb)
 
 Run the following shell commands:
 
