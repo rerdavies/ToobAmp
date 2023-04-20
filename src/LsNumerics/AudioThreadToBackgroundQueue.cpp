@@ -228,7 +228,9 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
             }
             else
             {
-                nice(0);
+                int rc = nice(0);
+                (void)rc;
+                
                 int schedPolicy = SCHED_RR;
                 int priorityMin = sched_get_priority_min(schedPolicy);
                 int priorityMax = sched_get_priority_max(schedPolicy);
