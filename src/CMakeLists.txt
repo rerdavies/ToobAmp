@@ -26,12 +26,13 @@ execute_process(COMMAND
 if (CMAKE_COMPILER_IS_GNUCXX)
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        set(CXX_ARCH_FLAGS -mtune=cortex-a72) # raspberry pi 4.
+        set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4.
     else()
-        # enable MMX, SSE, SSE2 (covers pretty much all desktops, and most mini-pcs). We want SSE2 (and would use  AVX if given the chance.)
-        set(CXX_ARCH_FLAGS -march=pentium4 -mtune=pentium4 )  
+        # enable MMX, SSE, SSE2 (covers pretty much all desktops, and most mini-pcs). 
+        # We want SSE2 (and would use  AVX if given the chance.)
+        #set(CXX_ARCH_FLAGS "-march=pentium4 -mtune=pentium4" )  
         # Minimum architecture for AVX: May exclude pentium4 mini-pcs, and core2 machines.
-        # set(CXX_ARCH_FLAGS -arch=sandybridge -mtune=sandybridge)  
+        set(CXX_ARCH_FLAGS -arch=sandybridge -mtune=sandybridge)  
     endif()
 
 
