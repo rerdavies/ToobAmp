@@ -69,7 +69,7 @@ namespace Iir {
 		for (int i = m_numStages; --i >=0; ++stage)
 		{
 			complex_t ct    (stage->getB0() + stage->getB1()*czn1 + stage->getB2()*czn2);
-			complex_t cb = (stage->getA0() + stage->getB1()*czn2 + stage->getA2()*czn2);
+			complex_t cb = (stage->getA0() + stage->getA1()*czn2 + stage->getA2()*czn2);
 			ch   *= ct;
 			cbot *= cb;
 		}

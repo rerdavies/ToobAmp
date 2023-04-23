@@ -184,16 +184,16 @@ void AudioData::ConvertToMono()
 /*static*/ ChebyshevDownsamplingFilter AudioData::DesignFilter(size_t inputSampleRate, size_t outputSampleRate)
 {
     ChebyshevDownsamplingFilter downsamplingFilter;
-    size_t cutoff;
+    double cutoff;
     if (outputSampleRate < 48000)
     {
-        cutoff = outputSampleRate * 18000 / 44100; // 18000 for 44100, proportionately scaled if the sample rate is even lower.
+        cutoff = outputSampleRate * 20000.0 / 44100; // 18000 for 44100, proportionately scaled if the sample rate is even lower.
     }
     else
     {
-        cutoff = 20000;
+        cutoff = outputSampleRate*20000.0/44100;;
     }
-    downsamplingFilter.Design(inputSampleRate, 0.1, cutoff, -9, outputSampleRate / 2);
+    downsamplingFilter.Design(inputSampleRate, 0.1, cutoff, -20, outputSampleRate / 2);
     return downsamplingFilter;
 
 }

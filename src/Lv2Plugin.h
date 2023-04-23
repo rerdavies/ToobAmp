@@ -26,12 +26,15 @@
 #include "lv2/core/lv2.h"
 #include "lv2/state/state.h"
 #include "lv2/worker/worker.h"
+#include "lv2/options/options.h"
 #include "lv2/log/logger.h"
 #include "lv2/atom/atom.h"
 #include "lv2/atom/forge.h"
 #include "lv2/urid/urid.h"
 #include "lv2/patch/patch.h"
 #include "lv2/units/units.h"
+#include "lv2/buf-size/buf-size.h"
+
 
 #include <vector>
 #include <functional>
@@ -51,6 +54,12 @@ namespace toob
 		Warning = 2,
 		Error = 3,
 		None = 4,
+	};
+	struct BufSizeOptions {
+		uint32_t minBlockLength = -1;
+		uint32_t maxBlockLength = -1;
+		uint32_t nominalBlockLength = -1;
+		uint32_t sequenceSize = -1;
 	};
 
 	typedef Lv2Plugin *(*PFN_CREATE_PLUGIN)(double _rate,
@@ -168,6 +177,8 @@ namespace toob
 		}
 
 	protected:
+		const BufSizeOptions& GetBuffSizeOptions() const { return bufSizeOptions; }
+		
 		void PutPatchPropertyString(int64_t frameTime,LV2_URID propertyUrid, const char*value);
 		void PutPatchPropertyPath(int64_t frameTime,LV2_URID propertyUrid, const char*value);
 		void PutPatchPropertyUri(int64_t frameTime,LV2_URID propertyUrid, const char*value);
@@ -299,12 +310,13 @@ namespace toob
 		}
 
 	private:
-	private:
 		LV2_Log_Logger logger;
 		LV2_Worker_Schedule *schedule = nullptr;
+		LV2_Options_Option*options = nullptr;
 		LV2_Atom_Forge_Frame outputFrame;
 		LV2_Atom_Forge inputForge;
 
+		BufSizeOptions bufSizeOptions;
 		static Lv2LogLevel logLevel;
 		bool hasState = false;
 
@@ -345,6 +357,10 @@ namespace toob
 
 		static const void *extension_data(const char *uri);
 		static const void *extension_data_with_state(const char *uri);
+
+
+		int32_t GetIntOption(const LV2_Options_Option *option);
+		void InitBufSizeOptions();
 		
 		class PluginUrids
 		{
@@ -357,8 +373,14 @@ namespace toob
 			LV2_URID patch__value;
 			LV2_URID atom__URID;
 			LV2_URID atom__float;
+			LV2_URID atom__int;
 			LV2_URID units__Frame;
 			LV2_URID state__StateChanged;
+			LV2_URID buf_size__maxBlockLength;
+			LV2_URID buf_size__minBlockLength;
+			LV2_URID buf_size__nominalBlockLength;
+			LV2_URID buf_size__sequenceSize;
+
 
 			void Init(LV2_URID_Map *map)
 			{
@@ -369,8 +391,13 @@ namespace toob
 				patch__value = map->map(map->handle, LV2_PATCH__value);
 				atom__URID = map->map(map->handle, LV2_ATOM__URID);
 				atom__float = map->map(map->handle, LV2_ATOM__Float);
+				atom__int = map->map(map->handle, LV2_ATOM__Int);
 				units__Frame = map->map(map->handle,LV2_UNITS__frame);
 				state__StateChanged = map->map(map->handle,LV2_STATE__StateChanged);
+				buf_size__minBlockLength = map->map(map->handle,LV2_BUF_SIZE__minBlockLength);
+				buf_size__maxBlockLength = map->map(map->handle,LV2_BUF_SIZE__maxBlockLength);
+				buf_size__nominalBlockLength = map->map(map->handle,LV2_BUF_SIZE__nominalBlockLength);
+				buf_size__sequenceSize = map->map(map->handle,LV2_BUF_SIZE__sequenceSize);
 			}
 		};
 
@@ -383,6 +410,7 @@ namespace toob
 			Lv2PluginWithState(const LV2_Feature *const *features) : Lv2Plugin(features,true) { }
 			static bool HasState() { return true; }
 	};
+
 }
 
 #pragma GCC diagnostic pop
