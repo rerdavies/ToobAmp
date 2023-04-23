@@ -24,6 +24,7 @@
 #include "Lv2Plugin.h"
 
 #include "lv2/atom/atom.h"
+#include "lv2/options/options.h"
 #include "lv2/atom/util.h"
 #include "lv2/core/lv2.h"
 #include "lv2/core/lv2_util.h"
@@ -187,10 +188,13 @@ Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
 {
     this->hasState = hasState;
 
+
+
     this->logger.log = nullptr;
     this->map = nullptr;
     this->unmap = nullptr;
     this->schedule = nullptr;
+    this->options = nullptr;
     // Scan host features for URID map
     // clang-format off
     const char* missing = lv2_features_query(
@@ -199,9 +203,13 @@ Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
         LV2_URID__map, &this->map, true,
         LV2_URID__unmap,&this->unmap,false,
         LV2_WORKER__schedule, &schedule, false,
+        LV2_OPTIONS__options, &options, false,
         nullptr);
 
     lv2_log_logger_set_map(&this->logger, this->map);
+
+
+    InitBufSizeOptions();
 
     if (missing) {
         lv2_log_error(&this->logger, "Missing feature <%s>\n", missing);
@@ -527,4 +535,40 @@ void Lv2Plugin::BeginAtomOutput(LV2_Atom_Sequence *controlOutput)
 void Lv2Plugin::EndAtomOutput() {
     lv2_atom_forge_pop(&this->outputForge,&this->outputFrame);
 
+}
+
+
+int32_t Lv2Plugin::GetIntOption(const LV2_Options_Option *option)
+{
+    if (option->type == urids.atom__float)
+    {
+        return (int32_t)*(const float*)(option->value);
+    }
+    if (option->type == urids.atom__int)
+    {
+        return *(const int32_t*)(option->value);
+    }
+    return -1;
+}
+void Lv2Plugin::InitBufSizeOptions()
+{
+    if (this->options)
+    {
+        for (const LV2_Options_Option *option = this->options; option->key != 0 || option->value != 0; ++option)
+        {
+            if (option->key == urids.buf_size__maxBlockLength)
+            {
+                bufSizeOptions.maxBlockLength = GetIntOption(option);
+            } else if (option->key == urids.buf_size__minBlockLength)
+            {
+                bufSizeOptions.minBlockLength = GetIntOption(option);
+            } else if (option->key == urids.buf_size__nominalBlockLength)
+            {
+                bufSizeOptions.nominalBlockLength = GetIntOption(option);
+            } else if (option->key == urids.buf_size__sequenceSize)
+            {
+                bufSizeOptions.sequenceSize = GetIntOption(option);
+            }
+        }
+    }
 }

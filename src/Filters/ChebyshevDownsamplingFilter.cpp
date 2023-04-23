@@ -36,7 +36,7 @@ void ChebyshevDownsamplingFilter::Design(double samplingFrequency,
     double dbRipple, double cutoffFrequency,
     double bandstopDb, double bandstopFrequency)
 {
-    for (int order = 3; order < 20; ++order)
+    for (int order = 2; order < 20; ++order)
     {
         filter.setup(order,samplingFrequency,cutoffFrequency,dbRipple);
         Iir::complex_t response = filter.response(bandstopFrequency/samplingFrequency);    

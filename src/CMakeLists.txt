@@ -38,9 +38,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 
     set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=400000")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG ${CXX_ARCH_FLAGS}")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS}")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS}")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS}")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 
@@ -207,6 +207,31 @@ add_executable(FftTest
 )
 
 add_test(FftTest FftTest)
+
+add_executable(ResamplerTest 
+    LsNumerics/MotorolaResampler.hpp
+    LsNumerics/ResamplerTest.cpp
+    AudioData.cpp AudioData.hpp
+    WavWriter.cpp WavWriter.hpp
+    WavGuid.cpp WavGuid.hpp
+    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter.cpp
+    iir/ChebyshevI.h
+    iir/ChebyshevI.cpp
+    iir/Biquad.cpp
+    iir/Biquad.h
+    iir/Cascade.h
+    iir/Types.h
+    iir/PoleFilter.cpp
+    iir/Common.h
+    iir/PoleFilter.h
+    iir/Cascade.cpp
+    iir/Biquad.cpp
+    WavConstants.cpp
+    TestAssert.hpp
+)
+
+add_test(FftTest FftTest)
+
 
 add_executable(BaxandallToneStackTest 
     TestAssert.hpp
