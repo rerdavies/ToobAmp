@@ -39,6 +39,10 @@
 #include <atomic>
 #include "FixedDelay.hpp"
 #include "SectionExecutionTrace.hpp"
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include "../ControlDezipper.h"
 
 #ifndef RESTRICT
 #define RESTRICT __restrict // good for MSVC, and GCC.
@@ -62,14 +66,160 @@ namespace LsNumerics
 
     inline float UndenormalizeValue(float value)
     {
-        return 1.0f+value - 1.0f;
+        return 1.0f + value - 1.0f;
     }
-
 
     namespace Implementation
     {
         void SlotUsageTest();
 
+        class AssemblyQueue
+        {
+            // single-reader, single-writer, designed to be friendly to the reader.
+        public:
+            AssemblyQueue() { buffer.resize(BUFFER_SIZE); }
+            ~AssemblyQueue()
+            {
+                Close();
+            }
+            size_t Read(std::vector<float> &inputBuffer, size_t requestedSize)
+            {
+                std::unique_lock<std::mutex> lock{mutex};
+
+                size_t readIx = 0;
+                while (true)
+                {
+                    if (count != 0)
+                    {
+                        size_t thisTime = requestedSize;
+                        if (count < thisTime)
+                            thisTime = count;
+                        if (readHead + thisTime > buffer.size())
+                        {
+                            // split read.
+                            size_t firstPart = buffer.size() - readHead;
+                            for (size_t i = 0; i < firstPart; ++i)
+                            {
+                                inputBuffer[readIx++] = buffer[readHead++];
+                            }
+                            readHead = 0;
+                            for (size_t i = firstPart; i < thisTime; ++i)
+                            {
+                                inputBuffer[readIx++] = buffer[readHead++];
+                            }
+                        }
+                        else
+                        {
+                            for (size_t i = 0; i < thisTime; ++i)
+                            {
+                                inputBuffer[readIx++] = buffer[readHead++];
+                            }
+                            if (readHead >= buffer.size())
+                            {
+                                readHead = 0;
+                            }
+                        }
+                        count -= thisTime;
+                        lock.unlock();
+                        write_cv.notify_all();
+                        return thisTime;
+                    }
+                    else if (closed)
+                    {
+                        for (size_t i = 0; i < requestedSize; ++i)
+                        {
+                            inputBuffer[i] = 0;
+                        }
+                        return requestedSize;
+                    }
+
+                    read_cv.wait(lock);
+                }
+            }
+            void Close()
+            {
+                {
+                    std::lock_guard<std::mutex> lock{mutex};
+                    closed = true;
+                }
+                read_cv.notify_all();
+                write_cv.notify_all();
+            }
+
+            void Write(const std::vector<float> &outputBuffer, size_t size)
+            {
+                std::unique_lock<std::mutex> lock{mutex};
+                size_t inputIx = 0;
+                while (true)
+                {
+                    if (closed)
+                    {
+                        throw DelayLineClosedException();
+                    }
+                    if (size == 0)
+                    {
+                        lock.unlock();
+                        read_cv.notify_all();
+                        return;
+                    }
+                    
+                    if (count < buffer.size())
+                    {
+                        size_t thisTime = buffer.size() - count;
+                        if (thisTime > size)
+                        {
+                            thisTime = size;
+                        }
+                        if (thisTime != 0)
+                        {
+                            if (writeHead + thisTime > buffer.size())
+                            {
+                                // split write.
+                                size_t firstPart = buffer.size() - writeHead;
+                                for (size_t i = 0; i < firstPart; ++i)
+                                {
+                                    buffer[i + writeHead] = outputBuffer[inputIx++];
+                                }
+                                writeHead = thisTime-firstPart;
+                                for (size_t i = 0; i < writeHead; ++i)
+                                {
+                                    buffer[i] = outputBuffer[inputIx++];
+                                }
+                            }
+                            else
+                            {
+                                for (size_t i = 0; i < thisTime; ++i)
+                                {
+                                    buffer[i + writeHead] = outputBuffer[inputIx++];
+                                }
+                                writeHead += thisTime;
+                                if (writeHead >= buffer.size())
+                                {
+                                    writeHead = 0;
+                                }
+                            }
+                            this->count += thisTime;
+                            size -= thisTime;
+                        }
+                    }
+                    else
+                    {
+                        write_cv.wait(lock);
+                    }
+                }
+            }
+
+        private:
+            bool closed = false;
+            std::mutex mutex;
+            std::condition_variable read_cv;
+            std::condition_variable write_cv;
+            size_t readHead = 0;
+            size_t writeHead = 0;
+            static constexpr size_t BUFFER_SIZE = 256;
+            size_t count = 0;
+            std::vector<float> buffer;
+        };
         class DelayLine
         {
         public:
@@ -99,6 +249,10 @@ namespace LsNumerics
             std::vector<float> storage;
             std::size_t head = 0;
             std::size_t sizeMask = 0;
+        };
+
+        class ConvolutionAssemblyThread
+        {
         };
 
         class DirectConvolutionSection
@@ -573,44 +727,67 @@ namespace LsNumerics
         }
         size_t GetUnderrunCount() const { return (size_t)underrunCount; }
 
-        float TickUnsynchronized(float value)
+    private:
+        friend class ConvolutionReverb;
+
+        float TickUnsynchronized(float value, float backgroundValue)
         {
-            backgroundConvolutionTask.Write(value);
-            double result = 0;
+            audioThreadToBackgroundQueue.Write(value);
+            double result = backgroundValue;
             for (size_t i = 0; i < directConvolutionLength; ++i)
             {
-                result += backgroundConvolutionTask[i] * (double)directImpulse[i];
+                result += audioThreadToBackgroundQueue[i] * (double)directImpulse[i];
             }
             for (auto &section : balancedSections)
             {
-                result += section.fftSection.Tick(backgroundConvolutionTask[section.sampleDelay]);
+                result += section.fftSection.Tick(audioThreadToBackgroundQueue[section.sampleDelay]);
             }
-            for (auto &sectionThread : directSectionThreads)
-            {
-                result += sectionThread->Tick();
-            }
+            // moved to assembly thread.
+            // for (auto &sectionThread : directSectionThreads)
+            // {
+            //     result += sectionThread->Tick();
+            // }
             return (float)result;
         }
-        void SynchWrite()
-        {
-            backgroundConvolutionTask.SynchWrite();
-        }
 
-        //[[deprecated( "Use Tick(size_t,float*,float*) instead." )]]
+    public:
+        // Highly sub-optimal. Call Tick(size_t,const float*,float*) instead.
         float Tick(float value)
         {
-            float result = TickUnsynchronized(value);
-            backgroundConvolutionTask.SynchWrite();
-            return result;
+            float output;
+            Tick(1, &value, &output);
+            return output;
         }
-
-        void Tick(size_t frames, float *input, float *output)
+        void Tick(size_t frames, const float * RESTRICT input, float * RESTRICT output)
         {
-            for (size_t i = 0; i < frames; ++i)
+            size_t ix = 0;
+            size_t remaining = frames;
+            if (this->directSections.size() == 0)
             {
-                output[i] = TickUnsynchronized(input[i]);
+                for (size_t i = 0; i < frames; ++i)
+                {
+                    output[ix + i] = TickUnsynchronized(input[ix + i], 0);
+                }
             }
-            backgroundConvolutionTask.SynchWrite();
+            else
+            {
+                while (remaining != 0)
+                {
+                    size_t thisTime = 64;
+                    if (thisTime > remaining)
+                    {
+                        thisTime = remaining;
+                    }
+                    size_t nRead = assemblyQueue.Read(this->assemblyInputBuffer, thisTime);
+                    for (size_t i = 0; i < nRead; ++i)
+                    {
+                        output[ix + i] = TickUnsynchronized(input[ix + i], assemblyInputBuffer[i]);
+                    }
+                    ix += nRead;
+                    remaining -= nRead;
+                    audioThreadToBackgroundQueue.SynchWrite();
+                }
+            }
         }
         void Tick(std::vector<float> &input, std::vector<float> &output)
         {
@@ -622,6 +799,14 @@ namespace LsNumerics
 #if EXECUTION_TRACE
         SectionExecutionTrace executionTrace;
 #endif
+
+        std::vector<float> assemblyOutputBuffer;
+        std::vector<float> assemblyInputBuffer;
+        size_t assemblyInputBufferIndex = 0;
+        std::unique_ptr<std::thread> assemblyThread;
+        Implementation::AssemblyQueue assemblyQueue;
+        void AssemblyThreadProc();
+
         std::atomic<size_t> underrunCount;
         SchedulerPolicy schedulerPolicy;
 
@@ -669,14 +854,15 @@ namespace LsNumerics
 
 #if EXECUTION_TRACE
         public:
-            void SetTraceInfo(SectionExecutionTrace*pTrace,size_t threadNumber)
+            void SetTraceInfo(SectionExecutionTrace *pTrace, size_t threadNumber)
             {
                 this->threadNumber = threadNumber;
                 if (section)
                 {
-                    section->directSection.SetTraceInfo(pTrace,threadNumber);
+                    section->directSection.SetTraceInfo(pTrace, threadNumber);
                 }
             }
+
         private:
             size_t threadNumber = -1;
 #endif
@@ -735,7 +921,7 @@ namespace LsNumerics
 
         size_t sampleRate = 48000;
         std::vector<float> directImpulse;
-        AudioThreadToBackgroundQueue backgroundConvolutionTask;
+        AudioThreadToBackgroundQueue audioThreadToBackgroundQueue;
         size_t directConvolutionLength;
 
         struct Section
@@ -754,6 +940,9 @@ namespace LsNumerics
         ConvolutionReverb(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulse)
             : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulse) // the last value is recirculated.
         {
+            directMixDezipper.To(0, 0);
+            reverbMixDezipper.To(1.0, 0);
+
             if (size != 0)
             {
                 feedbackScale = impulse[size - 1];
@@ -772,92 +961,206 @@ namespace LsNumerics
         }
         void SetFeedback(float feedback, size_t tapPosition)
         {
-            
+
             feedbackDelay.SetSize(tapPosition);
             feedbackScale = feedback;
             hasFeedback = feedbackScale != 0;
         }
 
     protected:
-        float TickUnsynchronizedWithFeedback(float value)
-        {
-            float recirculationValue = feedbackDelay.Value() * feedbackScale;
-            float input = Undenormalize(value + recirculationValue);
-            float reverb = convolution.TickUnsynchronized(input);
-            feedbackDelay.Put(reverb);
+        // float TickUnsynchronizedWithFeedback(float value)
+        // {
+        //     float recirculationValue = feedbackDelay.Value() * feedbackScale;
+        //     float input = Undenormalize(value + recirculationValue);
+        //     float reverb = convolution.TickUnsynchronized(input);
+        //     feedbackDelay.Put(reverb);
 
-            return value * directMix + (reverb)*reverbMix;
-        }
+        //     return value * directMix + (reverb)*reverbMix;
+        // }
 
-        float TickUnsynchronizedWithoutFeedback(float value)
-        {
+        // float TickUnsynchronizedWithoutFeedback(float value)
+        // {
 
-            value  = Undenormalize(value);
-            float reverb = convolution.TickUnsynchronized(value);
+        //     value  = Undenormalize(value);
+        //     float reverb = convolution.TickUnsynchronized(value);
 
-            return value * directMix + (reverb)*reverbMix;
-        }
+        //     return value * directMix + (reverb)*reverbMix;
+        // }
     public:
+        void SetSampleRate(double rate)
+        {
+            this->sampleRate = rate;
+            this->reverbMixDezipper.SetSampleRate(rate);
+            this->directMixDezipper.SetSampleRate(rate);
+        }
+        void ResetDirectMix(float value)
+        {
+            this->directMixDezipper.To(value, 0);
+        }
+        void ResetReverbMix(float value)
+        {
+            this->reverbMixDezipper.To(value, 0);
+        }
+        bool IsDezipping()
+        {
+            return (!reverbMixDezipper.IsComplete()) || (!directMixDezipper.IsComplete());
+        }
         void SetDirectMix(float value)
         {
-            this->directMix = value;
+            if (this->sampleRate != 0)
+            {
+                this->directMixDezipper.To(value, 0.1);
+            }
+            else
+            {
+                this->directMixDezipper.To(value, 0);
+            }
         }
         void SetReverbMix(float value)
         {
-            this->reverbMix = value;
-        }
-        float Tick(float value)
-        {
-            float result;
-            if (hasFeedback)
+            if (this->sampleRate != 0)
             {
-                result = TickUnsynchronizedWithFeedback(value);
+                this->reverbMixDezipper.To(value, 0.1);
             }
             else
             {
-                result = TickUnsynchronizedWithoutFeedback(value);
+                this->reverbMixDezipper.To(value, 0);
             }
-            convolution.SynchWrite();
-            return result;
         }
+        // float Tick(float value)
+        // {
+        //     float result;
+        //     if (hasFeedback)
+        //     {
+        //         result = TickUnsynchronizedWithFeedback(value);
+        //     }
+        //     else
+        //     {
+        //         result = TickUnsynchronizedWithoutFeedback(value);
+        //     }
+        //     convolution.SynchWrite();
+        //     return result;
+        // }
 
-        float TickUnsynchronized(float value)
+        // float TickUnsynchronized(float value)
+        // {
+        //     float result;
+        //     if (hasFeedback)
+        //     {
+        //         result = TickUnsynchronizedWithFeedback(value);
+        //     }
+        //     else
+        //     {
+        //         result = TickUnsynchronizedWithoutFeedback(value);
+        //     }
+        //     return result;
+        // }
+        // void TickSynchronize()
+        // {
+        //     convolution.SynchWrite();
+        // }
+
+        void Tick(size_t count, const float  * RESTRICT input, float * RESTRICT output)
         {
-            float result;
+            // TODO: there has to be a way to refactor this sensibly. :-/
             if (hasFeedback)
             {
-                result = TickUnsynchronizedWithFeedback(value);
-            }
-            else
-            {
-                result = TickUnsynchronizedWithoutFeedback(value);
-            }
-            return result;
-        }
-        void TickSynchronize()
-        {
-            convolution.SynchWrite();
-        }
-
-
-
-        void Tick(size_t count, const float *input, float *output)
-        {
-            if (hasFeedback)
-            {
-                for (size_t i = 0; i < count; ++i)
+                size_t ix = 0;
+                size_t remaining = count;
+                if (this->convolution.directSections.size() == 0)
                 {
-                    output[i] = TickUnsynchronizedWithFeedback(input[i]);
+                    // feedback, no direct sections.
+                    size_t thisTime = remaining;
+                    for (size_t i = 0; i < thisTime; ++i)
+                    {
+                        float value = input[ix + i];
+                        float recirculationValue = feedbackDelay.Value() * feedbackScale;
+                        float input = Undenormalize(value + recirculationValue);
+
+                        float reverb = convolution.TickUnsynchronized(input, 0);
+                        feedbackDelay.Put(reverb);
+                        float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                        output[ix + i] = returnValue;
+                    }
+                    ix += thisTime;
+                    remaining -= thisTime;
+                    convolution.audioThreadToBackgroundQueue.SynchWrite();
+                }
+                else
+                {
+                    // feedback, with direct sections.
+                    while (remaining != 0)
+                    {
+                        size_t thisTime = 64;
+                        if (thisTime > remaining)
+                        {
+                            thisTime = remaining;
+                        }
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, thisTime);
+                        for (size_t i = 0; i < nRead; ++i)
+                        {
+                            float value = input[ix + i];
+                            float recirculationValue = feedbackDelay.Value() * feedbackScale;
+                            float input = Undenormalize(value + recirculationValue);
+
+                            float reverb = convolution.TickUnsynchronized(input, convolution.assemblyInputBuffer[i]);
+                            feedbackDelay.Put(reverb);
+                            float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                            output[ix + i] = returnValue;
+                        }
+                        ix += nRead;
+                        remaining -= nRead;
+                        convolution.audioThreadToBackgroundQueue.SynchWrite();
+                    }
                 }
             }
             else
             {
-                for (size_t i = 0; i < count; ++i)
+                size_t ix = 0;
+                size_t remaining = count;
+                if (this->convolution.directSections.size() == 0)
                 {
-                    output[i] = TickUnsynchronizedWithoutFeedback(input[i]);
+                    // no feedback, no direct sections.
+                    size_t thisTime = remaining;
+                    for (size_t i = 0; i < thisTime; ++i)
+                    {
+                        float value = input[ix + i];
+
+                        float reverb = convolution.TickUnsynchronized(value, 0);
+
+                        float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                        output[ix + i] = returnValue;
+                    }
+                    ix += thisTime;
+                    remaining -= thisTime;
+                    convolution.audioThreadToBackgroundQueue.SynchWrite();
+                }
+                else
+                {
+                    // no feedback, with direct sections.
+                    while (remaining != 0)
+                    {
+                        size_t thisTime = 64;
+                        if (thisTime > remaining)
+                        {
+                            thisTime = remaining;
+                        }
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, thisTime);
+                        for (size_t i = 0; i < nRead; ++i)
+                        {
+                            float value = input[ix + i];
+                            
+                            float reverb = convolution.TickUnsynchronized(value, convolution.assemblyInputBuffer[i]);
+                            feedbackDelay.Put(reverb);
+                            float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                            output[ix + i] = returnValue;
+                        }
+                        ix += nRead;
+                        remaining -= nRead;
+                        convolution.audioThreadToBackgroundQueue.SynchWrite();
+                    }
                 }
             }
-            convolution.SynchWrite();
         }
         void Tick(size_t count, const std::vector<float> &input, std::vector<float> &output)
         {
@@ -865,12 +1168,13 @@ namespace LsNumerics
         }
 
     private:
+        double sampleRate = 0;
+        toob::ControlDezipper directMixDezipper;
+        toob::ControlDezipper reverbMixDezipper;
         bool hasFeedback = false;
         float feedbackScale = 0;
         FixedDelay feedbackDelay;
         BalancedConvolution convolution;
-        float reverbMix = 1.0;
-        float directMix = 0.0;
     };
 
     /// @brief Enable/display display of section plans

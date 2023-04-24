@@ -48,8 +48,12 @@
 using namespace std;
 using namespace toob;
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+
 #include "NeuralModel.h"
 
+#pragma GCC diagnostic push
 
 constexpr float MODEL_FADE_RATE = 0.2f; // seconds.
 constexpr float MASTER_DEZIP_RATE = 0.1f; // seconds.
