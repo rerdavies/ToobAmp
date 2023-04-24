@@ -75,6 +75,29 @@ namespace LsNumerics
             ++head;
         }
 
+        void WriteSynchronized(const float*input, size_t size)
+        {
+            {
+                std::lock_guard lock{mutex};
+                for (size_t i = 0; i < size; ++i)
+                {
+                    Write(input[i]);
+                }
+                readTail = head;
+
+                if (readTail < (ptrdiff_t)this->size)
+                {
+                    readHead = 0;  // data is valid from 0 to readTail.
+                }
+                else
+                {
+                    readHead = readTail - this->size; // data is valid from readTail-size to readTail.
+                }
+            }
+            readConditionVariable.notify_all();
+
+
+        }
         void SynchWrite()
         {
             {

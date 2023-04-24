@@ -64,7 +64,7 @@ static int NextPowerOf2(size_t value)
 void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
 {
     this->schedulerPolicy = schedulerPolicy;
-    size = NextPowerOf2(size);
+    size = NextPowerOf2(size+padEntries+1024);
     this->size = size;
     this->sizeMask = size - 1;
     this->head = 0;

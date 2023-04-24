@@ -39,6 +39,9 @@
 #include <set>
 #include "BinaryWriter.hpp"
 #include "BinaryReader.hpp"
+#include "../util.hpp"
+#include <memory.h>
+#include <iostream>
 
 using namespace LsNumerics;
 
@@ -54,7 +57,7 @@ using namespace LsNumerics;
 #define DISPLAY_SECTION_ALLOCATIONS 1 // enable for test purposes only
 
 #if DISPLAY_SECTION_ALLOCATIONS
-static bool gDisplaySectionPlans = true;
+static bool gDisplaySectionPlans = false;
 #endif
 
 void LsNumerics::SetDisplaySectionPlans(bool value)
@@ -1665,8 +1668,11 @@ static size_t convolutionMaxAudioBufferSize = (size_t)-1;
 BalancedConvolution::BalancedConvolution(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
     : schedulerPolicy(schedulerPolicy)
 {
+    this->assemblyInputBuffer.resize(1024);
+    this->assemblyOutputBuffer.resize(1024);
     PrepareSections(size, impulseResponse, sampleRate, maxAudioBufferSize);
     PrepareThreads();
+
 }
 
 BalancedConvolution::DirectSectionThread *BalancedConvolution::GetDirectSectionThread(int threadNumber)
@@ -1705,20 +1711,24 @@ void BalancedConvolution::PrepareThreads()
         DirectSectionThread *thread = directSectionThreads[i].get();
         if (thread)
         {
-            backgroundConvolutionTask.CreateThread(
+            audioThreadToBackgroundQueue.CreateThread(
                 [this, thread]()
                 {
-                    thread->Execute(this->backgroundConvolutionTask);
+                    thread->Execute(this->audioThreadToBackgroundQueue);
                 },
                 (int)thread->GetThreadNumber());
         }
+    }
+    if (this->directSectionThreads.size() != 0)
+    {
+        this->assemblyThread = std::make_unique<std::thread>(std::bind(&BalancedConvolution::AssemblyThreadProc,this));
     }
 }
 void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
 {
     constexpr size_t INITIAL_SECTION_SIZE = 128;
     constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
-    constexpr size_t MAXIMUM_USABLE_BALANCED_SECTION = 132 * 1024;                                // calculating balanced sections larger than this requires too much memory. Can't go larger than this.
+    constexpr size_t MAXIMUM_USABLE_BALANCED_SECTION = 8 * 1024;                                // calculating balanced sections larger than this requires too much memory. Can't go larger than this.
     constexpr size_t DIRECT_SECTION_CUTOFF_LIMIT = std::numeric_limits<size_t>::max(); // the point at which balanced sections become faster than direct sections.
     // nb: global data, but constructor is always protected by the cache mutex.
 
@@ -1934,7 +1944,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
     {
         directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
     }
-    backgroundConvolutionTask.SetSize(delaySize + 1, 256, this->schedulerPolicy);
+    audioThreadToBackgroundQueue.SetSize(delaySize + 1, 256, this->schedulerPolicy);
 }
 static int NextPowerOf2(size_t value)
 {
@@ -2467,12 +2477,19 @@ BalancedConvolution::~BalancedConvolution()
 
 void BalancedConvolution::Close()
 {
+    assemblyQueue.Close();
+    if (assemblyThread)
+    {
+        assemblyThread->join();
+        assemblyThread = nullptr; // joins the assembly thread.
+    }
+
     // shut down Direct Convolution Threads in an orderly manner.
     for (auto &thread : directSectionThreads)
     {
         thread->Close(); // close the thread's delay line.
     }
-    backgroundConvolutionTask.Close(); // shut down all delayLine threads.
+    audioThreadToBackgroundQueue.Close(); // shut down all delayLine threads.
 }
 
 bool BalancedConvolution::ThreadedDirectSection::Execute(AudioThreadToBackgroundQueue &delayLine)
@@ -2560,7 +2577,7 @@ void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
     // hack to allow us to wait on a signle condition variable.
     // If an output delay line writeStalled and now becomes ready, pump the main delay line once
     // to get Execute() to happen once more.
-    this->backgroundConvolutionTask.NotifyReadReady();
+    this->audioThreadToBackgroundQueue.NotifyReadReady();
 }
 
 void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQueue &inputDelayLine)
@@ -2581,5 +2598,61 @@ void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQu
         {
             tailPosition = inputDelayLine.WaitForMoreReadData(tailPosition);
         }
+    }
+}
+
+void BalancedConvolution::AssemblyThreadProc()
+{
+    std::vector<float> buffer;
+    toob::SetThreadName("cr_assembly");
+
+
+    int schedPolicy = SCHED_RR;
+    int priorityMin = sched_get_priority_min(schedPolicy);
+    int priorityMax = sched_get_priority_max(schedPolicy);
+    int schedPriority = 32;
+    if (schedPriority < priorityMin)
+    {
+        schedPriority = priorityMin;
+    }
+    if (schedPriority >= priorityMax)
+    {
+        throw std::logic_error(SS("BalancedConvolution thread priority above maximum value. (" << priorityMax << ")"));
+    }
+
+    sched_param schedParam;
+    memset(&schedParam, 0, sizeof(schedParam));
+    schedParam.sched_priority = schedPriority;
+
+    int ret = sched_setscheduler(0, schedPolicy, &schedParam);
+    if (ret != 0)
+    {
+        throw std::logic_error("pthread_setschedparam failed.");
+    }
+
+
+    buffer.resize(16);
+    try {
+        while (true)
+        {
+            for (size_t i = 0; i < buffer.size(); ++i)
+            {
+                float result = 0;
+                for (auto &sectionThread : directSectionThreads)
+                {
+                    result += sectionThread->Tick();
+                }
+                buffer[i] = result;
+            }
+            assemblyQueue.Write(buffer,buffer.size());
+        }
+
+    } catch (const DelayLineClosedException&)
+    {
+        // expected.
+    }
+    catch (const std::exception & e)
+    {
+        throw;
     }
 }

@@ -35,7 +35,6 @@
 #include "lv2/units/units.h"
 #include "FilterResponse.h"
 #include <string>
-#include "DbDezipper.h"
 #include "AudioData.hpp"
 
 #include "Lv2Plugin.h"
@@ -284,12 +283,9 @@ namespace toob
 
 		std::shared_ptr<LsNumerics::ConvolutionReverb> pConvolutionReverb;
 
-		DbDezipper directMixDezipper;
-		DbDezipper reverbMixDezipper;
-
 		float time = 2.0f;
-		float directMixDb = -96;
-		float reverbMixDb = -96;
+		float directMixAf = 0;
+		float reverbMixAf = 0;
 
 		std::string bundle_path;
 
@@ -315,7 +311,6 @@ namespace toob
 		float lastPredelay = -999;
 		float lastLoadingState = 0;
 
-		float reverbMixAf = 1;
 		float reverb2MixAf = 0;
 		float reverb3MixAf = 0;
 
