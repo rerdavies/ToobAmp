@@ -187,7 +187,7 @@ target_link_libraries(ToobAmp
     RTNeural 
     dl pthread
     boost_iostreams
-    z.a
+    z
     -Wl,--whole-archive
     ogg.a
     FLAC.a
