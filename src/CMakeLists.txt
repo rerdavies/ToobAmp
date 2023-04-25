@@ -186,13 +186,16 @@ add_library(ToobAmp  SHARED
 target_link_libraries(ToobAmp 
     RTNeural 
     dl pthread
-    boost_iostreams 
+    boost_iostreams
     z.a
+    -Wl,--whole-archive
     ogg.a
     FLAC.a
     FLAC++.a
+    -Wl,--no-whole-archive
     )
-target_include_directories(ToobAmp PRIVATE
+
+    target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
 )
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
