@@ -187,8 +187,11 @@ target_link_libraries(ToobAmp
     RTNeural 
     dl pthread
     boost_iostreams 
-    FLAC++
-    z)
+    z.a
+    ogg.a
+    FLAC.a
+    FLAC++.a
+    )
 target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
 )
@@ -355,7 +358,7 @@ add_test(Ce2ChorusTest Ce2ChorusTest)
 add_executable(linkageTest 
     linkageTest.cpp )
 
-target_link_libraries(linkageTest ToobAmp FLAC++)
+target_link_libraries(linkageTest ToobAmp z.a ogg.a FLAC.a FLAC++.a)
 
 
 

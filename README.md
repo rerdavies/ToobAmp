@@ -139,7 +139,7 @@ Run the following shell commands:
 
 ## Building ToobAmp
 
-Prerequisites:
+##### Prerequisites
 
 In the project directory, run:
 
@@ -148,11 +148,14 @@ In the project directory, run:
      sudo apt install lv2-dev
      sudo apt install libboost-iostreams-dev
      sudo apt install libflac++-dev
+     sudo apt install zlib1g-dev
 
 	
 If you have not installed Visual Studio Code, you will need to install CMake:
 
     apt install cmake
+
+##### Building
 
 ToobAmp was built using Visual Studio Code, with CMake build files.
 
@@ -161,13 +164,13 @@ will automatically detect and configure the project. Build and configuration too
 
 If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and install the project:
 
-    ./config     #configure the CMake project
+    ./config.sh     #configure the CMake project
    
-    ./bld   # build the project.
+    ./build.sh   # build the project.
     
 After a full build, run the following command to install ToobAmp:
 
-    sudo ./install
+    ./install.sh
 	
 To rebuild the debian package, run
 
