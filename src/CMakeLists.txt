@@ -188,8 +188,8 @@ target_link_libraries(ToobAmp
     dl pthread
     boost_iostreams
     z
+    ogg
     -Wl,--whole-archive
-    ogg.a
     FLAC.a
     FLAC++.a
     -Wl,--no-whole-archive
