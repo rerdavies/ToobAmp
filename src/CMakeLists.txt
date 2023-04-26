@@ -189,10 +189,8 @@ target_link_libraries(ToobAmp
     boost_iostreams
     z
     ogg
-    -Wl,--whole-archive
-    FLAC.a
-    FLAC++.a
-    -Wl,--no-whole-archive
+    FLAC
+    FLAC++
     )
 
     target_include_directories(ToobAmp PRIVATE

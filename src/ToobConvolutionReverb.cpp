@@ -658,6 +658,7 @@ AudioData ToobConvolutionReverb::LoadWorker::LoadFile(const std::filesystem::pat
     {
         data.ConvertToMono();
     }
+    pThis->LogNote(SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
     NormalizeConvolution(data);
     if (!predelay) // bbetter to do it on the pristine un-filtered data.
@@ -670,7 +671,6 @@ AudioData ToobConvolutionReverb::LoadWorker::LoadFile(const std::filesystem::pat
 
     data.Scale(level);
 
-    pThis->LogNote(SS("File loaded. Sample rate: " << data.getSampleRate() << std::setw(4) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << " seconds.").c_str());
     return data;
 }
 void ToobConvolutionReverb::LoadWorker::OnWork()
@@ -699,22 +699,12 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
         this->tailScale = 0;
         if (maxSize < data.getSize())
         {
-            size_t oldSize = data.getSize();
             this->tailScale = GetTailScale(data.getChannel(0), maxSize);
             data.setSize(maxSize);
 
-            pThis->LogNote(SS("Sample rate: " << data.getSampleRate() 
-                << " Length: " << std::setprecision(2) << (oldSize * 1.0f / data.getSampleRate()) 
-                << "sec Trimmed to: " << std::setprecision(2) << (data.getSize() * 1.0f / data.getSampleRate()) 
-                << " sec Feedback: " << this->tailScale ).c_str()
-                );
+            pThis->LogNote(SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
 
-        } else {
-            pThis->LogNote(SS("Sample rate: " << data.getSampleRate() 
-                << " Length: " << std::setprecision(2) << (data.getSize() * 1.0f / data.getSampleRate()) 
-                ).c_str());
-        }
-        pThis->LogNote("Building convolution.");
+        } 
         if (data.getSize() == 0)
         {
             data.setSize(1);
