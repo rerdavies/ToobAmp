@@ -139,35 +139,41 @@ Run the following shell commands:
 
 ## Building ToobAmp
 
-Prerequisites:
+##### Prerequisites
+
+Run the following commands to install prerequisites:
+
+     sudo apt update
+     sudo apt install build-essential
+     sudo apt install cmake
+     sudo apt install lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev
+
+Clone the repository to your local machine.
 
 In the project directory, run:
 
      git submodule update --init --recursive
-     sudo apt update
-     sudo apt install lv2-dev
-     sudo apt install libboost-iostreams-dev
-     sudo apt install libflac++-dev
 
-	
-If you have not installed Visual Studio Code, you will need to install CMake:
+If you are using Visual Studio Code, you will still need to perform the previous command after 
+cloning the project, since Visual Studio Code does not yet understand submodules.
 
-    apt install cmake
+##### Building 
 
-ToobAmp was built using Visual Studio Code, with CMake build files.
+ToobAmp was built using Visual Studio Code, with CMake build files, so it's easier to configure and build 
+TooBAmp if you are using Visual Studio Code.
 
 If you are using Visual Studio code, install the Microsoft CMake extension, and load the project directory. Visual Studio Code
 will automatically detect and configure the project. Build and configuration tools for the CMake project can be accessed on the Visual Studio Code status bar.
 
 If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and install the project:
 
-    ./config     #configure the CMake project
+    ./config.sh     #configure the CMake project
    
-    ./bld   # build the project.
+    ./build.sh   # build the project.
     
 After a full build, run the following command to install ToobAmp:
 
-    sudo ./install
+    sudo ./install.sh
 	
 To rebuild the debian package, run
 
