@@ -173,10 +173,14 @@ If you are not usings Visual Studio Code, the following shell scripts, found in 
     
 After a full build, run the following command to install ToobAmp:
 
-    sudo ./install.sh
+    ./install.sh
 	
-To rebuild the debian package, run
+To build the debian package, run
 
-    sudo ./makePackage
+    ./makePackage
+
+Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that 
+Debian packages don't conflict with each other.
+
 
 
