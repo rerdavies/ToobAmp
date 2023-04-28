@@ -218,7 +218,10 @@ void ToobConvolutionReverb::UpdateControls()
         {
             if (!loadWorker.IsChanging())
             {
-                pConvolutionReverb->SetReverbMix(reverbMixAf);
+                if (pConvolutionReverb)
+                {                
+                    pConvolutionReverb->SetReverbMix(reverbMixAf);
+                }
             }
         }
         else
@@ -305,10 +308,14 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
         }
     }
     EndAtomOutput();
+
+    // absolutely ignore hosts that set *pLoadingState.
+    *(pLoadingState) = this->loadingState;
 }
 
 void ToobConvolutionReverb::CancelLoad()
 {
+    // there's nothing worthwhile that we can do to cancel the load.
 }
 void ToobConvolutionReverb::Deactivate()
 {
@@ -784,17 +791,22 @@ static const T *GetFeature(const LV2_Feature *const *features, const char *featu
 
 static std::string UnmapPath(const LV2_State_Map_Path *mapPath, const LV2_State_Free_Path *freePath, const std::string &fileName)
 {
-    char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
-    std::string t = result;
-    if (freePath)
+    if (mapPath)
     {
-        freePath->free_path(freePath->handle, result);
+        char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
+        std::string t = result;
+        if (freePath)
+        {
+            freePath->free_path(freePath->handle, result);
+        }
+        else
+        {
+            free(result);
+        }
+        return t;
+    } else {
+        return fileName;
     }
-    else
-    {
-        free(result);
-    }
-    return t;
 }
 LV2_State_Status
 ToobConvolutionReverb::OnSaveLv2State(
@@ -807,12 +819,7 @@ ToobConvolutionReverb::OnSaveLv2State(
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
 
-    if (mapPath == nullptr)
-    {
-        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
-    }
     if (IsConvolutionReverb())
-
     {
         std::string fileName = UnmapPath(mapPath, freePath, this->loadWorker.GetFileName());
         auto status = store(handle,
@@ -914,6 +921,25 @@ LV2_State_Status ToobConvolutionReverb::PublishResourceFiles(
     this->MaybeCreateSampleDirectory(targetPath);
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
+
+
+static std::string MapFilename(
+    const LV2_State_Map_Path *mapPath,
+    const LV2_State_Free_Path *freePath,
+    const std::string &input) {
+    if (mapPath == nullptr) return input;
+    char*t = mapPath->absolute_path(mapPath->handle,input.c_str());
+    std::string result = t;
+    if (freePath)
+    {
+        freePath->free_path(freePath->handle,t);
+    } else {
+        free(t);
+    }
+    return result;
+}
+
+
 // State extension callbacks.
 LV2_State_Status
 ToobConvolutionReverb::OnRestoreLv2State(
@@ -935,12 +961,6 @@ ToobConvolutionReverb::OnRestoreLv2State(
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
 
-    if (mapPath == nullptr)
-    {
-        this->LogError("Missing LV2_STATE__mapPath feature. Can't restore state.");
-        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
-    }
-
     if (IsConvolutionReverb())
     {
         const void *data = retrieve(
@@ -952,30 +972,12 @@ ToobConvolutionReverb::OnRestoreLv2State(
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             std::string input((const char *)data, size);
-            char *absolutePath = mapPath->absolute_path(mapPath->handle, input.c_str());
-            this->loadWorker.SetFileName(absolutePath);
-            if (freePath)
-            {
-                freePath->free_path(freePath->handle, absolutePath);
-            }
-            else
-            {
-                free((void *)absolutePath);
-            }
+            this->loadWorker.SetFileName(MapFilename(mapPath,freePath,input).c_str());
         }
         else
         {
 
             SetDefaultFile(features);
-            std::filesystem::path targetPath;
-            LV2_State_Status res = GetUserResourcePath(features, &targetPath);
-            if (res != LV2_State_Status::LV2_STATE_SUCCESS)
-            {
-                return res;
-            }
-
-            std::filesystem::path defaultFilePath = targetPath / "Genesis 6 Studio Live Room.wav";
-            this->loadWorker.SetFileName(defaultFilePath.c_str());
         }
     }
     else
@@ -990,17 +992,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-
-                char *absolutePath = mapPath->absolute_path(mapPath->handle, input.c_str());
-                this->loadWorker.SetFileName(absolutePath);
-                if (freePath)
-                {
-                    freePath->free_path(freePath->handle, absolutePath);
-                }
-                else
-                {
-                    free((void *)absolutePath);
-                }
+                this->loadWorker.SetFileName(MapFilename(mapPath,freePath,input).c_str());
             }
             else
             {
@@ -1017,17 +1009,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-
-                char *absolutePath = mapPath->absolute_path(mapPath->handle, input.c_str());
-                this->loadWorker.SetFileName2(absolutePath);
-                if (freePath)
-                {
-                    freePath->free_path(freePath->handle, absolutePath);
-                }
-                else
-                {
-                    free((void *)absolutePath);
-                }
+                this->loadWorker.SetFileName2(MapFilename(mapPath,freePath,input).c_str());
             }
             else
             {
@@ -1044,17 +1026,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-
-                char *absolutePath = mapPath->absolute_path(mapPath->handle, input.c_str());
-                this->loadWorker.SetFileName3(absolutePath);
-                if (freePath)
-                {
-                    freePath->free_path(freePath->handle, absolutePath);
-                }
-                else
-                {
-                    free((void *)absolutePath);
-                }
+                this->loadWorker.SetFileName3(MapFilename(mapPath,freePath,input).c_str());
             }
             else
             {

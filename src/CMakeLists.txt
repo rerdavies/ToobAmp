@@ -22,17 +22,23 @@ execute_process(COMMAND
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(DBUS REQUIRED dbus-1)
+# include_directories(${DBUS_INCLUDE_DIRS})
+# link_directories(${DBUS_LIBRARY_DIRS})
+
+
+
 
 if (CMAKE_COMPILER_IS_GNUCXX)
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
         set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4.
     else()
-        # enable MMX, SSE, SSE2 (covers pretty much all desktops, and most mini-pcs). 
-        # We want SSE2 (and would use  AVX if given the chance.)
-        #set(CXX_ARCH_FLAGS "-march=pentium4 -mtune=pentium4" )  
+        # MMX, SSE, SSE2 are enabled by default.
+        
         # Minimum architecture for AVX: May exclude pentium4 mini-pcs, and core2 machines.
-        set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
+        # set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
     endif()
 
 
@@ -67,6 +73,7 @@ set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COM
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
+        #rtkit.cpp rtkit.h
         FlacReader.cpp FlacReader.hpp
         LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
         util.hpp util.cpp
@@ -184,6 +191,7 @@ add_library(ToobAmp  SHARED
          )
 
 target_link_libraries(ToobAmp 
+    #${DBUS_LIBRARIES}
     RTNeural 
     dl pthread
     boost_iostreams
@@ -270,10 +278,15 @@ add_library(BalancedConvolution STATIC
 
     LsNumerics/FixedDelay.hpp
 
+    util.hpp util.cpp
+    #rtkit.h rtkit.cpp
+
     
 )
 
-target_link_libraries(BalancedConvolution pthread boost_iostreams.a z.a)
+target_link_libraries(BalancedConvolution 
+    #${DBUS_LIBRARIES} 
+    pthread boost_iostreams.a z.a)
 
 
 add_executable(GenerateFftPlans

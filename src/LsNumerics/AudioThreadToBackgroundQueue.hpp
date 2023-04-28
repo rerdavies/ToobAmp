@@ -178,14 +178,48 @@ namespace LsNumerics
             std::lock_guard lock { mutex};
             this->readConditionVariable.notify_all();
         }
-
+        void WaitForStartup()
+        {
+            std::unique_lock lock(this->mutex);
+            while (true)
+            {
+                if (startedSuccessfully) return;
+                if (startupError.length() != 0)
+                {
+                    throw std::logic_error(startupError);
+                }
+                this->startConditionVariable.wait(lock);
+            }
+        }
 
     private:
+
+        void StartupSucceeded()
+        {
+            {
+                std::lock_guard lock(mutex);
+                startedSuccessfully = true;
+            }
+            startConditionVariable.notify_all();
+        }
+        void StartupFailed(const std::string &error)
+        {
+            {
+                std::lock_guard lock(mutex);
+                startupError = error;
+            }
+            startConditionVariable.notify_all();
+        }
+
+        bool startedSuccessfully = false;
+        std::string startupError;
+
         static constexpr size_t MAX_READ_BORROW = 16;
         bool IsReadReady_(ptrdiff_t position, size_t count);
         bool closed = false;
         std::mutex mutex;
         std::condition_variable readConditionVariable;
+        std::condition_variable startConditionVariable;
         std::vector<float> storage;
         std::size_t head = 0;
         std::size_t size = 0;

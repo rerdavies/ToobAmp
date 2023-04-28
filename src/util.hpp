@@ -1,18 +1,18 @@
 /*
  * MIT License
- * 
+ *
  * Copyright (c) 2023 Robin E. R. Davies
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
  * the Software without restriction, including without limitation the rights to
  * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
  * of the Software, and to permit persons to whom the Software is furnished to do
  * so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,14 +22,43 @@
  * SOFTWARE.
  */
 
-#pragma once 
+#pragma once
 
 #include <string>
-namespace toob {
-    inline bool endsWith(const std::string& str, const std::string& suffix)
+#include <functional>
+namespace toob
+{
+    inline bool endsWith(const std::string &str, const std::string &suffix)
     {
-        return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
+        return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
     }
 
-    void SetThreadName(const std::string&name);
+    void SetThreadName(const std::string &name);
+
+    int SetRtThreadPriority(int threadPriority);
+
+    class Finally
+    {
+    public:
+        explicit Finally(std::function<void()> func);
+        Finally(const Finally&) = delete;
+        Finally(const Finally&&) = delete;
+        Finally&operator=(const Finally&) = delete;
+
+        ~Finally();
+
+    private:
+        std::function<void()> func;
+    };
+
+    inline Finally::Finally(std::function<void()> func)
+        : func(func)
+    {
+    }
+
+    inline Finally::~Finally()
+    {
+        func();
+    }
+
 }

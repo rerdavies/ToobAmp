@@ -146,7 +146,7 @@ Run the following commands to install prerequisites:
      sudo apt update
      sudo apt install build-essential
      sudo apt install cmake
-     sudo apt install lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev
+     sudo apt install lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev
 
 Clone the repository to your local machine.
 
@@ -173,10 +173,14 @@ If you are not usings Visual Studio Code, the following shell scripts, found in 
     
 After a full build, run the following command to install ToobAmp:
 
-    sudo ./install.sh
+    ./install.sh
 	
-To rebuild the debian package, run
+To build the debian package, run
 
-    sudo ./makePackage
+    ./makePackage
+
+Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that 
+Debian packages don't conflict with each other.
+
 
 
