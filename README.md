@@ -182,5 +182,9 @@ To build the debian package, run
 Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that 
 Debian packages don't conflict with each other.
 
+If you are building the plugins for use with a host other than PiPedal, you should read this:
+
+    https://rerdavies.github.io/pipedal/RTThreadPriority.htm
+
 
 
