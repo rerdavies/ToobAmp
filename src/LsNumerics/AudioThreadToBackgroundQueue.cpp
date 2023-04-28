@@ -191,8 +191,8 @@ AudioThreadToBackgroundQueue::~AudioThreadToBackgroundQueue()
 static int convolutionThreadPriorities[] = 
 {
     -1,
-    31,
-    30,
+    45,
+    44,
     4,
     3,
     2,
@@ -210,12 +210,14 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
     {
         throw std::logic_error("Invalid thread number.");
     }
-
+    this->startedSuccessfully = false;
+    this->startupError = "";
 
     thread_ptr thread = std::make_unique<std::thread>(
         [this, threadProc, threadNumber]()
         {
             toob::SetThreadName(SS("crvb" << threadNumber));
+
 
             if (this->schedulerPolicy == SchedulerPolicy::UnitTest)
             {
@@ -228,32 +230,17 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
             }
             else
             {
-                int rc = nice(0);
-                (void)rc;
-                
-                int schedPolicy = SCHED_RR;
-                int priorityMin = sched_get_priority_min(schedPolicy);
-                int priorityMax = sched_get_priority_max(schedPolicy);
-                // constexpr int USB_SERVICE_THREAD_PRIORITY = 5;
-                int schedPriority = convolutionThreadPriorities[threadNumber];
-                if (schedPriority < priorityMin)
+                try {
+                    int schedPriority = convolutionThreadPriorities[threadNumber];
+                    toob::SetRtThreadPriority(schedPriority);
+                } catch (const std::exception & e)
                 {
-                    schedPriority = priorityMin;
+                    this->StartupFailed(
+                        SS("Unable to set realtime thread priority. See https://rerdavies.github.io/pipedal/RTThreadPriority.html for further instructions. "
+                            << "(" << e.what() << ")"));
+                    return;
                 }
-                if (schedPriority >= priorityMax)
-                {
-                    throw std::logic_error(SS("BalancedConvolution thread priority above maximum value. (" << priorityMax << ")"));
-                }
-
-                sched_param schedParam;
-                memset(&schedParam, 0, sizeof(schedParam));
-                schedParam.sched_priority = schedPriority;
-
-                int ret = sched_setscheduler(0, schedPolicy, &schedParam);
-                if (ret != 0)
-                {
-                    throw std::logic_error("pthread_setschedparam failed.");
-                }
+                this->StartupSucceeded();
             }
             try
             {
@@ -270,6 +257,7 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
             }
         });
     this->threads.push_back(std::move(thread));
+    this->WaitForStartup();
 }
 
 

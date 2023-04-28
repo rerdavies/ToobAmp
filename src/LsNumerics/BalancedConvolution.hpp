@@ -728,6 +728,15 @@ namespace LsNumerics
         size_t GetUnderrunCount() const { return (size_t)underrunCount; }
 
     private:
+        void WaitForAssemblyThreadStartup();
+        void SetAssemblyThreadStartupFailed(const std::string & e);
+        void SetAssemblyThreadStartupSucceeded();
+
+        std::mutex startup_mutex;
+        std::condition_variable startup_cv;
+        bool startupSucceeded = false;
+        std::string startupError;
+
         friend class ConvolutionReverb;
 
         float TickUnsynchronized(float value, float backgroundValue)

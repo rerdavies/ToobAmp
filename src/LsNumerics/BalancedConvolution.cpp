@@ -1722,6 +1722,7 @@ void BalancedConvolution::PrepareThreads()
     if (this->directSectionThreads.size() != 0)
     {
         this->assemblyThread = std::make_unique<std::thread>(std::bind(&BalancedConvolution::AssemblyThreadProc,this));
+        this->WaitForAssemblyThreadStartup();
     }
 }
 void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
@@ -2604,34 +2605,18 @@ void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQu
 void BalancedConvolution::AssemblyThreadProc()
 {
     std::vector<float> buffer;
-    toob::SetThreadName("cr_assembly");
-
-
-    int schedPolicy = SCHED_RR;
-    int priorityMin = sched_get_priority_min(schedPolicy);
-    int priorityMax = sched_get_priority_max(schedPolicy);
-    int schedPriority = 32;
-    if (schedPriority < priorityMin)
-    {
-        schedPriority = priorityMin;
-    }
-    if (schedPriority >= priorityMax)
-    {
-        throw std::logic_error(SS("BalancedConvolution thread priority above maximum value. (" << priorityMax << ")"));
-    }
-
-    sched_param schedParam;
-    memset(&schedParam, 0, sizeof(schedParam));
-    schedParam.sched_priority = schedPriority;
-
-    int ret = sched_setscheduler(0, schedPolicy, &schedParam);
-    if (ret != 0)
-    {
-        throw std::logic_error("pthread_setschedparam failed.");
-    }
-
-
     buffer.resize(16);
+
+    toob::SetThreadName("cr_assembly");
+    try {
+        toob::SetRtThreadPriority(32);
+    } catch (const std::exception &e)
+    {
+        SetAssemblyThreadStartupFailed(e.what());
+        return;
+    } 
+    SetAssemblyThreadStartupSucceeded();
+
     try {
         while (true)
         {
@@ -2655,4 +2640,37 @@ void BalancedConvolution::AssemblyThreadProc()
     {
         throw;
     }
+}
+
+void BalancedConvolution::WaitForAssemblyThreadStartup()
+{
+    std::unique_lock lock { startup_mutex};
+    while (true)
+    {
+        if (startupSucceeded) 
+        {
+            return;
+        }
+        if (startupError.length() != 0)
+        {
+            throw std::logic_error(startupError);
+        }
+        startup_cv.wait(lock);
+    }
+}
+void BalancedConvolution::SetAssemblyThreadStartupFailed(const std::string & e)
+{
+    {
+        std::lock_guard lock { startup_mutex};
+        this->startupError = e;
+    }
+    startup_cv.notify_all();
+}
+void BalancedConvolution::SetAssemblyThreadStartupSucceeded()
+{
+    {
+        std::lock_guard lock { startup_mutex};
+    this->startupSucceeded = true;
+    }
+    startup_cv.notify_all();
 }

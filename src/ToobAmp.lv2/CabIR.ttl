@@ -50,20 +50,20 @@ cabir:impulseFile3Group
 
 
 cabir:impulseFile
-        a rdf:property;
+        a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile1Group ;
 
         rdfs:range atom:Path.
 
 cabir:impulseFile2
-        a rdf:property;
+        a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile2Group ;
         rdfs:range atom:Path.
 
 cabir:impulseFile3
-        a rdf:property;
+        a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile3Group ;
         rdfs:range atom:Path.
@@ -143,8 +143,8 @@ Source: <https://www.adventurekid.se/akrt/free-reverb-impulse-responses/>
 
         mod:brand "TooB";
         mod:label "Convolution Reverb";
-        lv2:requiredFeature urid:map, state:makePath, state:mapPath ;
-        lv2:optionalFeature state::freePath;
+        lv2:requiredFeature urid:map;
+        lv2:optionalFeature state::freePath, state:makePath, state:mapPath ;
         
         lv2:extensionData state:interface;
 
