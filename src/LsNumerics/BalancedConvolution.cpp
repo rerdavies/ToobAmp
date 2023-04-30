@@ -2609,7 +2609,8 @@ void BalancedConvolution::AssemblyThreadProc()
 
     toob::SetThreadName("cr_assembly");
     try {
-        toob::SetRtThreadPriority(32);
+        // 76 slots into pipewire priorities nicely.
+        toob::SetRtThreadPriority(76);
     } catch (const std::exception &e)
     {
         SetAssemblyThreadStartupFailed(e.what());
