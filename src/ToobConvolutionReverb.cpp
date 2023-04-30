@@ -882,10 +882,14 @@ LV2_State_Status ToobConvolutionReverb::GetUserResourcePath(const LV2_Feature *c
 {
     const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
 
-    if (makePath == nullptr)
+    if (makePath == nullptr )
     {
-        LogError("Can't load state. Missing LV2_STATE__makePath feature.");
+        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
+    }
+    if (mapPath == nullptr )
+    {
         return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
     }
 
@@ -952,11 +956,6 @@ ToobConvolutionReverb::OnRestoreLv2State(
     uint32_t type;
     uint32_t myFlags;
 
-    LV2_State_Status result = PublishResourceFiles(features);
-    if (result != LV2_State_Status::LV2_STATE_SUCCESS)
-    {
-        return result;
-    }
 
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);

@@ -144,7 +144,7 @@ Source: <https://www.adventurekid.se/akrt/free-reverb-impulse-responses/>
         mod:brand "TooB";
         mod:label "Convolution Reverb";
         lv2:requiredFeature urid:map;
-        lv2:optionalFeature state::freePath, state:makePath, state:mapPath ;
+        lv2:optionalFeature state::freePath, state:makePath, state:mapPath, work:schedule ;
         
         lv2:extensionData state:interface;
 

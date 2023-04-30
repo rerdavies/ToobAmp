@@ -348,7 +348,7 @@ void Lv2Plugin::WorkerAction::Request()
     {
         // no scheduler. do it synchronously.
         OnWork();
-        OnResponse();
+        Response();
     }
 }
 
