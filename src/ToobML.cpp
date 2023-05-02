@@ -97,7 +97,7 @@ public:
 	
 };
 
-static std::vector<std::vector<float> > transpose(const std::vector<std::vector<float> > &value)
+static std::vector<std::vector<float> > Transpose(const std::vector<std::vector<float> > &value)
 {
 	size_t r = value.size();
 	size_t c = value[0].size();
@@ -126,7 +126,7 @@ private:
         RTNeural::LSTMLayerT<float, N_INPUTS, 20>,
         RTNeural::DenseT<float, 20, 1>> model;
 
-	using Vec2d = std::vector<std::vector<float> >;
+	using FloatMatrix = std::vector<std::vector<float> >;
 	float inData[3];
 public:
 
@@ -136,23 +136,23 @@ public:
     	auto& lstm = (model).template get<0>();
     	auto& dense = (model).template get<1>();
 
-		const Vec2d& lstm_weights_ih = data.rec__weight_ih_l0();
-		lstm.setWVals(transpose(lstm_weights_ih));
+		const FloatMatrix& lstm_weights_ih = data.rec__weight_ih_l0();
+		lstm.setWVals(Transpose(lstm_weights_ih));
 
-		const Vec2d& lstm_weights_hh = data.rec__weight_hh_l0(); 
-		lstm.setUVals(transpose(lstm_weights_hh));
+		const FloatMatrix& lstm_weights_hh = data.rec__weight_hh_l0(); 
+		lstm.setUVals(Transpose(lstm_weights_hh));
 
-		std::vector<float> lstm_bias_ih = data.rec__bias_ih_l0();
+		const std::vector<float>& lstm_bias_ih = data.rec__bias_ih_l0();
 		std::vector<float> lstm_bias_hh = data.rec__bias_hh_l0();
 		if (lstm_bias_ih.size() != lstm_bias_hh.size())
 		{
 			throw MLException("Invalid model.");
 		}
-		for (size_t i = 0; i < lstm_bias_ih.size(); ++i) 
+		for (size_t i = 0; i < 80; ++i) 
 			lstm_bias_hh[i] += lstm_bias_ih[i];
 		lstm.setBVals(lstm_bias_hh);
 
-		const Vec2d& dense_weights = data.lin__weight();
+		const FloatMatrix& dense_weights = data.lin__weight();
 		dense.setWeights(dense_weights);
 
 		std::vector<float> dense_bias = data.lin__bias();
@@ -669,3 +669,4 @@ void ToobML::Run(uint32_t n_samples)
 	lv2_atom_forge_pop(&forge, &out_frame);
 }
 
+ 
