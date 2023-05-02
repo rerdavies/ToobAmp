@@ -23,6 +23,8 @@
 
 #include "NeuralModel.h"
 #include <fstream>
+#include <stdexcept>
+#include "ss.hpp"
 
 using namespace toob;
 using namespace std;
@@ -32,6 +34,10 @@ void NeuralModel::Load(const std::string&fileName)
 {
     ifstream s;
     s.open(fileName);
+    if (!s.is_open())
+    {
+        throw std::logic_error(SS("Can't open file " << fileName));
+    }
     json_reader reader(s);
 
     NeuralModel result;
