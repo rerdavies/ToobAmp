@@ -1107,6 +1107,7 @@ void ToobConvolutionReverb::SetDefaultFile(const LV2_Feature *const *features)
         if (res != LV2_State_Status::LV2_STATE_SUCCESS)
         {
             this->loadWorker.SetFileName("");
+            return;
         }
 
         std::filesystem::path defaultFilePath = targetPath / "Genesis 6 Studio Live Room.wav";
