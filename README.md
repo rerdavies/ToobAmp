@@ -7,15 +7,18 @@ ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberr
 Currently supported platforms:
 
 - Raspberry Pi 4 or 400, at least 2GB RAM
-- Ubuntu 21.04 or later (64-bit) 
 - Raspberry Pi OS (64-bit), latest version.
+- Ubuntu 21.04 or later (arm64 or amd64), at least 2GB RAM
+
 
 ## Install ToobAmp
 
 Download the current install package for your platform:
 
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.11a/toobamp_1.0.11_arm64.deb)
- 
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.11/toobamp_1.0.11_arm64.deb)
+
+* [Ubuntu 21.04 or later; amd64/x64](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.11/toobamp_1.0.11_arm64.deb)
+
 Run the following shell commands:
 
     sudo apt update
@@ -47,7 +50,33 @@ Run the following shell commands:
 
     &nbsp;
 
+*   **Toob ML Amplifier**
 
+    Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
+    pedals. 
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/MlAmplifier.png)
+
+    &nbsp;
+
+*   **TooB CE Chorus**
+
+    A faithful digital replica of the Boss CE II Chorus.
+
+    &nbsp;
+
+
+*   **TooB Freeverb**
+
+    A particularly well-balanced reverb, based on the famous Freeverb algorithm.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Freeverb-ss.png)
+
+    &nbsp;
 
 *   **TooB Input Stage**
 
@@ -60,6 +89,7 @@ Run the following shell commands:
 
     &nbsp;
 
+
 *   **TooB Tone Stack**
 
     Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
@@ -70,16 +100,6 @@ Run the following shell commands:
 
     &nbsp;    
 
-*   **Toob ML Amplifier**
-
-    Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
-    pedals. 
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/MlAmplifier.png)
-
-    &nbsp;
 
 *   **TooB Power Stage**
 
@@ -102,16 +122,6 @@ Run the following shell commands:
     &nbsp;
 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/CabSim-ss.png)
-
-    &nbsp;
-
-*   **TooB Freeverb**
-
-    A particularly well-balanced Reverb plugin, based on the famous Freeverb algorithm.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Freeverb-ss.png)
 
     &nbsp;
 
