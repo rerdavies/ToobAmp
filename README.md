@@ -14,13 +14,13 @@ Currently supported platforms:
 
 Download the current install package for your platform:
 
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.9a/toobamp_1.0.9_arm64.deb)
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.11a/toobamp_1.0.11_arm64.deb)
  
 Run the following shell commands:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install ./toobamp_1.0.9_arm64.deb
+    sudo apt-get install ./toobamp_1.0.11_arm64.deb
     
 --------------------
 
