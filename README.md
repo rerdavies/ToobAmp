@@ -31,7 +31,7 @@ Run the following shell commands:
 
 *   **TooB Convolution Reverb (NEW!)**
 
-    Convolution reverb. Simulated reverb from recorded impulse response files.
+    Simulates reverb from pre-recorded impulse response files.
 
     &nbsp;
 
@@ -42,7 +42,7 @@ Run the following shell commands:
 
 *   **TooB Cab IR (NEW!)**
 
-    Cabinet impulse response filer, for simulating guitar cabinet frequency responses from impulse files.
+    Simulates guitar cabinet frequency responses from pre-recorded impulse files.
 
     &nbsp;
 
