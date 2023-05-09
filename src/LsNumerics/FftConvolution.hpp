@@ -37,6 +37,10 @@
 #pragma once
 #ifndef FFT_CONVOLUTION__HPP
 #define FFT_CONVOLUTION__HPP
+
+#ifndef RESTRICT
+#define RESTRICT __restrict
+#endif
 namespace LsNumerics
 {
 
@@ -109,21 +113,28 @@ namespace LsNumerics
                 if (tail <= storage.size())
                 {
                     // can do it diretly.
+                    const float*RESTRICT pImpulse = &values[0];
+                    const float *RESTRICT pData = &storage[head];
                     for (size_t i = 0; i < valueSize; ++i)
                     {
-                        sum += storage[head+i]*values[i];
+                        sum += pImpulse[i]*pData[i];
                     }
                     return (float)sum;
                 } else {
                     tail -= storage.size();
                     size_t valuesIx = 0;
-                    for (size_t i = head; i < storage.size(); ++i)
+                    const float*RESTRICT pImpulse = &(values[0]);
+                    const float *RESTRICT pData = &(storage[head]);
+                    size_t n = storage.size()-head;
+                    for (size_t i = 0; i < n; ++i)
                     {
-                        sum += storage[i] + values[valuesIx++];
+                        sum += pImpulse[i]*pData[i];
                     }
+                    pImpulse += n;
+                    pData = &(storage[0]);
                     for (size_t i = 0; i < tail; ++i)
                     {
-                        sum += storage[i] * values[valuesIx++];
+                        sum += pImpulse[i] * pData[valuesIx++];
                     }
                     return (float)sum;
                 }

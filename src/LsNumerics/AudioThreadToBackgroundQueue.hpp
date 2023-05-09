@@ -27,6 +27,10 @@
 #ifndef SYNCHRONIZED_DELAY_LINE_HPP
 #define SYNCHRONIZED_DELAY_LINE_HPP
 
+#ifndef RESTRICT
+#define RESTRICT __restrict
+#endif
+
 #include <cstddef>
 #include <vector>
 #include <condition_variable>
@@ -44,7 +48,8 @@
 namespace LsNumerics
 {
 
-    enum class SchedulerPolicy { 
+    enum class SchedulerPolicy
+    {
         Realtime, // schedule with sufficiently high SCHED_RR priority.
         UnitTest  // set relative priority using nice (3) -- for when the running process may not have sufficient privileges to set a realtime thread priority.
     };
@@ -55,7 +60,7 @@ namespace LsNumerics
     public:
         SchedulerPolicy schedulerPolicy = SchedulerPolicy::UnitTest;
 
-        AudioThreadToBackgroundQueue() :AudioThreadToBackgroundQueue(0,0,SchedulerPolicy::UnitTest){ }
+        AudioThreadToBackgroundQueue() : AudioThreadToBackgroundQueue(0, 0, SchedulerPolicy::UnitTest) {}
         AudioThreadToBackgroundQueue(
             size_t size,
             size_t audioBufferSize, // maximum number of times push can be called before synch is called.
@@ -63,22 +68,61 @@ namespace LsNumerics
 
         )
         {
-            SetSize(size, audioBufferSize,schedulerPolicy);
+            SetSize(size, audioBufferSize, schedulerPolicy);
         }
         ~AudioThreadToBackgroundQueue();
 
         void SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy);
 
+        // Calculate the the part of the convolution that is done directly without FFT.
+        // Note that the impulse has been previously reversed.
+        float DirectConvolve(const std::vector<float> &impulse) const
+        {
+            float sum = 0;
+            size_t impulseSize = impulse.size();
+            size_t tail = (this->head & this->sizeMask);
+            size_t head = (tail - impulseSize) & this->sizeMask;
+
+            if (head <= tail)
+            {
+                // can do it diretly.
+                const float *RESTRICT pImpulse = &impulse[0];
+                const float *RESTRICT pData = &storage[head];
+                for (size_t i = 0; i < impulseSize; ++i)
+                {
+                    sum += pImpulse[i] * pData[i];
+                }
+                return (float)sum;
+            }
+            else
+            {
+                size_t valuesIx = 0;
+                const float *RESTRICT pImpulse = &(impulse[0]);
+                const float *RESTRICT pData = &(storage[head]);
+                size_t n = storage.size() - head;
+                for (size_t i = 0; i < n; ++i)
+                {
+                    sum += pImpulse[i] * pData[i];
+                }
+                pImpulse += n;
+                pData = &(storage[0]);
+                for (size_t i = 0; i < tail; ++i)
+                {
+                    sum += pImpulse[i] * pData[valuesIx++];
+                }
+                return (float)sum;
+            }
+        }
         void Write(float value)
         {
             storage[head & sizeMask] = value;
             ++head;
         }
 
-        void WriteSynchronized(const float*input, size_t size)
+        void WriteSynchronized(const float *input, size_t size)
         {
             {
-                std::lock_guard lock{mutex};
+                std::lock_guard<std::mutex> lock{mutex};
                 for (size_t i = 0; i < size; ++i)
                 {
                     Write(input[i]);
@@ -87,7 +131,7 @@ namespace LsNumerics
 
                 if (readTail < (ptrdiff_t)this->size)
                 {
-                    readHead = 0;  // data is valid from 0 to readTail.
+                    readHead = 0; // data is valid from 0 to readTail.
                 }
                 else
                 {
@@ -95,8 +139,6 @@ namespace LsNumerics
                 }
             }
             readConditionVariable.notify_all();
-
-
         }
         void SynchWrite()
         {
@@ -107,7 +149,7 @@ namespace LsNumerics
                 readTail = head;
                 if (readTail < (ptrdiff_t)size)
                 {
-                    readHead = 0;  // data is valid from 0 to readTail.
+                    readHead = 0; // data is valid from 0 to readTail.
                 }
                 else
                 {
@@ -155,7 +197,8 @@ namespace LsNumerics
         void ReadWait()
         {
             std::unique_lock lock{mutex};
-            if (closed) {
+            if (closed)
+            {
                 throw DelayLineClosedException();
             }
             readConditionVariable.wait(lock);
@@ -175,7 +218,7 @@ namespace LsNumerics
 
         void NotifyReadReady()
         {
-            std::lock_guard lock { mutex};
+            std::lock_guard lock{mutex};
             this->readConditionVariable.notify_all();
         }
         void WaitForStartup()
@@ -183,7 +226,8 @@ namespace LsNumerics
             std::unique_lock lock(this->mutex);
             while (true)
             {
-                if (startedSuccessfully) return;
+                if (startedSuccessfully)
+                    return;
                 if (startupError.length() != 0)
                 {
                     throw std::logic_error(startupError);
@@ -193,7 +237,6 @@ namespace LsNumerics
         }
 
     private:
-
         void StartupSucceeded()
         {
             {

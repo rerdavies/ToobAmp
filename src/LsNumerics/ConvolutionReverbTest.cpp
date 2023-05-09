@@ -1086,12 +1086,7 @@ void BenchmarkFftConvolutionStep()
                 for (size_t i = 0; i < n; ++i)
                 {
                     delayLine.push(input[i]);
-                    for (size_t i = 0; i < impulse.size(); ++i)
-                    {
-                        sink += delayLine[i]*impulse[i];
-                    }
-                    // delayLine.push(input[i]);
-                    // sink += delayLine.Convolve(impulse);
+                    sink += delayLine.Convolve(impulse);
                 }
             }
             nConvolutionMs = std::chrono::duration_cast<ns_duration_t>(clock_t::now() - nStart);

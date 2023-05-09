@@ -32,24 +32,19 @@
 #include <cstring> // for memset.
 #include "../util.hpp"
 #include "../ss.hpp"
- 
 
 using namespace LsNumerics;
 
-//#define WRITE_BARRIER() __dmb(14)
-//#define READ_BARRIER() __dmb(15)
-
+// #define WRITE_BARRIER() __dmb(14)
+// #define READ_BARRIER() __dmb(15)
 
 #define READ_BARRIER() std::atomic_thread_fence(std::memory_order_acquire)
 #define WRITE_BARRIER() std::atomic_thread_fence(std::memory_order_release); // Ensure that data in the buffer is flushed.
 
-
 // #define READ_BARRIER() ((void)0)
 // #define WRITE_BARRIER() ((void)0)
 
-
-
-//std::atomic_thread_fence(std::memory_order_release); // flush buffer data.
+// std::atomic_thread_fence(std::memory_order_release); // flush buffer data.
 
 static int NextPowerOf2(size_t value)
 {
@@ -64,7 +59,7 @@ static int NextPowerOf2(size_t value)
 void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
 {
     this->schedulerPolicy = schedulerPolicy;
-    size = NextPowerOf2(size+padEntries+1024);
+    size = NextPowerOf2(size + padEntries + 1024);
     this->size = size;
     this->sizeMask = size - 1;
     this->head = 0;
@@ -80,9 +75,9 @@ inline bool AudioThreadToBackgroundQueue::IsReadReady_(ptrdiff_t position, size_
     if (closed)
     {
         throw DelayLineClosedException();
-    } 
+    }
 
-    ptrdiff_t end = position + (ptrdiff_t) size;
+    ptrdiff_t end = position + (ptrdiff_t)size;
     if (position < readHead && position >= 0)
     {
         throw DelayLineSynchException("AudioThreadToBackgroundQueue underrun.");
@@ -188,25 +183,25 @@ AudioThreadToBackgroundQueue::~AudioThreadToBackgroundQueue()
     }
 }
 
-static int convolutionThreadPriorities[] = 
-{
-    -1,
-    45,
-    44,
-    4,
-    3,
-    2,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
+static int convolutionThreadPriorities[] =
+    {
+        -1,
+        45,
+        44,
+        4,
+        3,
+        2,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
 };
 
 void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> &threadProc, int threadNumber)
 {
-    if ((size_t)threadNumber > sizeof(convolutionThreadPriorities)/sizeof(convolutionThreadPriorities[0]) || threadNumber == 0)
+    if ((size_t)threadNumber > sizeof(convolutionThreadPriorities) / sizeof(convolutionThreadPriorities[0]) || threadNumber == 0)
     {
         throw std::logic_error("Invalid thread number.");
     }
@@ -218,26 +213,30 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
         {
             toob::SetThreadName(SS("crvb" << threadNumber));
 
-
             if (this->schedulerPolicy == SchedulerPolicy::UnitTest)
             {
                 errno = 0;
                 int ret = nice(threadNumber);
                 if (ret < 0 && errno != 0)
                 {
-                    throw std::logic_error("Can't reduce priority of BalancedConvolution thread.");
+                    this->StartupFailed(
+                        "Can't reduce priority of BalancedConvolution thread.");
+                    return;
                 }
+                this->StartupSucceeded();
             }
             else
             {
-                try {
+                try
+                {
                     int schedPriority = convolutionThreadPriorities[threadNumber];
                     toob::SetRtThreadPriority(schedPriority);
-                } catch (const std::exception & e)
+                }
+                catch (const std::exception &e)
                 {
                     this->StartupFailed(
                         SS("Unable to set realtime thread priority. See https://rerdavies.github.io/pipedal/RTThreadPriority.html for further instructions. "
-                            << "(" << e.what() << ")"));
+                           << "(" << e.what() << ")"));
                     return;
                 }
                 this->StartupSucceeded();
@@ -259,5 +258,3 @@ void AudioThreadToBackgroundQueue::CreateThread(const std::function<void(void)> 
     this->threads.push_back(std::move(thread));
     this->WaitForStartup();
 }
-
-

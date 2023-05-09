@@ -62,7 +62,7 @@ static bool gDisplaySectionPlans = false;
 
 void LsNumerics::SetDisplaySectionPlans(bool value)
 {
-#if DISPLAY_SECTION_PLANS
+#if DISPLAY_SECTION_ALLOCATIONS
     gDisplaySectionPlans = value;
 #endif
 }
@@ -1755,10 +1755,14 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
         // 2. Once we have enough samples to run direct sections (on a background thread), use direct sections.
         // 3. Due to better cache conditioning, balanced sections run much faster for very large sizes (> 32768), so switch back to balanced sections for very large sections (which run on the real-time thread)
 
+
         size_t balancedSectionSize = INITIAL_SECTION_SIZE;
         size_t balancedSectionDelay = BalancedConvolutionSection::GetSectionDelay(balancedSectionSize);
         size_t directSectionSize = INITIAL_DIRECT_SECTION_SIZE;
-        directConvolutionLength = balancedSectionDelay;
+
+        directConvolutionLength = GetDirectSectionLeadTime(directSectionSize);
+
+        
         if (directConvolutionLength > size)
         {
             directConvolutionLength = size;
@@ -1772,7 +1776,9 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
 
         int threadNumber = 0;
         size_t executionOffsetInSamples = 0;
-        bool considerBalancedSections = true;
+
+        bool considerBalancedSections = false;
+        //bool considerBalancedSections = true;
         while (sampleOffset < size)
         {
 
@@ -1943,7 +1949,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
     directImpulse.resize(directConvolutionLength);
     for (size_t i = 0; i < directConvolutionLength; ++i)
     {
-        directImpulse[i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
+        directImpulse[directConvolutionLength-1-i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
     }
     audioThreadToBackgroundQueue.SetSize(delaySize + 1, 256, this->schedulerPolicy);
 }

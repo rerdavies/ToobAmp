@@ -251,9 +251,9 @@ namespace LsNumerics
             std::size_t sizeMask = 0;
         };
 
-        class ConvolutionAssemblyThread
-        {
-        };
+        // class ConvolutionAssemblyThread
+        // {
+        // };
 
         class DirectConvolutionSection
         {
@@ -743,10 +743,11 @@ namespace LsNumerics
         {
             audioThreadToBackgroundQueue.Write(value);
             double result = backgroundValue;
-            for (size_t i = 0; i < directConvolutionLength; ++i)
-            {
-                result += audioThreadToBackgroundQueue[i] * (double)directImpulse[i];
-            }
+            result += audioThreadToBackgroundQueue.DirectConvolve(directImpulse);
+            // for (size_t i = 0; i < directConvolutionLength; ++i)
+            // {
+            //     result += audioThreadToBackgroundQueue[i] * (double)directImpulse[i];
+            // }
             for (auto &section : balancedSections)
             {
                 result += section.fftSection.Tick(audioThreadToBackgroundQueue[section.sampleDelay]);
