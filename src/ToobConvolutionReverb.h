@@ -43,7 +43,7 @@
 #include "InputPort.h"
 #include "OutputPort.h"
 #include "ControlDezipper.h"
-#include "LsNumerics/BalancedConvolution.hpp"
+#include "LsNumerics/ConvolutionReverb.hpp"
 
 namespace toob
 {
@@ -225,6 +225,7 @@ namespace toob
 			bool changed = false;
 			static constexpr size_t MAX_FILENAME = 1024;
 			size_t sampleRate = 48000;
+			size_t audioBufferSize = 256;
 			char fileName[MAX_FILENAME];
 			char fileName2[MAX_FILENAME];
 			char fileName3[MAX_FILENAME];

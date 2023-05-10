@@ -209,7 +209,6 @@ Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
     lv2_log_logger_set_map(&this->logger, this->map);
 
 
-    InitBufSizeOptions();
 
     if (missing) {
         lv2_log_error(&this->logger, "Missing feature <%s>\n", missing);
@@ -217,6 +216,7 @@ Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
         urids.Init(map);
         lv2_atom_forge_init(&this->inputForge, map);
         lv2_atom_forge_init(&this->outputForge, map);
+        InitBufSizeOptions();
 
     }
 

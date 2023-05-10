@@ -27,7 +27,7 @@
 #include "WavReader.hpp"
 #include "FlacReader.hpp"
 #include "ss.hpp"
-#include "LsNumerics/BalancedConvolution.hpp"
+#include "LsNumerics/ConvolutionReverb.hpp"
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -62,9 +62,7 @@ ToobConvolutionReverb::ToobConvolutionReverb(
     loadWorker.Initialize((size_t)rate, this);
 
     SetDefaultFile(features);
-    std::filesystem::path planFilePath{bundle_path};
-    planFilePath = planFilePath / "fftplans";
-    BalancedConvolutionSection::SetPlanFileDirectory(planFilePath.string());
+
     try
     {
         PublishResourceFiles(features);
@@ -414,6 +412,11 @@ ToobConvolutionReverb::LoadWorker::LoadWorker(Lv2Plugin *pPlugin)
 void ToobConvolutionReverb::LoadWorker::Initialize(size_t sampleRate, ToobConvolutionReverb *pReverb)
 {
     this->sampleRate = sampleRate;
+    size_t bufferSize = pReverb->GetBuffSizeOptions().nominalBlockLength;
+    if (bufferSize == 0 || bufferSize == (size_t)-1) bufferSize = 256;
+    if (bufferSize > 1024) bufferSize = 1024;
+    pReverb->LogNote(SS("Buffer size: " << bufferSize).c_str());
+    this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
 }
 
@@ -716,7 +719,9 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
         {
             data.setSize(1);
         }
-        this->convolutionReverbResult = std::make_shared<ConvolutionReverb>(SchedulerPolicy::Realtime, data.getSize(), data.getChannel(0));
+        this->convolutionReverbResult = std::make_shared<ConvolutionReverb>(SchedulerPolicy::Realtime, data.getSize(), data.getChannel(0),
+            sampleRate,
+            audioBufferSize);
         if (tailScale != 0)
         {
         }
