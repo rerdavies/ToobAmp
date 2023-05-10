@@ -89,8 +89,8 @@ add_library(ToobAmp  SHARED
         LsNumerics/FftConvolution.hpp
         LsNumerics/StagedFft.cpp
         LsNumerics/StagedFft.hpp
-        LsNumerics/BalancedConvolution.cpp
-        LsNumerics/BalancedConvolution.hpp
+        LsNumerics/ConvolutionReverb.cpp
+        LsNumerics/ConvolutionReverb.hpp
 
         LsNumerics/AudioThreadToBackgroundQueue.hpp
         LsNumerics/AudioThreadToBackgroundQueue.cpp
@@ -268,8 +268,8 @@ add_library(BalancedConvolution STATIC
     LsNumerics/FftConvolution.hpp
     LsNumerics/StagedFft.cpp
     LsNumerics/StagedFft.hpp
-    LsNumerics/BalancedConvolution.cpp
-    LsNumerics/BalancedConvolution.hpp
+    LsNumerics/ConvolutionReverb.cpp
+    LsNumerics/ConvolutionReverb.hpp
 
     LsNumerics/AudioThreadToBackgroundQueue.hpp
     LsNumerics/AudioThreadToBackgroundQueue.cpp
@@ -287,18 +287,6 @@ add_library(BalancedConvolution STATIC
 target_link_libraries(BalancedConvolution 
     #${DBUS_LIBRARIES} 
     pthread boost_iostreams.a z.a)
-
-
-add_executable(GenerateFftPlans
-    util.hpp
-    util.cpp
-    LsNumerics/GenerateFftPlans.cpp
-    CommandLineParser.hpp
-)
-target_link_libraries(GenerateFftPlans
-    PRIVATE BalancedConvolution
-
-)
 
 
 
