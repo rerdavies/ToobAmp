@@ -42,35 +42,43 @@
 #include "InputPort.h"
 #include "OutputPort.h"
 #include "ControlDezipper.h"
-#include "Ce2Chorus.hpp"
+#include "Tf2Flanger.hpp"
 
 
 
 namespace toob {
 
-	class ToobChorus : public Lv2Plugin {
+	class ToobFlanger : public Lv2Plugin {
 	private:
 		enum class PortId {
-			RATE = 0,
+			MANUAL = 0,
 			DEPTH,
+			RATE,
+			LFO,
+			RES,
 			AUDIO_INL,
-			AUDIO_OUTL,
-			AUDIO_OUTR,
+			AUDIO_OUTL, 
+			AUDIO_OUTR, 
 		};
 
-		float*pRate = nullptr;
-		float *pDepth= nullptr;
+		const float*pManual = nullptr;
+		const float*pRate = nullptr;
+		const float *pDepth = nullptr;
+		const float *pRes = nullptr;
+		float *pLfo = nullptr;
 		const float*inL = nullptr;
 		float*outL = nullptr;
 		float*outR = nullptr;
 
+		float lastRes = -2;
+		float lastManual = -2;
 		float lastRate = -2;
 		float lastDepth = -2;
 
 		double rate = 44100;
 		std::string bundle_path;
 
-		Ce2Chorus chorus;
+		Tf2Flanger flanger;
 		double getRate() { return rate; }
 		std::string getBundlePath() { return bundle_path.c_str(); }
 
@@ -81,15 +89,16 @@ namespace toob {
 			const char* bundle_path,
 			const LV2_Feature* const* features)
 		{
-			return new ToobChorus(rate, bundle_path, features);
+			return new ToobFlanger(rate, bundle_path, features);
 		}
-		ToobChorus(double rate,
+		ToobFlanger(double rate,
 			const char* bundle_path,
 			const LV2_Feature* const* features
 		);
 
 	public:
 		static const char* URI;
+		static const char * STEREO_URI;
 	protected:
 		virtual void ConnectPort(uint32_t port, void* data);
 		virtual void Activate();

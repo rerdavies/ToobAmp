@@ -401,7 +401,7 @@ namespace LsNumerics
         {
             // Left channel
             // StkFloat yn = fInput + (roomSize_ * Freeverb::undenormalize(combLPL_[i].tick(Freeverb::undenormalize(combDelayL_[i].nextOut()))));
-            StkFloat yn = fInput + (roomSize_ * combLPL_[i].tick(combDelayL_[i].nextOut()));
+            StkFloat yn = fInput + Freeverb::undenormalize(roomSize_ * combLPL_[i].tick(combDelayL_[i].nextOut()));
             combDelayL_[i].tick(yn);
             outL += yn;
 

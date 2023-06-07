@@ -20,12 +20,15 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-#include "ToobChorus.h"
+#include "ToobFlanger.h"
 
 
 
 
-#define TOOB_CHORUS_URI "http://two-play.com/plugins/toob-chorus"
+#define TOOB_FLANGER_URI "http://two-play.com/plugins/toob-flanger"
+#define TOOB_FLANGER_STEREO_URI "http://two-play.com/plugins/toob-flanger-stereo"
+
+
 #ifndef TOOB_URI
 #define TOOB_URI "http://two-play.com/plugins/toob"
 #endif
@@ -33,33 +36,42 @@
 
 using namespace toob;
 
-const float MAX_DELAY_MS = 4000;
-const float NOMINAL_DELAY_MS = 1600;
 
-ToobChorus::ToobChorus(
+ToobFlanger::ToobFlanger(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
     : Lv2Plugin(features),
       rate(rate),
       bundle_path(bundle_path),
-      chorus(rate)
+      flanger(rate)
 
 {
 }
 
-const char *ToobChorus::URI = TOOB_CHORUS_URI;
+const char *ToobFlanger::URI = TOOB_FLANGER_URI;
+const char *ToobFlanger::STEREO_URI = TOOB_FLANGER_STEREO_URI;
 
-void ToobChorus::ConnectPort(uint32_t port, void *data)
+void ToobFlanger::ConnectPort(uint32_t port, void *data)
 {
     switch ((PortId)port)
     {
+    case PortId::MANUAL:
+        this->pManual = (const float*)data;
+        break;
+    case PortId::RES:
+        this->pRes = (const float*)data;
+        break;
     case PortId::RATE:
-        this->pRate = (float *)data;
+        this->pRate = (const float *)data;
+        break;
+    case PortId::LFO:
+        this->pLfo = (float*)data;
         break;
     case PortId::DEPTH:
-        this->pDepth = (float *)data;
+        this->pDepth = (const float *)data;
         break;
+
     case PortId::AUDIO_INL:
         this->inL = (const float *)data;
         break;
@@ -71,19 +83,38 @@ void ToobChorus::ConnectPort(uint32_t port, void *data)
         break;
     }
 }
-void ToobChorus::clear()
+void ToobFlanger::clear()
 {
-    chorus.Clear();
+    flanger.Clear();
 }
-inline void ToobChorus::updateControls()
+inline void ToobFlanger::updateControls()
 {
+    if (lastManual != *pManual)
+    {
+        lastManual = *pManual;
+        double value = lastManual;
+        if (value < 0) value = 0;
+        if (value > 1) value = 1;
+
+        flanger.SetManual(value);
+    }
+    if (lastRes != *pRes)
+    {
+        lastRes = *pRes;
+        double value = lastRes;
+        if (value < 0) value = 0;
+        if (value > 1) value = 1;
+
+        flanger.SetRes(value);
+    }
+
     if (lastRate != *pRate)
     {
         lastRate = *pRate;
         double value = lastRate;
         if (value < 0) value = 0;
         if (value > 1) value = 1;
-        chorus.SetRate(value);
+        flanger.SetRate(value);
     }
     if (lastDepth != *pDepth)
     {
@@ -91,37 +122,39 @@ inline void ToobChorus::updateControls()
         double value = lastDepth;
         if (value < 0) value = 0;
         if (value > 1) value = 1;
-        chorus.SetDepth(value);
+        flanger.SetDepth(value);
 
     }
 }
-void ToobChorus::Activate()
+void ToobFlanger::Activate()
 {
     lastRate = lastDepth = -1E30; // force updates
     updateControls();
     clear();
 }
 
-void ToobChorus::Run(uint32_t n_samples)
+void ToobFlanger::Run(uint32_t n_samples)
 {
     updateControls();
-    if (this->outR != nullptr)
+    if (outR != nullptr)
     {
         for (uint32_t i = 0; i < n_samples; ++i)
         {
-            chorus.Tick(inL[i],outL+i,outR+i);
+            float input = inL[i];
+
+            flanger.Tick(input,&(outL[i]),&(outR[i]));
         }
     } else {
         for (uint32_t i = 0; i < n_samples; ++i)
         {
             float input = inL[i];
 
-            float output = chorus.Tick(input);
-            
-            outL[i] = output;
+            outL[i] = flanger.Tick(input);
         }
+
     }
+    *pLfo = flanger.GetLfoValue();
 }
-void ToobChorus::Deactivate()
+void ToobFlanger::Deactivate()
 {
 }

@@ -54,5 +54,13 @@ namespace toob {
 
 		double a[3];
 		double b[3];
+
+		FilterCoefficients2 HighPass() {
+			FilterCoefficients2 result;
+
+			result.a[0] = a[2]; result.a[1] = a[1]; result.a[2] = a[0];
+			result.b[0] = b[2]; result.b[1] = b[1]; result.b[2] = b[0];
+			return result;
+		}
 	};
 }

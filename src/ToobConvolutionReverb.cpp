@@ -34,6 +34,7 @@
 #include "ss.hpp"
 
 #define TOOB_CONVOLUTION_REVERB_URI "http://two-play.com/plugins/toob-convolution-reverb"
+#define TOOB_CONVOLUTION_REVERB_STEREO_URI "http://two-play.com/plugins/toob-convolution-reverb-stereo"
 #define TOOB_CAB_IR_URI "http://two-play.com/plugins/toob-cab-ir"
 #ifndef TOOB_URI
 #define TOOB_URI "http://two-play.com/plugins/toob"
@@ -41,23 +42,22 @@
 
 using namespace toob;
 
-const float MAX_DELAY_MS = 4000;
-const float NOMINAL_DELAY_MS = 1600;
-
 constexpr float MIN_MIX_DB = -40;
 
 ToobConvolutionReverb::ToobConvolutionReverb(
-    bool isConvolutionReverb_,
+    PluginType pluginType,
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
     : Lv2PluginWithState(features),
       sampleRate(rate),
       bundle_path(bundle_path),
-      loadWorker(this)
+      loadWorker(this),
+      isConvolutionReverb(pluginType != PluginType::CabIr),
+      pluginType(pluginType),
+      isStereo(pluginType == PluginType::ConvolutionReverbStereo)
 
 {
-    this->isConvolutionReverb = isConvolutionReverb_;
     urids.Init(this);
     loadWorker.Initialize((size_t)rate, this);
 
@@ -65,7 +65,7 @@ ToobConvolutionReverb::ToobConvolutionReverb(
 
     try
     {
-        PublishResourceFiles(features);
+        PublishResourceFiles(features); 
     }
     catch (const std::exception &e)
     {
@@ -74,56 +74,110 @@ ToobConvolutionReverb::ToobConvolutionReverb(
 }
 
 const char *ToobConvolutionReverb::CONVOLUTION_REVERB_URI = TOOB_CONVOLUTION_REVERB_URI;
+const char *ToobConvolutionReverb::CONVOLUTION_REVERB_STEREO_URI = TOOB_CONVOLUTION_REVERB_STEREO_URI;
 const char *ToobConvolutionReverb::CAB_IR_URI = TOOB_CAB_IR_URI;
 
 void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
 {
-    if (IsConvolutionReverb())
+    switch (pluginType)
     {
-        switch ((ReverbPortId)port)
+    case PluginType::ConvolutionReverb:
+    {
+        switch ((MonoReverbPortId)port)
         {
-        case ReverbPortId::TIME:
+        case MonoReverbPortId::TIME:
             this->pTime = (float *)data;
             break;
-        case ReverbPortId::DIRECT_MIX:
+        case MonoReverbPortId::DIRECT_MIX:
             this->pDirectMix = (float *)data;
             break;
-        case ReverbPortId::REVERB_MIX:
+        case MonoReverbPortId::REVERB_MIX:
             this->pReverbMix = (float *)data;
             break;
-        case ReverbPortId::REVERB2_MIX:
-            this->pReverb2Mix = (float *)data;
-            break;
-        case ReverbPortId::REVERB3_MIX:
-            this->pReverb3Mix = (float *)data;
-            break;
-
-        case ReverbPortId::PREDELAY:
+        case MonoReverbPortId::PREDELAY:
             this->pPredelay = (float *)data;
             break;
-        case ReverbPortId::LOADING_STATE:
+        case MonoReverbPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
             if (this->pLoadingState)
             {
                 *(this->pLoadingState) = this->loadingState;
             }
             break;
-
-        case ReverbPortId::AUDIO_INL:
+        case MonoReverbPortId::AUDIO_INL:
             this->inL = (const float *)data;
             break;
-        case ReverbPortId::AUDIO_OUTL:
+        case MonoReverbPortId::AUDIO_OUTL:
             this->outL = (float *)data;
             break;
-        case ReverbPortId::CONTROL_IN:
+        case MonoReverbPortId::CONTROL_IN:
             this->controlIn = (LV2_Atom_Sequence *)data;
             break;
-        case ReverbPortId::CONTROL_OUT:
+        case MonoReverbPortId::CONTROL_OUT:
             this->controlOut = (LV2_Atom_Sequence *)data;
+            break;
+        default:
+            this->LogNote(SS("Illegal port id: " << port).c_str());
             break;
         }
     }
-    else
+    break;
+    case PluginType::ConvolutionReverbStereo:
+    {
+        switch ((StereoReverbPortId)port)
+        {
+        case StereoReverbPortId::TIME:
+            this->pTime = (float *)data;
+            break;
+        case StereoReverbPortId::DIRECT_MIX:
+            this->pDirectMix = (float *)data;
+            break;
+        case StereoReverbPortId::REVERB_MIX:
+            this->pReverbMix = (float *)data;
+            break;
+        case StereoReverbPortId::PREDELAY:
+            this->pPredelay = (float *)data;
+            break;
+        case StereoReverbPortId::LOADING_STATE:
+            this->pLoadingState = (float *)data;
+            if (this->pLoadingState)
+            {
+                *(this->pLoadingState) = this->loadingState;
+            }
+            break;
+        case StereoReverbPortId::WIDTH:
+            this->pWidth = (float *)data;
+            break;
+        case StereoReverbPortId::PAN:
+            this->pPan = (float *)data;
+            break;
+
+        case StereoReverbPortId::AUDIO_INL:
+            this->inL = (const float *)data;
+            break;
+        case StereoReverbPortId::AUDIO_OUTL:
+            this->outL = (float *)data;
+            break;
+        case StereoReverbPortId::AUDIO_INR:
+            this->inR = (const float *)data;
+            break;
+        case StereoReverbPortId::AUDIO_OUTR:
+            this->outR = (float *)data;
+            break;
+        case StereoReverbPortId::CONTROL_IN:
+            this->controlIn = (LV2_Atom_Sequence *)data;
+            break;
+        case StereoReverbPortId::CONTROL_OUT:
+            this->controlOut = (LV2_Atom_Sequence *)data;
+            break;
+        default:
+            this->LogNote(SS("Illegal port id: " << port).c_str());
+            break;
+        }
+    }
+    break;
+
+    case PluginType::CabIr:
     {
         switch ((CabIrPortId)port)
         {
@@ -166,7 +220,13 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
         case CabIrPortId::CONTROL_OUT:
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
+        default:
+            this->LogNote(SS("Illegal port id: " << port).c_str());
         }
+        break;
+    default:
+        throw std::logic_error(SS("Invalid plugin type."));
+    }
     }
 }
 void ToobConvolutionReverb::clear()
@@ -179,6 +239,16 @@ void ToobConvolutionReverb::clear()
 
 void ToobConvolutionReverb::UpdateControls()
 {
+    if (pPan != nullptr && lastPan != *pPan)
+    {
+        lastPan = *pPan;
+        loadWorker.SetPan(lastPan);
+    }
+    if (pWidth != nullptr && lastWidth != *pWidth)
+    {
+        lastWidth = *pWidth;
+        loadWorker.SetWidth(lastWidth);
+    }
     if (lastTime != *pTime)
     {
         lastTime = *pTime;
@@ -217,7 +287,7 @@ void ToobConvolutionReverb::UpdateControls()
             if (!loadWorker.IsChanging())
             {
                 if (pConvolutionReverb)
-                {                
+                {
                     pConvolutionReverb->SetReverbMix(reverbMixAf);
                 }
             }
@@ -227,7 +297,7 @@ void ToobConvolutionReverb::UpdateControls()
             loadWorker.SetMix(reverbMixAf);
         }
     }
-    if (lastReverb2Mix != *pReverb2Mix)
+    if (pReverb2Mix != nullptr && lastReverb2Mix != *pReverb2Mix)
     {
         lastReverb2Mix = *pReverb2Mix;
         if (lastReverb2Mix <= MIN_MIX_DB)
@@ -240,7 +310,7 @@ void ToobConvolutionReverb::UpdateControls()
         }
         loadWorker.SetMix2(reverb2MixAf);
     }
-    if (lastReverb3Mix != *pReverb3Mix)
+    if (pReverb3Mix != nullptr && lastReverb3Mix != *pReverb3Mix)
     {
         lastReverb3Mix = *pReverb3Mix;
         if (lastReverb3Mix <= MIN_MIX_DB)
@@ -295,13 +365,27 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
         }
         if (pConvolutionReverb)
         {
-            pConvolutionReverb->Tick(n_samples, inL, outL);
+            if (isStereo)
+            {
+                pConvolutionReverb->Tick(n_samples, inL, inR, outL, outR);
+            }
+            else
+            {
+                pConvolutionReverb->Tick(n_samples, inL, outL);
+            }
         }
         else
         {
             for (uint32_t i = 0; i < n_samples; ++i)
             {
                 this->outL[i] = 0;
+            }
+            if (this->outR)
+            {
+                for (uint32_t i = 0; i < n_samples; ++i)
+                {
+                    this->outR[i] = 0;
+                }
             }
         }
     }
@@ -413,11 +497,34 @@ void ToobConvolutionReverb::LoadWorker::Initialize(size_t sampleRate, ToobConvol
 {
     this->sampleRate = sampleRate;
     size_t bufferSize = pReverb->GetBuffSizeOptions().nominalBlockLength;
-    if (bufferSize == 0 || bufferSize == (size_t)-1) bufferSize = 256;
-    if (bufferSize > 1024) bufferSize = 1024;
+    if (bufferSize == 0 || bufferSize == (size_t)-1)
+        bufferSize = 256;
+    if (bufferSize > 1024)
+        bufferSize = 1024;
     pReverb->LogNote(SS("Buffer size: " << bufferSize).c_str());
     this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
+}
+
+bool ToobConvolutionReverb::LoadWorker::SetWidth(float width)
+{
+    if (this->width != width)
+    {
+        this->width = width;
+        this->changed = true;
+        return true;
+    }
+    return false;
+}
+bool ToobConvolutionReverb::LoadWorker::SetPan(float pan)
+{
+    if (this->pan != pan)
+    {
+        this->pan = pan;
+        this->changed = true;
+        return true;
+    }
+    return false;
 }
 
 bool ToobConvolutionReverb::LoadWorker::SetTime(float timeInSeconds)
@@ -537,7 +644,9 @@ void ToobConvolutionReverb::LoadWorker::Request()
     strncpy(requestFileName, fileName, sizeof(requestFileName));
     strncpy(requestFileName2, fileName2, sizeof(requestFileName2));
     strncpy(requestFileName3, fileName3, sizeof(requestFileName3));
+    this->requestWidth = this->width;
     this->requestMix = this->mix;
+    this->requestPan = this->pan;
     this->requestMix2 = this->mix2;
     this->requestMix3 = this->mix3;
 
@@ -660,13 +769,35 @@ AudioData ToobConvolutionReverb::LoadWorker::LoadFile(const std::filesystem::pat
     }
 
     // Assume files with 4 channels are in Ambisonic b-Format.
-    if (data.getChannelCount() == 4)
+    if (pThis->isStereo)
     {
-        data.AmbisonicDownmix({AmbisonicMicrophone(0, 0)});
+        switch (data.getChannelCount())
+        {
+        case 1:
+            data.MonoToStereo();
+            break;
+        case 2:
+        default:
+            data.SetStereoWidth(this->requestWidth);
+            break;
+        case 4:
+        {
+            float angle = 90 * (this->requestWidth);
+            data.AmbisonicDownmix({AmbisonicMicrophone(-angle+90*requestPan, 0), AmbisonicMicrophone(angle+90*requestPan, 0)});
+        }
+        break;
+        }
     }
     else
     {
-        data.ConvertToMono();
+        if (data.getChannelCount() == 4)
+        {
+            data.AmbisonicDownmix({AmbisonicMicrophone(0, 0)});
+        }
+        else
+        {
+            data.ConvertToMono();
+        }
     }
     pThis->LogNote(SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
@@ -713,17 +844,25 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
             data.setSize(maxSize);
 
             pThis->LogNote(SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
-
-        } 
+        }
         if (data.getSize() == 0)
         {
             data.setSize(1);
         }
-        this->convolutionReverbResult = std::make_shared<ConvolutionReverb>(SchedulerPolicy::Realtime, data.getSize(), data.getChannel(0),
-            sampleRate,
-            audioBufferSize);
-        if (tailScale != 0)
+        if (pThis->isStereo)
         {
+            this->convolutionReverbResult = std::make_shared<ConvolutionReverb>(
+                SchedulerPolicy::Realtime,
+                data.getSize(), data.getChannel(0), data.getChannel(1),
+                sampleRate,
+                audioBufferSize);
+        }
+        else
+        {
+            this->convolutionReverbResult = std::make_shared<ConvolutionReverb>(SchedulerPolicy::Realtime,
+                                                                                data.getSize(), data.getChannel(0),
+                                                                                sampleRate,
+                                                                                audioBufferSize);
         }
         this->convolutionReverbResult->SetFeedback(tailScale, data.getSize() - 1);
         pThis->LogNote("Load complete.");
@@ -809,7 +948,9 @@ static std::string UnmapPath(const LV2_State_Map_Path *mapPath, const LV2_State_
             free(result);
         }
         return t;
-    } else {
+    }
+    else
+    {
         return fileName;
     }
 }
@@ -831,7 +972,7 @@ ToobConvolutionReverb::OnSaveLv2State(
                             urids.reverb__propertyFileName,
                             fileName.c_str(),
                             fileName.length() + 1,
-                            urids.atom_path,
+                            urids.atom__path,
                             LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
         if (status != LV2_State_Status::LV2_STATE_SUCCESS)
         {
@@ -846,7 +987,7 @@ ToobConvolutionReverb::OnSaveLv2State(
                                 urids.cabir__propertyFileName,
                                 fileName.c_str(),
                                 fileName.length() + 1,
-                                urids.atom_path,
+                                urids.atom__path,
                                 LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
             if (status != LV2_State_Status::LV2_STATE_SUCCESS)
             {
@@ -859,7 +1000,7 @@ ToobConvolutionReverb::OnSaveLv2State(
                                 urids.cabir__propertyFileName2,
                                 fileName.c_str(),
                                 fileName.length() + 1,
-                                urids.atom_path,
+                                urids.atom__path,
                                 LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
             if (status != LV2_State_Status::LV2_STATE_SUCCESS)
             {
@@ -872,7 +1013,7 @@ ToobConvolutionReverb::OnSaveLv2State(
                                 urids.cabir__propertyFileName3,
                                 fileName.c_str(),
                                 fileName.length() + 1,
-                                urids.atom_path,
+                                urids.atom__path,
                                 LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
             if (status != LV2_State_Status::LV2_STATE_SUCCESS)
             {
@@ -889,11 +1030,11 @@ LV2_State_Status ToobConvolutionReverb::GetUserResourcePath(const LV2_Feature *c
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
 
-    if (makePath == nullptr )
+    if (makePath == nullptr)
     {
         return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
     }
-    if (mapPath == nullptr )
+    if (mapPath == nullptr)
     {
         return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
     }
@@ -931,23 +1072,25 @@ LV2_State_Status ToobConvolutionReverb::PublishResourceFiles(
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
-
 static std::string MapFilename(
     const LV2_State_Map_Path *mapPath,
     const LV2_State_Free_Path *freePath,
-    const std::string &input) {
-    if (mapPath == nullptr) return input;
-    char*t = mapPath->absolute_path(mapPath->handle,input.c_str());
+    const std::string &input)
+{
+    if (mapPath == nullptr)
+        return input;
+    char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
     std::string result = t;
     if (freePath)
     {
-        freePath->free_path(freePath->handle,t);
-    } else {
+        freePath->free_path(freePath->handle, t);
+    }
+    else
+    {
         free(t);
     }
     return result;
 }
-
 
 // State extension callbacks.
 LV2_State_Status
@@ -961,9 +1104,10 @@ ToobConvolutionReverb::OnRestoreLv2State(
     uint32_t type;
     uint32_t myFlags;
 
-
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    PublishResourceFiles(features);
 
     if (IsConvolutionReverb())
     {
@@ -971,16 +1115,15 @@ ToobConvolutionReverb::OnRestoreLv2State(
             handle, urids.reverb__propertyFileName, &size, &type, &myFlags);
         if (data)
         {
-            if (type != this->urids.atom_path)
+            if (type != this->urids.atom__path && type != this->urids.atom__string)
             {
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             std::string input((const char *)data, size);
-            this->loadWorker.SetFileName(MapFilename(mapPath,freePath,input).c_str());
+            this->loadWorker.SetFileName(MapFilename(mapPath, freePath, input).c_str());
         }
         else
         {
-
             SetDefaultFile(features);
         }
     }
@@ -991,12 +1134,12 @@ ToobConvolutionReverb::OnRestoreLv2State(
                 handle, urids.cabir__propertyFileName, &size, &type, &myFlags);
             if (data)
             {
-                if (type != this->urids.atom_path)
+                if (type != this->urids.atom__path && type != this->urids.atom__string)
                 {
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName(MapFilename(mapPath,freePath,input).c_str());
+                this->loadWorker.SetFileName(MapFilename(mapPath, freePath, input).c_str());
             }
             else
             {
@@ -1008,12 +1151,12 @@ ToobConvolutionReverb::OnRestoreLv2State(
                 handle, urids.cabir__propertyFileName2, &size, &type, &myFlags);
             if (data)
             {
-                if (type != this->urids.atom_path)
+                if (type != this->urids.atom__path && type != this->urids.atom__string)
                 {
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName2(MapFilename(mapPath,freePath,input).c_str());
+                this->loadWorker.SetFileName2(MapFilename(mapPath, freePath, input).c_str());
             }
             else
             {
@@ -1025,12 +1168,12 @@ ToobConvolutionReverb::OnRestoreLv2State(
                 handle, urids.cabir__propertyFileName3, &size, &type, &myFlags);
             if (data)
             {
-                if (type != this->urids.atom_path)
+                if (type != this->urids.atom__path && type != this->urids.atom__string)
                 {
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName3(MapFilename(mapPath,freePath,input).c_str());
+                this->loadWorker.SetFileName3(MapFilename(mapPath, freePath, input).c_str());
             }
             else
             {

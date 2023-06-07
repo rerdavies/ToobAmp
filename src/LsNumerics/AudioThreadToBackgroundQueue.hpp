@@ -60,19 +60,20 @@ namespace LsNumerics
     public:
         SchedulerPolicy schedulerPolicy = SchedulerPolicy::UnitTest;
 
-        AudioThreadToBackgroundQueue() : AudioThreadToBackgroundQueue(0, 0, SchedulerPolicy::UnitTest) {}
+        AudioThreadToBackgroundQueue() : AudioThreadToBackgroundQueue(0, 0, SchedulerPolicy::UnitTest,false) {}
         AudioThreadToBackgroundQueue(
             size_t size,
             size_t audioBufferSize, // maximum number of times push can be called before synch is called.
-            SchedulerPolicy schedulerPolicy
+            SchedulerPolicy schedulerPolicy,
+            bool isStereo
 
         )
         {
-            SetSize(size, audioBufferSize, schedulerPolicy);
+            SetSize(size, audioBufferSize, schedulerPolicy,isStereo);
         }
         ~AudioThreadToBackgroundQueue();
 
-        void SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy);
+        void SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy, bool isStereo);
 
         // Calculate the the part of the convolution that is done directly without FFT.
         // Note that the impulse has been previously reversed.
@@ -113,9 +114,68 @@ namespace LsNumerics
                 return (float)sum;
             }
         }
+        void DirectConvolve(const std::vector<float> &impulse, const std::vector<float>&impulseRight,float*outL, float*outR) const
+        {
+            float sumL = 0;
+            float sumR = 0;
+            size_t impulseSize = impulse.size();
+            size_t tail = (this->head & this->sizeMask);
+            size_t head = (tail - impulseSize) & this->sizeMask;
+
+            if (head <= tail)
+            {
+                // can do it diretly.
+                const float *RESTRICT pImpulse = &impulse[0];
+                const float *RESTRICT pData = &storage[head];
+                for (size_t i = 0; i < impulseSize; ++i)
+                {
+                    sumL += pImpulse[i] * pData[i];
+                }
+
+                const float *RESTRICT pImpulseR = &impulseRight[0];
+                const float *RESTRICT pDataR = &storageRight[head];
+                for (size_t i = 0; i < impulseSize; ++i)
+                {
+                    sumR += pImpulseR[i] * pDataR[i];
+                }
+            }
+            else
+            {
+                const float *RESTRICT pImpulse = &(impulse[0]);
+                const float *RESTRICT pData = &(storage[head]);
+                const float *RESTRICT pImpulseR = &(impulseRight[0]);
+                const float *RESTRICT pDataR = &(storageRight[head]);
+                size_t n = storage.size() - head;
+                for (size_t i = 0; i < n; ++i)
+                {
+                    sumL += pImpulse[i] * pData[i];
+                    sumR += pImpulseR[i] * pDataR[i];
+                }
+                pImpulse += n;
+                pData = &(storage[0]);
+                pImpulseR += n;
+                pDataR = &(storageRight[0]);
+
+                for (size_t i = 0; i < tail; ++i)
+                {
+                    sumL += pImpulse[i] * pData[i];
+                    sumR += pImpulseR[i] * pDataR[i];
+
+                }
+            }
+            *outL = sumL;
+            *outR = sumR;
+        }
         void Write(float value)
         {
             storage[head & sizeMask] = value;
+            ++head;
+        }
+        void Write(float valueL, float valueR)
+        {
+            size_t ix = head & sizeMask;
+            storage[ix] = valueL;
+            storageRight[ix] = valueR;
             ++head;
         }
 
@@ -140,6 +200,28 @@ namespace LsNumerics
             }
             readConditionVariable.notify_all();
         }
+        void WriteSynchronized(const float *inputL, const float * inputR, size_t size)
+        {
+            {
+                std::lock_guard<std::mutex> lock{mutex};
+                for (size_t i = 0; i < size; ++i)
+                {
+                    Write(inputL[i],inputR[i]);
+                }
+                readTail = head;
+
+                if (readTail < (ptrdiff_t)this->size)
+                {
+                    readHead = 0; // data is valid from 0 to readTail.
+                }
+                else
+                {
+                    readHead = readTail - this->size; // data is valid from readTail-size to readTail.
+                }
+            }
+            readConditionVariable.notify_all();
+        }
+
         void SynchWrite()
         {
             {
@@ -187,10 +269,15 @@ namespace LsNumerics
             return storage[(head - 1 - index) & sizeMask];
         }
 
-        float operator[](size_t index) const
+        float AtRight(size_t index) const
         {
-            return At(index);
+            return storageRight[(head - 1 - index) & sizeMask];
         }
+
+        // float operator[](size_t index) const
+        // {
+        //     return At(index);
+        // }
 
         void ReadLock(size_t position, size_t size);
         void ReadUnlock(size_t poisiont, size_t size);
@@ -204,9 +291,14 @@ namespace LsNumerics
             readConditionVariable.wait(lock);
         }
         void ReadRange(ptrdiff_t position, size_t size, size_t outputOffset, std::vector<float> &output);
+        void ReadRange(ptrdiff_t position, size_t size, size_t outputOffset, std::vector<float> &outputLeft,std::vector<float> &outputRight);
         void ReadRange(ptrdiff_t position, size_t count, std::vector<float> &output)
         {
             ReadRange(position, count, 0, output);
+        }
+        void ReadRange(ptrdiff_t position, size_t count, std::vector<float> &outputLeft, std::vector<float> &outputRight)
+        {
+            ReadRange(position, count, 0, outputLeft,outputRight);
         }
 
         bool IsReadReady(ptrdiff_t position, size_t count);
@@ -264,6 +356,7 @@ namespace LsNumerics
         std::condition_variable readConditionVariable;
         std::condition_variable startConditionVariable;
         std::vector<float> storage;
+        std::vector<float> storageRight;
         std::size_t head = 0;
         std::size_t size = 0;
         std::size_t paddingSize = 0;

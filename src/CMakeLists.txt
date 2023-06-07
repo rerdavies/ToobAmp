@@ -107,6 +107,7 @@ add_library(ToobAmp  SHARED
         ToobFreeverb.cpp ToobFreeverb.h
         ToobDelay.cpp ToobDelay.h
         ToobChorus.cpp ToobChorus.h
+        ToobFlanger.cpp ToobFlanger.h
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
         InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
@@ -122,6 +123,7 @@ add_library(ToobAmp  SHARED
 
         LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
         Ce2Chorus.cpp Ce2Chorus.hpp
+        Tf2Flanger.cpp Tf2Flanger.hpp
         Filters/AudioFilter2.h
          Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp Lv2Plugin.cpp OutputPort.h
          ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h IDelay.h SagProcessor.h
@@ -133,11 +135,13 @@ add_library(ToobAmp  SHARED
          NeuralModel.h NeuralModel.cpp
          ToobML.h ToobML.cpp
          json.hpp json.cpp
+         Filters/ShelvingLowCutFilter2.h Filters/ShelvingLowCutFilter2.cpp
          Filters/FilterCoefficients.cpp Filters/FilterCoefficients.h
          Filters/Polynomial.cpp Filters/Polynomial.h
          Filters/DownsamplingLowpassFilter.cpp Filters/DownsamplingLowPassFilter.h
          Filters/AudioFilter3.cpp Filters/AudioFilter3.h
          Filters/LowPassFilter.cpp Filters/LowPassFilter.h
+         Filters/HighPassFilter.cpp Filters/HighPassFilter.h
          Filters/AudioFilter.cpp Filters/AudioFilter.h
          Filters/ChebyshevDownsamplingFilter.h
          Filters/ChebyshevDownsamplingFilter.cpp
@@ -329,7 +333,10 @@ add_executable(Ce2ChorusTest
 
     Ce2ChorusTest.cpp
     Ce2Chorus.cpp Ce2Chorus.hpp
+    Tf2Flanger.cpp Tf2Flanger.hpp
     Filters/LowPassFilter.cpp Filters/LowPassFilter.h
+    Filters/ShelvingLowCutFilter2.cpp Filters/ShelvingLowCutFilter2.h
+    Filters/HighPassFilter.cpp Filters/HighPassFilter.h
     Filters/AudioFilter2.cpp Filters/AudioFilter2.h
     Filters/AudioFilter.cpp Filters/AudioFilter.h
     

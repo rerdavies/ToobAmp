@@ -104,6 +104,16 @@ namespace toob
         SPEAKER_TOP_BACK_RIGHT = 0x20000,
     };
 
+    inline ChannelMask operator|(ChannelMask a, ChannelMask b)
+    {
+        return static_cast<ChannelMask>(static_cast<int>(a) | static_cast<int>(b));
+    }
+    inline bool operator&(ChannelMask a, ChannelMask b)
+    {
+        return (static_cast<int>(a) & static_cast<int>(b)) != 0;
+    }
+
+
     // return's the mask of the n-th channel in the ChannelMask.
     ChannelMask GetChannel(size_t channel,ChannelMask channelMask);
 

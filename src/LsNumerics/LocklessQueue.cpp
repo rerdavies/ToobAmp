@@ -197,6 +197,85 @@ void LocklessQueue::Write(size_t count, size_t offset, const std::vector<std::co
         }
     }
 }
+void LocklessQueue::Write(size_t count, size_t offset, const std::vector<std::complex<double>> &inputLeft, const std::vector<std::complex<double>> &inputRight)
+{
+    while (count != 0)
+    {
+        size_t thisTime;
+        while (true)
+        {
+            if (atomicClosed)
+            {
+                throw DelayLineClosedException();
+            }
+            if (wWriteCount+ count >= buffer.size())
+            {
+                wWriteCount = atomicWriteCount.load();
+            }
+            if (wWriteCount == buffer.size())
+            {
+                writeStalled = true;
+                {
+                    // need to check for space before calling write.
+                    throw DelayLineSynchException("Write sync lost.");
+                }
+            }
+            else
+            {
+                thisTime = buffer.size() - wWriteCount;
+
+                break;
+            }
+        }
+        if (thisTime > count)
+        {
+            thisTime = count;
+        }
+        size_t start = writeHead;
+        size_t end = start + thisTime;
+        if (end < buffer.size())
+        {
+            int writeHead = this->writeHead;
+            for (size_t i = 0; i < thisTime; ++i)
+            {
+                buffer[writeHead] = float(inputLeft[offset].real());
+                bufferRight[writeHead++] = float(inputRight[offset++].real());
+            }
+            this->writeHead = writeHead;
+            count -= thisTime;
+        }
+        else
+        {
+            size_t writeHead = this->writeHead;
+            size_t count0 = buffer.size() - start;
+            for (size_t i = 0; i < count0; ++i)
+            {
+                buffer[writeHead] = float(inputLeft[offset].real());
+                bufferRight[writeHead++] = float(inputRight[offset++].real());
+            }
+            size_t count1 = end - buffer.size();
+            writeHead = 0;
+            for (size_t i = 0; i < count1; ++i)
+            {
+                buffer[writeHead] = float(inputLeft[offset].real());
+                bufferRight[writeHead++] = float(inputRight[offset++].real());
+            }
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+        {
+            
+            if (atomicClosed.load())
+            {
+                throw DelayLineClosedException();
+            }
+            WRITE_BARRIER();
+            this->atomicWriteCount += thisTime; // and release the reader with an atomic operation.
+            wWriteCount += thisTime;
+
+        }
+    }
+}
 void LocklessQueue::Write(size_t count, size_t offset, const std::vector<float> &input)
 {
     while (count != 0)
@@ -255,6 +334,78 @@ void LocklessQueue::Write(size_t count, size_t offset, const std::vector<float> 
             for (size_t i = 0; i < count1; ++i)
             {
                 buffer[writeHead++] = input[offset++];
+            }
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+
+        WRITE_BARRIER(); 
+        this->atomicWriteCount += thisTime; // and release the reader (atomic operation)
+        this->wWriteCount += thisTime;
+    }
+}
+
+void LocklessQueue::Write(size_t count, size_t offset, const std::vector<float> &inputLeft, const std::vector<float> &inputRight)
+{
+    while (count != 0)
+    {
+        size_t thisTime;
+        while (true)
+        {
+            if (atomicClosed.load())
+            {
+                throw DelayLineClosedException();
+            }
+            if (wWriteCount+count < buffer.size())
+            {
+                thisTime = count;
+                break;
+            }
+            wWriteCount = this->atomicWriteCount.load();
+            if (wWriteCount == buffer.size())
+            {
+                writeStalled = true;
+                throw DelayLineSynchException("Write sync lost.");
+            }
+            else
+            {
+                thisTime = buffer.size() - wWriteCount;
+                break;
+            }
+        }
+        if (thisTime > count)
+        {
+            thisTime = count;
+        }
+        size_t start = writeHead;
+        size_t end = start + thisTime;
+        if (end < buffer.size())
+        {
+            int writeHead = this->writeHead;
+            for (size_t i = 0; i < thisTime; ++i)
+            {
+                buffer[writeHead] = inputLeft[offset];
+                bufferRight[writeHead++] = inputRight[offset++];
+            }
+            this->writeHead = writeHead;
+            count -= thisTime;
+            this->writeHead = writeHead;
+        }
+        else
+        {
+            size_t writeHead = this->writeHead;
+            size_t count0 = buffer.size() - start;
+            for (size_t i = 0; i < count0; ++i)
+            {
+                buffer[writeHead] = inputLeft[offset];
+                bufferRight[writeHead++] = inputRight[offset++];
+            }
+            size_t count1 = end - buffer.size();
+            writeHead = 0;
+            for (size_t i = 0; i < count1; ++i)
+            {
+                buffer[writeHead] = inputLeft[offset];
+                bufferRight[writeHead++] = inputRight[offset++];
             }
             count -= thisTime;
             this->writeHead = writeHead;

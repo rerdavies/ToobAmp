@@ -51,13 +51,11 @@ namespace toob
 	class ToobConvolutionReverb : public Lv2PluginWithState
 	{
 	private:
-		enum class ReverbPortId
+		enum class MonoReverbPortId
 		{
 			TIME = 0,
 			DIRECT_MIX,
 			REVERB_MIX,
-			REVERB2_MIX,
-			REVERB3_MIX,
 			PREDELAY,
 			LOADING_STATE,
 			AUDIO_INL,
@@ -65,6 +63,23 @@ namespace toob
 			CONTROL_IN,
 			CONTROL_OUT
 		};
+		enum class StereoReverbPortId
+		{
+			TIME = 0,
+			DIRECT_MIX,
+			REVERB_MIX,
+			WIDTH,
+			PAN,
+			PREDELAY,
+			LOADING_STATE,
+			AUDIO_INL,
+			AUDIO_INR,
+			AUDIO_OUTL,
+			AUDIO_OUTR,
+			CONTROL_IN,
+			CONTROL_OUT
+		};
+
 		enum class CabIrPortId
 		{
 			REVERB_MIX = 0,
@@ -84,20 +99,32 @@ namespace toob
 		static constexpr uint32_t SAMPLE_FILES_VERSION = 1;
 
 	public:
-		static Lv2Plugin *CreateConvolutionReverb(double rate,
+		enum class PluginType {
+			ConvolutionReverb,
+			ConvolutionReverbStereo,
+			CabIr
+		};
+		static Lv2Plugin *CreateMonoConvolutionReverb(double rate,
 												  const char *bundle_path,
 												  const LV2_Feature *const *features)
 		{
-			return new ToobConvolutionReverb(true, rate, bundle_path, features);
+			return new ToobConvolutionReverb(PluginType::ConvolutionReverb, rate, bundle_path, features);
 		}
+		static Lv2Plugin *CreateStereoConvolutionReverb(double rate,
+												  const char *bundle_path,
+												  const LV2_Feature *const *features)
+		{
+			return new ToobConvolutionReverb(PluginType::ConvolutionReverbStereo, rate, bundle_path, features);
+		}
+
 		static Lv2Plugin *CreateCabIR(double rate,
 									  const char *bundle_path,
 									  const LV2_Feature *const *features)
 		{
-			return new ToobConvolutionReverb(false, rate, bundle_path, features);
+			return new ToobConvolutionReverb(PluginType::CabIr, rate, bundle_path, features);
 		}
 		ToobConvolutionReverb(
-			bool isConvolutionReverb,
+			PluginType pluginType,
 			double rate,
 			const char *bundle_path,
 			const LV2_Feature *const *features);
@@ -107,6 +134,7 @@ namespace toob
 
 	public:
 		static const char *CONVOLUTION_REVERB_URI;
+		static const char *CONVOLUTION_REVERB_STEREO_URI;
 		static const char *CAB_IR_URI;
 
 	protected:
@@ -170,6 +198,8 @@ namespace toob
 
 			LoadWorker(Lv2Plugin *pPlugin);
 			void Initialize(size_t sampleRate, ToobConvolutionReverb *pReverb);
+			bool SetWidth(float width);
+			bool SetPan(float pan);
 			bool SetTime(float timeInSeconds);
 			bool SetFileName(const char *szName);
 			bool SetFileName2(const char *szName);
@@ -229,6 +259,8 @@ namespace toob
 			char fileName[MAX_FILENAME];
 			char fileName2[MAX_FILENAME];
 			char fileName3[MAX_FILENAME];
+			float width = 1;
+			float pan = 0;
 			float mix = 1;
 			float mix2 = 0;
 			float mix3 = 0;
@@ -236,6 +268,8 @@ namespace toob
 			char requestFileName2[MAX_FILENAME];
 			char requestFileName3[MAX_FILENAME];
 			float requestMix = 1;
+			float requestPan = 0;
+			float requestWidth = 1;
 			float requestMix2 = 0;
 			float requestMix3 = 0;
 			convolution_reverb_ptr convolutionReverbResult;
@@ -249,6 +283,7 @@ namespace toob
 
 	private:
 		bool IsConvolutionReverb() const { return isConvolutionReverb; }
+		PluginType pluginType = PluginType::ConvolutionReverb;
 		bool isConvolutionReverb = false;
 		LV2_State_Status PublishResourceFiles(const LV2_Feature *const *features);
 		LV2_State_Status GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path*path);
@@ -266,14 +301,16 @@ namespace toob
 				cabir__propertyFileName = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile");
 				cabir__propertyFileName2 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile2");
 				cabir__propertyFileName3 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile3");
-				atom_path = plugin->MapURI(LV2_ATOM__Path);
+				atom__path = plugin->MapURI(LV2_ATOM__Path);
+				atom__string = plugin->MapURI(LV2_ATOM__String);
 				//convolution__state = plugin->MapURI(TOOB_Impulse__Prefix "state");
 			}
 			LV2_URID reverb__propertyFileName;
 			LV2_URID cabir__propertyFileName;
 			LV2_URID cabir__propertyFileName2;
 			LV2_URID cabir__propertyFileName3;
-			LV2_URID atom_path;
+			LV2_URID atom__path;
+			LV2_URID atom__string;
 			//LV2_URID convolution__state;
 		};
 		Urids urids;
@@ -299,12 +336,20 @@ namespace toob
 		float *pReverb3Mix = nullptr;
 		float *pPredelay = nullptr;
 		float *pLoadingState = nullptr;
+		float *pWidth = nullptr;
+		float *pPan = nullptr;
 		const float *inL = nullptr;
 		float *outL = nullptr;
+		const float *inR = nullptr;
+		float *outR = nullptr;
+		bool isStereo = false;
+
 		LV2_Atom_Sequence *controlIn = nullptr;
 		LV2_Atom_Sequence *controlOut = nullptr;
 
-		float lastTime = -1;
+		float lastTime = -999;
+		float lastWidth = 0;
+		float lastPan = -999;
 		float lastDirectMix = -999;
 		float lastReverbMix = -999;
 		float lastReverb2Mix = -999;

@@ -20,45 +20,20 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
+
 #pragma once
+
 #include "AudioFilter2.h"
-#include "../LsNumerics/LsMath.hpp"
-#include <cmath>
-#include <functional>
+
 
 namespace toob {
-    using namespace LsNumerics;
-
-    class ShelvingLowCutFilter2: public AudioFilter2 {
+    class  HighPassFilter: public AudioFilter2 {
     private:
+        static FilterCoefficients2 HIGHPASS_PROTOTYPE;
 
-        float lowCutDb;
-        bool disabled;
-        float sampleRate;
-        float cutoffFrequency = 4000;
     public:
-        ShelvingLowCutFilter2()
-        {
-            SetLowCutDb(0);
-        }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
-
-        void SetSampleRate(float sampleRate)
-        {
-            AudioFilter2::SetSampleRate(sampleRate);
-            this->sampleRate = sampleRate;
-        }
-
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
+        HighPassFilter();
+        HighPassFilter(float minFrequency, float maxFrequency, float disabledFrequency = -1);
 
     };
-
 }

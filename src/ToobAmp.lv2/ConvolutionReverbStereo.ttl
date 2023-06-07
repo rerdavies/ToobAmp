@@ -24,8 +24,7 @@
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-
-@prefix toobcr: <http://two-play.com/plugins/toob-convolution-reverb#> .
+@prefix toobcrs: <http://two-play.com/plugins/toob-convolution-reverb-stereo#> .
 @prefix toobimpulse: <http://two-play.com/plugins/toob-impulse#> .
                       
 toobimpulse:impulseFile
@@ -40,11 +39,11 @@ toobimpulse:impulseFile
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <https://github.com/sponsors/rerdavies> .
 
-<http://two-play.com/plugins/toob-convolution-reverb>
+<http://two-play.com/plugins/toob-convolution-reverb-stereo>
         a lv2:Plugin ,
                 lv2:ReverbPlugin ;
-        doap:name "TooB Convolution Reverb" ,
-                "TooB Convolution Reverb"@en-gb 
+        doap:name "TooB Convolution Reverb (Stereo)" ,
+                "TooB Convolution Reverb (Stereo)"@en-gb 
                 ;
         doap:license <https://two-play.com/TooB/licenses/isc> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
@@ -68,8 +67,9 @@ impulse signal; turning it off removes leading silence. If the the Direct mix co
 delaying the convolution reverb output; you want responses as quickly as possible; the Predelay control should be set to off.
  The leading silence in impulse files can sometimes be quite significant. 
 
-If the input file has 4 channels, Toob Convolution Reverb assumes the signal is in Ambisonic b-format, and downmixes the ambisonic channels to mono. To generate
-stereo reverb effects from ambisonic audio, use the stereo version of this plugin.
+If the input file has 4 channels, Toob Convolution Reverb assumes the signal is in Ambisonic b-format, and downmixes the channels accordingly. Unfortunately,
+it currently dowmixes the Ambisonic audio to mono. The Width control determines
+how wide the stereo image is. 
 
 Toob Convolution Reverb comes with a nominal set of reverb impulse files to get you started. You are strongly encouraged to explore the rich collections of
 reverb impulse files that are widely available on the internet. 
@@ -152,13 +152,17 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 """ ;
 
         mod:brand "TooB";
-        mod:label "Convolution Reverb";
+        mod:label "Convolution Reverb (Stereo)";
         lv2:requiredFeature urid:map;
         lv2:optionalFeature state::freePath, state:makePath, state:mapPath, work:schedule ;
         lv2:extensionData state:interface;
 
 
         lv2:optionalFeature lv2:hardRTCapable;
+
+        pg:mainInput toobcrs:mainIn ;
+	pg:mainOutput toobcrs:mainOut ;
+
         patch:readable 
                 toobimpulse:impulseFile
                 ;
@@ -233,6 +237,36 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:ControlPort ;
 
                 lv2:index 3 ;
+                lv2:symbol "width" ;
+                lv2:name "Width";
+
+                lv2:default 1.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0 ;    
+
+                rdfs:comment "Stereo image width." ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:portProperty epp:notOnGUI;  # doens't produce convincing stereo imaging.
+                lv2:index 4 ;
+                lv2:symbol "pan" ;
+                lv2:name "Pan";
+
+                lv2:default 0.0 ;
+                lv2:minimum -1.0 ;
+                lv2:maximum 1.0 ;    
+
+                rdfs:comment "Pan." ;
+        ],  
+
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 5 ;
                 lv2:symbol "predelay" ;
                 lv2:name "Predelay";
 
@@ -257,7 +291,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 a lv2:OutputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 4 ;
+                lv2:index 6 ;
                 lv2:symbol "loading_state" ;
                 lv2:name "Status";
 
@@ -297,16 +331,40 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 5 ;
-                lv2:symbol "in" ;
-                lv2:name "In"
+                lv2:index 7 ;
+                lv2:symbol "inL" ;
+                lv2:name "InL" ;
+                lv2:designation pg:left ;
+                pg:group toobcrs:mainIn
+
+
+        ],
+        [
+                a lv2:AudioPort ,
+                        lv2:InputPort ;
+                lv2:index 8 ;
+                lv2:symbol "inR" ;
+                lv2:name "InR" ;
+                lv2:designation pg:right ;
+                pg:group toobcrs:mainIn;
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 6 ;
-                lv2:symbol "out" ;
-                lv2:name "Out"
+                lv2:index 9 ;
+                lv2:symbol "outL" ;
+                lv2:name "OutL" ;
+                lv2:designation pg:left ;
+                pg:group toobcrs:mainOut;
+        ],
+        [
+                a lv2:AudioPort ,
+                        lv2:OutputPort ;
+                lv2:index 10 ;
+                lv2:symbol "outR" ;
+                lv2:name "OutR" ;
+                lv2:designation pg:right ;
+                pg:group toobcrs:mainOut;
         ],
         [
                 a atom:AtomPort ,
@@ -316,7 +374,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 7 ;
+                lv2:index 11 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -326,7 +384,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 atom:bufferType atom:Sequence ;
                 atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 8;
+                lv2:index 12;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;
@@ -334,15 +392,15 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         .
 
 
-<http://two-play.com/plugins/toob-convolution-reverb>  pipedal_ui:ui toobcr:ui .
+<http://two-play.com/plugins/toob-convolution-reverb-stereo>  pipedal_ui:ui toobcrs:ui .
 
-toobcr:ui 
+toobcrs:ui 
         a pipedal_ui:ui ;
         pipedal_ui:fileProperties 
         [
                 a pipedal_ui:fileProperty;
                 rdfs:label "Impulse File" ;
-                lv2:index 4 ;
+                lv2:index 3 ;
                 pipedal_ui:patchProperty toobimpulse:impulseFile ;
                 pipedal_ui:directory "ReverbImpulseFiles";
                 pipedal_ui:fileTypes 
@@ -360,7 +418,7 @@ toobcr:ui
         ui:portNotification 
         [
                 lv2:symbol "loading_state";
-                ui:plugin <http://two-play.com/plugins/toob-convolution-reverb>;
+                ui:plugin <http://two-play.com/plugins/toob-convolution-reverb-stereo>;
                 ui:protocol ui:floatProtocol;
         ]
         .

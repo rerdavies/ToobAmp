@@ -113,21 +113,25 @@ static std::vector<ExecutionEntry> executionTimePerSampleNs{
     {64, 92.286, INVALID_THREAD_ID},
 
     // executed on thread 1.
-    {128, 244, 1,0},  // execution times in microseconds measured under real-time conditions (with write barrier)
-    {256, 244, 1,0},
-    {512, 368, 1,0},
-    {1024, 594, 2,0},
+    {128, 244, 1, 0}, // execution times in microseconds measured under real-time conditions (with write barrier)
+    {256, 244, 1, 0},
+    {512, 368, 1, 0},
+    {1024, 594, 2, 0},
     // executed on thread 2
-    {2048, 977, 2,0},
-    {4096, 2093, 2,0},
-    {8192, 3662, 3,0},
+    {2048, 977, 2, 0},
+    {4096, 2093, 2, 0},
+    {8192, 3662, 3, 0},
 
-    {16384, 15174, 3,},
+    {
+        16384,
+        15174,
+        3,
+    },
     {32768, 36324, 4},
-    {65536, 60926,5},
-    {131072, 60926*2.2, 6},
-    {262144, 60926*2.2*2.2, 7},
-    {524288,  60926*2.2*2.2*2.2, 8},
+    {65536, 60926, 5},
+    {131072, 60926 * 2.2, 6},
+    {262144, 60926 * 2.2 * 2.2, 7},
+    {524288, 60926 * 2.2 * 2.2 * 2.2, 8},
 
 };
 
@@ -154,7 +158,7 @@ size_t BalancedConvolution::GetDirectSectionExecutionTimeInSamples(size_t direct
     {
         if (entry.n == directSectionSize)
         {
-            return (size_t)std::ceil(entry.n*1E-6*sampleRate);
+            return (size_t)std::ceil(entry.n * 1E-6 * sampleRate);
         }
     }
     throw std::invalid_argument("invalid directSectionSize.");
@@ -166,7 +170,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
     // a direction section of a particular size.
 
     // Calculate per-thread worst execution times.
-    // (Service threads handle groups of block sizes.) 
+    // (Service threads handle groups of block sizes.)
     std::vector<int> pooledExecutionTime;
     pooledExecutionTime.resize(MAX_THREAD_ID + 1);
     for (const auto &entry : executionTimePerSampleNs)
@@ -176,7 +180,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
             double executionTimeSeconds = entry.microsecondsPerExecution * 1E-6;
             executionTimeSeconds *= ((double)sampleRate) / 48000; // benchmarks were for 48000.
             executionTimeSeconds *= 1.8 / 1.5;                    // in case we're running on 1.5Ghz pi.
-            executionTimeSeconds *= 2;                          // because there may be duplicates
+            executionTimeSeconds *= 2;                            // because there may be duplicates
             size_t samplesLeadTime = (std::ceil(executionTimeSeconds * sampleRate));
 
             pooledExecutionTime[entry.threadNumber] += samplesLeadTime;
@@ -207,7 +211,7 @@ static void UpdateDirectExecutionLeadTimes(size_t sampleRate, size_t maxAudioBuf
             directSectionLeadTimes[log2N] = pooledExecutionTime[entry.threadNumber] + schedulingJitter + entry.n;
         }
     }
-    
+
     // std::cout << "Direct Section Lead Times" << std::endl;
     // for (size_t i = 0; i < directSectionLeadTimes.size(); ++i)
     // {
@@ -231,7 +235,6 @@ static size_t GetDirectSectionLeadTime(size_t directSectionSize)
     }
     return result;
 }
-
 
 std::string MaxString(const std::string &s, size_t maxLen)
 {
@@ -938,18 +941,33 @@ namespace LsNumerics::Implementation
 
 using namespace LsNumerics::Implementation;
 
-
 static size_t convolutionSampleRate = (size_t)-1;
 static size_t convolutionMaxAudioBufferSize = (size_t)-1;
 
 BalancedConvolution::BalancedConvolution(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
-    : schedulerPolicy(schedulerPolicy)
+    : schedulerPolicy(schedulerPolicy), isStereo(false), assemblyQueue(false)
 {
     this->assemblyInputBuffer.resize(1024);
     this->assemblyOutputBuffer.resize(1024);
-    PrepareSections(size, impulseResponse, sampleRate, maxAudioBufferSize);
+    PrepareSections(size, impulseResponse, nullptr, sampleRate, maxAudioBufferSize);
     PrepareThreads();
+}
 
+BalancedConvolution::BalancedConvolution(
+    SchedulerPolicy schedulerPolicy,
+    size_t size,
+    const std::vector<float> &impulseResponseLeft, const std::vector<float> &impulseResponseRight,
+    size_t sampleRate,
+    size_t maxAudioBufferSize)
+    : schedulerPolicy(schedulerPolicy), isStereo(true), assemblyQueue(true)
+{
+
+    this->assemblyInputBuffer.resize(1024);
+    this->assemblyOutputBuffer.resize(1024);
+    this->assemblyInputBufferRight.resize(1024);
+    this->assemblyOutputBufferRight.resize(1024);
+    PrepareSections(size, impulseResponseLeft, &impulseResponseRight, sampleRate, maxAudioBufferSize);
+    PrepareThreads();
 }
 
 BalancedConvolution::DirectSectionThread *BalancedConvolution::GetDirectSectionThread(int threadNumber)
@@ -978,7 +996,7 @@ void BalancedConvolution::PrepareThreads()
         auto sectionThread = GetDirectSectionThread(threadedDirectSection->GetDirectSection()->directSection.ThreadNumber());
         sectionThread->AddSection(threadedDirectSection.get());
 #if EXECUTION_TRACE
-        threadedDirectSection->SetTraceInfo(&executionTrace,sectionThread->GetThreadNumber());
+        threadedDirectSection->SetTraceInfo(&executionTrace, sectionThread->GetThreadNumber());
 #endif
         threadedDirectSection->SetWriteReadyCallback(dynamic_cast<IDelayLineCallback *>(this));
     }
@@ -998,11 +1016,11 @@ void BalancedConvolution::PrepareThreads()
     }
     if (this->directSectionThreads.size() != 0)
     {
-        this->assemblyThread = std::make_unique<std::thread>(std::bind(&BalancedConvolution::AssemblyThreadProc,this));
+        this->assemblyThread = std::make_unique<std::thread>(std::bind(&BalancedConvolution::AssemblyThreadProc, this));
         this->WaitForAssemblyThreadStartup();
     }
 }
-void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize)
+void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> &impulseResponse, const std::vector<float> *impulseResponseRight, size_t sampleRate, size_t maxAudioBufferSize)
 {
     constexpr size_t INITIAL_SECTION_SIZE = 128;
     constexpr size_t INITIAL_DIRECT_SECTION_SIZE = 128;
@@ -1017,6 +1035,8 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             UpdateDirectExecutionLeadTimes(sampleRate, maxAudioBufferSize);
         }
     }
+    int stereoScaling = isStereo ? 2 : 1;
+
     size_t delaySize = -1;
     if (size < INITIAL_SECTION_SIZE)
     {
@@ -1025,17 +1045,11 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
     }
     else
     {
-        // Generate lists of sections based on the following criteria.
-        // 1. Initially, we need to use balanced sections on the real-time thread to build up enough delayed samples to switch to DirectSections which are much faster.
-        // 2. Once we have enough samples to run direct sections (on a background thread), use direct sections.
-        // 3. Due to better cache conditioning, balanced sections run much faster for very large sizes (> 32768), so switch back to balanced sections for very large sections (which run on the real-time thread)
-
 
         size_t directSectionSize = INITIAL_DIRECT_SECTION_SIZE;
 
-        directConvolutionLength = GetDirectSectionLeadTime(directSectionSize);
+        directConvolutionLength = GetDirectSectionLeadTime(directSectionSize) * stereoScaling;
 
-        
         if (directConvolutionLength > size)
         {
             directConvolutionLength = size;
@@ -1059,7 +1073,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
             // Pick a candidate Direct section.
             while (true)
             {
-                directSectionDelay = GetDirectSectionLeadTime(directSectionSize) + executionOffsetInSamples;
+                directSectionDelay = GetDirectSectionLeadTime(directSectionSize) * stereoScaling + executionOffsetInSamples;
                 if (directSectionDelay == std::numeric_limits<size_t>::max())
                 {
                     throw std::logic_error("Failed to schedule direct section.");
@@ -1075,7 +1089,7 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                     break;
                 }
                 // don't increase the direct section size if we don't have enough samples.
-                size_t nextDirectSectionDelay = GetDirectSectionLeadTime(directSectionSize * 2) + executionOffsetInSamples;
+                size_t nextDirectSectionDelay = GetDirectSectionLeadTime(directSectionSize * 2) * stereoScaling + executionOffsetInSamples;
                 if (nextDirectSectionDelay > sampleOffset)
                 {
                     break;
@@ -1083,19 +1097,20 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                 directSectionSize = directSectionSize * 2;
             }
 
+            // If remaining samples are less that half of the directSection size, reduce the size of the direct section.
             while (remaining <= directSectionSize / 2 && directSectionSize > INITIAL_SECTION_SIZE)
             {
                 directSectionSize = directSectionSize / 2;
                 directSectionDelay = GetDirectSectionLeadTime(directSectionSize) + executionOffsetInSamples;
             }
 
-                        {
+            {
 
-                size_t inputDelay = executionOffsetInSamples & (directSectionSize-1);
+                size_t inputDelay = executionOffsetInSamples & (directSectionSize - 1);
 
-                if (inputDelay > sampleOffset-directSectionDelay)
+                if (inputDelay > sampleOffset - directSectionDelay)
                 {
-                    inputDelay = ((sampleOffset-directSectionDelay)*2/3) & (directSectionSize-1); // just do what we can. Effectively, a random placement.
+                    inputDelay = ((sampleOffset - directSectionDelay) * 2 / 3) & (directSectionSize - 1); // just do what we can. Effectively, a random placement.
                 }
 
 #if DISPLAY_SECTION_ALLOCATIONS
@@ -1115,12 +1130,12 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                 {
                     delaySize = myDelaySize;
                 }
-                
+
                 // sections get their assigned thread number, except for the size-reduced last section, which goes on the same thread as
                 // its predecessor.
 
                 int t = GetDirectSectionThreadId(directSectionSize);
-                if (t > threadNumber) 
+                if (t > threadNumber)
                 {
                     threadNumber = t;
                 }
@@ -1131,13 +1146,13 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
                         DirectConvolutionSection(
                             directSectionSize,
                             sampleOffset,
-                            impulseResponse, 
+                            impulseResponse,
+                            impulseResponseRight,
                             directSectionDelay,
                             inputDelay,
                             threadNumber)});
                 sampleOffset += directSectionSize;
                 executionOffsetInSamples += this->GetDirectSectionExecutionTimeInSamples(directSectionSize);
-
             }
         }
     }
@@ -1147,9 +1162,17 @@ void BalancedConvolution::PrepareSections(size_t size, const std::vector<float> 
     directImpulse.resize(directConvolutionLength);
     for (size_t i = 0; i < directConvolutionLength; ++i)
     {
-        directImpulse[directConvolutionLength-1-i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
+        directImpulse[directConvolutionLength - 1 - i] = i < impulseResponse.size() ? impulseResponse[i] : 0;
     }
-    audioThreadToBackgroundQueue.SetSize(delaySize + 1, 256, this->schedulerPolicy);
+    if (isStereo)
+    {
+        directImpulseRight.resize(directConvolutionLength);
+        for (size_t i = 0; i < directConvolutionLength; ++i)
+        {
+            directImpulseRight[directConvolutionLength - 1 - i] = i < (*impulseResponseRight).size() ? ((*impulseResponseRight)[i]) : 0;
+        }
+    }
+    audioThreadToBackgroundQueue.SetSize(delaySize + 1, 256, this->schedulerPolicy, isStereo);
 }
 static int NextPowerOf2(size_t value)
 {
@@ -1180,7 +1203,7 @@ void Implementation::DelayLine::SetSize(size_t size)
 
 Implementation::DirectConvolutionSection::DirectConvolutionSection(
     size_t size,
-    size_t sampleOffset, const std::vector<float> &impulseData,
+    size_t sampleOffset, const std::vector<float> &impulseData, const std::vector<float> *impulseDataRightOpt,
     size_t sectionDelay,
     size_t inputDelay,
     size_t threadNumber)
@@ -1189,8 +1212,8 @@ Implementation::DirectConvolutionSection::DirectConvolutionSection(
       threadNumber(threadNumber),
       sampleOffset(sampleOffset),
       sectionDelay(sectionDelay),
-      inputDelay(inputDelay)
-
+      inputDelay(inputDelay),
+      isStereo(impulseDataRightOpt != nullptr)
 {
     buffer.resize(size * 2);
     inputBuffer.resize(size * 2);
@@ -1214,6 +1237,17 @@ Implementation::DirectConvolutionSection::DirectConvolutionSection(
     }
     fftPlan.Compute(impulseFft, impulseFft, Fft::Direction::Forward);
     bufferIndex = 0;
+    if (impulseDataRightOpt != nullptr)
+    {
+        bufferRight.resize(size * 2);
+        inputBufferRight.resize(size * 2);
+        impulseFftRight.resize(size * 2);
+        for (size_t i = 0; i < len; ++i)
+        {
+            impulseFftRight[i + size] = norm * (*impulseDataRightOpt)[i + sampleOffset];
+        }
+        fftPlan.Compute(impulseFftRight, impulseFftRight, Fft::Direction::Forward);
+    }
 }
 
 void Implementation::DirectConvolutionSection::UpdateBuffer()
@@ -1225,6 +1259,17 @@ void Implementation::DirectConvolutionSection::UpdateBuffer()
         buffer[i] *= impulseFft[i];
     }
     fftPlan.Compute(buffer, buffer, Fft::Direction::Backward);
+
+    if (isStereo)
+    {
+        fftPlan.Compute(inputBufferRight, bufferRight, Fft::Direction::Forward);
+        size_t size2 = size * 2;
+        for (size_t i = 0; i < size2; ++i)
+        {
+            bufferRight[i] *= impulseFftRight[i];
+        }
+        fftPlan.Compute(bufferRight, bufferRight, Fft::Direction::Backward);
+    }
     bufferIndex = 0;
 }
 
@@ -1281,17 +1326,36 @@ void DirectConvolutionSection::Execute(AudioThreadToBackgroundQueue &input, size
 #endif
 
     {
-        size_t size = Size();
-        for (size_t i = 0; i < size; ++i)
+        if (isStereo)
         {
-            inputBuffer[i] = inputBuffer[i + size];
-        }
-        input.ReadRange(time, size, size, inputBuffer);
-        UpdateBuffer();
+            size_t size = Size();
+            for (size_t i = 0; i < size; ++i)
+            {
+                inputBuffer[i] = inputBuffer[i + size];
+            }
+            for (size_t i = 0; i < size; ++i)
+            {
+                inputBufferRight[i] = inputBufferRight[i + size];
+            }
+            input.ReadRange(time, size, size, inputBuffer, inputBufferRight);
+            UpdateBuffer();
 
-        output.Write(size, 0, this->buffer);
+            output.Write(size, 0, this->buffer, this->bufferRight);
+        }
+        else
+        {
+            size_t size = Size();
+            for (size_t i = 0; i < size; ++i)
+            {
+                inputBuffer[i] = inputBuffer[i + size];
+            }
+            input.ReadRange(time, size, size, inputBuffer);
+            UpdateBuffer();
+
+            output.Write(size, 0, this->buffer);
+        }
     }
-    
+
 #if EXECUTION_TRACE
     SectionExecutionTrace::time_point end = SectionExecutionTrace::clock::now();
 
@@ -1306,7 +1370,6 @@ void DirectConvolutionSection::Execute(AudioThreadToBackgroundQueue &input, size
 BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection &section)
     : section(&section)
 {
-    // degree of freedom: inputDelay is as long as possible. We can reduce input delay down to zero, and should do so to distribute compute time.
     auto &directSection = section.directSection;
     size_t size = directSection.Size();
     (void)size;
@@ -1314,15 +1377,14 @@ BalancedConvolution::ThreadedDirectSection::ThreadedDirectSection(DirectSection 
     size_t sectionDelay = directSection.SectionDelay();
     size_t inputDelay = directSection.InputDelay();
 
-    this->currentSample = inputDelay-size;
+    this->currentSample = inputDelay - size;
 
     size_t delayLineSize = sampleOffset + sectionDelay + 256;
     outputDelayLine.SetSize(delayLineSize, delayLineSize - size);
 
-
     std::vector<float> tempBuffer;
-    assert (inputDelay <= size);
-    tempBuffer.resize(sampleOffset-(size-inputDelay));
+    assert(inputDelay <= size);
+    tempBuffer.resize(sampleOffset - (size - inputDelay));
     outputDelayLine.Write(tempBuffer.size(), 0, tempBuffer);
 }
 
@@ -1362,39 +1424,68 @@ void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQu
 void BalancedConvolution::AssemblyThreadProc()
 {
     std::vector<float> buffer;
+    std::vector<float> bufferRight;
     buffer.resize(16);
+    bufferRight.resize(16);
 
     toob::SetThreadName("cr_assembly");
-    try {
+    try
+    {
         // 76 slots into pipewire priorities nicely.
         toob::SetRtThreadPriority(76);
-    } catch (const std::exception &e)
+    }
+    catch (const std::exception &e)
     {
         SetAssemblyThreadStartupFailed(e.what());
         return;
-    } 
+    }
     SetAssemblyThreadStartupSucceeded();
 
-    try {
-        while (true)
+    try
+    {
+        if (this->isStereo)
         {
-            for (size_t i = 0; i < buffer.size(); ++i)
+            while (true)
             {
-                float result = 0;
-                for (auto &sectionThread : directSectionThreads)
+                for (size_t i = 0; i < buffer.size(); ++i)
                 {
-                    result += sectionThread->Tick();
+                    float resultL = 0;
+                    float resultR = 0;
+                    for (auto &sectionThread : directSectionThreads)
+                    {
+                        float left,right;
+                        sectionThread->Tick(&left,&right);
+                        resultL += left;
+                        resultR += right;
+                    }
+                    buffer[i] = resultL;
+                    bufferRight[i] = resultR;
                 }
-                buffer[i] = result;
+                assemblyQueue.Write(buffer, bufferRight, buffer.size());
             }
-            assemblyQueue.Write(buffer,buffer.size());
         }
-
-    } catch (const DelayLineClosedException&)
+        else
+        {
+            while (true)
+            {
+                for (size_t i = 0; i < buffer.size(); ++i)
+                {
+                    float result = 0;
+                    for (auto &sectionThread : directSectionThreads)
+                    {
+                        result += sectionThread->Tick();
+                    }
+                    buffer[i] = result;
+                }
+                assemblyQueue.Write(buffer, buffer.size());
+            }
+        }
+    }
+    catch (const DelayLineClosedException &)
     {
         // expected.
     }
-    catch (const std::exception & e)
+    catch (const std::exception &e)
     {
         throw;
     }
@@ -1402,10 +1493,10 @@ void BalancedConvolution::AssemblyThreadProc()
 
 void BalancedConvolution::WaitForAssemblyThreadStartup()
 {
-    std::unique_lock lock { startup_mutex};
+    std::unique_lock lock{startup_mutex};
     while (true)
     {
-        if (startupSucceeded) 
+        if (startupSucceeded)
         {
             return;
         }
@@ -1416,10 +1507,10 @@ void BalancedConvolution::WaitForAssemblyThreadStartup()
         startup_cv.wait(lock);
     }
 }
-void BalancedConvolution::SetAssemblyThreadStartupFailed(const std::string & e)
+void BalancedConvolution::SetAssemblyThreadStartupFailed(const std::string &e)
 {
     {
-        std::lock_guard lock { startup_mutex};
+        std::lock_guard lock{startup_mutex};
         this->startupError = e;
     }
     startup_cv.notify_all();
@@ -1427,8 +1518,8 @@ void BalancedConvolution::SetAssemblyThreadStartupFailed(const std::string & e)
 void BalancedConvolution::SetAssemblyThreadStartupSucceeded()
 {
     {
-        std::lock_guard lock { startup_mutex};
-    this->startupSucceeded = true;
+        std::lock_guard lock{startup_mutex};
+        this->startupSucceeded = true;
     }
     startup_cv.notify_all();
 }

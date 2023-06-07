@@ -151,6 +151,11 @@ namespace toob
                 size = this->data.size();
             }
         }
+
+        void MonoToStereo();
+        // Set width of the stereo image [0...1], 0 = monophonic. 1 = normal.
+        void SetStereoWidth(float width);
+
         void setData(std::vector<std::vector<float>> &&data)
         {
             this->data = std::move(data);

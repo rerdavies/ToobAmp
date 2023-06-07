@@ -53,6 +53,7 @@ namespace toob {
 		: Frequency(0.0f,0.0f)
 		{
 			disabledFrequency = -1;
+			Reset();			
 		}
 	public:
 		AudioFilter2(const FilterCoefficients2& prototype, float minFrequency,float maxFrequency, float disableFrequency = -1)

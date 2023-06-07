@@ -20,45 +20,27 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-#pragma once
-#include "AudioFilter2.h"
-#include "../LsNumerics/LsMath.hpp"
-#include <cmath>
-#include <functional>
 
-namespace toob {
-    using namespace LsNumerics;
+#include "../std.h"
 
-    class ShelvingLowCutFilter2: public AudioFilter2 {
-    private:
+#include "HighPassFilter.h"
 
-        float lowCutDb;
-        bool disabled;
-        float sampleRate;
-        float cutoffFrequency = 4000;
-    public:
-        ShelvingLowCutFilter2()
-        {
-            SetLowCutDb(0);
-        }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
+using namespace toob;
 
-        void SetSampleRate(float sampleRate)
-        {
-            AudioFilter2::SetSampleRate(sampleRate);
-            this->sampleRate = sampleRate;
-        }
 
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
+FilterCoefficients2 HighPassFilter::HIGHPASS_PROTOTYPE = FilterCoefficients2(
+	0.8291449788086549, 0, 0,
+	0.8484582463996709, 1.156251050939778,1).HighPass();
 
-    };
+
+HighPassFilter::HighPassFilter()
+: AudioFilter2(HIGHPASS_PROTOTYPE)
+{
+
+}
+
+HighPassFilter::HighPassFilter(float minFrequency, float maxFrequency, float disabledFrequency)
+: AudioFilter2(HIGHPASS_PROTOTYPE, minFrequency,maxFrequency,disabledFrequency)
+{
 
 }

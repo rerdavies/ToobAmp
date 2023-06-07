@@ -403,7 +403,7 @@ static void TestDirectConvolutionSection()
         }
         const std::vector<float> &expectedOutput = s0.Buffer();
 
-        Implementation::DirectConvolutionSection convolutionSection(n, 0, impulseResponse);
+        Implementation::DirectConvolutionSection convolutionSection(n, 0, impulseResponse,nullptr);
         cout << "MaxDelay: " << convolutionSection.SectionDelay() << endl;
 
         // convolutionSection.PrintPlan();
@@ -754,7 +754,7 @@ void BenchmarkFftConvolutionStep()
         // FftConvolution
         FftConvolution::DelayLine delayLine(n * 2);
 
-        Implementation::DirectConvolutionSection directSection(n, 0, impulse);
+        Implementation::DirectConvolutionSection directSection(n, 0, impulse,nullptr);
 
         ns_duration_t fftConvolutionDuration;
         auto start = clock_t::now();

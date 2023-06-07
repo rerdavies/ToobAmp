@@ -68,12 +68,12 @@ namespace LsNumerics {
             virtual void OnSynchronizedSingleReaderDelayLineUnderrun() = 0;
         };
 
-        LocklessQueue(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
+        LocklessQueue(bool isStereo, size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
         {
-            SetSize(size, lowWaterMark);
+            SetSize(isStereo,size, lowWaterMark);
         }
         LocklessQueue()
-            : LocklessQueue(0, 0) 
+            : LocklessQueue(false,0, 0) 
         {
         }
         ~LocklessQueue()
@@ -90,8 +90,9 @@ namespace LsNumerics {
             this->writeReadyCallback = callback;
         }
 
-        void SetSize(size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
+        void SetSize(bool isStereo, size_t size, size_t lowWaterMark = DEFAULT_LOW_WATER_MARK)
         {
+            this->isStereo = isStereo;
             if (lowWaterMark == DEFAULT_LOW_WATER_MARK)
             {
                 lowWaterMark = size / 2;
@@ -100,6 +101,10 @@ namespace LsNumerics {
             if (size != 0)
             {
                 buffer.resize(size+ MAX_READ_BORROW);
+                if (isStereo)
+                {
+                    bufferRight.resize(size+ MAX_READ_BORROW);
+                }
             }
         }
 
@@ -132,6 +137,24 @@ namespace LsNumerics {
             }
             return result;
         }
+        void Read(float*left, float*right)
+        {
+            if (atomicClosed)
+            {
+                throw DelayLineClosedException();
+            }
+            if (readCount == 0)
+            {
+                ReadWait();
+            }
+            --readCount;
+            *left = buffer[readHead];
+            *right = bufferRight[readHead++];
+            if (readHead == buffer.size())
+            {
+                readHead = 0;
+            }
+        }
 
 
         bool CanWrite(size_t size)
@@ -158,8 +181,9 @@ namespace LsNumerics {
         // }
 
         void Write(size_t count, size_t offset, const std::vector<float> &input);
-
         void Write(size_t count, size_t offset, const std::vector<std::complex<double>> &input);
+        void Write(size_t count, size_t offset, const std::vector<float> &inputLeft, const std::vector<float>&inputRight);
+        void Write(size_t count, size_t offset, const std::vector<std::complex<double>> &inputLeft,const std::vector<std::complex<double>> &inputRight);
 
         size_t GetReadWaits()
         {
@@ -169,6 +193,7 @@ namespace LsNumerics {
         }
 
     private:
+        bool isStereo = false;
         std::atomic<bool> writeStalled = false;
         std::atomic<uint32_t> atomicWriteCount = 0;
         uint32_t rWriteCount = 0;
@@ -183,6 +208,7 @@ namespace LsNumerics {
         std::uint32_t lowWaterMark = 0;
 
         std::vector<float> buffer;
+        std::vector<float> bufferRight;
     };
 
 }

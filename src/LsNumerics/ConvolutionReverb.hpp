@@ -75,11 +75,76 @@ namespace LsNumerics
         {
             // single-reader, single-writer, designed to be friendly to the reader.
         public:
-            AssemblyQueue() { buffer.resize(BUFFER_SIZE); }
+            AssemblyQueue(bool isStereo): isStereo(isStereo) { 
+                buffer.resize(BUFFER_SIZE); 
+                if (isStereo)
+                {
+                    bufferRight.resize(BUFFER_SIZE);
+                }
+            }
             ~AssemblyQueue()
             {
                 Close();
             }
+            size_t Read(std::vector<float> &inputBufferL, std::vector<float> &inputBufferR, size_t requestedSize)
+            {
+                std::unique_lock<std::mutex> lock{mutex};
+
+                size_t readIx = 0;
+                while (true)
+                {
+                    if (count != 0)
+                    {
+                        size_t thisTime = requestedSize;
+                        if (count < thisTime)
+                            thisTime = count;
+                        if (readHead + thisTime > buffer.size())
+                        {
+                            // split read.
+                            size_t firstPart = buffer.size() - readHead;
+                            for (size_t i = 0; i < firstPart; ++i)
+                            {
+                                inputBufferL[readIx] = buffer[readHead];
+                                inputBufferR[readIx++] = bufferRight[readHead++];
+                            }
+                            readHead = 0;
+                            for (size_t i = firstPart; i < thisTime; ++i)
+                            {
+                                inputBufferL[readIx] = buffer[readHead];
+                                inputBufferR[readIx++] = bufferRight[readHead++];
+                            }
+                        }
+                        else
+                        {
+                            for (size_t i = 0; i < thisTime; ++i)
+                            {
+                                inputBufferL[readIx] = buffer[readHead];
+                                inputBufferR[readIx++] = bufferRight[readHead++];
+                            }
+                            if (readHead >= buffer.size())
+                            {
+                                readHead = 0;
+                            }
+                        }
+                        count -= thisTime;
+                        lock.unlock();
+                        write_cv.notify_all();
+                        return thisTime;
+                    }
+                    else if (closed)
+                    {
+                        for (size_t i = 0; i < requestedSize; ++i)
+                        {
+                            inputBufferL[i] = 0;
+                            inputBufferR[i] = 0;
+                        }
+                        return requestedSize;
+                    }
+
+                    read_cv.wait(lock);
+                }
+            }
+
             size_t Read(std::vector<float> &inputBuffer, size_t requestedSize)
             {
                 std::unique_lock<std::mutex> lock{mutex};
@@ -206,6 +271,71 @@ namespace LsNumerics
                     }
                 }
             }
+            void Write(const std::vector<float> &outputBufferL, const std::vector<float> &outputBufferR, size_t size)
+            {
+                std::unique_lock<std::mutex> lock{mutex};
+                size_t inputIx = 0;
+                while (true)
+                {
+                    if (closed)
+                    {
+                        throw DelayLineClosedException();
+                    }
+                    if (size == 0)
+                    {
+                        lock.unlock();
+                        read_cv.notify_all();
+                        return;
+                    }
+                    
+                    if (count < buffer.size())
+                    {
+                        size_t thisTime = buffer.size() - count;
+                        if (thisTime > size)
+                        {
+                            thisTime = size;
+                        }
+                        if (thisTime != 0)
+                        {
+                            if (writeHead + thisTime > buffer.size())
+                            {
+                                // split write.
+                                size_t firstPart = buffer.size() - writeHead;
+                                for (size_t i = 0; i < firstPart; ++i)
+                                {
+                                    buffer[i + writeHead] = outputBufferL[inputIx];
+                                    bufferRight[i + writeHead] = outputBufferR[inputIx++];
+                                }
+                                writeHead = thisTime-firstPart;
+                                for (size_t i = 0; i < writeHead; ++i)
+                                {
+                                    buffer[i] = outputBufferL[inputIx];
+                                    bufferRight[i] = outputBufferR[inputIx++];
+                                }
+                            }
+                            else
+                            {
+                                for (size_t i = 0; i < thisTime; ++i)
+                                {
+                                    buffer[i + writeHead] = outputBufferL[inputIx];
+                                    bufferRight[i + writeHead] = outputBufferR[inputIx++];
+                                }
+                                writeHead += thisTime;
+                                if (writeHead >= buffer.size())
+                                {
+                                    writeHead = 0;
+                                }
+                            }
+                            this->count += thisTime;
+                            size -= thisTime;
+                        }
+                    }
+                    else
+                    {
+                        write_cv.wait(lock);
+                    }
+                }
+            }
 
         private:
             bool closed = false;
@@ -216,7 +346,9 @@ namespace LsNumerics
             size_t writeHead = 0;
             static constexpr size_t BUFFER_SIZE = 256;
             size_t count = 0;
+            bool isStereo = false;
             std::vector<float> buffer;
+            std::vector<float> bufferRight;
         };
         class DelayLine
         {
@@ -258,7 +390,7 @@ namespace LsNumerics
         public:
             DirectConvolutionSection(
                 size_t size,
-                size_t sampleOffset, const std::vector<float> &impulseData,
+                size_t sampleOffset, const std::vector<float> &impulseData, const std::vector<float>*impulseDataRightOpt,
                 size_t directSectionDelay = 0,
                 size_t inputDelay = 0,
                 size_t threadNumber = -1);
@@ -312,7 +444,10 @@ namespace LsNumerics
 
         private:
             using Fft = StagedFft;
+            
             void UpdateBuffer();
+
+            bool isStereo = false;
             size_t sectionDelay;
             size_t threadNumber;
             Fft fftPlan;
@@ -320,9 +455,13 @@ namespace LsNumerics
             size_t sampleOffset;
             size_t inputDelay;
             std::vector<fft_complex_t> impulseFft;
+            std::vector<fft_complex_t> impulseFftRight;
+
             size_t bufferIndex;
             std::vector<float> inputBuffer;
+            std::vector<float> inputBufferRight;
             std::vector<fft_complex_t> buffer;
+            std::vector<fft_complex_t> bufferRight;
         };
     }
 
@@ -348,6 +487,7 @@ namespace LsNumerics
         /// is set to SCHED_RR (realtime). Actually priorities are chosen to provide optimal priorities for Linux
         /// audio systems. Very large FFTs are schedule below +6 inorder not to interfere with USB audio services
         /// which run at RT priority +6.
+        ///
         /// If Scheduler::Normal is specified, the thread priorities are set using nice (3). When running in 
         /// realtime, the schedulerPolicy should always be SchedulerPolicy::Realtime.
         /// SchedulerPolicy::Normal allows unit testing in an environment where the running process may not have
@@ -379,11 +519,36 @@ namespace LsNumerics
 
         BalancedConvolution(
             SchedulerPolicy schedulerPolicy,
+            size_t size, 
+            const std::vector<float> &impulseResponseLeft, const std::vector<float> &impulseResponseRight,
+            size_t sampleRate,
+            size_t maxAudioBufferSize);
+
+
+        BalancedConvolution(
+            SchedulerPolicy schedulerPolicy,
             const std::vector<float> &impulseResponse,
             size_t sampleRate = 44100,
             size_t maxAudioBufferSize = 128)
             : BalancedConvolution(schedulerPolicy, impulseResponse.size(), impulseResponse, sampleRate, maxAudioBufferSize)
         {
+        }
+        BalancedConvolution(
+            SchedulerPolicy schedulerPolicy,
+            const std::vector<float> &impulseResponseLeft,
+            const std::vector<float> &impulseResponseRight,
+            size_t sampleRate = 44100,
+            size_t maxAudioBufferSize = 128)
+            : BalancedConvolution(
+                schedulerPolicy, 
+                impulseResponseLeft.size(), 
+                impulseResponseLeft, impulseResponseRight,
+                sampleRate, maxAudioBufferSize)
+        {
+            if (impulseResponseLeft.size() != impulseResponseRight.size())
+            {
+                throw std::logic_error("Impulse responses must be the same size.");
+            }
         }
 
         ~BalancedConvolution();
@@ -394,6 +559,8 @@ namespace LsNumerics
         void WaitForAssemblyThreadStartup();
         void SetAssemblyThreadStartupFailed(const std::string & e);
         void SetAssemblyThreadStartupSucceeded();
+
+        bool isStereo = false;
 
         std::mutex startup_mutex;
         std::condition_variable startup_cv;
@@ -407,6 +574,16 @@ namespace LsNumerics
             audioThreadToBackgroundQueue.Write(value);
 
             return (float)(backgroundValue + audioThreadToBackgroundQueue.DirectConvolve(directImpulse));
+        }
+
+        void TickUnsynchronized(float valueL, float backgroundValueL, float valueR, float backgroundValueR,float *outL, float *outR)
+        {
+            audioThreadToBackgroundQueue.Write(valueL,valueR);
+            float directL, directR;
+            audioThreadToBackgroundQueue.DirectConvolve(directImpulse,directImpulseRight,&directL, &directR);
+            *outL = backgroundValueL + directL;
+            *outR = backgroundValueR + directR;
+
         }
 
     public:
@@ -461,6 +638,8 @@ namespace LsNumerics
 
         std::vector<float> assemblyOutputBuffer;
         std::vector<float> assemblyInputBuffer;
+        std::vector<float> assemblyOutputBufferRight;
+        std::vector<float> assemblyInputBufferRight;
         size_t assemblyInputBufferIndex = 0;
         std::unique_ptr<std::thread> assemblyThread;
         Implementation::AssemblyQueue assemblyQueue;
@@ -473,7 +652,7 @@ namespace LsNumerics
         virtual void OnSynchronizedSingleReaderDelayLineReady();
         virtual void OnSynchronizedSingleReaderDelayLineUnderrun();
 
-        void PrepareSections(size_t size, const std::vector<float> &impulseResponse, size_t sampleRate, size_t maxAudioBufferSize);
+        void PrepareSections(size_t size, const std::vector<float> &impulseResponse, const std::vector<float> *impulseResponseRight, size_t sampleRate, size_t maxAudioBufferSize);
         void PrepareThreads();
         class DirectSectionThread;
         DirectSectionThread *GetDirectSectionThread(int threadNumber);
@@ -508,6 +687,10 @@ namespace LsNumerics
             void Close() { outputDelayLine.Close(); }
 
             float Tick() { return outputDelayLine.Read(); }
+            void Tick(float*left, float*right) {
+                outputDelayLine.Read(left,right);
+            }
+
             DirectSection *GetDirectSection() { return this->section; }
             const DirectSection *GetDirectSection() const { return this->section; }
 
@@ -555,6 +738,20 @@ namespace LsNumerics
                 }
                 return result;
             }
+            void  Tick(float*left, float*right)
+            {
+                double resultL = 0;
+                double resultR = 0;
+                for (auto section : sections)
+                {
+                    float l,r;
+                    section->Tick(&l,&r);
+                    resultL += l;
+                    resultR += r;
+                }
+                *left = resultL;
+                *right = resultR;
+            }
             void Execute(AudioThreadToBackgroundQueue &inputDelayLine);
             void Close()
             {
@@ -580,6 +777,7 @@ namespace LsNumerics
 
         size_t sampleRate = 48000;
         std::vector<float> directImpulse;
+        std::vector<float> directImpulseRight;
         AudioThreadToBackgroundQueue audioThreadToBackgroundQueue;
         size_t directConvolutionLength;
 
@@ -589,8 +787,9 @@ namespace LsNumerics
     class ConvolutionReverb
     {
     public:
-        ConvolutionReverb(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulse,size_t sampleRate, size_t maxBufferSize)
-            : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulse, sampleRate, maxBufferSize) // the last value is recirculated.
+        ConvolutionReverb(SchedulerPolicy schedulerPolicy, size_t size, const std::vector<float> &impulse, size_t sampleRate, size_t maxBufferSize)
+            : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulse, sampleRate, maxBufferSize), // the last value is recirculated.
+              isStereo(false)
         {
             directMixDezipper.To(0, 0);
             reverbMixDezipper.To(1.0, 0);
@@ -611,12 +810,45 @@ namespace LsNumerics
                 feedbackScale = 0;
             }
         }
+        ConvolutionReverb(
+            SchedulerPolicy schedulerPolicy, 
+            size_t size, const std::vector<float> &impulseLeft,const std::vector<float> &impulseRight,
+            size_t sampleRate, size_t maxBufferSize)
+            : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulseLeft, impulseRight, sampleRate, maxBufferSize), // the last value is recirculated.
+                isStereo(true)
+        {
+            directMixDezipper.To(0, 0);
+            reverbMixDezipper.To(1.0, 0);
+
+            if (size != 0)
+            {
+                feedbackScale = impulseLeft[size - 1];
+                feedbackDelay.SetSize(size - 1);
+                feedbackDelayRight.SetSize(size - 1);
+                // guard against overflow.
+                if (feedbackScale > 0.1)
+                    feedbackScale = 0.1;
+                if (feedbackScale < -0.1)
+                    feedbackScale = -0.1;
+            }
+            else
+            {
+                feedbackDelay.SetSize(1);
+                feedbackDelayRight.SetSize(1);
+                feedbackScale = 0;
+            }
+        }
         void SetFeedback(float feedback, size_t tapPosition)
         {
 
             feedbackDelay.SetSize(tapPosition);
+            if (isStereo)
+            {
+                feedbackDelayRight.SetSize(tapPosition);
+            }
             feedbackScale = feedback;
             hasFeedback = feedbackScale != 0;
+            
         }
 
     protected:
@@ -679,38 +911,154 @@ namespace LsNumerics
                 this->reverbMixDezipper.To(value, 0);
             }
         }
-        // float Tick(float value)
-        // {
-        //     float result;
-        //     if (hasFeedback)
-        //     {
-        //         result = TickUnsynchronizedWithFeedback(value);
-        //     }
-        //     else
-        //     {
-        //         result = TickUnsynchronizedWithoutFeedback(value);
-        //     }
-        //     convolution.SynchWrite();
-        //     return result;
-        // }
 
-        // float TickUnsynchronized(float value)
-        // {
-        //     float result;
-        //     if (hasFeedback)
-        //     {
-        //         result = TickUnsynchronizedWithFeedback(value);
-        //     }
-        //     else
-        //     {
-        //         result = TickUnsynchronizedWithoutFeedback(value);
-        //     }
-        //     return result;
-        // }
-        // void TickSynchronize()
-        // {
-        //     convolution.SynchWrite();
-        // }
+        void Tick(size_t count, 
+            const float  * RESTRICT inputL, const float  * RESTRICT inputR, 
+            float * RESTRICT outputL,float * RESTRICT outputR)
+        {
+            // TODO: there has to be a way to refactor this sensibly. :-/
+            if (hasFeedback)
+            {
+                size_t ix = 0;
+                size_t remaining = count;
+                if (this->convolution.directSections.size() == 0)
+                {
+                    // feedback, no direct sections.
+                    size_t thisTime = remaining;
+                    for (size_t i = 0; i < thisTime; ++i)
+                    {
+                        float valueL = inputL[ix + i];
+                        float recirculationValueL = feedbackDelay.Value() * feedbackScale;
+                        float inputL = Undenormalize(valueL + recirculationValueL);
+
+                        float valueR = inputR[ix + i];
+                        float recirculationValueR = feedbackDelayRight.Value() * feedbackScale;
+                        float inputR = Undenormalize(valueR + recirculationValueR);
+
+
+                        float reverbL, reverbR;
+                        convolution.TickUnsynchronized(inputL, 0, inputR, 0, &reverbL, &reverbR);
+                        feedbackDelay.Put(reverbL);
+                        feedbackDelayRight.Put(reverbR);
+                        float directMix = directMixDezipper.Tick();
+                        float reverbMix = reverbMixDezipper.Tick();
+                        float returnValueL = valueL * directMix + (reverbL)*reverbMix;
+                        float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                        outputL[ix + i] = returnValueL;
+                        outputR[ix + i] = returnValueR;
+                    }
+                    ix += thisTime;
+                    remaining -= thisTime;
+                    convolution.audioThreadToBackgroundQueue.SynchWrite();
+                }
+                else
+                {
+                    // feedback, with direct sections.
+                    while (remaining != 0)
+                    {
+                        size_t thisTime = 64;
+                        if (thisTime > remaining)
+                        {
+                            thisTime = remaining;
+                        }
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer,convolution.assemblyInputBufferRight,  thisTime);
+                        for (size_t i = 0; i < nRead; ++i)
+                        {
+                            float valueL = inputL[ix + i];
+                            float recirculationValueL = feedbackDelay.Value() * feedbackScale;
+                            float inputL = Undenormalize(valueL + recirculationValueL);
+
+                            float valueR = inputR[ix + i];
+                            float recirculationValueR = feedbackDelayRight.Value() * feedbackScale;
+                            float inputR = Undenormalize(valueR + recirculationValueR);
+
+
+
+                            float reverbL, reverbR;
+                            convolution.TickUnsynchronized(
+                                inputL, convolution.assemblyInputBuffer[i],
+                                inputR, convolution.assemblyInputBufferRight[i],
+                                &reverbL, &reverbR);
+                            feedbackDelay.Put(reverbL);
+                            feedbackDelayRight.Put(reverbR);
+
+                            float directMix = directMixDezipper.Tick();
+                            float reverbMix = reverbMixDezipper.Tick();
+                            float returnValueL = valueL * directMix + (reverbL)*reverbMix;
+                            float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                            outputL[ix + i] = returnValueL;
+                            outputR[ix + i] = returnValueR;
+                        }
+                        ix += nRead;
+                        remaining -= nRead;
+                        convolution.audioThreadToBackgroundQueue.SynchWrite();
+                    }
+                }
+            }
+            else
+            {
+                size_t ix = 0;
+                size_t remaining = count;
+                if (this->convolution.directSections.size() == 0)
+                {
+                    // no feedback, no direct sections.
+                    size_t thisTime = remaining;
+                    for (size_t i = 0; i < thisTime; ++i)
+                    {
+                        float valueL = inputL[ix + i];
+                        float valueR = inputR[ix + i];
+
+                        float reverbL,reverbR;
+                        convolution.TickUnsynchronized(valueL, 0,valueR,0,&reverbL, &reverbR);
+
+
+                        float directMix = directMixDezipper.Tick();
+                        float reverbMix = reverbMixDezipper.Tick();
+                        float returnValueL = valueL * directMix + (reverbL)*reverbMix;
+                        float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                        outputL[ix + i] = returnValueL;
+                        outputR[ix + i] = returnValueR;
+                    }
+                    ix += thisTime;
+                    remaining -= thisTime;
+                    convolution.audioThreadToBackgroundQueue.SynchWrite();
+                }
+                else
+                {
+                    // no feedback, with direct sections.
+                    while (remaining != 0)
+                    {
+                        size_t thisTime = 64;
+                        if (thisTime > remaining)
+                        {
+                            thisTime = remaining;
+                        }
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer,convolution.assemblyInputBufferRight, thisTime);
+                        for (size_t i = 0; i < nRead; ++i)
+                        {
+                            float valueL = inputL[ix + i];
+                            float valueR = inputR[ix + i];
+                            
+                            float reverbL, reverbR;
+                            convolution.TickUnsynchronized(
+                                valueL, convolution.assemblyInputBuffer[i],
+                                valueR, convolution.assemblyInputBufferRight[i],
+                                &reverbL,&reverbR);
+
+                            float directMix = directMixDezipper.Tick();
+                            float reverbMix = reverbMixDezipper.Tick();
+                            float returnValueL = valueL * directMix + (reverbL)*reverbMix;
+                            float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                            outputL[ix + i] = returnValueL;
+                            outputR[ix + i] = returnValueR;
+                        }
+                        ix += nRead;
+                        remaining -= nRead;
+                        convolution.audioThreadToBackgroundQueue.SynchWrite();
+                    }
+                }
+            }
+        }
 
         void Tick(size_t count, const float  * RESTRICT input, float * RESTRICT output)
         {
@@ -818,14 +1166,20 @@ namespace LsNumerics
         {
             Tick(count, &input[0], &output[0]);
         }
+        void Tick(size_t count, const std::vector<float> &inputL, const std::vector<float> &inputR,std::vector<float> &outputL,std::vector<float> &outputR)
+        {
+            Tick(count, &inputL[0], &inputR[0],  &outputL[0],&outputR[0]);
+        }
 
     private:
+        bool isStereo = false;
         double sampleRate = 0;
         toob::ControlDezipper directMixDezipper;
         toob::ControlDezipper reverbMixDezipper;
         bool hasFeedback = false;
         float feedbackScale = 0;
         FixedDelay feedbackDelay;
+        FixedDelay feedbackDelayRight;
         BalancedConvolution convolution;
     };
 

@@ -27,6 +27,7 @@
 #include "LsNumerics/LagrangeInterpolator.hpp"
 #include "Filters/ChebyshevDownsamplingFilter.h"
 #include "LsNumerics/LsMath.hpp"
+#include <iostream>
 
 using namespace toob;
 using namespace LsNumerics;
@@ -279,8 +280,10 @@ std::vector<float> AudioData::AmbisonicDownmixChannel(const AmbisonicMicrophone 
 
     double p = micParameter.getMicP();
     double w = p*std::sqrt(2.0);
-    double x = (1-p)*std::cos(degreesToRadians(micParameter.getHorizontalAngle()));
-    double y = (1-p)*std::sin(degreesToRadians(micParameter.getHorizontalAngle()));
+    double x = -(1-p)*std::cos(degreesToRadians(micParameter.getHorizontalAngle()));
+    double y = -(1-p)*std::sin(degreesToRadians(micParameter.getHorizontalAngle()));
+
+    //std::cout << "a: " << micParameter.getHorizontalAngle() << " w: " << w << " x: " << x << " y: " << y << std::endl;
 
     const std::vector<float>&W = getChannel(0);
     const std::vector<float>&X = getChannel(1);
@@ -328,6 +331,38 @@ void AudioData::Scale(float value)
         }
     }
 }
+
+
+void AudioData::MonoToStereo()
+{
+    this->data.resize(2);
+    this->data[1] = this->data[0];
+    this->channelMask = ChannelMask::SPEAKER_FRONT_LEFT | ChannelMask::SPEAKER_FRONT_RIGHT;
+}
+
+void AudioData::SetStereoWidth(float width)
+{
+    this->data.resize(2);
+    float fLL = width*0.5f+0.5f;
+    float fLR = -width*0.5f+0.5f;
+    float fRL = -width*0.5+0.5f;
+    float fRR = width*0.5f+0.5f;
+
+    auto & left = data[0];
+    auto & right = data[1];
+    size_t size = data[0].size();
+
+    for (size_t i = 0; i < size; ++i)
+    {
+        float lVal = left[i]*fLL + right[i]*fLR;
+        float rVal = left[i]*fRL + right[i]*fRR;
+        left[i] = lVal;
+        right[i] = rVal;
+
+    }
+}
+
+
 
 
 AudioData& AudioData::operator+=(const AudioData&other) 

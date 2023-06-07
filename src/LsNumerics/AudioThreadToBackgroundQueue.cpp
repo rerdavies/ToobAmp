@@ -56,7 +56,7 @@ static int NextPowerOf2(size_t value)
     return result;
 }
 
-void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy)
+void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, SchedulerPolicy schedulerPolicy, bool isStereo)
 {
     this->schedulerPolicy = schedulerPolicy;
     size = NextPowerOf2(size + padEntries + 1024);
@@ -66,6 +66,11 @@ void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, Sched
     this->paddingSize = paddingSize;
     this->storage.resize(0);
     this->storage.resize(size);
+    if (isStereo)
+    {
+        this->storageRight.resize(0);
+        this->storageRight.resize(size);
+    }
     readHead = 0;
     readTail = 0;
 }
@@ -150,6 +155,48 @@ void AudioThreadToBackgroundQueue::ReadRange(ptrdiff_t position, size_t size, si
         for (size_t i = bufferStart; i < bufferEnd; ++i)
         {
             output[outputIndex++] = storage[i];
+        }
+    }
+    ReadUnlock(position, size);
+}
+void AudioThreadToBackgroundQueue::ReadRange(ptrdiff_t position, size_t size, size_t offset, std::vector<float> &outputLeft,std::vector<float> &outputRight)
+{
+    WaitForRead(position, size);
+
+    size_t bufferStart = position & sizeMask;
+    size_t bufferEnd = (position + size) & sizeMask;
+    if (bufferEnd < bufferStart)
+    {
+        size_t outputIndex = offset;
+        for (size_t i = bufferStart; i < this->storage.size(); ++i)
+        {
+            outputLeft[outputIndex++] = storage[i];
+        }
+        for (size_t i = 0; i < bufferEnd; ++i)
+        {
+            outputLeft[outputIndex++] = storage[i];
+        }
+        outputIndex = offset;
+        for (size_t i = bufferStart; i < this->storage.size(); ++i)
+        {
+            outputRight[outputIndex++] = storageRight[i];
+        }
+        for (size_t i = 0; i < bufferEnd; ++i)
+        {
+            outputRight[outputIndex++] = storageRight[i];
+        }
+    }
+    else
+    {
+        size_t outputIndex = offset;
+        for (size_t i = bufferStart; i < bufferEnd; ++i)
+        {
+            outputLeft[outputIndex++] = storage[i];
+        }
+        outputIndex = offset;
+        for (size_t i = bufferStart; i < bufferEnd; ++i)
+        {
+            outputRight[outputIndex++] = storageRight[i];
         }
     }
     ReadUnlock(position, size);

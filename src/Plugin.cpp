@@ -41,6 +41,7 @@
 #include "ToobDelay.h"
 #include "ToobChorus.h"
 #include "ToobConvolutionReverb.h"
+#include "ToobFlanger.h"
 
 using namespace toob;
 
@@ -56,7 +57,12 @@ std::vector<Lv2PluginFactory> factories = {
     Lv2PluginFactory::Create<ToobFreeverb>(),
     Lv2PluginFactory::Create<ToobDelay>(),
     Lv2PluginFactory::Create<ToobChorus>(),
-    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_URI,&ToobConvolutionReverb::CreateConvolutionReverb,true),
+    Lv2PluginFactory::Create<ToobFlanger>(),
+    Lv2PluginFactory(ToobFlanger::URI, &ToobFlanger::Create, false),
+    Lv2PluginFactory(ToobFlanger::STEREO_URI, &ToobFlanger::Create, false),
+
+    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_URI,&ToobConvolutionReverb::CreateMonoConvolutionReverb,true),
+    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_STEREO_URI,&ToobConvolutionReverb::CreateStereoConvolutionReverb,true),
     Lv2PluginFactory(ToobConvolutionReverb::CAB_IR_URI,&ToobConvolutionReverb::CreateCabIR,true),
 };
 

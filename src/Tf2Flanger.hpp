@@ -25,35 +25,41 @@
 
 #include "LsNumerics/InterpolatingDelay.hpp"
 #include "Filters/LowPassFilter.h"
+#include "Filters/HighPassFilter.h"
 #include "Filters/ChebyshevDownsamplingFilter.h"
+#include "Filters/ShelvingLowCutFilter2.h"
 
 namespace toob
 {
     using namespace LsNumerics;
 
-    // Emulation of a famous Chorus pedal.
-    class Ce2Chorus {
+    /// Emulation of a famous classic flanger.
+    /// Functional emulation based on circuit analysis.
+    class Tf2Flanger {
     public:
-        Ce2Chorus();
-        Ce2Chorus(double sampleRate);
+        Tf2Flanger();
+        Tf2Flanger(double sampleRate);
 
         void SetSampleRate(double sampleRate);
 
+        void SetManual(float value); // [0..1]
         void SetRate(float value); // [0..1]
-        void SetDepth(float depth); // [..1]
+        void SetDepth(float depth); // [0..1]
+        void SetRes(float value); // [0..1]
 
         float Tick(float value);
-        void Tick(float value,float*outL, float*outR);
-
+        void Tick(float value, float*outL, float*outR);
         void Clear();
 
-        class Instrumentation // test instrumentation
+        float GetLfoValue() const { return this->lfoValue*this->lfoSign; }
+        // test instrumentation
+        class Instrumentation 
         {
         private:
-            Ce2Chorus *pChorus;
+            Tf2Flanger *pFlanger;
         public:
-            Instrumentation(Ce2Chorus *pChorus)
-            : pChorus(pChorus)
+            Instrumentation(Tf2Flanger *pFlanger)
+            : pFlanger(pFlanger)
             {
 
             }
@@ -62,31 +68,49 @@ namespace toob
         };
     private:
         uint32_t bucketBrigadeIndex;
+        double bucketBrigadeTotal = 0;
         static constexpr size_t BUCKET_BRIGADE_LENGTH = 1024;
         static constexpr double BUCKET_BRIGADE_SCALE = 1.0/BUCKET_BRIGADE_LENGTH;
         float bucketBrigadeDelays[BUCKET_BRIGADE_LENGTH];
-        float bucketBrigadeTotal;
         double bbX = 0;
 
+        double LfoToVoltage(double lfoValue);
+        double LfoToFreq(double lfoVoltage);
+        void UpdateLfoRange();
         void ClearBucketBrigade();
         float TickBucketBrigade(float value);
 
 
         double TickLfo();
         double sampleRate = 44100;
+        float manual = 0.5f;
         float rate = 0.5f;
         float depth = 0.5f;
-        float depthFactor = 0;
+        float res = 0.5f;
 
-        float rateFactor = 0;
+        double m0SamplesPerSec;
+        double m1SamplesPerSec;
+
+
         float lfoValue = 0;
-
-
         float lfoDx = 0;
         float lfoSign = 1;
 
         InterpolatingDelay delayLine;
         LowPassFilter lfoLowpassFilter;
+
+
+
+        LowPassFilter preDelayLowPass1;
+        LowPassFilter preDelayLowPass2;
+        HighPassFilter preDelayHighPass;
+        LowPassFilter postDelayLowPass;
+
+        ShelvingLowCutFilter2 preemphasisFilter;
+        ShelvingLowCutFilter2 deemphasisFilterL;
+        ShelvingLowCutFilter2 deemphasisFilterR;
+
         ChebyshevDownsamplingFilter antiAliasingLowpassFilter;
+
     };
 }

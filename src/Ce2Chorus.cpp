@@ -149,6 +149,17 @@ float Ce2Chorus::Tick(float value)
     delayLine.Put(value);
     return 0.5*(antiAliasingLowpassFilter.Tick(delayValue)+value);
 }
+void Ce2Chorus::Tick(float value,float*outL, float*outR)
+{
+    float delaySec = TickLfo();
+    float delayValue = delayLine.Get(delaySec*sampleRate);
+    delayLine.Put(value);
+
+    float t = antiAliasingLowpassFilter.Tick(delayValue);
+    *outL = 0.5f*(value+t);
+    *outR = 0.5f*(value-t);
+}
+
 
 void Ce2Chorus::Clear()
 {
