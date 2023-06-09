@@ -22,12 +22,28 @@ Run the following shell commands:
 
 &nbsp;
 
-*   **TooB BF-2 Flanger (NEW!)**
+*   **TooB BF-2 Flanger (NEW in 1.0.15!)**
 
     Simulates a famous flanger.
 
     &nbsp;
-*   **TooB Stereo Convolution Reverb (NEW!)**
+    
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Flanger-ss.png)
+
+    &nbsp;
+
+
+*   **TooB Stereo Convolution Reverb (NEW in 1.0.15!)**
+
+    Simulates stereo reverb from pre-recorded stereo or Ambisonic b-format impulse response files.
+
+    &nbsp;
+    
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverbStereo-ss.png)
+
+    &nbsp;
+
+*   **TooB Convolution Reverb (NEW  in 1.0.14!)**
 
     Simulates reverb from pre-recorded impulse response files.
 
@@ -37,18 +53,8 @@ Run the following shell commands:
 
     &nbsp;
 
-*   **TooB Convolution Reverb (NEW!)**
 
-    Simulates reverb from pre-recorded impulse response files.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverb-ss.png)
-
-    &nbsp;
-
-
-*   **TooB Cab IR (NEW!)**
+*   **TooB Cab IR (NEW in 1.0.14!)**
 
     Simulates guitar cabinet frequency responses from pre-recorded impulse files.
 
