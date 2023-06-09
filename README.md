@@ -4,16 +4,9 @@ v1.0.15
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
-Currently supported platforms:
-
-- Raspberry Pi 4 or 400, at least 2GB RAM
-- Raspberry Pi OS (64-bit), latest version.
-- Ubuntu 21.04 or later (arm64 or amd64), at least 2GB RAM
-
-
 ## Install ToobAmp
 
-Download the current install package for your platform:
+Download the current .deb install package for your platform:
 
 * [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.15/toobamp_1.0.15_arm64.deb)
 
@@ -28,6 +21,21 @@ Run the following shell commands:
 --------------------
 
 &nbsp;
+
+*   **TooB BF-2 Flanger (NEW!)**
+
+    Simulates a famous flanger.
+
+    &nbsp;
+*   **TooB Stereo Convolution Reverb (NEW!)**
+
+    Simulates reverb from pre-recorded impulse response files.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverb-ss.png)
+
+    &nbsp;
 
 *   **TooB Convolution Reverb (NEW!)**
 
