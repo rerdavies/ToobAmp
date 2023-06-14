@@ -977,40 +977,15 @@ static const T *GetFeature(const LV2_Feature *const *features, const char *featu
     return nullptr;
 }
 
-static bool isAbsolutePath(const std::string&filename)
-{
-    std::filesystem::path fsPath { filename};
-    return fsPath.is_absolute();
-}
-
 std::string ToobConvolutionReverb::UnmapFilename(const LV2_Feature*const* features,const std::string &fileName)
 {
     // const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
 
-    std::string madeFileName;
-    // if (makePath != nullptr && fileName.starts_with(this->getBundlePath().c_str()))
-    // {
-    //     char*t = makePath->path(makePath->handle,fileName.c_str());
-    //     madeFileName = t;
-
-    //     std::filesystem::remove(madeFileName);
-    //     std::filesystem::create_directory_symlink(fileName,madeFileName);
-
-    //     if (freePath) {
-    //         freePath->free_path(freePath->handle,t);
-    //     } else {
-    //         free((void*)t);
-    //     }
-    // } else 
-    {
-        madeFileName = fileName;
-    }
-
     if (mapPath)
     {
-        char *result = mapPath->abstract_path(mapPath->handle, madeFileName.c_str());
+        char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
         std::string t = result;
         if (freePath)
         {
@@ -1024,7 +999,7 @@ std::string ToobConvolutionReverb::UnmapFilename(const LV2_Feature*const* featur
     }
     else
     {
-        return madeFileName;
+        return fileName;
     }
 }
 LV2_State_Status
@@ -1134,34 +1109,17 @@ std::string ToobConvolutionReverb::MapFilename(
     const std::string &input)
 {
 
-    const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
-
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
 
     std::string madeFileName;
-    if (makePath != nullptr && input.starts_with(this->getBundlePath().c_str()))
+    if (mapPath == nullptr || input.starts_with(this->getBundlePath().c_str()))
     {
+        // workaround for carla. Don't map absolute paths files.
         return input;
-        // char*t = makePath->path(makePath->handle,input.c_str());
-        // madeFileName = t;
-
-        // std::filesystem::remove(madeFileName);
-        // std::filesystem::create_symlink(input,madeFileName);
-        // if (freePath) {
-        //     freePath->free_path(freePath->handle,t);
-        // } else {
-        //     free((void*)t);
-        // }
-        // return madeFileName;
     } else 
     {
-        madeFileName = input;
-
-
-        if (mapPath == nullptr)
-            return madeFileName;
-        char *t = mapPath->absolute_path(mapPath->handle, madeFileName.c_str());
+        char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
         std::string result = t;
         if (freePath)
         {
