@@ -73,9 +73,8 @@ set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COM
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
-        #rtkit.cpp rtkit.h
 
-        PiPedalUploadPath.h
+        lv2ext/filedialog.h
 
         FlacReader.cpp FlacReader.hpp
         LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp

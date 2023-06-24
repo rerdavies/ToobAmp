@@ -151,7 +151,6 @@ namespace toob
 	private:
 		void clear();
 		void UpdateControls();
-		void MaybeCreateSampleDirectory(const std::filesystem::path &targetDirectory);
 
 		// State extension callbacks.
 		virtual LV2_State_Status
@@ -292,8 +291,7 @@ namespace toob
 
 		PluginType pluginType = PluginType::ConvolutionReverb;
 		bool isConvolutionReverb = false;
-		LV2_State_Status PublishResourceFiles(const LV2_Feature *const *features);
-		LV2_State_Status GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path*path);
+		void PublishResourceFiles(const LV2_Feature *const *features);
 
 		std::string StringFromAtomPath(const LV2_Atom*pAtom);
 

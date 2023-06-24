@@ -21,7 +21,7 @@
  *   SOFTWARE.
  */
 #include "ToobConvolutionReverb.h"
-#include "PiPedalUploadPath.h"
+#include "lv2ext/filedialog.h"
 
 #include "db.h"
 #include <thread>
@@ -1068,40 +1068,32 @@ ToobConvolutionReverb::OnSaveLv2State(
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
-LV2_State_Status ToobConvolutionReverb::GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path *path)
-{
-    const LV2_Pipedal_Upload_Path *uploadPath = GetFeature<LV2_Pipedal_Upload_Path>(features, PIPEDAL_STATE__uploadPath);
-
-    if (uploadPath == nullptr)
-    {
-        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
-    }
-    // Use makePath to get a user-modifiable directory.
-    std::filesystem::path targetPath =
-        IsConvolutionReverb()
-            ? std::filesystem::path("ReverbImpulseFiles")
-            : std::filesystem::path("CabIR");
-    {
-        char *mappedPath = uploadPath->upload_path(uploadPath->handle, targetPath.c_str());
-        if (mappedPath) {
-            (*path) = mappedPath;
-            uploadPath->free_path(uploadPath->handle,mappedPath);
-            return LV2_State_Status::LV2_STATE_SUCCESS;
-        }
-    }
-    return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
-}
-LV2_State_Status ToobConvolutionReverb::PublishResourceFiles(
+void ToobConvolutionReverb::PublishResourceFiles(
     const LV2_Feature *const *features)
 {
-    std::filesystem::path targetPath;
-    LV2_State_Status res = GetUserResourcePath(features, &targetPath);
-    if (res != LV2_State_Status::LV2_STATE_SUCCESS)
+    const LV2_FileBrowser_Files *fileBrowserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
+
+    if (fileBrowserFiles == nullptr)
     {
-        return res;
+        return;
     }
-    this->MaybeCreateSampleDirectory(targetPath);
-    return LV2_State_Status::LV2_STATE_SUCCESS;
+    LV2_FileBrowser_Status status;
+    if (IsConvolutionReverb())
+    {
+        constexpr int RESOURCE_VERSION = 1;
+        status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle,RESOURCE_VERSION,"impulseFiles/reverb","ReverbImpulseFiles");
+    } else {
+        constexpr int RESOURCE_VERSION = 1;
+        status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle,RESOURCE_VERSION,"impulseFiles/CabIR","CabIR");
+    }
+    if (status == LV2_FileBrowser_Status::LV2_FileBrowser_Status_Err_Filesystem)
+    {
+        LogNote("%s: %s\n",
+            IsConvolutionReverb() ? "TooB Convolution Reverb": "Toob Cab IR",
+            "Failed to publish resource audio files."
+        );
+    }
+    
 }
 
 std::string ToobConvolutionReverb::MapFilename(
@@ -1109,13 +1101,33 @@ std::string ToobConvolutionReverb::MapFilename(
     const std::string &input)
 {
 
+
+    if (input.starts_with(this->getBundlePath().c_str()))
+    {
+        // map bundle files to corresponding files in the browser dialog directories.
+        const LV2_FileBrowser_Files *browserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
+        if (browserFiles != nullptr)
+        {
+            LogNote("Found it.");
+            char *t = nullptr;
+            if (IsConvolutionReverb())
+            {
+                t = browserFiles->map_path(browserFiles->handle,input.c_str(),"impulseFiles/reverb","ReverbImpulseFiles");
+            } else {
+                t = browserFiles->map_path(browserFiles->handle,input.c_str(),"impulseFiles/CabIR","CabIR");
+            }
+            std::string result = t;
+            browserFiles->free_path(browserFiles->handle,t);
+            return result;
+        }
+        LogNote("Didn't");
+        return input;
+    }
     const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
     const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
 
-    std::string madeFileName;
-    if (mapPath == nullptr || input.starts_with(this->getBundlePath().c_str()))
+    if (mapPath == nullptr)
     {
-        // workaround for carla. Don't map absolute paths files.
         return input;
     } else 
     {
@@ -1227,78 +1239,11 @@ ToobConvolutionReverb::OnRestoreLv2State(
 
 // plugin creates the directories, not the host.
 
-void ToobConvolutionReverb::MaybeCreateSampleDirectory(const std::filesystem::path &audioFileDirectory)
-{
-    // to be deletable, impulse files must be in a user-modifiable directory.
-    // We will create an audioFileDirectory with soft links to the files in our bundle directory.
-    // (permissioning doesn't allow hard links).
-    // We'll also version check using a file in the audioFileDirectory.
-
-    // check to see what version of sample files have been installed.
-    uint32_t sampleVersion = 0;
-
-    std::filesystem::create_directories(audioFileDirectory);
-
-    std::string folder = IsConvolutionReverb() ? "reverb" : "CabIR";
-    std::filesystem::path resourceDirectory = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / folder;
-
-    std::filesystem::path versionFilePath = audioFileDirectory / VERSION_FILENAME;
-    try
-    {
-        std::ifstream f(versionFilePath);
-        if (f.is_open())
-        {
-            f >> sampleVersion;
-        }
-    }
-    catch (const std::exception &)
-    {
-    }
-
-    if (sampleVersion >= SAMPLE_FILES_VERSION) // already created links? Don't do it again.
-    {
-        return;
-    }
-
-    std::filesystem::create_directories(audioFileDirectory);
-
-    try
-    {
-        // hard-link any resource files into user-accessible directory.
-        for (auto const &dir_entry : std::filesystem::directory_iterator(resourceDirectory))
-        {
-            const std::filesystem::path &resourceFilePath = dir_entry.path();
-
-            std::filesystem::path targetFilePath = audioFileDirectory / resourceFilePath.filename();
-            if (!std::filesystem::exists(targetFilePath))
-            {
-                std::filesystem::create_symlink(resourceFilePath, targetFilePath);
-            }
-        }
-        std::ofstream f(versionFilePath, std::ios_base::trunc);
-        if (f.is_open())
-        {
-            f << SAMPLE_FILES_VERSION << std::endl;
-        }
-    }
-    catch (const std::exception &e)
-    {
-        this->LogError("%s\n", SS("Can't create reverb impulse file directory. " << e.what()).c_str());
-    }
-}
-
 void ToobConvolutionReverb::SetDefaultFile(const LV2_Feature *const *features)
 {
     if (IsConvolutionReverb())
     {
-        std::filesystem::path targetPath;
-        LV2_State_Status res = GetUserResourcePath(features, &targetPath);
-        if (res != LV2_State_Status::LV2_STATE_SUCCESS)
-        {
-            targetPath = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / "reverb" / "Genesis 6 Studio Live Room.wav";
-        } else {
-            targetPath = targetPath / "Genesis 6 Studio Live Room.wav";
-        }
+        auto targetPath = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / "reverb" / "Genesis 6 Studio Live Room.wav";
         this->loadWorker.SetFileName(targetPath.c_str());
     }
 }
