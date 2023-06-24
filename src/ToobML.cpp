@@ -376,7 +376,7 @@ void ToobML::LoadModelIndex()
 		}
 		this->modelFiles = std::move(index);
     } else {
-		this->LogError("ToobML: Can't locate model resource files.");
+		this->LogError("ToobML: Can't locate model resource files.\n");
 	}
 }
 
@@ -396,7 +396,7 @@ ToobMlModel* ToobML::LoadModel(size_t index)
 		return result;
 	} catch (std::exception &error)
 	{
-		this->LogError("TooblML: Failed to load model file (%s).",fileName.c_str());
+		this->LogError("TooblML: Failed to load model file (%s).\n",fileName.c_str());
 		return nullptr;
 	}
 }

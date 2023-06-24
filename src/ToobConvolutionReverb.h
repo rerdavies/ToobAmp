@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2023 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -151,7 +151,6 @@ namespace toob
 	private:
 		void clear();
 		void UpdateControls();
-		void MaybeCreateSampleDirectory(const std::filesystem::path &targetDirectory);
 
 		// State extension callbacks.
 		virtual LV2_State_Status
@@ -283,10 +282,16 @@ namespace toob
 
 	private:
 		bool IsConvolutionReverb() const { return isConvolutionReverb; }
+
+		std::string MapFilename(
+			const LV2_Feature *const *features,
+			const std::string &input);
+
+		std::string UnmapFilename(const LV2_Feature*const* features,const std::string &fileName);
+
 		PluginType pluginType = PluginType::ConvolutionReverb;
 		bool isConvolutionReverb = false;
-		LV2_State_Status PublishResourceFiles(const LV2_Feature *const *features);
-		LV2_State_Status GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path*path);
+		void PublishResourceFiles(const LV2_Feature *const *features);
 
 		std::string StringFromAtomPath(const LV2_Atom*pAtom);
 
@@ -367,6 +372,15 @@ namespace toob
 		class Loader;
 		Loader *pLoader = nullptr;
 		void SetDefaultFile(const LV2_Feature *const *features);
+
+		void RequestNotifyOnLoad();
+		void NotifyProperties();
+
+		bool stateChanged = false;
+    	bool notifyReverbFileName = false; 
+		bool notifyCabIrFileName  = false;
+		bool notifyCabIrFileName2  = false;
+		bool notifyCabIrFileName3  = false;
 
 	};
 

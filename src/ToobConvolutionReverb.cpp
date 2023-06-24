@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2023 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,6 +21,7 @@
  *   SOFTWARE.
  */
 #include "ToobConvolutionReverb.h"
+#include "lv2ext/filedialog.h"
 
 #include "db.h"
 #include <thread>
@@ -117,7 +118,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote(SS("Illegal port id: " << port).c_str());
+            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
             break;
         }
     }
@@ -171,7 +172,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote(SS("Illegal port id: " << port).c_str());
+            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
             break;
         }
     }
@@ -221,7 +222,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote(SS("Illegal port id: " << port).c_str());
+            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
         }
         break;
     default:
@@ -335,7 +336,7 @@ void ToobConvolutionReverb::Activate()
     activated = true;
     lastReverbMix = lastDirectMix = lastTime = std::numeric_limits<float>::min(); // force updates
     UpdateControls();
-
+    RequestNotifyOnLoad();
     clear();
 }
 
@@ -388,6 +389,7 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
                 }
             }
         }
+        NotifyProperties();
     }
     EndAtomOutput();
 
@@ -432,7 +434,7 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         bool changed = loadWorker.SetFileName(name.c_str());
         if (changed)
         {
-            PutStateChanged(0);
+            this->stateChanged = true;
         }
     }
     if (propertyUrid == urids.cabir__propertyFileName2)
@@ -442,7 +444,7 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         bool changed = loadWorker.SetFileName2(name.c_str());
         if (changed)
         {
-            PutStateChanged(0);
+            this->stateChanged = true;
         }
     }
     if (propertyUrid == urids.cabir__propertyFileName3)
@@ -452,7 +454,7 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         bool changed = loadWorker.SetFileName3(name.c_str());
         if (changed)
         {
-            PutStateChanged(0);
+            this->stateChanged = true;
         }
     }
 }
@@ -461,22 +463,64 @@ void ToobConvolutionReverb::OnPatchGetAll()
 {
     // PutPatchPropertyPath(urids.propertyFileName, urids.propertyFileName, this->loadWorker.GetFileName());
 }
+
+void ToobConvolutionReverb::RequestNotifyOnLoad()
+{
+    // Carla and MOD require property notification after first load, or after a restore.
+    if (IsConvolutionReverb())
+    {
+        notifyReverbFileName = true;
+    } else {
+        notifyCabIrFileName = notifyCabIrFileName2 = notifyCabIrFileName3 = true;
+    }
+}
 void ToobConvolutionReverb::OnPatchGet(LV2_URID propertyUrid)
 {
+
     if (propertyUrid == urids.reverb__propertyFileName)
     {
-        PutPatchPropertyPath(0, urids.reverb__propertyFileName, this->loadWorker.GetFileName());
-    }
-    if (propertyUrid == urids.cabir__propertyFileName)
+        notifyReverbFileName = true;
+    } else if (propertyUrid == urids.cabir__propertyFileName)
     {
-        PutPatchPropertyPath(0, urids.cabir__propertyFileName, this->loadWorker.GetFileName());
+        notifyCabIrFileName =  true;
     }
     else if (propertyUrid == urids.cabir__propertyFileName2)
     {
-        PutPatchPropertyPath(0, urids.cabir__propertyFileName2, this->loadWorker.GetFileName2());
+        notifyCabIrFileName2 = true;
     }
     else if (propertyUrid == urids.cabir__propertyFileName3)
     {
+        notifyCabIrFileName3 = true;
+    }
+}
+void ToobConvolutionReverb::NotifyProperties()
+{
+    if (this->stateChanged)
+    {
+        this->stateChanged = false;
+        PutStateChanged(0);
+    }
+
+
+    if (notifyReverbFileName)
+    {
+        notifyReverbFileName = false;
+        PutPatchPropertyPath(0, urids.reverb__propertyFileName, this->loadWorker.GetFileName());
+    }
+    if (notifyCabIrFileName)
+    {
+        notifyCabIrFileName = false;
+        PutPatchPropertyPath(0, urids.cabir__propertyFileName, this->loadWorker.GetFileName());
+    }
+    if (notifyCabIrFileName2)
+    {
+        notifyCabIrFileName2 = false;
+
+        PutPatchPropertyPath(0, urids.cabir__propertyFileName2, this->loadWorker.GetFileName2());
+    }
+    if (notifyCabIrFileName3)
+    {
+        notifyCabIrFileName3 = false;
         PutPatchPropertyPath(0, urids.cabir__propertyFileName3, this->loadWorker.GetFileName3());
     }
 }
@@ -501,7 +545,7 @@ void ToobConvolutionReverb::LoadWorker::Initialize(size_t sampleRate, ToobConvol
         bufferSize = 256;
     if (bufferSize > 1024)
         bufferSize = 1024;
-    pReverb->LogNote(SS("Buffer size: " << bufferSize).c_str());
+    //pReverb->LogNote("%s\n", SS("Buffer size: " << bufferSize).c_str());
     this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
 }
@@ -552,7 +596,7 @@ bool ToobConvolutionReverb::LoadWorker::SetFileName(const char *szName)
     size_t length = strlen(szName);
     if (length >= sizeof(fileName) - 1)
     {
-        pReverb->LogError("File name too long.");
+        pReverb->LogError("File name too long.\n");
         SetState(State::Error);
         return false;
     }
@@ -570,7 +614,7 @@ bool ToobConvolutionReverb::LoadWorker::SetFileName2(const char *szName)
     size_t length = strlen(szName);
     if (length >= sizeof(fileName) - 1)
     {
-        pReverb->LogError("File name too long.");
+        pReverb->LogError("File name too long.\n");
         SetState(State::Error);
         return false;
     }
@@ -587,7 +631,7 @@ bool ToobConvolutionReverb::LoadWorker::SetFileName3(const char *szName)
     size_t length = strlen(szName);
     if (length >= sizeof(fileName) - 1)
     {
-        pReverb->LogError("File name too long.");
+        pReverb->LogError("File name too long.\n");
         SetState(State::Error);
         return false;
     }
@@ -799,7 +843,7 @@ AudioData ToobConvolutionReverb::LoadWorker::LoadFile(const std::filesystem::pat
             data.ConvertToMono();
         }
     }
-    pThis->LogNote(SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
+    pThis->LogNote("%s\n",SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
     NormalizeConvolution(data);
     if (!predelay) // bbetter to do it on the pristine un-filtered data.
@@ -820,7 +864,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
 
     this->oldConvolutionReverb = nullptr; // destroy the old convolution reverb if it exists.
 
-    pThis->LogNote("%s", SS("Loading " << requestFileName).c_str());
+    pThis->LogNote("%s\n", SS("Loading " << requestFileName).c_str());
     hasWorkError = false;
     workError = "";
     try
@@ -843,7 +887,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
             this->tailScale = GetTailScale(data.getChannel(0), maxSize);
             data.setSize(maxSize);
 
-            pThis->LogNote(SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
+            pThis->LogNote("%s\n",SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
         }
         if (data.getSize() == 0)
         {
@@ -865,7 +909,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
                                                                                 audioBufferSize);
         }
         this->convolutionReverbResult->SetFeedback(tailScale, data.getSize() - 1);
-        pThis->LogNote("Load complete.");
+        pThis->LogNote("Load complete.\n");
     }
     catch (const std::exception &e)
     {
@@ -878,7 +922,7 @@ void ToobConvolutionReverb::LoadWorker::OnResponse()
 {
     if (hasWorkError)
     {
-        pReverb->LogError(workError.c_str());
+        pReverb->LogError("%s\n",workError.c_str());
     }
     else
     {
@@ -933,8 +977,12 @@ static const T *GetFeature(const LV2_Feature *const *features, const char *featu
     return nullptr;
 }
 
-static std::string UnmapPath(const LV2_State_Map_Path *mapPath, const LV2_State_Free_Path *freePath, const std::string &fileName)
+std::string ToobConvolutionReverb::UnmapFilename(const LV2_Feature*const* features,const std::string &fileName)
 {
+    // const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
     if (mapPath)
     {
         char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
@@ -961,13 +1009,9 @@ ToobConvolutionReverb::OnSaveLv2State(
     uint32_t flags,
     const LV2_Feature *const *features)
 {
-
-    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
-    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
-
     if (IsConvolutionReverb())
     {
-        std::string fileName = UnmapPath(mapPath, freePath, this->loadWorker.GetFileName());
+        std::string fileName = UnmapFilename(features, this->loadWorker.GetFileName());
         auto status = store(handle,
                             urids.reverb__propertyFileName,
                             fileName.c_str(),
@@ -982,7 +1026,7 @@ ToobConvolutionReverb::OnSaveLv2State(
     else
     {
         {
-            std::string fileName = UnmapPath(mapPath, freePath, this->loadWorker.GetFileName());
+            std::string fileName = UnmapFilename(features, this->loadWorker.GetFileName());
             auto status = store(handle,
                                 urids.cabir__propertyFileName,
                                 fileName.c_str(),
@@ -995,7 +1039,7 @@ ToobConvolutionReverb::OnSaveLv2State(
             }
         }
         {
-            std::string fileName = UnmapPath(mapPath, freePath, this->loadWorker.GetFileName2());
+            std::string fileName = UnmapFilename(features, this->loadWorker.GetFileName2());
             auto status = store(handle,
                                 urids.cabir__propertyFileName2,
                                 fileName.c_str(),
@@ -1008,7 +1052,7 @@ ToobConvolutionReverb::OnSaveLv2State(
             }
         }
         {
-            std::string fileName = UnmapPath(mapPath, freePath, this->loadWorker.GetFileName3());
+            std::string fileName = UnmapFilename(features, this->loadWorker.GetFileName3());
             auto status = store(handle,
                                 urids.cabir__propertyFileName3,
                                 fileName.c_str(),
@@ -1024,72 +1068,81 @@ ToobConvolutionReverb::OnSaveLv2State(
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
-LV2_State_Status ToobConvolutionReverb::GetUserResourcePath(const LV2_Feature *const *features, std::filesystem::path *path)
+void ToobConvolutionReverb::PublishResourceFiles(
+    const LV2_Feature *const *features)
 {
-    const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
-    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
-    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_FileBrowser_Files *fileBrowserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
 
-    if (makePath == nullptr)
+    if (fileBrowserFiles == nullptr)
     {
-        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
+        return;
     }
+    LV2_FileBrowser_Status status;
+    if (IsConvolutionReverb())
+    {
+        constexpr int RESOURCE_VERSION = 1;
+        status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle,RESOURCE_VERSION,"impulseFiles/reverb","ReverbImpulseFiles");
+    } else {
+        constexpr int RESOURCE_VERSION = 1;
+        status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle,RESOURCE_VERSION,"impulseFiles/CabIR","CabIR");
+    }
+    if (status == LV2_FileBrowser_Status::LV2_FileBrowser_Status_Err_Filesystem)
+    {
+        LogNote("%s: %s\n",
+            IsConvolutionReverb() ? "TooB Convolution Reverb": "Toob Cab IR",
+            "Failed to publish resource audio files."
+        );
+    }
+    
+}
+
+std::string ToobConvolutionReverb::MapFilename(
+	const LV2_Feature *const *features,
+    const std::string &input)
+{
+
+
+    if (input.starts_with(this->getBundlePath().c_str()))
+    {
+        // map bundle files to corresponding files in the browser dialog directories.
+        const LV2_FileBrowser_Files *browserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
+        if (browserFiles != nullptr)
+        {
+            LogNote("Found it.");
+            char *t = nullptr;
+            if (IsConvolutionReverb())
+            {
+                t = browserFiles->map_path(browserFiles->handle,input.c_str(),"impulseFiles/reverb","ReverbImpulseFiles");
+            } else {
+                t = browserFiles->map_path(browserFiles->handle,input.c_str(),"impulseFiles/CabIR","CabIR");
+            }
+            std::string result = t;
+            browserFiles->free_path(browserFiles->handle,t);
+            return result;
+        }
+        LogNote("Didn't");
+        return input;
+    }
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
     if (mapPath == nullptr)
     {
-        return LV2_State_Status::LV2_STATE_ERR_NO_FEATURE;
-    }
-
-    // Use makePath to get a user-modifiable directory.
-    std::filesystem::path targetPath =
-        IsConvolutionReverb()
-            ? std::filesystem::path("ReverbImpulseFiles")
-            : std::filesystem::path("CabIR");
+        return input;
+    } else 
     {
-        char *mappedPath = makePath->path(makePath->handle, targetPath.c_str());
-        targetPath = mappedPath;
+        char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
+        std::string result = t;
         if (freePath)
         {
-            freePath->free_path(freePath->handle, mappedPath);
+            freePath->free_path(freePath->handle, t);
         }
         else
         {
-            free((void *)mappedPath);
+            free(t);
         }
-        *path = std::move(targetPath);
+        return result;
     }
-    return LV2_State_Status::LV2_STATE_SUCCESS;
-}
-LV2_State_Status ToobConvolutionReverb::PublishResourceFiles(
-    const LV2_Feature *const *features)
-{
-    std::filesystem::path targetPath;
-    LV2_State_Status res = GetUserResourcePath(features, &targetPath);
-    if (res != LV2_State_Status::LV2_STATE_SUCCESS)
-    {
-        return res;
-    }
-    this->MaybeCreateSampleDirectory(targetPath);
-    return LV2_State_Status::LV2_STATE_SUCCESS;
-}
-
-static std::string MapFilename(
-    const LV2_State_Map_Path *mapPath,
-    const LV2_State_Free_Path *freePath,
-    const std::string &input)
-{
-    if (mapPath == nullptr)
-        return input;
-    char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
-    std::string result = t;
-    if (freePath)
-    {
-        freePath->free_path(freePath->handle, t);
-    }
-    else
-    {
-        free(t);
-    }
-    return result;
 }
 
 // State extension callbacks.
@@ -1104,8 +1157,8 @@ ToobConvolutionReverb::OnRestoreLv2State(
     uint32_t type;
     uint32_t myFlags;
 
-    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
-    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    RequestNotifyOnLoad();
 
     PublishResourceFiles(features);
 
@@ -1120,7 +1173,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             std::string input((const char *)data, size);
-            this->loadWorker.SetFileName(MapFilename(mapPath, freePath, input).c_str());
+            this->loadWorker.SetFileName(MapFilename(features, input).c_str());
         }
         else
         {
@@ -1139,7 +1192,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName(MapFilename(mapPath, freePath, input).c_str());
+                this->loadWorker.SetFileName(MapFilename(features, input).c_str());
             }
             else
             {
@@ -1156,7 +1209,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName2(MapFilename(mapPath, freePath, input).c_str());
+                this->loadWorker.SetFileName2(MapFilename(features,  input).c_str());
             }
             else
             {
@@ -1173,7 +1226,7 @@ ToobConvolutionReverb::OnRestoreLv2State(
                     return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
                 }
                 std::string input((const char *)data, size);
-                this->loadWorker.SetFileName3(MapFilename(mapPath, freePath, input).c_str());
+                this->loadWorker.SetFileName3(MapFilename(features, input).c_str());
             }
             else
             {
@@ -1186,79 +1239,11 @@ ToobConvolutionReverb::OnRestoreLv2State(
 
 // plugin creates the directories, not the host.
 
-void ToobConvolutionReverb::MaybeCreateSampleDirectory(const std::filesystem::path &audioFileDirectory)
-{
-    // to be deletable, impulse files must be in a user-modifiable directory.
-    // We will create an audioFileDirectory with soft links to the files in our bundle directory.
-    // (permissioning doesn't allow hard links).
-    // We'll also version check using a file in the audioFileDirectory.
-
-    // check to see what version of sample files have been installed.
-    uint32_t sampleVersion = 0;
-
-    std::filesystem::create_directories(audioFileDirectory);
-
-    std::string folder = IsConvolutionReverb() ? "reverb" : "CabIR";
-    std::filesystem::path resourceDirectory = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / folder;
-
-    std::filesystem::path versionFilePath = audioFileDirectory / VERSION_FILENAME;
-    try
-    {
-        std::ifstream f(versionFilePath);
-        if (f.is_open())
-        {
-            f >> sampleVersion;
-        }
-    }
-    catch (const std::exception &)
-    {
-    }
-
-    if (sampleVersion >= SAMPLE_FILES_VERSION) // already created links? Don't do it again.
-    {
-        return;
-    }
-
-    std::filesystem::create_directories(audioFileDirectory);
-
-    try
-    {
-        // hard-link any resource files into user-accessible directory.
-        for (auto const &dir_entry : std::filesystem::directory_iterator(resourceDirectory))
-        {
-            const std::filesystem::path &resourceFilePath = dir_entry.path();
-
-            std::filesystem::path targetFilePath = audioFileDirectory / resourceFilePath.filename();
-            if (!std::filesystem::exists(targetFilePath))
-            {
-                std::filesystem::create_symlink(resourceFilePath, targetFilePath);
-            }
-        }
-        std::ofstream f(versionFilePath, std::ios_base::trunc);
-        if (f.is_open())
-        {
-            f << SAMPLE_FILES_VERSION << std::endl;
-        }
-    }
-    catch (const std::exception &e)
-    {
-        this->LogError("%s", SS("Can't create reverb impulse file directory. " << e.what()).c_str());
-    }
-}
-
 void ToobConvolutionReverb::SetDefaultFile(const LV2_Feature *const *features)
 {
     if (IsConvolutionReverb())
     {
-        std::filesystem::path targetPath;
-        LV2_State_Status res = GetUserResourcePath(features, &targetPath);
-        if (res != LV2_State_Status::LV2_STATE_SUCCESS)
-        {
-            this->loadWorker.SetFileName("");
-            return;
-        }
-
-        std::filesystem::path defaultFilePath = targetPath / "Genesis 6 Studio Live Room.wav";
-        this->loadWorker.SetFileName(defaultFilePath.c_str());
+        auto targetPath = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / "reverb" / "Genesis 6 Studio Live Room.wav";
+        this->loadWorker.SetFileName(targetPath.c_str());
     }
 }
