@@ -41,7 +41,8 @@ public:
 		}
 		pOut = (float*)data;
 		if (pOut != NULL)
-		{			*pOut = defaultValue;
+		{
+			*pOut = defaultValue;
 		}
 	}
 

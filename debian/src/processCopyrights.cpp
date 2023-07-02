@@ -556,6 +556,7 @@ class Copyrights
     };
 
     std::vector<std::string> ignoredFiles;
+    std::vector<std::string> ignoredDirectories;
     std::map<std::string, std::shared_ptr<License>> licenseMap;
 
     static std::string trim(const std::string &value)
@@ -749,6 +750,16 @@ class Copyrights
         }
         return false;
     }
+    bool isDirectoryIgnored(const std::string &fileName)
+    {
+        for (auto&directory: ignoredDirectories)
+        {
+            if (fileName.starts_with(directory)) {
+                return true;
+            }
+        }
+        return false;
+    }
     std::string upstreamName;
     std::string upstreamContact;
     std::string source;
@@ -757,6 +768,10 @@ public:
     void ignoreFiles(const std::string &fileName)
     {
         this->ignoredFiles.push_back(fileName);
+    }
+    void ignoreDirectory(const std::string &directoryName)
+    {
+        this->ignoredDirectories.push_back(directoryName);
     }
     void ApplyLicenseCopyrights()
     {
@@ -866,7 +881,7 @@ public:
                     switch (state)
                     {
                     case State::files:
-                        if (!isFileIgnored(line))
+                        if ((!isFileIgnored(line)) && !isDirectoryIgnored(line))
                         {
                             std::string shortPath = toProjectPath(line);
                             if (std::find(files.begin(), files.end(), shortPath) == files.end())
@@ -911,7 +926,7 @@ public:
 
                         if (tag == "Files")
                         {
-                            if (!isFileIgnored(arg))
+                            if ((!isFileIgnored(arg)) && !isDirectoryIgnored(arg))
                             {
                                 files.push_back(toProjectPath(arg));
                             }
@@ -1001,6 +1016,9 @@ int main(int argc, const char *argv[])
 
         copyrights.ignoreFiles("README.md");
         copyrights.ignoreFiles("GeneralBlockPanelKernel.h");
+        copyrights.ignoreDirectory("modules/NeuralAmpModelerCore/Dependencies/eigen/unsupported/");
+        copyrights.ignoreDirectory("modules/NeuralAmpModelerCore/Dependencies/eigen/bench/");
+        copyrights.ignoreDirectory("modules/NeuralAmpModelerCore/Dependencies/eigen/scripts/");
 
         for (const std::string &arg : parser.Arguments())
         {

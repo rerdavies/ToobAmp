@@ -10,8 +10,8 @@ if (DEFINED BUILD_MACHINE)
     message(STATUS "Google Profiler support disabled.}")
     set (PROFILER 0) #no google-perf install on build machine.
 else()
-    #set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest
-    set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest
+    #set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler. Requires google-perftools-dev
+    set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
 endif()
 
 execute_process(COMMAND
@@ -33,7 +33,7 @@ execute_process(COMMAND
 if (CMAKE_COMPILER_IS_GNUCXX)
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4.
+        set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4. cortex-a72
     else()
         # MMX, SSE, SSE2 are enabled by default.
         
@@ -66,13 +66,59 @@ add_custom_target(copy-files ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2 ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
     )
 
+set(NAM_SOURCES	
+    ../modules/NeuralAmpModelerCore/NAM/activations.h
+    ../modules/NeuralAmpModelerCore/NAM/activations.cpp
+    ../modules/NeuralAmpModelerCore/NAM/version.h
+    ../modules/NeuralAmpModelerCore/NAM/lstm.h
+    ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
+    ../modules/NeuralAmpModelerCore/NAM/dsp.h
+    ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
+    ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
+    ../modules/NeuralAmpModelerCore/NAM/util.cpp
+    ../modules/NeuralAmpModelerCore/NAM/util.h
+    ../modules/NeuralAmpModelerCore/NAM/wavenet.cpp
+    ../modules/NeuralAmpModelerCore/NAM/wavenet.h
+    ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
+    ../modules/NeuralAmpModelerCore/NAM/convnet.h
 
+    ../modules/NeuralAmpModelerCore/dsp/dsp.cpp
+    ../modules/NeuralAmpModelerCore/dsp/dsp.h
+    ../modules/NeuralAmpModelerCore/dsp/ImpulseResponse.cpp
+    ../modules/NeuralAmpModelerCore/dsp/ImpulseResponse.h
+    namFixes/NamDSP.cpp 
+    namFixes/NamDSP.h
+    namFixes/NoiseGate.cpp
+    namFixes//NoiseGate.h
+    ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.cpp
+    ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h
+    ../modules/NeuralAmpModelerCore/dsp/Resample.h
+    ../modules/NeuralAmpModelerCore/dsp/wav.cpp
+    ../modules/NeuralAmpModelerCore/dsp/wav.h
+
+)
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    set(NAM_EXTRA_FLAGS -fPIC -Wno-sign-compare -Wno-pedantic -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-effc++)
+endif()
+
+add_library(namSources STATIC ${NAM_SOURCES})
+target_compile_options(namSources PRIVATE ${NAM_EXTRA_FLAGS} )
+target_compile_definitions(namSources PUBLIC NAM_SAMPLE_FLOAT)
+target_include_directories(namSources PUBLIC
+../modules/NeuralAmpModelerCore
+../modules/NeuralAmpModelerCore/Dependencies/eigen
+../modules/NeuralAmpModelerCore/Dependencies/nlohmann
+)
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-pedantic")
 
 # Add source to this project's executable.
 add_library(ToobAmp  SHARED
+        NeuralAmpModeler.cpp NeuralAmpModeler.h
+        nam_architecture.hpp
 
         lv2ext/filedialog.h
 
@@ -198,7 +244,8 @@ add_library(ToobAmp  SHARED
 
 target_link_libraries(ToobAmp 
     #${DBUS_LIBRARIES}
-    RTNeural 
+    RTNeural
+    namSources
     dl pthread
     boost_iostreams
     z
@@ -209,6 +256,10 @@ target_link_libraries(ToobAmp
 
     target_include_directories(ToobAmp PRIVATE
     ../modules/RTNeural 
+    ../modules/NeuralAmpModelerCore/Dependencies/eigen
+    ../modules/NeuralAmpModelerCore/Dependencies/nlohmann
+    ../modules/NeuralAmpModelerCore
+    ../modules    
 )
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
@@ -389,6 +440,26 @@ add_test(PitchDetectorTest PitchDetectorTest)
 
 add_test(LinkageTest linkageTest)
 
+add_executable(ProfileNeuralAmpModeler 
+    ProfileNeuralAmpModeler.cpp
+) 
+
+
+target_include_directories(ProfileNeuralAmpModeler PRIVATE
+../modules/NeuralAmpModelerCore/Dependencies/eigen
+../modules/NeuralAmpModelerCore/Dependencies/nlohmann
+../modules    
+)
+
+if(PROFILER)
+    target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler)
+    target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
+else()
+    target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp)
+endif()
+
+
+
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 
@@ -403,7 +474,6 @@ set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 set_target_properties(ToobAmp PROPERTIES PREFIX "")
 
 include(GNUInstallDirs)
-
 
 
 install(TARGETS ToobAmp

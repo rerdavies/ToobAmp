@@ -184,9 +184,10 @@ const LV2_Descriptor *const *Lv2Plugin::CreateDescriptors(const std::vector<Lv2P
     return descriptors;
 }
 
-Lv2Plugin::Lv2Plugin(const LV2_Feature *const *features, bool hasState)
+Lv2Plugin::Lv2Plugin(const char*_bundle_path,const LV2_Feature *const *features, bool hasState)
+:bundle_path(_bundle_path),
+hasState(hasState)
 {
-    this->hasState = hasState;
 
 
 
@@ -242,7 +243,20 @@ void Lv2Plugin::LogError(const char* fmt, ...)
         va_start(va,fmt);
         logger.log->vprintf(logger.log->handle, logger.Error, fmt, va);
         va_end(va);
+    } else {
+        char buffer[256];
+        va_list va;
+        va_start(va,fmt);
+        vsnprintf(buffer,sizeof(buffer),fmt,va);
+        buffer[254] = 0;
+        size_t len = strlen(buffer);
+        if (len != 0 && buffer[len-1] == '\n')
+        {
+            buffer[len-1] = 0;
+        }
+        std::cout << "Error: " << buffer << std::endl;
     }
+
 }
 void Lv2Plugin::LogWarning(const char* fmt, ...)
 {
@@ -253,6 +267,18 @@ void Lv2Plugin::LogWarning(const char* fmt, ...)
         va_start(va, fmt);
         logger.log->vprintf(logger.log->handle, logger.Warning, fmt, va);
         va_end(va);
+    } else {
+        char buffer[256];
+        va_list va;
+        va_start(va,fmt);
+        vsnprintf(buffer,sizeof(buffer),fmt,va);
+        buffer[254] = 0;
+        size_t len = strlen(buffer);
+        if (len != 0 && buffer[len-1] == '\n')
+        {
+            buffer[len-1] = 0;
+        }
+        std::cout << "Warning: " << buffer << std::endl;
     }
 
 }
@@ -265,6 +291,19 @@ void Lv2Plugin::LogNote(const char* fmt, ...)
         va_start(va, fmt);
         logger.log->vprintf(logger.log->handle, logger.Note, fmt, va);
         va_end(va);
+    } else {
+        char buffer[256];
+        va_list va;
+        va_start(va,fmt);
+        vsnprintf(buffer,sizeof(buffer),fmt,va);
+        buffer[254] = 0;
+        size_t len = strlen(buffer);
+        if (len != 0 && buffer[len-1] == '\n')
+        {
+            buffer[len-1] = 0;
+        }
+        std::cout << "Note: " << buffer << std::endl;
+
     }
 
 }
@@ -277,6 +316,18 @@ void Lv2Plugin::LogTrace(const char* fmt, ...)
         va_start(va, fmt);
         logger.log->vprintf(logger.log->handle, logger.Trace, fmt, va);
         va_end(va);
+    } else {
+        char buffer[256];
+        va_list va;
+        va_start(va,fmt);
+        vsnprintf(buffer,sizeof(buffer),fmt,va);
+        buffer[254] = 0;
+        size_t len = strlen(buffer);
+        if (len != 0 && buffer[len-1] == '\n')
+        {
+            buffer[len-1] = 0;
+        }
+        std::cout << "Trace: " << buffer << std::endl;
     }
 }
 
@@ -531,10 +582,6 @@ void Lv2Plugin::BeginAtomOutput(LV2_Atom_Sequence *controlOutput)
     lv2_atom_forge_set_buffer(
         &(this->outputForge), (uint8_t *)(controlOutput), notify_capacity);
     lv2_atom_forge_sequence_head(&this->outputForge, &outputFrame, urids.units__Frame);
-}
-void Lv2Plugin::EndAtomOutput() {
-    lv2_atom_forge_pop(&this->outputForge,&this->outputFrame);
-
 }
 
 

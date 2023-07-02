@@ -41,7 +41,7 @@ ToobFlanger::ToobFlanger(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2Plugin(features),
+    : Lv2Plugin(bundle_path,features),
       rate(rate),
       bundle_path(bundle_path),
       flanger(rate)

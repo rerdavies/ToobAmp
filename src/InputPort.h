@@ -148,9 +148,22 @@ namespace toob {
 
 	};
 
+	class BooleanInputPort  {
+	public:
+		bool GetValue() const {
+			return *pData > 0;
+		}
+		void SetData(void*pData)
+		{
+			this->pData = (float*)pData;
+		}
+	private:
+		float *pData = nullptr;
+	};
+
 	class SteppedInputPort  {
 	private:
-		float *pData;
+		float *pData = nullptr;
 		float lastValue;
 		int minValue,maxValue;
 		int value;

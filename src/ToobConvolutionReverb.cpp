@@ -50,7 +50,7 @@ ToobConvolutionReverb::ToobConvolutionReverb(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2PluginWithState(features),
+    : Lv2PluginWithState(bundle_path,features),
       sampleRate(rate),
       bundle_path(bundle_path),
       loadWorker(this),
@@ -391,7 +391,6 @@ void ToobConvolutionReverb::Run(uint32_t n_samples)
         }
         NotifyProperties();
     }
-    EndAtomOutput();
 
     // absolutely ignore hosts that set *pLoadingState.
     *(pLoadingState) = this->loadingState;
@@ -963,19 +962,6 @@ void ToobConvolutionReverb::LoadWorker::OnCleanupComplete()
     }
 }
 
-template <typename T>
-static const T *GetFeature(const LV2_Feature *const *features, const char *featureUri)
-{
-    while (*features != nullptr)
-    {
-        if (strcmp((*features)->URI, featureUri) == 0)
-        {
-            return (const T *)((*features)->data);
-        }
-        ++features;
-    }
-    return nullptr;
-}
 
 std::string ToobConvolutionReverb::UnmapFilename(const LV2_Feature*const* features,const std::string &fileName)
 {
