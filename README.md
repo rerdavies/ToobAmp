@@ -86,9 +86,9 @@ Run the following shell commands:
 
     &nbsp;
 
-*   **TooB CE Chorus**
+*   **TooB CE-2 Chorus**
 
-    A faithful digital replica of the Boss CE II Chorus.
+    A faithful digital replica of the Boss CE-2 Chorus.
 
     &nbsp;
 
