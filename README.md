@@ -23,11 +23,9 @@ Run the following shell commands:
 &nbsp;
 *   **TooB Neural Amp Modeler (NEW in 1.0.17!)**
 
-    Guitar amp emulations based on Neural Net modeling. Download model files from 
-    [ToneHunt.org](https://tonehunt.org). 
-
-    A port of Steven Atkinson's astounding Neural Amp Modeler to LV2.
-
+    Guitar amp emulations based on Neural Net modeling. A port of Steven Atkinson's astounding [Neural Amp Modeler](https://github.com/sdatkinson/NeuralAmpModelerCore) to LV2.  
+      
+    Download model files from [ToneHunt.org](https://tonehunt.org), or (if you're feeling adventurous) [train your own models](https://github.com/sdatkinson/neural-amp-modeler).
     &nbsp;
     
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/nam-sshot.png)
