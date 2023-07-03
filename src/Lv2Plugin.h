@@ -23,6 +23,7 @@
 
 #pragma once
 #include <cassert>
+#include <string>
 #include "lv2/core/lv2.h"
 #include "lv2/state/state.h"
 #include "lv2/worker/worker.h"
@@ -56,10 +57,11 @@ namespace toob
 		None = 4,
 	};
 	struct BufSizeOptions {
-		uint32_t minBlockLength = -1;
-		uint32_t maxBlockLength = -1;
-		uint32_t nominalBlockLength = -1;
-		uint32_t sequenceSize = -1;
+		static constexpr uint32_t INVALID_VALUE = (uint32_t)-1;
+		uint32_t minBlockLength = INVALID_VALUE;
+		uint32_t maxBlockLength = INVALID_VALUE;
+		uint32_t nominalBlockLength = INVALID_VALUE;
+		uint32_t sequenceSize = INVALID_VALUE;
 	};
 
 	typedef Lv2Plugin *(*PFN_CREATE_PLUGIN)(double _rate,
@@ -96,10 +98,11 @@ namespace toob
 	{
 	private:
 		friend class Lv2PluginWithState;
-		Lv2Plugin(const LV2_Feature *const *features, bool hasState);
+		Lv2Plugin(const char*bundlePath,const LV2_Feature *const *features, bool hasState);
 	protected:
-		Lv2Plugin(const LV2_Feature *const *features): Lv2Plugin(features,false) { }
+		Lv2Plugin(const char*bundlePath,const LV2_Feature *const *features): Lv2Plugin(bundlePath,features,false) { }
 	public:
+		const std::string& GetBundlePath() const { return bundle_path; }
 		static bool HasState() { return false; }
 		virtual void ConnectPort(uint32_t port, void *data) = 0;
 		virtual void Activate() = 0;
@@ -132,6 +135,10 @@ namespace toob
 		LV2_Atom_Forge outputForge;
 
 	protected:
+
+		template <typename T>
+		static const T *GetFeature(const LV2_Feature *const *features, const char *featureUri);
+
 		// State extension callbacks.
 		virtual LV2_State_Status
 		OnRestoreLv2State(
@@ -162,7 +169,6 @@ namespace toob
 
 		void HandleEvents(LV2_Atom_Sequence *controlInput);
 		void BeginAtomOutput(LV2_Atom_Sequence*controlOutput);
-		void EndAtomOutput();
 
 
 		virtual void OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
@@ -185,7 +191,7 @@ namespace toob
 
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, bool value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, float value);
-		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, const float *values);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, double value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int32_t value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int64_t value);
@@ -288,8 +294,8 @@ namespace toob
 			}
 		};
 
-	private:
-		LV2_Worker_Status OnWork(
+	protected:
+		virtual LV2_Worker_Status OnWork(
 			LV2_Worker_Respond_Function respond,
 			LV2_Worker_Respond_Handle handle,
 			uint32_t size,
@@ -301,7 +307,7 @@ namespace toob
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
-		LV2_Worker_Status OnWorkResponse(uint32_t size, const void *data)
+		virtual LV2_Worker_Status OnWorkResponse(uint32_t size, const void *data)
 		{
 			assert(size == sizeof(WorkerAction *));
 			WorkerAction *worker = *(WorkerAction **)data;
@@ -309,7 +315,14 @@ namespace toob
 			return LV2_Worker_Status::LV2_WORKER_SUCCESS;
 		}
 
+
+	protected:
+		const LV2_Worker_Schedule *GetLv2WorkerSchedule() const
+		{
+			return schedule;
+		}
 	private:
+
 		LV2_Log_Logger logger;
 		LV2_Worker_Schedule *schedule = nullptr;
 		LV2_Options_Option*options = nullptr;
@@ -318,6 +331,7 @@ namespace toob
 
 		BufSizeOptions bufSizeOptions;
 		static Lv2LogLevel logLevel;
+		std::string bundle_path;
 		bool hasState = false;
 
 		static LV2_Handle
@@ -407,10 +421,26 @@ namespace toob
 	class Lv2PluginWithState: public Lv2Plugin
 	{
 		public:
-			Lv2PluginWithState(const LV2_Feature *const *features) : Lv2Plugin(features,true) { }
+			Lv2PluginWithState(const char*bundlePath,const LV2_Feature *const *features) : Lv2Plugin(bundlePath,features,true) { }
 			static bool HasState() { return true; }
 	};
 
+	template <typename T>
+	inline const T *Lv2Plugin::GetFeature(const LV2_Feature *const *features, const char *featureUri)
+	{
+		while (*features != nullptr)
+		{
+			if (strcmp((*features)->URI, featureUri) == 0)
+			{
+				return (const T *)((*features)->data);
+			}
+			++features;
+		}
+		return nullptr;
+	}
+
+
 }
+
 
 #pragma GCC diagnostic pop

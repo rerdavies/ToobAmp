@@ -60,7 +60,7 @@ PowerStage2::PowerStage2(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
-	Lv2Plugin(features),
+	Lv2Plugin(_bundle_path,features),
 	rate(_rate),
 	bundle_path(_bundle_path)
 {

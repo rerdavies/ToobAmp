@@ -32,7 +32,7 @@ namespace toob {
 	class InputPort {
 	private:
 		const float* pData = NULL;
-		float lastValue = std::numeric_limits<float>::min();
+		float lastValue = -std::numeric_limits<float>::max();
 
 	public:
 		void SetData(void* data) {
@@ -54,7 +54,7 @@ namespace toob {
 	private:
 		float minValue, maxValue;
 		const float* pData = NULL;
-		float lastValue = std::numeric_limits<float>::min();
+		float lastValue = -std::numeric_limits<float>::max();
 
 	private:
 		float ClampedValue()
@@ -91,12 +91,50 @@ namespace toob {
 		}
 
 	};
+	class EnumeratedInputPort {
+	private:
+		int32_t nValues;
+		const float* pData = NULL;
+		float lastValue = -std::numeric_limits<float>::max();
+
+	private:
+		int32_t ClampedValue()
+		{
+			float vFloat = *pData;
+			if (vFloat < 0) vFloat = 0;
+			if (vFloat > nValues-1) vFloat = nValues-1;
+			int32_t v = (int32_t)std::floor(vFloat+0.5);
+			return v;
+		}
+	public:
+		EnumeratedInputPort(int32_t nValues)
+		:nValues(nValues)
+		{
+		}
+
+		void SetData(void* data) {
+			pData = (float*)data;
+		}
+		bool HasChanged()
+		{
+			// fast path for well-behaved hosts that trim inputs.
+			return (*pData != lastValue);
+
+		}
+
+		int32_t GetValue()
+		{
+			lastValue = *pData;
+			return ClampedValue();
+		}
+
+	};
 
 	class RangedDbInputPort {
 	private:
 		float minValue, maxValue;
 		const float* pData = NULL;
-		float lastValue = std::numeric_limits<float>::min();
+		float lastValue = -std::numeric_limits<float>::max();
 		float lastAfValue = 0;
 
 	private:
@@ -148,9 +186,22 @@ namespace toob {
 
 	};
 
+	class BooleanInputPort  {
+	public:
+		bool GetValue() const {
+			return *pData > 0;
+		}
+		void SetData(void*pData)
+		{
+			this->pData = (float*)pData;
+		}
+	private:
+		float *pData = nullptr;
+	};
+
 	class SteppedInputPort  {
 	private:
-		float *pData;
+		float *pData = nullptr;
 		float lastValue;
 		int minValue,maxValue;
 		int value;

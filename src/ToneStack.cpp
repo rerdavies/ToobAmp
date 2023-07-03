@@ -65,7 +65,7 @@ ToneStack::ToneStack(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
-	Lv2Plugin(features),
+	Lv2Plugin(_bundle_path,features),
 	rate(_rate),
 	filterResponse(),
 	bundle_path(_bundle_path),
@@ -176,31 +176,30 @@ void ToneStack::Run(uint32_t n_samples)
 			this->updateSamples = this->updateSampleDelay;
 		}
 	}
-    if (this->patchGet)
+	if (this->updateSamples != 0)
+	{
+		this->updateSamples -= n_samples;
+		if (this->updateSamples <= 0 || n_samples == 0)
+		{
+			this->patchGet = true;
+		}
+	}
+	if (this->updateMs != 0 && n_samples == 0)
+	{
+		uint64_t ctime = timeMs();
+		if (ctime > this->updateMs || n_samples != 0)
+		{
+			this->patchGet = true;
+		}
+	}
+	if (this->patchGet)
     {
         this->patchGet = false;
         this->updateSampleDelay = 0;
         this->updateMs = 0;
         WriteFrequencyResponse();
     }
-	if (this->updateSamples != 0)
-	{
-		this->updateSamples -= n_samples;
-		if (this->updateSamples <= 0 || n_samples == 0)
-		{
-			this->updateSamples = 0;
-			WriteFrequencyResponse();
-		}
-	}
-	if (this->updateMs != 0)
-	{
-		uint64_t ctime = timeMs();
-		if (ctime > this->updateMs || n_samples != 0)
-		{
-			this->updateMs = 0;
-			WriteFrequencyResponse();
-		}
-	}
+
 	lv2_atom_forge_pop(&forge, &out_frame);
 }
 
@@ -274,6 +273,21 @@ LV2_Atom_Forge_Ref ToneStack::WriteFrequencyResponse()
 
 	LV2_Atom_Forge_Frame vectorFrame;
 	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
+	
+    if (useBaxandall)
+    {
+		lv2_atom_forge_float(&forge,30.0f);
+		lv2_atom_forge_float(&forge,20000.0f);
+		lv2_atom_forge_float(&forge,20.0f);
+		lv2_atom_forge_float(&forge,-20.0f);
+    } else {
+		lv2_atom_forge_float(&forge,30.0f);
+		lv2_atom_forge_float(&forge,20000.0f);
+		lv2_atom_forge_float(&forge,5.0f);
+		lv2_atom_forge_float(&forge,-30.0f);
+
+    }
+
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
 		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
@@ -309,3 +323,4 @@ void ToneStack::OnPatchGet(LV2_URID propertyUrid)
 	}
 
 }
+

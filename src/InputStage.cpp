@@ -68,13 +68,13 @@ uint64_t timeMs()
 {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000;
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 InputStage::InputStage(double _rate,
                        const char *_bundle_path,
                        const LV2_Feature *const *features)
-    : Lv2Plugin(features),
+    : Lv2Plugin(_bundle_path,features),
       rate(_rate),
       bundle_path(_bundle_path),
       programNumber(0)

@@ -218,7 +218,7 @@ ToobML::ToobML(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
-	Lv2Plugin(features),
+	Lv2Plugin(_bundle_path,features),
 	loadWorker(this),
 	deleteWorker(this),
 	rate(_rate),
@@ -438,6 +438,13 @@ LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 
 	LV2_Atom_Forge_Frame vectorFrame;
 	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
+
+	lv2_atom_forge_float(&forge,30.0f);
+	lv2_atom_forge_float(&forge,20000.0f);
+	lv2_atom_forge_float(&forge,20.0f);
+	lv2_atom_forge_float(&forge,-20.0f);
+
+
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
 		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));

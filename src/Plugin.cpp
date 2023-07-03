@@ -42,6 +42,7 @@
 #include "ToobChorus.h"
 #include "ToobConvolutionReverb.h"
 #include "ToobFlanger.h"
+#include "NeuralAmpModeler.h"
 
 using namespace toob;
 
@@ -60,6 +61,7 @@ std::vector<Lv2PluginFactory> factories = {
     Lv2PluginFactory::Create<ToobFlanger>(),
     Lv2PluginFactory(ToobFlanger::URI, &ToobFlanger::Create, false),
     Lv2PluginFactory(ToobFlanger::STEREO_URI, &ToobFlanger::Create, false),
+    Lv2PluginFactory(NeuralAmpModeler::URI, &NeuralAmpModeler::Create, true),
 
     Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_URI,&ToobConvolutionReverb::CreateMonoConvolutionReverb,true),
     Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_STEREO_URI,&ToobConvolutionReverb::CreateStereoConvolutionReverb,true),

@@ -2,3 +2,6 @@
 	path = modules/RTNeural
 	url = https://github.com/jatinchowdhury18/RTNeural
 	branch = main
+[submodule "modules/NeuralAmpModelerCore"]
+	path = modules/NeuralAmpModelerCore
+	url = https://github.com/sdatkinson/NeuralAmpModelerCore.git
