@@ -68,7 +68,7 @@ uint64_t timeMs()
 {
     struct timespec ts;
     timespec_get(&ts, TIME_UTC);
-    return ts.tv_sec * 1000 + ts.tv_nsec / 1000;
+    return ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
 }
 
 InputStage::InputStage(double _rate,

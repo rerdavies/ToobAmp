@@ -186,10 +186,17 @@ int main(int argc, char **argv)
     LV2_Atom_Sequence *controlOutput = (LV2_Atom_Sequence *)(&notify_mem[0]);
 
     float inputLevel = 0, outputLevel = 0, gateThreshold = 0, gateOutput = 0;
+    float bass = 0.1f, mid = 1.0f, treble = 0.1f;
+    float toneStackType = 1;
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kInputLevel, &inputLevel);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kOutputLevel, &outputLevel);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kNoiseGateThreshold, &gateThreshold);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kGateOut, &gateOutput);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kBass, &bass);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kMid, &mid);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kTreble, &treble);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kStackType, &toneStackType);
+
 
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kAudioIn, &(input[0]));
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kAudioOut, &(output[0]));
@@ -212,12 +219,19 @@ int main(int argc, char **argv)
 #endif
     auto start = std::chrono::high_resolution_clock::now();
 
-
+    double x = 0;
+    double dx = 440*3.14159*2/SAMPLE_RATE;
     for (size_t sample = 0; sample < SAMPLE_RATE * TEST_SECONDS; sample += FRAME_SIZE)
     {
         controlInput->atom.type = atom__Sequence;
         controlInput->atom.size = sizeof(LV2_Atom_Sequence::body);
         controlInput->body.unit = atom__frameTime;
+
+        for (size_t i = 0; i < FRAME_SIZE; ++i)
+        {
+            input[i] = std::sin(x);
+            x += dx;
+        }
 
         controlOutput->atom.type = 0;
         controlOutput->atom.size = SEQUENCE_SIZE-sizeof(LV2_Atom);

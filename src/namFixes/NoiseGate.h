@@ -144,10 +144,10 @@ public:
   double _GetGainReduction(const double levelDB) const
   {
     const double threshold = this->mParams.GetThreshold();
-    // Quadratic gain reduction? :)
+    // Quadratic gain reduction? :) Huh. 8-O
     return levelDB < threshold ? -(this->mParams.GetRatio()) * (levelDB - threshold) * (levelDB - threshold) : 0.0;
   }
-  double _GetMaxGainReduction() const { return this->_GetGainReduction(MINIMUM_LOUDNESS_DB); }
+  double _GetMaxGainReduction() const { return MINIMUM_LOUDNESS_DB; }
   virtual void _PrepareBuffers(const size_t numChannels, const size_t numFrames) override;
 
   TriggerParams mParams;

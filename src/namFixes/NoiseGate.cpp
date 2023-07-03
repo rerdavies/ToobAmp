@@ -44,9 +44,10 @@ SOFTWARE.
 
 using namespace dsp;
 
-static double _LevelToDB(const double db)
+
+static double _LevelToDB(double db)
 {
-  return 10.0 * log10(db);
+  return 20.0 * log10(db);
 }
 
 
@@ -122,7 +123,7 @@ nam_float_t** dsp::noise_gate::Trigger::Process(nam_float_t** inputs, const size
         {
           this->mGainReduction[c][s] = 0; // avoid denorms.
         } else {
-          this->mGainReduction[c][s] = std::pow((nam_float_t)10.0f,(nam_float_t)(this->mLastGainReductionDB[c])*((nam_float_t)0.1f));
+          this->mGainReduction[c][s] = std::pow((nam_float_t)10.0f,(nam_float_t)(this->mLastGainReductionDB[c])*((nam_float_t)0.05f));
         }
       }
     }
@@ -151,17 +152,24 @@ void dsp::noise_gate::Trigger::_PrepareBuffers(const size_t numChannels, const s
     this->super::_PrepareBuffers(numChannels, numFrames);
 
     const double maxGainReduction = this->_GetMaxGainReduction();
-    if (updateChannels)
+    if (updateChannels || updateFrames)
     {
-      this->mGainReduction.resize(numChannels);
-      this->mLastGainReductionDB.resize(numChannels);
-      std::fill(this->mLastGainReductionDB.begin(), this->mLastGainReductionDB.end(), maxGainReduction);
-      this->mState.resize(numChannels);
-      std::fill(this->mState.begin(), this->mState.end(), dsp::noise_gate::Trigger::State::MOVING);
-      this->mLevel.resize(numChannels);
-      std::fill(this->mLevel.begin(), this->mLevel.end(), MINIMUM_LOUDNESS_POWER);
-      this->mTimeHeld.resize(numChannels);
-      std::fill(this->mTimeHeld.begin(), this->mTimeHeld.end(), 0.0);
+      if (updateChannels)
+      {
+        this->mGainReduction.resize(numChannels);
+        this->mLastGainReductionDB.resize(numChannels);
+        std::fill(this->mLastGainReductionDB.begin(), this->mLastGainReductionDB.end(), maxGainReduction);
+        this->mState.resize(numChannels);
+        std::fill(this->mState.begin(), this->mState.end(), dsp::noise_gate::Trigger::State::MOVING);
+        this->mLevel.resize(numChannels);
+        std::fill(this->mLevel.begin(), this->mLevel.end(), MINIMUM_LOUDNESS_POWER);
+        this->mTimeHeld.resize(numChannels);
+        std::fill(this->mTimeHeld.begin(), this->mTimeHeld.end(), 0.0);
+      }
+      for (auto& channel: mGainReduction)
+      {
+        channel.resize(numFrames);
+      }
     }
   }
 }

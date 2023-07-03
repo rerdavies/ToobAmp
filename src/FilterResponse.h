@@ -65,5 +65,7 @@ namespace toob {
         void SetRequested(bool value) { requested = value;}
         bool GetRequested() { return requested; }
 
+        const std::vector<float>& GetResponses() const { return responses; }
+
     };
 }

@@ -63,7 +63,7 @@ and uses model files from from the GuitarML Neural Pi project (https://github.co
 """ ;
 
         mod:brand "TooB";
-        mod:label "ML Amplifier";
+        mod:label "TooB ML";
         lv2:requiredFeature urid:map, work:schedule ;
         lv2:optionalFeature lv2:hardRTCapable;
         lv2:extensionData state:interface, work:interface;

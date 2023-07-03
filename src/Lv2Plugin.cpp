@@ -502,7 +502,7 @@ void Lv2Plugin::PutStateChanged(int64_t frameTime)
     }
     lv2_atom_forge_pop(&outputForge, &frame);
 }
-void Lv2Plugin::PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values)
+void Lv2Plugin::PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, const float *values)
 {
     lv2_atom_forge_frame_time(&outputForge, frameTime);
 

@@ -191,7 +191,7 @@ namespace toob
 
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, bool value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, float value);
-		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, float *values);
+		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, size_t count, const float *values);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, double value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int32_t value);
 		void PutPatchProperty(int64_t frameTime,LV2_URID propertyUrid, int64_t value);

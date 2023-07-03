@@ -128,6 +128,13 @@ namespace toob {
 
 			return y0;
 		}
+		inline void Process(size_t nFrames, const float*input, float*output)
+		{
+			for (size_t i = 0; i < nFrames; ++i)
+			{
+				output[i] = Tick(input[i]);
+			}
+		}
 		inline double TickR(double x0)
 		{
 			double x1 = xR[0];

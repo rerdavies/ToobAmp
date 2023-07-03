@@ -40,6 +40,11 @@ SOFTWARE.
 #include "NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h"
 #include "NeuralAmpModelerCore/dsp/dsp.h"
 #include "NeuralAmpModelerCore/dsp/wav.h"
+#include "LsNumerics/BaxandallToneStack.hpp"
+#include "LsNumerics/ToneStackFilter.h"
+
+#include "FilterResponse.h"
+
 
 #pragma GCC diagnostic pop
 
@@ -84,6 +89,10 @@ namespace toob
             kOutputLevel,
             kNoiseGateThreshold,
             kGateOut,
+            kBass,
+            kMid,
+            kTreble,
+            kStackType,
 
             kAudioIn,
             kAudioOut,
@@ -96,9 +105,24 @@ namespace toob
         {
             void Initialize(NeuralAmpModeler &this_);
             uint32_t nam__ModelFileName;
+            uint32_t nam__FrequencyResponse;
             uint32_t atom__Path;
             uint32_t atom__String;
+
+			LV2_URID patch;
+			LV2_URID patch__Get;
+			LV2_URID patch__Set;
+			LV2_URID patch__property;
+			LV2_URID patch__value;
+			LV2_URID atom__URID;
+			LV2_URID atom__float;
+			LV2_URID atom__int;
+			LV2_URID units__Frame;
+
+
         };
+
+
         Urids urids;
         void ConnectPort(uint32_t port, void *data) override;
         void Activate() override;
@@ -150,6 +174,22 @@ namespace toob
         RangedDbInputPort cInputGain{-20, 20};
         RangedDbInputPort cOutputGain{-40, 40};
         RangedDbInputPort cNoiseGateThreshold{-100, 0};
+        RangedInputPort cBass {0,10};
+        RangedInputPort cMid{ 0,10};
+        RangedInputPort cTreble{ 0,10};
+        EnumeratedInputPort cToneStackType { 4};
+
+        enum ToneStackType {
+            Bassman = 0, // matches enum values in .ttl file.
+            Jcm8000 = 1,
+            Baxandall = 2,
+            Bypass = 3,
+        };
+        ToneStackType toneStackType = ToneStackType::Bypass;
+		ToneStackFilter toneStackFilter;
+		BaxandallToneStack baxandallToneStack;
+
+
         bool noiseGateActive = false;
         OutputPort cGateOutput;
         const float *audioIn = nullptr;
@@ -162,11 +202,26 @@ namespace toob
         bool isActivated = false;
         bool requestFileUpdate = true;
 
+
+        FilterResponse filterResponse;
+
+        bool responseGet = false;
+        int64_t responseDelaySamplesMax = 0;
+        int64_t responseDelaySamples = 0;
+        uint64_t responseDelayMsMax = 0;
+        uint64_t responseDelayMs = 0;
+
     private:
-        // Allocates mInputPointers and mOutputPointers
-        void _AllocateIOPointers(const size_t nChans);
-        // Deallocates mInputPointers and mOutputPointers
-        void _DeallocateIOPointers();
+        // Update tone stack filter designs.
+        void UpdateToneStack();
+        // Write frequency response for UI.
+        void WriteFrequencyResponse();
+
+        // Frequency response of the tone stack at specified frequency.
+        float CalculateFrequencyResponse(float hz);
+
+
+
         // Fallback that just copies inputs to outputs if mDSP doesn't hold a model.
         void _FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels, const size_t numFrames);
         // Sizes based on mInputArray
@@ -200,8 +255,13 @@ namespace toob
         // Output from NAM
         std::vector<std::vector<nam_float_t>> mOutputArray;
         // Pointer versions
+        std::vector<nam_float_t*> mInputPointerMemory;
+        std::vector<nam_float_t*> mOutputPointerMemory;
         nam_float_t **mInputPointers = nullptr;
         nam_float_t **mOutputPointers = nullptr;
+
+        std::vector<nam_float_t> mToneStackArray;
+        nam_float_t *mToneStackPointer = nullptr;
 
         // Noise gates
         dsp::noise_gate::Trigger mNoiseGateTrigger;

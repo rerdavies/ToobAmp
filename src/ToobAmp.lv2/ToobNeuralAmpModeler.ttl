@@ -38,6 +38,12 @@ toobNam:modelFile
         rdfs:label "Model";
         rdfs:range atom:Path.
 
+toobNam:eqGroup
+    a param:ControlGroup ,
+        pg:InputGroup ;
+    lv2:name "Tone" ;
+    lv2:symbol "eqGroup" .
+
 
 <http://two-play.com/plugins/toob-nam>
         a lv2:Plugin ,
@@ -89,12 +95,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-
-
 """ ;
 
         mod:brand "TooB";
-        mod:label "Neural Amp Modeler";
+        mod:label "TooB NAM";
         lv2:optionalFeature lv2:hardRTCapable;
 
         patch:readable 
@@ -167,16 +171,84 @@ SOFTWARE.
                 lv2:portProperty lv2:toggled;
         ],
         [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index  4;
+                lv2:symbol "bass" ;
+                lv2:name "Bass";
+                lv2:default 5.0;
+                lv2:minimum 0.0;
+                lv2:maximum 10.0;
+                rdfs:comment "Bass";
+                pg:group toobNam:eqGroup ;
+
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index  5;
+                lv2:symbol "mid" ;
+                lv2:name "Mid";
+                lv2:default 5.0;
+                lv2:minimum 0.0;
+                lv2:maximum 10.0;
+                rdfs:comment "Mid";
+                pg:group toobNam:eqGroup ;
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index  6;
+                lv2:symbol "treble" ;
+                lv2:name "Treble";
+                lv2:default 5.0;
+                lv2:minimum 0.0;
+                lv2:maximum 10.0;
+                rdfs:comment "Bass";
+                pg:group toobNam:eqGroup ;
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 7 ;
+                lv2:symbol "toneStack" ;
+                lv2:name "Type";
+                lv2:default 0.0 ;
+                lv2:minimum 2.0 ;
+                lv2:maximum 3.0; 
+                lv2:portProperty lv2:enumeration ;
+
+                 lv2:scalePoint [
+                        rdfs:label "Bassman" ;
+                        rdf:value 0.0
+                ] , [
+                        rdfs:label "JCM8000" ;
+                        rdf:value 1.0
+                ], [
+                        rdfs:label "Baxandall" ;
+                        rdf:value 2.0
+                ],[
+                        rdfs:label "Bypass" ;
+                        rdf:value 3.0
+                ];   
+                pg:group toobNam:eqGroup ;
+
+        ],
+        [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 4 ;
+                lv2:index 8 ;
                 lv2:symbol "in" ;
                 lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 5 ;
+                lv2:index 9 ;
                 lv2:symbol "out" ;
                 lv2:name "Out"
         ],
@@ -188,7 +260,7 @@ SOFTWARE.
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 6 ;
+                lv2:index 10 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -198,7 +270,7 @@ SOFTWARE.
                 atom:bufferType atom:Sequence ;
                 atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 7;
+                lv2:index 11;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;
@@ -215,7 +287,7 @@ toobNam:ui
                 a pipedal_ui:fileProperty;
                 rdfs:label "Model (*.nam)" ;
                 pipedal_ui:directory "NeuralAmpModels";
-                lv2:index 4 ;
+                lv2:index 8 ;
                 pipedal_ui:patchProperty toobNam:modelFile ;
                 pipedal_ui:fileTypes 
                 [
@@ -224,6 +296,15 @@ toobNam:ui
                         pipedal_ui:fileExtension ".nam";
                         pipedal_ui:mimeType "application/octet-stream";
                 ];
+        ];
+        pipedal_ui:frequencyPlot 
+        [
+                pipedal_ui:patchProperty toobNam:FrequencyResponse;
+                lv2:index 7 ;
+                pg:group toobNam:eqGroup ;
+                
+                pipedal_ui:width: 60;
         ]
+
         .
 
