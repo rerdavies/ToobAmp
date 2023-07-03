@@ -30,7 +30,7 @@ Run the following shell commands:
 
     &nbsp;
     
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/nam-ss.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/nam-sshot.png)
 
     &nbsp;
 
