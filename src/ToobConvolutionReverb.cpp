@@ -434,6 +434,14 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         if (changed)
         {
             this->stateChanged = true;
+            if (propertyUrid == urids.reverb__propertyFileName)
+            {
+                notifyReverbFileName = true;
+
+            } else {
+                notifyCabIrFileName = true;
+            }
+
         }
     }
     if (propertyUrid == urids.cabir__propertyFileName2)
@@ -444,6 +452,7 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         if (changed)
         {
             this->stateChanged = true;
+            notifyCabIrFileName2 = true;
         }
     }
     if (propertyUrid == urids.cabir__propertyFileName3)
@@ -454,6 +463,7 @@ void ToobConvolutionReverb::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *at
         if (changed)
         {
             this->stateChanged = true;
+            notifyCabIrFileName3 = true;       
         }
     }
 }
