@@ -63,7 +63,7 @@ void AudioThreadToBackgroundQueue::SetSize(size_t size, size_t padEntries, Sched
     this->size = size;
     this->sizeMask = size - 1;
     this->head = 0;
-    this->paddingSize = paddingSize;
+    this->paddingSize = padEntries;
     this->storage.resize(0);
     this->storage.resize(size);
     if (isStereo)

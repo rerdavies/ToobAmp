@@ -27,7 +27,7 @@ namespace toob {
         WavGuid();
         WavGuid(const char*strGuid);
 
-        bool operator == (const WavGuid& other);
+        bool operator == (const WavGuid& other) const;
 
         uint32_t data0;
         uint16_t data1;

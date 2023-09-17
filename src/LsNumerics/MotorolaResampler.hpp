@@ -33,11 +33,12 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef RESAMPLER_H
 #define RESAMPLER_H
 
-using namespace std;
 
 #include <stdexcept>
 #include <complex>
 #include <vector>
+
+using namespace std;
 
 template<class S1, class S2, class C>
 class Resampler{

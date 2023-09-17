@@ -176,7 +176,7 @@ namespace toob {
 		void WriteFrequencyResponse();
 		void WriteUiState();
 	protected:
-		virtual void OnPatchGet(LV2_URID propertyUrid);
+		virtual void OnPatchGet(LV2_URID propertyUrid) override;
 		double getRate() { return rate; }
 		std::string getBundlePath() { return bundle_path.c_str(); }
 	public:

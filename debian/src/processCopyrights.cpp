@@ -397,7 +397,7 @@ public:
     {
         if (this->copyrightHolder != other.copyrightHolder)
         {
-            this->copyrightHolder < other.copyrightHolder;
+            return this->copyrightHolder < other.copyrightHolder;
         }
         return this->years < other.years;
     }

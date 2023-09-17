@@ -88,7 +88,7 @@ namespace LsNumerics
             using iterator_t = T *;
 
             iterator_t begin() { return p; }
-            iterator_t end() { return p + size; }
+            iterator_t end() { return p + _size; }
 
         private:
             size_t _size;

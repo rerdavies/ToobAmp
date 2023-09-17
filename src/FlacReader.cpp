@@ -45,7 +45,7 @@ namespace toob
         size_t getLength() const { return this->sampleOffset; }
     protected:
 
-        virtual ::FLAC__StreamDecoderLengthStatus length_callback(	FLAC__uint64 * 	stream_length	)	
+        virtual ::FLAC__StreamDecoderLengthStatus length_callback(	FLAC__uint64 * 	stream_length	)  override	
         {
             return FLAC__StreamDecoderLengthStatus::FLAC__STREAM_DECODER_LENGTH_STATUS_OK;
         }
@@ -145,7 +145,7 @@ namespace toob
                 this->bitsPerSample = stream_info.bits_per_sample;
             }
         }
-        virtual void error_callback(::FLAC__StreamDecoderErrorStatus status)
+        virtual void error_callback(::FLAC__StreamDecoderErrorStatus status)  override
         {
             this->errorMessage = "Invalid file format.";
         }

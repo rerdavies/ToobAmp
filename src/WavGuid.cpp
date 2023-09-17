@@ -99,7 +99,7 @@ WavGuid::WavGuid(const char*strGuid)
 
 }
 
-bool WavGuid::operator == (const WavGuid&other)
+bool WavGuid::operator == (const WavGuid&other) const
 {
     if (data0 != other.data0) return false;
     if (data1 != other.data1) return false;

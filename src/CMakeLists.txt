@@ -112,7 +112,7 @@ target_include_directories(namSources PUBLIC
 )
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
-set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking -fno-var-tracking-assignments")
+set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking ")
 set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-pedantic")
 
 # Add source to this project's executable.

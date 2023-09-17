@@ -146,7 +146,7 @@ void testIfPitchDetection()
     constexpr size_t FFT_SIZE = 4096;
     constexpr size_t SAMPLE_OFFSET = FFT_SIZE/2;
 
-    std::vector<double> sampleRates{{SAMPLE_RATE}};
+    std::vector<double> sampleRates{SAMPLE_RATE};
 
     std::vector<float> buffer;
 

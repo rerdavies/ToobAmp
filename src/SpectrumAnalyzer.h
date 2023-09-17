@@ -302,9 +302,9 @@ namespace toob {
 	public:
 		static const char* URI;
 	protected:
-		virtual void ConnectPort(uint32_t port, void* data);
-		virtual void Activate();
-		virtual void Run(uint32_t n_samples);
-		virtual void Deactivate();
+		virtual void ConnectPort(uint32_t port, void* data)  override;
+		virtual void Activate()  override;
+		virtual void Run(uint32_t n_samples)  override;
+		virtual void Deactivate()  override;
 	};
 }

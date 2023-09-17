@@ -82,11 +82,11 @@ namespace toob {
             using pointer = T*;
             using reference = T&;
 
-            bool operator==(const ReadIterator&other)
+            bool operator==(const ReadIterator&other) const
             {
                 return p == other.p;
             }
-            bool operator!=(const ReadIterator&other)
+            bool operator!=(const ReadIterator&other) const
             {
                 return p != other.p;
             }
