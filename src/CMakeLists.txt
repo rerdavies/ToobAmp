@@ -302,7 +302,19 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-
+# Workaround for --whole-archive defects in CMake prior to 3.24.
+# The goal: write lvtk and lvtk_ui libraries (only with --whole-archive option)
+add_library(static-workaround STATIC empty.cpp)
+#set_target_properties(static-workaround PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(
+    static-workaround 
+    -Wl,--whole-archive
+    lvtk
+    -Wl,--no-whole-archive
+    -Wl,--whole-archive
+    lvtk_ui
+    -Wl,--no-whole-archive
+)
 
 
 add_library(ToobAmpUI SHARED
@@ -315,7 +327,7 @@ set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
 set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 
 target_link_options(ToobAmpUI PRIVATE
-    #"-Wl,-z,nodelete"
+    "-Wl,-z,nodelete"
 )
 
 
@@ -327,9 +339,10 @@ target_include_directories(
 )
 target_link_libraries(
     ToobAmpUI PRIVATE 
-    lvtk_ui
-    lvtk
-)
+    -Wl,--whole-archive
+     lvtk lvtk_ui
+    -Wl,--no-whole-archive
+    )
 
 
 # Tests.

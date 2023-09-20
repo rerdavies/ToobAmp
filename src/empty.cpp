@@ -1,0 +1,1 @@
+// empty cpp file for static-workaround librar.
