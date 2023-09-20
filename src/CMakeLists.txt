@@ -3,6 +3,10 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
+set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lvtk)
+#find_package(Lvtk REQUIRED)
+
+
 set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -42,7 +46,7 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     endif()
 
 
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder --param=max-vartrack-size=400000")
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder ")   # --param=max-vartrack-size=400000
 
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS}")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
@@ -61,10 +65,7 @@ message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
    add_compile_definitions("DEBUG")
 endif()
-# Add resource files.
-add_custom_target(copy-files ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2 ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
-    )
+
 
 set(NAM_SOURCES	
     ../modules/NeuralAmpModelerCore/NAM/activations.h
@@ -262,6 +263,74 @@ target_link_libraries(ToobAmp
     ../modules    
 )
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
+####################################################
+
+
+
+set(LVTK_INCLUDE_DIRS
+   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk/include
+   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
+)
+
+configure_file(ToobAmp.lv2/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
+
+configure_file(ToobAmp.lv2/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
+add_custom_command(
+    OUTPUT  CabSimInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-cab-sim
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
+              --class CabSimPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
+add_custom_command(
+    OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-chorus
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
+              --class ToobChorusPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobChorus.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+
+
+add_library(ToobAmpUI SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
+    CabSimUi.cpp
+    ToobChorusUi.cpp
+)
+set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
+set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
+
+target_link_options(ToobAmpUI PRIVATE
+    #"-Wl,-z,nodelete"
+)
+
+
+
+target_include_directories(
+    ToobAmpUI PRIVATE
+    ${LVTK_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+target_link_libraries(
+    ToobAmpUI PRIVATE 
+    lvtk_ui
+    lvtk
+)
+
 
 # Tests.
 add_executable(FftTest 
@@ -460,12 +529,6 @@ endif()
 
 
 
-
-set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
-
-add_dependencies(ToobAmp copy-files)
-
-
 set_target_properties(ToobAmp PROPERTIES VERSION ${PROJECT_VERSION})
 
 set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
@@ -476,14 +539,30 @@ set_target_properties(ToobAmp PROPERTIES PREFIX "")
 include(GNUInstallDirs)
 
 
-install(TARGETS ToobAmp
+install(TARGETS ToobAmp ToobAmpUI
     LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
     )
+
+
+add_executable(UiLinkageTest 
+    UiLinkageTest.cpp 
+    MapFeature.cpp MapFeature.h)
+
+target_link_libraries(UiLinkageTest ToobAmpUI)
+
+target_include_directories(
+    UiLinkageTest  PRIVATE
+    ${LVTK_INCLUDE_DIRS}
+)
+
+
 # Copy all assets to resources file
-INSTALL(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
-INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/fftplans.gz/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/fftplans.gz)
+INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/reverb/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/reverb)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/CabIR)
-        
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/models/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/models)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lvtk/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
+
 
 # TODO: Add tests if needed.
