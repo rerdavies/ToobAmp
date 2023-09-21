@@ -21,7 +21,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "lvtk_ui/Lv2UI.hpp"
 #include "lvtk/LvtkVerticalStackElement.hpp"
-#include "lvtk/LvtkPngElement.hpp"
+#include "lvtk/LvtkFlexGridElement.hpp"
+#include "lvtk/LvtkSvgElement.hpp"
+#include "lvtk/LvtkButtonElement.hpp"
 
 using namespace lvtk::ui;
 using namespace lvtk;
@@ -43,7 +45,8 @@ public:
     PLUGIN_CLASS();
 protected:
     virtual LvtkContainerElement::ptr Render() override;
-
+private:
+    void OnHelpClicked();
 };
 
 
@@ -56,28 +59,78 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 
 }
 
+void PLUGIN_CLASS::OnHelpClicked()
+{
+    
+}
+
+
+
 LvtkContainerElement::ptr PLUGIN_CLASS::Render() {
     auto container = LvtkVerticalStackElement::Create();
     container->Style()
         .VerticalAlignment(LvtkAlignment::Stretch)
-        .HorizontalAlignment(LvtkAlignment::Stretch);
+        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .Background(Theme()->paper);
     {
-        auto result = super::Render();
-        result->Style()
-            .FlexJustification(LvtkFlexJustification::SpaceAround);
-    }
-    {
-        auto img = LvtkPngElement::Create();
-        img->Source("ToobChorusLogo.png");
-        img->Style()
-            .MarginLeft(8)
-            .MarginTop(4)
-            .MarginBottom(4)
-            .Height(48)
+        LvtkContainerElement::ptr controlContainer = LvtkContainerElement::Create();
+        controlContainer->Style()
+            .HorizontalAlignment(LvtkAlignment::Stretch)
+            .VerticalAlignment(LvtkAlignment::Stretch)
             ;
-        container->AddChild(img);
+        {
+            auto controls = super::RenderControls();
+            controls->Style()
+                .FlexJustification(LvtkFlexJustification::Center)
+                .VerticalAlignment(LvtkAlignment::Center)
+                ;
+            controlContainer->AddChild(controls);
+        }
+        container->AddChild(controlContainer);
     }
-    
+    {
+        auto bottomBar = LvtkFlexGridElement::Create();
+        bottomBar->Style()
+            .BorderWidthTop(1)
+            .BorderColor(LvtkColor("#E0E0E080"))
+            .FlexAlignItems(LvtkAlignment::Center)
+            .FlexDirection(LvtkFlexDirection::Row)
+            .FlexWrap(LvtkFlexWrap::NoWrap)
+            .HorizontalAlignment(LvtkAlignment::Stretch)
+            ;
+        {
+            auto img = LvtkSvgElement::Create();
+            img->Source("ToobChorusLogo.svg");
+            img->Style()
+                .MarginLeft(8)
+                .MarginTop(4)
+                .MarginBottom(4)
+                .Opacity(0.75)
+                ;
+            bottomBar->AddChild(img);
+        }
+        {
+            auto item = LvtkElement::Create();
+            item->Style()
+                .HorizontalAlignment(LvtkAlignment::Stretch);
+            bottomBar->AddChild(item);
+        }
+        {
+            auto button = LvtkButtonElement::Create();
+            button
+                ->Variant(LvtkButtonVariant::ImageButton)
+                .Icon("help.svg");
+            button->Clicked.AddListener(
+                [this](const LvtkMouseEventArgs&args)
+                {
+                    OnHelpClicked();
+                    return true;
+                }
+            );
+            bottomBar->AddChild(button);
+        }
+        container->AddChild(bottomBar);
+    }
     return container;
 
 

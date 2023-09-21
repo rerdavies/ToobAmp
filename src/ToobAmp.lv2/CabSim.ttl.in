@@ -21,6 +21,10 @@
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
+@prefix toob: <http://two-play.com/plugins/toob#> .
+
+@prefix cabsim: <two-play.com/plugins/toob-cab-sim#> .
 
 <http://two-play.com/plugins/toob#frequencyResponseVector>
         a lv2:Parameter ;
@@ -38,6 +42,12 @@
 	foaf:name "Robin Davies" ;
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <https://github.com/sponsors/rerdavies> .
+
+toob:frequencyResponseVector
+        a lv2:Parameter;
+        rdfs:label "Frequency Response";
+        rdfs:range atom:Vector.
+
 
 <http://two-play.com/plugins/toob-cab-sim>
     a lv2:Plugin ,
@@ -59,8 +69,8 @@
     lv2:requiredFeature urid:map ;
     lv2:optionalFeature lv2:hardRTCapable;
     patch:readable 
-            <http://two-play.com/plugins/toob#frequencyResponseVector>, 
-            <http://two-play.com/plugins/toob-cab-sim#uiState>;
+            toob:frequencyResponseVector;
+
 rdfs:comment """
 The TooB Cabinet simulator provides EQ tools for emulating cabinet response. See the presets for 
 emulations of well-known cabinets. 
@@ -231,4 +241,25 @@ use the following plugins in the following order:
     lv2:extensionData uiext:idleInterface;
     lv2:requiredFeature uiext:idleInterface ;
     .
+
+<http://two-play.com/plugins/toob-cab-sim> 
+     pipedal_ui:ui <http://two-play.com/plugins/toob-cab-sim#piPedalUI>.
+
+
+<http://two-play.com/plugins/toob-cab-sim#piPedalUI> 
+    a pipedal_ui:ui ;
+    pipedal_ui:frequencyPlot
+    [
+        lv2:index 0 ;
+        pipedal_ui:patchProperty toob:frequencyResponseVector;
+        pipedal_ui:xLeft 30 ;
+        pipedal_ui:xRight 22050 ;
+        pipedal_ui:yTop 10 ;
+        pipedal_ui:yBottom -35 ;
+        pipedal_ui:xLog 1 ;
+        pipedal_ui:yDb 1 ;
+        pipedal_ui:width 80 ;
+    ]
+    .
+
 

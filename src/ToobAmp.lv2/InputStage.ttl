@@ -79,7 +79,7 @@ the yellow range on the VU, but not going above zero dB).
 
 In some cases, you can reduce noise in your guitar signal by filtering out low and high frequencies.
 Use the Low and Hi Cut controls to remove unnecessary frequencies. Set the Lo Cut to minimum value
-to disable the Low Cut filter. Se the Hi Cut control to maximum value to disable the Hi Cut filter.
+to disable the Low Cut filter. Set the Hi Cut control to maximum value to disable the Hi Cut filter.
 
 Bright EQ settings allow boosting of high frequencies to simulate the bright input jack
 found on many guitar amps. 

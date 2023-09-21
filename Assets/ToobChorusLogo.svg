@@ -3,8 +3,8 @@
 
 <svg
    width="512"
-   height="48"
-   viewBox="0 0 135.46666 12.7"
+   height="36"
+   viewBox="0 0 135.46666 9.525"
    version="1.1"
    id="svg5"
    inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
@@ -24,9 +24,9 @@
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="1"
-     inkscape:cx="106.5"
-     inkscape:cy="26"
+     inkscape:zoom="1.414909"
+     inkscape:cx="-168.56208"
+     inkscape:cy="90.465181"
      inkscape:window-width="1920"
      inkscape:window-height="965"
      inkscape:window-x="1440"
@@ -37,9 +37,9 @@
      id="defs2">
     <rect
        x="-14.38694"
-       y="-5.4197795"
+       y="-5.4197793"
        width="35.01685"
-       height="69.568076"
+       height="69.568077"
        id="rect503" />
   </defs>
   <g
@@ -49,24 +49,24 @@
     <text
        xml:space="preserve"
        style="font-style:italic;font-weight:bold;font-size:5.64444px;line-height:0;font-family:Timana;-inkscape-font-specification:'Timana Bold Italic';fill:#686868;stroke:#7f7f7f;stroke-width:0.285001;stop-color:#000000"
-       x="11.778687"
-       y="8.5531855"
+       x="10.006036"
+       y="7.1034565"
        id="text236"><tspan
          sodipodi:role="line"
          id="tspan234"
          style="font-style:italic;font-variant:normal;font-weight:900;font-stretch:normal;font-size:5.64444px;line-height:0;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#e0e0e0;fill-opacity:0.752941;stroke:none;stroke-width:0.285"
-         x="11.778687"
-         y="8.5531855">TooB CE Chorus</tspan></text>
+         x="10.006036"
+         y="7.1034565">TooB CE-2 Chorus</tspan></text>
     <path
        id="path1348"
-       style="color:#000000;fill:#e0e0e0;fill-opacity:0.752941;-inkscape-stroke:none"
-       d="M 6.1277914,2.1171834 C 4.24555,2.1318994 2.7140115,3.6744673 2.714046,5.5567668 v 2.1109822 0.0062 0.00568 0.00982 c 0.00453,0.8890342 0.2392311,1.7354052 0.7462076,2.386935 0.1277885,0.164224 0.2744584,0.313735 0.4376994,0.445967 V 7.3390869 h 0.00362 V 5.5567668 c -2.28e-5,-1.2443843 0.9901438,-2.2443973 2.2344894,-2.254126 1.2491321,-0.00958 2.2584998,0.9812478 2.2711778,2.2303548 v 0.023771 2.3435262 c 0,0.539163 -0.163809,0.8448933 -0.445451,1.074353 C 7.6801475,9.2041055 7.2253348,9.353434 6.6182031,9.353434 H 6.1536074 v 2.225771 H 7.2119648 V 10.357507 C 7.7523705,10.275277 8.3130232,10.219648 8.7121309,9.8944863 9.2692446,9.4405926 9.5926963,8.7224088 9.5926963,7.9002928 v -2.3435262 -0.03359 -0.00155 C 9.5735173,3.6324092 8.0170512,2.1027009 6.1277914,2.1171834 Z"
+       style="color:#000000;fill:#e0e0e0;fill-opacity:0.752941;stroke-width:0.714406;-inkscape-stroke:none"
+       d="M 5.4193109,1.6360535 C 4.0746261,1.6465667 2.9804856,2.7485866 2.9805103,4.0933129 v 1.5080987 0.00443 0.00406 0.00702 c 0.00324,0.6351315 0.1709081,1.2397841 0.5330952,1.705241 0.091293,0.1173226 0.1960748,0.2241342 0.3126952,0.3186015 V 5.3666133 h 0.00259 V 4.0933129 C 3.8288705,3.2043172 4.5362516,2.4899017 5.4252198,2.4829515 6.3176074,2.4761075 7.0387059,3.1839609 7.0477631,4.0763306 v 0.016982 1.6742295 c 0,0.3851813 -0.1170262,0.6035969 -0.3182329,0.7675243 C 6.5283236,6.6989941 6.2034026,6.8056753 5.769664,6.8056753 H 5.437754 V 8.3957797 H 6.193851 V 7.5229912 C 6.5799202,7.4642455 6.9804539,7.4245038 7.2655789,7.1922063 7.6635843,6.8679419 7.8946602,6.354867 7.8946602,5.7675423 V 4.0933128 4.0693159 4.0682086 C 7.8809586,2.7185401 6.7690097,1.6257071 5.4193109,1.6360535 Z"
        sodipodi:nodetypes="ccccccscccccccsssccccsscccc" />
     <g
        aria-label="B"
        id="text1054"
        style="font-style:italic;font-weight:900;font-size:6.35px;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';fill:#e0e0e0;fill-opacity:0.752941;stroke-width:0.285001;stop-color:#000000"
-       transform="translate(-4.4602181,-0.1615253)">
+       transform="matrix(0.71440613,0,0,0.71440613,-2.144828,0.00813001)">
       <path
          id="path1085"
          style="font-style:normal;-inkscape-font-specification:'Roboto, Heavy';stroke-width:0.285"
@@ -77,6 +77,6 @@
        xml:space="preserve"
        transform="scale(0.26458333)"
        id="text501"
-       style="stroke-width:1.07716535;stop-color:#000000;font-size:22.66666667px;stroke:#7f7f7f;-inkscape-font-specification:'Timana Bold Italic';font-family:Timana;font-weight:bold;fill:#686868;font-style:italic;line-height:0;white-space:pre;shape-inside:url(#rect503)" />
+       style="font-style:italic;font-weight:bold;font-size:22.6667px;line-height:0;font-family:Timana;-inkscape-font-specification:'Timana Bold Italic';white-space:pre;shape-inside:url(#rect503);fill:#686868;stroke:#7f7f7f;stroke-width:1.07717;stop-color:#000000" />
   </g>
 </svg>
