@@ -182,6 +182,8 @@ Run the following commands to install prerequisites:
      sudo apt install build-essential
      sudo apt install cmake
      sudo apt install lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev
+     sudo apt install libcairo2-dev libpangocairo-1.0-0 catch2 librsvg2-dev liblilv-dev
+
 
 Clone the repository to your local machine.
 
