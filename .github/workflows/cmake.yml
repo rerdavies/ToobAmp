@@ -24,6 +24,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt install libboost-all-dev lv2-dev libflac++-dev
+        sudo apt install libcairo2-dev libpangocairo-1.0-0 catch2 librsvg2-dev liblilv-dev
         git submodule init
         git submodule update --init --recursive
 
