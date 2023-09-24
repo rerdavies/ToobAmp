@@ -180,6 +180,11 @@ void CabSim::Run(uint32_t n_samples)
 	this->HandleEvents(this->controlIn);
 
 
+	if (this->trim.HasChanged())
+	{
+		responseChanged = true;
+	}
+
 	float trim = this->trim.GetAf();
 
 	if (highCutFilter.UpdateControls())
@@ -329,11 +334,11 @@ void CabSim::WriteFrequencyResponse()
 	LV2_Atom_Forge_Frame vectorFrame;
 	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
 
-	
+	float trimAf = this->trim.GetAf();
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
-		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
-		lv2_atom_forge_float(&forge,filterResponse.GetResponse(i));
+		// lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
+		lv2_atom_forge_float(&forge,filterResponse.GetResponse(i)*trimAf);
 	}
 	lv2_atom_forge_pop(&forge, &vectorFrame);
 

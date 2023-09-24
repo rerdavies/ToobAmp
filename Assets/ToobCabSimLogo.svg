@@ -8,7 +8,7 @@
    version="1.1"
    id="svg5"
    inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
-   sodipodi:docname="ToobChorusLogo.svg"
+   sodipodi:docname="ToobCabSimLogo.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
@@ -25,10 +25,10 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="1.414909"
-     inkscape:cx="216.26833"
-     inkscape:cy="90.465182"
+     inkscape:cx="195.77231"
+     inkscape:cy="90.818561"
      inkscape:window-width="1920"
-     inkscape:window-height="1008"
+     inkscape:window-height="1007"
      inkscape:window-x="1440"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -56,7 +56,7 @@
          id="tspan234"
          style="font-style:italic;font-variant:normal;font-weight:900;font-stretch:normal;font-size:5.64444px;line-height:0;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#e0e0e0;fill-opacity:0.752941;stroke:none;stroke-width:0.285"
          x="10.006036"
-         y="7.1034565">TooB CE-2 Chorus</tspan></text>
+         y="7.1034565">TooB CabSim</tspan></text>
     <path
        id="path1348"
        style="color:#000000;fill:#e0e0e0;fill-opacity:0.752941;stroke-width:0.714406;-inkscape-stroke:none"

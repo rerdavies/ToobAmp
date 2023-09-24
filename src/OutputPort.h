@@ -23,6 +23,10 @@
 
 #pragma once
 
+#include <cstddef>
+#include <cmath>
+#include "LsNumerics/LsMath.hpp"
+
 class OutputPort
 {
 private:
@@ -35,12 +39,12 @@ public:
 	}
 	void SetData(void* data)
 	{
-		if (pOut != NULL)
+		if (pOut != nullptr)
 		{
 			defaultValue = *pOut;
 		}
 		pOut = (float*)data;
-		if (pOut != NULL)
+		if (pOut != nullptr)
 		{
 			*pOut = defaultValue;
 		}
@@ -54,6 +58,151 @@ public:
 		}
 		else {
 			defaultValue = value;
+		}
+	}
+};
+
+class RateLimitedOutputPort {
+private:
+	float* pOut = 0;
+	float updateRateHz;
+	size_t updateRate;
+	size_t sampleCount = 0;
+	float lastValue = 0;
+public:
+	RateLimitedOutputPort(float updateRateHz = 30.0f)
+	:updateRateHz(updateRateHz)
+	{
+	}
+	void SetSampleRate(double sampleRate)
+	{
+		updateRate = (size_t)(sampleRate/updateRateHz);
+	}
+	void Reset(double value) {
+		sampleCount = 0;
+		lastValue = value;
+		if (pOut)
+		{
+			*pOut = value;
+		}
+
+	}
+	void SetData(void* data)
+	{
+		pOut = (float*)data;
+		if (pOut != nullptr)
+		{
+			*pOut = lastValue;
+		}
+	}
+
+	void SetValue(float value)
+	{
+		lastValue = value;
+		if (++sampleCount >= updateRate)
+		{
+			sampleCount -= updateRate;
+			if (pOut)
+			{
+				*pOut = lastValue;
+			}
+		}
+	}
+	void SetValue(float value, size_t n_values)
+	{
+		lastValue = value;
+		sampleCount += n_values;
+		if (sampleCount >= updateRate)
+		{
+			sampleCount -= updateRate;
+			if (pOut)
+			{
+				*pOut = lastValue;
+			}
+		}
+	}
+};
+class VuOutputPort {
+private:
+	float* pOut = 0;
+	float minDb, maxDb;
+	size_t updateRate;
+	size_t sampleCount = 0;
+	float maxValue = 0;
+public:
+	VuOutputPort(float minDb, float maxDb)
+	{
+		this->minDb = minDb;
+		this->maxDb = maxDb;
+	}
+	void SetSampleRate(double sampleRate)
+	{
+		updateRate = (size_t)(sampleRate/30);
+	}
+	void Reset() {
+		// update 30 times a second.
+		sampleCount = 0;
+		maxValue = 0;
+		if (pOut)
+		{
+			*pOut = minDb;
+		}
+
+	}
+	void SetData(void* data)
+	{
+		this->minDb = minDb;
+		this->maxDb = maxDb;
+		pOut = (float*)data;
+		if (pOut != nullptr)
+		{
+			*pOut = minDb;
+		}
+	}
+
+	void AddValue(float value)
+	{
+		auto t = std::abs(value);
+		if (t > maxValue)
+		{
+			maxValue = t;
+		}
+		if (++sampleCount >= updateRate)
+		{
+			sampleCount -= updateRate;
+			if (pOut)
+			{
+				float value = LsNumerics::Af2Db(maxValue);
+				if (value < minDb) value = minDb;
+				if (value > maxDb) value = maxDb;
+				*pOut = value;
+			}
+			maxValue = 0;
+		}
+	}
+	void AddValues(size_t count, float*values)
+	{
+
+		for (size_t i = 0; i < count; ++i)
+		{
+			auto t = std::abs(values[i]);
+			if (t > maxValue)
+			{
+				maxValue = t;
+			}
+		}
+		sampleCount += count;
+		if (sampleCount >= updateRate)
+		{
+			sampleCount -= updateRate;
+			if (pOut)
+			{
+				float value = LsNumerics::Af2Db(maxValue);
+				if (value < minDb) value = minDb;
+				if (value > maxDb) value = maxDb;
+				*pOut = value;
+			}
+			maxValue = 0;
 		}
 	}
 };

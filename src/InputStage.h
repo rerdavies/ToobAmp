@@ -37,6 +37,7 @@
 #include "lv2/parameters/parameters.h"
 #include "lv2/units/units.h"
 #include "FilterResponse.h"
+#include "OutputPort.h"
 #include <string>
 
 #include "Lv2Plugin.h"
@@ -61,12 +62,13 @@ namespace toob {
 	private:
 		enum class PortId {
 			TRIM = 0,
+			TRIM_OUT,
+			GATE_T,
+			GATE_OUT,
 			LOCUT,
 			BRIGHT,
 			BRIGHTF,
 			HICUT,
-			GATE_T,
-			BOOST,
 			AUDIO_IN,
 			AUDIO_OUT,
 			CONTROL_IN,
@@ -76,13 +78,14 @@ namespace toob {
 		double rate;
 		std::string bundle_path;
 
-		RangedDbInputPort trim = RangedDbInputPort(-60.0f, 30.0f);
-		RangedInputPort locut = RangedInputPort(30.0f,300.0f);
-		RangedDbInputPort bright = RangedDbInputPort(0, 25.0f);
-		RangedInputPort brightf = RangedInputPort(1000.0f, 13000.0f);
-		RangedInputPort hicut = RangedInputPort(2000.0f, 13000.0f);
-		RangedDbInputPort gateT = RangedDbInputPort(-80.0f, -20.0f);
-		RangedDbInputPort boost = RangedDbInputPort(0, 1.0f);
+		RangedDbInputPort trim;
+		RangedInputPort locut;
+		RangedDbInputPort bright;
+		RangedInputPort brightf;
+		RangedInputPort hicut;
+		RangedDbInputPort gateT;
+		VuOutputPort trimOut;
+		RateLimitedOutputPort gateOut;
 
 		const float* input = NULL;
 		float* output = NULL;

@@ -288,6 +288,20 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
+configure_file(ToobAmp.lv2/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
+add_custom_command(
+    OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-delay
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp 
+              --class ToobDelayPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl    
+        generate_lvtk_plugin_info
+)
+
 configure_file(ToobAmp.lv2/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
 add_custom_command(
     OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
@@ -302,26 +316,39 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-# Workaround for --whole-archive defects in CMake prior to 3.24.
-# The goal: write lvtk and lvtk_ui libraries (only with --whole-archive option)
-add_library(static-workaround STATIC empty.cpp)
-#set_target_properties(static-workaround PROPERTIES LINKER_LANGUAGE CXX)
-target_link_libraries(
-    static-workaround 
-    -Wl,--whole-archive
-    lvtk
-    -Wl,--no-whole-archive
-    -Wl,--whole-archive
-    lvtk_ui
-    -Wl,--no-whole-archive
+configure_file(ToobAmp.lv2/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
+add_custom_command(
+    OUTPUT  InputStageInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-input_stage
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
+              --class InputStagePluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/InputStage.ttl    
+        generate_lvtk_plugin_info
 )
+
 
 
 add_library(ToobAmpUI SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
     CabSimUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
     ToobChorusUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp 
+    ToobDelayUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
+    InputStageUi.cpp
+
+
+    AboutDialog.hpp AboutDialog.cpp
+    ToobUi.hpp ToobUi.cpp
+
 )
 set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
 set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
@@ -571,6 +598,7 @@ target_include_directories(
 
 # Copy all assets to resources file
 INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
+INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/ttl/ DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/reverb/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/reverb)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/CabIR)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/models/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/models)

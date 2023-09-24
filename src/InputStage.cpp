@@ -74,20 +74,20 @@ uint64_t timeMs()
 InputStage::InputStage(double _rate,
                        const char *_bundle_path,
                        const LV2_Feature *const *features)
-    : Lv2Plugin(_bundle_path,features),
-      rate(_rate),
-      bundle_path(_bundle_path),
-      programNumber(0)
+    : Lv2Plugin(_bundle_path,features)
+    ,  rate(_rate)
+    ,  bundle_path(_bundle_path)
+    ,  programNumber(0)
+
+	, trim(-60.0f, 30.0f)
+	, trimOut{-35,10}
+	, locut (30.0f,300.0f)
+	, bright(0, 25.0f)
+	, brightf(1000.0f, 13000.0f)
+	, hicut(2000.0f, 13000.0f)
+	, gateT(-80.0f, -20.0f)
+
 {
-    LogTrace("InputStage: Loading");
-#ifdef JUNK
-
-    for (int i = 0; i < 200; ++i) // repeat for 20 seconds.
-    {
-        usleep(100000); // sleep for 0.1 seconds
-    }
-
-#endif
     uris.Map(this);
     lv2_atom_forge_init(&forge, map);
     LogTrace("InputStage: Loadedx");
@@ -96,6 +96,8 @@ InputStage::InputStage(double _rate,
     this->brightFilter.SetSampleRate((float)_rate);
     this->noiseGate.SetSampleRate(_rate);
     this->gainStage.SetSampleRate(_rate);
+    this->trimOut.SetSampleRate(_rate);
+    this->gateOut.SetSampleRate(_rate);
 
     this->updateSampleDelay = (int)(_rate / MAX_UPDATES_PER_SECOND);
     this->updateMsDelay = (1000 / MAX_UPDATES_PER_SECOND);
@@ -113,6 +115,8 @@ void InputStage::ConnectPort(uint32_t port, void *data)
     case PortId::TRIM:
         this->trim.SetData(data);
         break;
+    case PortId::TRIM_OUT:
+        this->trimOut.SetData(data);
     case PortId::LOCUT:
         this->locut.SetData(data);
         break;
@@ -128,8 +132,8 @@ void InputStage::ConnectPort(uint32_t port, void *data)
     case PortId::GATE_T:
         gateT.SetData(data);
         break;
-    case PortId::BOOST:
-        boost.SetData(data);
+    case PortId::GATE_OUT:
+        gateOut.SetData(data);
         break;
     case PortId::AUDIO_IN:
         this->input = (const float *)data;
@@ -152,11 +156,13 @@ void InputStage::Activate()
 
     responseChanged = true;
     frameTime = 0;
+    trimOut.Reset();
     this->loCutFilter.Reset();
     this->highCutFilter.Reset();
     this->brightFilter.Reset();
     this->noiseGate.Reset();
     this->gainStage.Reset();
+    this->gateOut.Reset(0);
 }
 void InputStage::Deactivate()
 {
@@ -230,6 +236,9 @@ void InputStage::Run(uint32_t n_samples)
             this->highCutFilter.Tick(
                 this->loCutFilter.Tick(
                     trim * input[i]))));
+
+        trimOut.AddValue(x);
+
         float absX = std::abs(x);
         if (absX > this->peakValue)
         {
@@ -238,8 +247,22 @@ void InputStage::Run(uint32_t n_samples)
         x = noiseGate.Tick(x);
         output[i] = x;
     }
+    float gateValue;
+    switch (noiseGate.GetState())
+    {
+    case NoiseGate::EState::Attacking:
+    case NoiseGate::EState::Holding:
+    case NoiseGate::EState::Disabled:
+        gateValue = 0.0;
+        break;
+    default:
+        gateValue = 1.0;
+        break;
+    }
+    gateOut.SetValue(gateValue,n_samples);
     frameTime += n_samples;
 
+    trimOut.AddValues(n_samples,output);
     if (responseChanged)
     {
         if (this->patchGet)
@@ -344,7 +367,7 @@ LV2_Atom_Forge_Ref InputStage::WriteFrequencyResponse()
     lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
     for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
     {
-        lv2_atom_forge_float(&forge, filterResponse.GetFrequency(i));
+        //lv2_atom_forge_float(&forge, filterResponse.GetFrequency(i));
         lv2_atom_forge_float(&forge, filterResponse.GetResponse(i));
     }
     lv2_atom_forge_pop(&forge, &vectorFrame);

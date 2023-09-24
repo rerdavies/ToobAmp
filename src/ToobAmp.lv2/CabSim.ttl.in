@@ -56,9 +56,9 @@ toob:frequencyResponseVector
             "TooB Cab Simulator"@en-gb 
             ;
     uiext:ui <http://two-play.com/plugins/toob-cab-sim-ui>;                
-    doap:license <https://two-play.com/TooB/licenses/isc> ;
+    doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
     doap:maintainer <http://two-play.com/rerdavies#me> ;
-    lv2:minorVersion ${CMAKE_PROJECT_VERSION_MINOR} ;
+    lv2:minorVersion 0 ;
     lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
     rdfs:comment "TooB amplifier cabinet simulator." ;
 
@@ -75,18 +75,6 @@ rdfs:comment """
 The TooB Cabinet simulator provides EQ tools for emulating cabinet response. See the presets for 
 emulations of well-known cabinets. 
 
-The TooB Cabinet Simulator is part of the TooB Amp Emulation Toolkit. Typically, you would 
-use the following plugins in the following order:
-
-- TooB Input Stage
-
-- TooB Tone Stack
-
-- Toob Power Stage
-
-- Toob Cabinet Simulator
-
-
 """;
     lv2:port
     [
@@ -96,16 +84,13 @@ use the following plugins in the following order:
         lv2:index 0 ;
         lv2:symbol "locut" ;
         lv2:name "Lo Cut";
-        lv2:default 120.0 ;
+        lv2:default 83.0 ;
         lv2:minimum 30.0 ;
         lv2:maximum 300.0 ;    
         units:unit units:hz ;
         lv2:scalePoint [
-                rdfs:label "30Hz" ;
-                rdf:value 30.0
-        ],  [
-                rdfs:label "300Hz" ;
-                rdf:value 300
+                rdfs:label "Off" ;
+                rdf:value 30.0;
         ];
         rdfs:comment "Low cutoff frequency. 30hz to 300hz. Set to minimum to disable." ;
     ], [
@@ -120,14 +105,8 @@ use the following plugins in the following order:
         lv2:maximum 20.0 ;    
         units:unit units:db;
         lv2:scalePoint [
-                rdfs:label "0dB" ;
-                rdf:value 0.0
-        ] , [
-                rdfs:label "10dB" ;
-                rdf:value 10
-        ] , [
-                rdfs:label "20dB" ;
-                rdf:value 20
+                rdfs:label "Off" ;
+                rdf:value 0.0;
         ];
         rdfs:comment "Bright boost (0db to 20db)." ;
 
@@ -159,6 +138,10 @@ use the following plugins in the following order:
         lv2:portProperty epp:logarithmic;
         lv2:designation param:cutoffFrequency ;
         rdfs:comment "Hi cutoff frequency. 2khz to 13khz. Set to maximum to disable." ;
+        lv2:scalePoint [
+                rdfs:label "Off" ;
+                rdf:value 13000.0;
+        ] ;
     ], [
         a lv2:InputPort ,
         lv2:ControlPort ;
@@ -166,7 +149,7 @@ use the following plugins in the following order:
         lv2:index 4 ;
         lv2:symbol "comb" ;
         lv2:name "Comb";
-        lv2:default 0.0 ;
+        lv2:default 0.32 ;
         lv2:minimum 0.0 ;
         lv2:maximum 1.0;    
         rdfs:comment "Amount of comb filtering. 0 to 1. Set to minimum to disable." ; 
@@ -177,9 +160,9 @@ use the following plugins in the following order:
         lv2:index 5 ;
         lv2:symbol "combf" ;
         lv2:name "Comb F";
-        lv2:default 2000.0 ;
+        lv2:default 8000.0 ;
         lv2:minimum 1000.0 ;
-        lv2:maximum 8000.0;    
+        lv2:maximum 10000.0;    
         units:unit units:hz;
         lv2:designation param:cutoffFrequency ;
         rdfs:comment "Comb filter frequency. (1khz to 8khz)" ;
@@ -190,7 +173,7 @@ use the following plugins in the following order:
         lv2:index 6 ;
         lv2:symbol "trim" ;
         lv2:name "Trim";
-        lv2:default 0.0 ;
+        lv2:default 1.5 ;
         lv2:minimum -30.0 ;
         lv2:maximum 30.0;    
         units:unit units:db;
@@ -258,7 +241,7 @@ use the following plugins in the following order:
         pipedal_ui:yBottom -35 ;
         pipedal_ui:xLog 1 ;
         pipedal_ui:yDb 1 ;
-        pipedal_ui:width 80 ;
+        pipedal_ui:width 236 ;
     ]
     .
 

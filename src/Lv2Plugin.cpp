@@ -364,13 +364,29 @@ void Lv2Plugin::HandleEvents(LV2_Atom_Sequence*controlInput)
             else if (obj->body.otype == urids.patch__Get)
             {
                 // Get the property and value of the set message
+                // TODO: patch__accept is the correct object property.
+                //       delete handling for patch__property once PiPedal has been fixed.
                 const LV2_Atom* property = nullptr;
+                const LV2_Atom* accept = nullptr;
 
                 lv2_atom_object_get(
                     obj,
+                    urids.patch__accept, &accept,
                     urids.patch__property, &property,
                     0);
-                if (property != nullptr && property->type == urids.atom__URID)
+                if (accept != nullptr && accept->type == urids.atom__URID)
+                {
+                    LV2_Atom_URID *pVal = (LV2_Atom_URID*)accept;
+                    LV2_URID propertyUrid = pVal->body;
+                    if (propertyUrid == 0)
+                    {
+                        OnPatchGetAll();
+                    } else {
+                        OnPatchGet(propertyUrid);
+                    }
+
+                }                    
+                else if (property != nullptr && property->type == urids.atom__URID)
                 {
                     LV2_Atom_URID *pVal = (LV2_Atom_URID*)property;
                     LV2_URID propertyUrid = pVal->body;
