@@ -270,6 +270,10 @@ void InputStage::Run(uint32_t n_samples)
             WriteFrequencyResponse();
             this->updateSampleDelay = 0;
             this->updateSamples = 0;
+            this->patchGet = false;
+            updateMs = 0;
+            updateSamples = 0;
+
         }
         else
         {
