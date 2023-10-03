@@ -97,7 +97,7 @@ void AudioFilter::Disable()
 
 }
 
-static constexpr double PI = M_PI;
+//static constexpr double PI = M_PI;
 static constexpr double TWO_PI = M_PI*2;
 
 void AudioFilter::BilinearTransform(float frequency, const FilterCoefficients& prototype, FilterCoefficients* result)

@@ -78,7 +78,6 @@ namespace toob
         float depth = 0.5f;
         float depthFactor = 0;
 
-        float rateFactor = 0;
         float lfoValue = 0;
 
 

@@ -33,8 +33,9 @@ execute_process(COMMAND
 
 
 
+message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
         set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4. cortex-a72
@@ -57,9 +58,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
 endif()
 
-message(STATUS "CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
-message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "src: CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
+message(STATUS "src: CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "src: CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -159,7 +160,9 @@ add_library(ToobAmp  SHARED
         ToobFlanger.cpp ToobFlanger.h
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
-        InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
+        InputPort.h CabSim.h CabSim.cpp CombFilter2.h DbDezipper.cpp DbDezipper.h
+        CombFilter2.cpp
+        restrict.hpp
         WavReader.hpp
         WavReader.cpp
         WavWriter.hpp
@@ -266,11 +269,69 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 ####################################################
 
 
-
 set(LVTK_INCLUDE_DIRS
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk/include
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
 )
+
+
+configure_file(ToobAmp.lv2/ToobFreeverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl)
+add_custom_command(
+    OUTPUT  ToobFreeverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-freeverb
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
+              --class ToobFreeverbInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+configure_file(ToobAmp.lv2/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
+add_custom_command(
+    OUTPUT  ToneStackInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-tone-stack
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
+              --class ToneStackPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl    
+        generate_lvtk_plugin_info
+)
+configure_file(ToobAmp.lv2/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
+add_custom_command(
+    OUTPUT  Tf2FlangerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-flanger
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
+              --class Tf2FlangerPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ToobFlangerStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl)
+add_custom_command(
+    OUTPUT  Tf2FlangerStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-flanger-stereo
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
+              --class Tf2FlangerStereoPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl    
+        generate_lvtk_plugin_info
+)
+
+
 
 configure_file(ToobAmp.lv2/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
 
@@ -332,7 +393,21 @@ add_custom_command(
 
 
 
-add_library(ToobAmpUI SHARED
+add_library(ToobAmpUI  SHARED
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
+    ToobFreeverbUi.cpp
+
+
+    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
+    Tf2FlangerUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
+    Tf2FlangerStereoUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
+    ToneStackUi.cpp
+
     ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
     CabSimUi.cpp
 
@@ -354,7 +429,11 @@ set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
 set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 
 target_link_options(ToobAmpUI PRIVATE
-    "-Wl,-z,nodelete"
+    -Wl,-z,nodelete 
+    # -Wl,-utoobChorusLinkage    # demand-link plugin.
+    # -Wl,-ulinkInputStage    # demand-link plugin.
+    # -Wl,-ulinkCabSimUi   # demand-link plugin.
+    # -Wl,-ulinkToobDelayUi   # demand-link plugin.
 )
 
 
@@ -366,10 +445,8 @@ target_include_directories(
 )
 target_link_libraries(
     ToobAmpUI PRIVATE 
-    -Wl,--whole-archive
-     lvtk lvtk_ui
-    -Wl,--no-whole-archive
-    )
+    lvtk lvtk_ui
+)
 
 
 # Tests.
@@ -490,6 +567,17 @@ endif()
 
 add_test(ConvolutionReverbTest ConvolutionReverbTest "--build")
 
+add_executable(CombFilterTest
+    CombFilterTest.cpp
+    CombFilter2.cpp CombFilter2.h
+    IDelay.h
+    restrict.hpp
+    LsNumerics/LsMath.cpp
+)
+
+add_test(CombFilterTest CombFilterTest)
+
+
 add_executable(Ce2ChorusTest 
     TestAssert.hpp
 
@@ -527,6 +615,7 @@ add_test(Ce2ChorusTest Ce2ChorusTest)
 
 # check for missing linkages.
 add_executable(linkageTest 
+
     linkageTest.cpp )
 
 target_link_libraries(linkageTest ToobAmp z.a ogg.a FLAC.a FLAC++.a)
@@ -585,6 +674,7 @@ install(TARGETS ToobAmp ToobAmpUI
 
 
 add_executable(UiLinkageTest 
+
     UiLinkageTest.cpp 
     MapFeature.cpp MapFeature.h)
 

@@ -54,6 +54,7 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 : super(
     PLUGIN_INFO_CLASS::Create(),
     LvtkSize(320,200), // default window size.
+    LvtkSize(470,120), // default help window size.
     "ToobChorusLogo.svg"
     )
 {
@@ -83,6 +84,11 @@ LvtkContainerElement::ptr PLUGIN_CLASS::RenderClientArea() {
 
 // Make the plugin visible to LV2 hosts.
 
-static Lv2UIRegistration<PLUGIN_CLASS> 
-registration { PLUGIN_UI_URI};
+Lv2UIRegistration<PLUGIN_CLASS> 
+toobChorusRegistration { PLUGIN_UI_URI};
+
+void* toobChorusLinkage() {
+    return (void*)&toobChorusRegistration;
+}
+
 

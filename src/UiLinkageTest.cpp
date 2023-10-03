@@ -90,9 +90,14 @@ void Lv2UiHost::Load(const LV2UI_Descriptor *descriptor)
 }
 
 
+
+extern void*toobChorusLinkage();
+
 int main(int argc, char**argv)
 {
 
+    toobChorusLinkage();
+    
     const LV2UI_Descriptor *descriptor = lv2ui_descriptor(0);
 
     //

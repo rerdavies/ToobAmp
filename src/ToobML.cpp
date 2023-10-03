@@ -51,7 +51,7 @@ using namespace toob;
 #pragma GCC diagnostic push
 
 
-// #pragma GCC diagnostic ignored "-Wunknown-warning-option" //clang
+#pragma GCC diagnostic ignored "-Wunknown-warning-option" //clang
 #pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
 
 #include "NeuralModel.h"
@@ -554,12 +554,12 @@ void ToobML::DeleteWorker::OnWork() {
 }
 
 
-static inline double clampValue(double value)
-{
-	if (value < 0) return 0;
-	if (value > 1) return 1;
-	return value;
-}
+// static inline double clampValue(double value)
+// {
+// 	if (value < 0) return 0;
+// 	if (value > 1) return 1;
+// 	return value;
+// }
 
 inline void ToobML::UpdateFilter()
 {

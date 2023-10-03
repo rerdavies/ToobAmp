@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Robin Davies
+// Copyright (c) 2023 Robin E. R. Davies
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -31,8 +31,13 @@ using namespace toob;
 
 
 
-ToobUi::ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, LvtkSize defaultWindowSize, const std::string&logoSvg)
+ToobUi::ToobUi(
+    std::shared_ptr<Lv2PluginInfo> pluginInfo, 
+    LvtkSize defaultWindowSize, 
+    LvtkSize defaultHelpWindowsize,
+    const std::string&logoSvg)
 : super(pluginInfo,defaultWindowSize)
+, defaultHelpWindowSize(defaultHelpWindowsize)
 , logoSvg(logoSvg)
 {
 
@@ -122,10 +127,9 @@ void ToobUi::OnHelpClicked()
     AboutDialog::ptr dialog = AboutDialog::Create();
     if (this->aboutDialog)
     {
-        aboutDialog->Close();
-        aboutDialog = nullptr;
+        return;
     }
-    dialog->Show(this->Window(),"dlg-" + PluginInfo().uri(),PluginInfo().name(),PluginInfo().comment());
+    dialog->Show(this->Window(),this->defaultHelpWindowSize,this);
     aboutDialog = dialog;
 }
 
@@ -138,4 +142,13 @@ void ToobUi::ui_delete()
         aboutDialog = nullptr;
     }
     super::ui_delete();
+}
+
+
+void ToobUi::OnAboutDialogClosed(AboutDialog*dlg)
+{
+    if (this->aboutDialog.get() == dlg)
+    {
+        this->aboutDialog = nullptr;
+    }
 }

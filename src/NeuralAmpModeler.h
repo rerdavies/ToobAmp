@@ -169,7 +169,7 @@ namespace toob
         double rate = 44100;
         std::string bundle_path;
 
-        const int kNumPresets = 1;
+        //const int kNumPresets = 1;
 
         RangedDbInputPort cInputGain{-20, 20};
         RangedDbInputPort cOutputGain{-40, 40};
@@ -248,7 +248,7 @@ namespace toob
         // Member data
 
         // The plugin is mono inside
-        const size_t mNUM_INTERNAL_CHANNELS = 1;
+        // const size_t mNUM_INTERNAL_CHANNELS = 1;
 
         // Input arrays to NAM
         std::vector<std::vector<nam_float_t>> mInputArray;

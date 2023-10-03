@@ -13,22 +13,22 @@ tpset:toob-cab-sim-preset-0
         pset:value 83.0 ;
     ], [
         lv2:symbol "bright" ;
-        pset:value 0.0 ;
+        pset:value 4.6 ;
     ],  [
         lv2:symbol "brightf" ;
-        pset:value 1300.0 ;
+        pset:value 1460.0 ;
     ],  [
         lv2:symbol "hicut" ;
         pset:value 6000.0 ;
     ], [
         lv2:symbol "comb" ;
-        pset:value 0.32 ;
+        pset:value 0.93 ;
     ],  [
         lv2:symbol "combf" ;
-        pset:value 8000.0 ;
+        pset:value 4690.0 ;
     ], [
         lv2:symbol "trim" ;
-        pset:value -1.5 ;
+        pset:value 1.5 ;
     ]
      .
 

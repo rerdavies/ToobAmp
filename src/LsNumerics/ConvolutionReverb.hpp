@@ -74,8 +74,9 @@ namespace LsNumerics
         class AssemblyQueue
         {
             // single-reader, single-writer, designed to be friendly to the reader.
+       
         public:
-            AssemblyQueue(bool isStereo): isStereo(isStereo) { 
+            AssemblyQueue(bool isStereo) { 
                 buffer.resize(BUFFER_SIZE); 
                 if (isStereo)
                 {
@@ -346,7 +347,6 @@ namespace LsNumerics
             size_t writeHead = 0;
             static constexpr size_t BUFFER_SIZE = 256;
             size_t count = 0;
-            bool isStereo = false;
             std::vector<float> buffer;
             std::vector<float> bufferRight;
         };
@@ -640,7 +640,6 @@ namespace LsNumerics
         std::vector<float> assemblyInputBuffer;
         std::vector<float> assemblyOutputBufferRight;
         std::vector<float> assemblyInputBufferRight;
-        size_t assemblyInputBufferIndex = 0;
         std::unique_ptr<std::thread> assemblyThread;
         Implementation::AssemblyQueue assemblyQueue;
         void AssemblyThreadProc();

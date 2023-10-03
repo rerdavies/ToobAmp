@@ -21,7 +21,7 @@
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix toobfreeverb: <http://two-play.com/plugins/toob-freeverb#> .
+@prefix toobChorus: <http://two-play.com/plugins/toob-chorus#> .
 
 
 <http://two-play.com/rerdavies#me>
@@ -30,25 +30,25 @@
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <https://github.com/sponsors/rerdavies> .
 
-<http://two-play.com/plugins/toob-freeverb>
+<http://two-play.com/plugins/toob-flanger>
         a lv2:Plugin ,
-                lv2:ReverbPlugin ;
-                doap:name "TooB Freeverb" ,
-                "TooB Freeverb"@en-gb 
+                lv2:FlangerPlugin ;
+                doap:name "TooB BF-2 Flanger" ,
+                "TooB BF-2 Flanger"@en-gb 
                 ;
+        uiext:ui <http://two-play.com/plugins/toob-flanger-ui>;                
+
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
-         lv2:minorVersion 0 ;
-        lv2:microVersion 29 ;
+        lv2:minorVersion 0 ;
+        lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-ToobFreeverb is an Lv2 implementation of the famous Freeverb reverb effect.
-
-The core implementation is taken from the The Synthesis Toolkit in C++ (STK), https://github.com/thestk/stk, Perry R. Cook and Gary P. Scavone.
+Emulation of a Boss BF-2 Flanger, based on circuit analysis and simulation of the original.
 
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Freeverb";
+        mod:label "TooB BF-2";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port
@@ -57,66 +57,88 @@ The core implementation is taken from the The Synthesis Toolkit in C++ (STK), ht
                 lv2:ControlPort ;
 
                 lv2:index  0;
-                lv2:symbol "dryWet" ;
-                lv2:name "Dry/Wet";
-                lv2:default 0.75 ;
-                lv2:minimum 0;
-                lv2:maximum 1 ;    
+                lv2:symbol "manual" ;
+                rdfs:comment "Maximum delay excursion";
+                lv2:name "Manual";
+                lv2:default 0.5 ;
+                lv2:minimum 0.0;
+                lv2:maximum 1.0;
         ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 1 ;
-                lv2:symbol "roomSize" ;
-                lv2:name "Room Size";
+                lv2:symbol "depth" ;
+                rdfs:comment "LFO depth";
+
+                lv2:name "Depth";
 
                 lv2:default 0.5 ;
                 lv2:minimum 0.0 ;
                 lv2:maximum 1.0 ;
-        ], [
+        ],  
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 2 ;
-                lv2:symbol "damping" ;
-                lv2:name "Damping";
+                lv2:symbol "rate" ;
+                lv2:name "Rate";
+                rdfs:comment "LFO rate";
 
-
-                lv2:default 0.0 ;
+                lv2:default 0.5 ;
                 lv2:minimum 0.0 ;
                 lv2:maximum 1.0 ;
+        ],  
+        [
+                a lv2:OutputPort ,
+                lv2:ControlPort ;
 
+                lv2:index 3 ;
+                lv2:symbol "lfo" ;
+                lv2:name "LFO";
+
+                lv2:minimum -1.0 ;
+                lv2:maximum 1.0 ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 4 ;
+                lv2:symbol "res" ;
+                lv2:name "Res";
+                rdfs:comment "Delay feedback";
+
+                lv2:default 0.5 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0 ;
         ],  
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 3 ;
-                lv2:symbol "inL" ;
-                lv2:name "InL"
-        ], 
-        [
-                a lv2:AudioPort ,
-                        lv2:InputPort ;
-                lv2:index 4 ;
-                lv2:symbol "inR" ;
-                lv2:name "InR"
-        ], 
-        [
-                a lv2:AudioPort ,
-                        lv2:OutputPort ;
                 lv2:index 5 ;
-                lv2:symbol "outL" ;
-                lv2:name "OutL"
-        ]
-        ,
+                lv2:symbol "in" ;
+                lv2:name "In"
+        ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
                 lv2:index 6 ;
-                lv2:symbol "outR" ;
-                lv2:name "OutR"
+                lv2:symbol "outl" ;
+                lv2:name "OutL"
         ]
+        .
+
+<http://two-play.com/plugins/toob-flanger-ui> 
+        a  uiext:X11UI ;
+        lv2:binary <ToobAmpUI.so>;
+
+        lv2:extensionData uiext::idle ;
+        lv2:extensionData uiext:resize ;
+        lv2:extensionData uiext:idleInterface;
+        lv2:requiredFeature uiext:idleInterface ;
         .
 
 

@@ -113,7 +113,6 @@ namespace LsNumerics
             std::vector<T> window;
             window.resize(size);
 
-            double scale = LsNumerics::Pi * 2 / (size - 1);
             for (int i = 0; i < size; ++i)
             {
                 window[i] = (T)(1.0);

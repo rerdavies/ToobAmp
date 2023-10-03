@@ -67,7 +67,7 @@ namespace toob {
                 head = 0;
             }
         }
-        class LockResult;
+        struct LockResult;
 
         class ReadIterator {
         public:

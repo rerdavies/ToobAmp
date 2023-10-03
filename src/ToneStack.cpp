@@ -181,6 +181,7 @@ void ToneStack::Run(uint32_t n_samples)
 		this->updateSamples -= n_samples;
 		if (this->updateSamples <= 0 || n_samples == 0)
 		{
+			updateSamples = 0;
 			this->patchGet = true;
 		}
 	}
@@ -189,13 +190,14 @@ void ToneStack::Run(uint32_t n_samples)
 		uint64_t ctime = timeMs();
 		if (ctime > this->updateMs || n_samples != 0)
 		{
+			updateMs = 0;
 			this->patchGet = true;
 		}
 	}
 	if (this->patchGet)
     {
         this->patchGet = false;
-        this->updateSampleDelay = 0;
+        this->updateSamples = 0;
         this->updateMs = 0;
         WriteFrequencyResponse();
     }
@@ -248,7 +250,7 @@ float ToneStack::CalculateFrequencyResponse(float f)
 }
 
 
-LV2_Atom_Forge_Ref ToneStack::WriteFrequencyResponse()
+void ToneStack::WriteFrequencyResponse()
 {
 
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
@@ -264,8 +266,7 @@ LV2_Atom_Forge_Ref ToneStack::WriteFrequencyResponse()
 	lv2_atom_forge_frame_time(&forge, frameTime);
 
 	LV2_Atom_Forge_Frame objectFrame;
-	LV2_Atom_Forge_Ref   set =
-		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
+	lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
 
     lv2_atom_forge_key(&forge, uris.patch__property);		
 	lv2_atom_forge_urid(&forge, uris.param_frequencyResponseVector);
@@ -290,13 +291,12 @@ LV2_Atom_Forge_Ref ToneStack::WriteFrequencyResponse()
 
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
-		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
+		//lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
 		lv2_atom_forge_float(&forge,filterResponse.GetResponse(i));
 	}
 	lv2_atom_forge_pop(&forge, &vectorFrame);
 
 	lv2_atom_forge_pop(&forge, &objectFrame);
-	return set;
 }
 
 

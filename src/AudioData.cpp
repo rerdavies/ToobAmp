@@ -93,8 +93,8 @@ struct ChannelMatrixValue {
 };
 
 static constexpr float SQRT2 = 1.4142135623730950488016887242097f;
-static constexpr float INV_SQRT2  = (float)(1.0 / SQRT2);
-static constexpr float INV_2SQRT2  = (float)(1.0 / (2* SQRT2));
+// static constexpr float INV_SQRT2  = (float)(1.0 / SQRT2);
+// static constexpr float INV_2SQRT2  = (float)(1.0 / (2* SQRT2));
 
 
 std::vector<ChannelMatrixValue> monoMatrix = {

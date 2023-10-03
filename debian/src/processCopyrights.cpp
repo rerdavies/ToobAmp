@@ -56,7 +56,7 @@ static bool hasFileName(const std::string &path, const std::string &fileName)
     {
         if (path[path.length() - fileName.length() - 1] == '/')
         {
-            return std::equal(fileName.rbegin(), fileName.rend(), path.rbegin());
+            return path.ends_with(fileName);
         }
     }
     return false;
@@ -785,6 +785,67 @@ public:
         }
     }
 
+    struct MdLicense{
+        std::vector<std::string> licensors;
+    };
+
+
+
+    void write_md(std::ostream &outputStream)
+    {
+        std::set<std::string> usedLicenses;
+
+        for (auto &licensePair : this->licenseMap)
+        {
+            auto license = licensePair.second;
+            for (auto &file : license->fileCopyrights)
+            {
+                if (file.copyrights.size() != 0)
+                {
+                    outputStream << "---" << endl << endl;
+                    
+                    for (size_t i = 0; i < file.copyrights.size(); ++i)
+                    {
+                        outputStream << "© ";
+                        const std::string&copyright = file.copyrights[i].string();
+                        for (char c: copyright)
+                        {
+                            switch (c)
+                            {
+                            case '<':
+                                outputStream << "&lt;";
+                                break;
+                            case  '&':
+                                outputStream << "&amp;";
+                                break;
+                            default:
+                                outputStream << c;
+
+                            }
+                        }
+                        outputStream << "  " << endl;
+                    }
+                    outputStream << endl;
+                    
+                    for (auto &line : license->licenseText)
+                    {
+                        if (line == ".")
+                        {
+                            outputStream << endl;    
+                        } else {
+                            if (line.starts_with("* ")) // convert to markdown bullet.
+                            {
+                                line = std::string("- ") + std::string(line.begin()+3,line.end());
+                            }
+                            outputStream << line << endl;
+                        }
+                    }
+                    outputStream << endl;
+                }
+            }
+        }
+    }
+
     void write(std::ostream &outputStream)
     {
         // write head paragraph
@@ -831,7 +892,7 @@ public:
         f.open(path);
         write(f);
     }
-    void loadFile(const std::filesystem::path &path)
+    void loadFile(const std::filesystem::path &path, bool ignoreFiles)
     {
         std::ifstream f(path);
         if (!f.is_open())
@@ -863,10 +924,21 @@ public:
             bool isContinuation = (line[0] == ' ' || line[0] == '\t');
             line = trim(line);
 
+            std::vector<std::string> emptyFiles;
+            emptyFiles.push_back("-");
+
             if (line.length() == 0)
             {
-                if (files.size() != 0 && copyrights.size() != 0 || licenseText.size() != 0)
+                if (
+                    (files.size() != 0 && copyrights.size() != 0)
+                    || 
+                    (licenseText.size() > 1)
+                )
                 {
+                    if (ignoreFiles && files.size() != 0)
+                    {
+                        files = emptyFiles;
+                    }
                     addCopyright(license, licenseText, copyrights, files);
                 }
                 copyrights.clear();
@@ -969,6 +1041,7 @@ int main(int argc, const char *argv[])
 {
     CommandLineParser parser;
     bool help = false;
+    bool md = false;
     bool helpError = false;
     std::string outputFile;
     std::vector<std::string> dependentModules;
@@ -976,6 +1049,7 @@ int main(int argc, const char *argv[])
     parser.AddOption("--help", &help);
     parser.AddOption("--output", &outputFile);
     parser.AddOption("--dependent", &dependentModules);
+    parser.AddOption("--md", &md);
 
     try
     {
@@ -996,7 +1070,7 @@ int main(int argc, const char *argv[])
              << endl;
 
         cout << "Syntax:" << endl
-             << "    processcopyrights [inputFiles...]  [ -dependentModule <moduleName> ]*" << endl;
+             << "    processcopyrights [inputFiles...]  --output <output-file-name> [ -dependentModule <moduleName> ]*" << endl;
         return helpError ? EXIT_FAILURE : EXIT_SUCCESS;
     }
     try
@@ -1022,17 +1096,23 @@ int main(int argc, const char *argv[])
 
         for (const std::string &arg : parser.Arguments())
         {
-            copyrights.loadFile(arg);
+            copyrights.loadFile(arg, md);
         }
         for (std::string dependent : dependentModules)
         {
             cout << "Processing copyrights for module " << dependent << endl;
             std::filesystem::path dependentCopyrightFile =
                 std::filesystem::path("/usr/share/doc") / dependent / "copyright";
-            copyrights.loadFile(dependentCopyrightFile);
+            copyrights.loadFile(dependentCopyrightFile,md);
         }
         cleanCopyrights(copyrights);
-        copyrights.write(outputStream);
+
+        if (md)
+        {
+            copyrights.write_md(outputStream);
+        } else {
+            copyrights.write(outputStream);
+        }
 
         return EXIT_SUCCESS;
     }

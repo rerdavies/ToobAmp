@@ -151,7 +151,6 @@ void FftConvolution::FftPlan::SetSize(int size)
         int m = 1 << i;  // butterfly mask
         int m2 = m >> 1; // butterfly width
 
-        complex_t wj(1, 0);
         complex_t wInc = std::exp(complex_t(0, LsNumerics::Pi / m2));
         twiddleIncrements[i] = wInc;
     }
@@ -174,7 +173,6 @@ FftConvolution::FftPlan::ptr FftConvolution::FftPlan::GetCachedPlan(size_t size)
 
 FftConvolution::Section::Section(size_t size, size_t offset, const std::vector<float> &impulseSamples)
 :size(size)
-,sampleOffset(offset)
 ,fftPlan(FftPlan::GetCachedPlan(size*2))
 {
     inputOffset = offset-size;

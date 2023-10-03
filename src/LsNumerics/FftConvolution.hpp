@@ -254,12 +254,10 @@ namespace LsNumerics
             void Update(const DelayLine&delayLine);
             size_t tickOffset = 0;
             size_t size;
-            std::size_t sampleOffset;
             FftPlan::ptr fftPlan;
             std::vector<complex_t> impulseFft;
             std::vector<complex_t> buffer;
             std::size_t inputOffset;
-            std::size_t directConvolutionLength;
         };
     private:
         DelayLine delayLine;

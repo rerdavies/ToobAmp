@@ -50,7 +50,7 @@ using namespace toob;
 
 
 const int MAX_UPDATES_PER_SECOND = 10;
-const int UPSAMPLING_BUFFER_SIZE = 128;
+//const int UPSAMPLING_BUFFER_SIZE = 128;
 
 const char* PowerStage2::URI= POWER_STAGE_2_URI;
 

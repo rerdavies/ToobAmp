@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     constexpr size_t TEST_SECONDS = 20;
 
     cout << "ProfileNeuralAmpModeler" << endl;
-    cout << "Copyright (c) 2023 Robin Davies" << endl;
+    cout << "Copyright (c) 2023 Robin E. R. Davies" << endl;
     cout << endl;
     if (argc != 2 || argv[1][0] == '-')
     {

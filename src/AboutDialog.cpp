@@ -22,36 +22,49 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "AboutDialog.hpp"
 #include "lvtk/LvtkTypographyElement.hpp"
 #include "lvtk/LvtkVerticalStackElement.hpp"
+#include "lvtk/LvtkTableElement.hpp"
 #include "lvtk/LvtkScrollContainerElement.hpp"
+#include "lvtk_ui/Lv2PluginInfo.hpp"
+#include "ToobUi.hpp"
+#include <fstream>
+#include "lvtk/LvtkMarkdownElement.hpp"
 
 using namespace toob;
 using namespace lvtk;
-
+using namespace lvtk::ui;
 
 void AboutDialog::Show(
     LvtkWindow::ptr parent,
-    const std::string&settingsKey,
-    const std::string&title,
-    const std::string&text)
+    LvtkSize defaultDialogSize,
+    ToobUi *toobUi)
 {
+    this->toobUi = toobUi;
     Theme(parent->ThemePtr());
 
-    this->text = text;
-    this->title = title;
+    const Lv2PluginInfo &pluginInfo = toobUi->PluginInfo();
+
+    std::string settingsKey = "dlg-" + pluginInfo.uri();
+    std::string title = "Help - " + pluginInfo.name();
+
     LvtkCreateWindowParameters windowParameters;
 
     windowParameters.backgroundColor = Theme().paper;
     windowParameters.positioning = LvtkWindowPositioning::CenterOnParent;
     windowParameters.title = title;
     windowParameters.settingsKey = settingsKey;
-    windowParameters.windowType = LvtkWindowType::Dialog;
+    windowParameters.windowType = LvtkWindowType::Utility;
+    windowParameters.minSize = LvtkSize(320, 200);
+    windowParameters.maxSize = LvtkSize(10000, 10000);
+    windowParameters.size = defaultDialogSize;
+    windowParameters.x11Windowclass = "com.twoplay.lvtk-plugin"; // Maybe used for settings by Window Managers.
+    windowParameters.gtkApplicationId = windowParameters.x11Windowclass;
+    windowParameters.x11WindowName = title;
 
     windowParameters.settingsObject = parent->WindowParameters().settingsObject;
 
     windowParameters.owner = parent.get();
 
-    super::CreateChildWindow(parent.get(),windowParameters,Render(text));
-    
+    super::CreateChildWindow(parent.get(), windowParameters, Render(pluginInfo));
 }
 
 WindowHandle AboutDialog::GetApplicationWindow(LvtkWindow::ptr parent)
@@ -59,75 +72,149 @@ WindowHandle AboutDialog::GetApplicationWindow(LvtkWindow::ptr parent)
     return parent->Handle();
 }
 
-static std::vector<std::string> getLines(const std::string&text)
+LvtkElement::ptr AboutDialog::RenderDivider()
 {
-    std::vector<std::string> result;
-    std::stringstream s {text};
-    while (s)
-    {
-        std::string line;
-        std::getline(s,line);
-        result.push_back(std::move(line));
-    }
-    return result;
+    auto element = LvtkElement::Create();
+    element->Style()
+        .Height(1)
+        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .Background(Theme().dividerColor)
+        .MarginTop({4})
+        .MarginBottom({8});
+    return element;
 }
 
-static LvtkTypographyElement::ptr MarkupLine(const std::string&text)
+LvtkVerticalStackElement::ptr AboutDialog::Markup(const std::string &text)
 {
-    auto typography = LvtkTypographyElement::Create();
-    typography->Variant(LvtkTypographyVariant::BodyPrimary)
-        .Text(text)
-        ;
-    typography->Style()
-        .MarginBottom(16)
-        .SingleLine(false)
-        ;
-    return typography;
+    auto element = LvtkMarkdownElement::Create();
+    element->SetMarkdown(text);
+    return element;
 }
 
-static LvtkElement::ptr Markup(const std::string &text)
+static bool HasControlDocs(const Lv2PluginInfo &pluginInfo)
 {
-    std::vector<LvtkElement::ptr> paragraphs;
-    std::vector<std::string> lines = getLines(text);
-    std::string lineBuffer;
-    for (std::string&line: lines)
+    for (auto &port : pluginInfo.ports())
     {
-        if (line.length() == 0)
+        if (port.is_control_port() && port.is_input() && port.comment().length() != 0)
         {
-            if (lineBuffer.length() != 0)
-            {
-                paragraphs.push_back(MarkupLine(lineBuffer));
-                lineBuffer.resize(0);
-            }
-        } else {
-            lineBuffer += line;
+            return true;
         }
     }
-    if (lineBuffer.length() != 0)
-    {
-        paragraphs.push_back(MarkupLine(lineBuffer));
-        lineBuffer.resize(0);
-    }
-
-    LvtkVerticalStackElement::ptr stack = LvtkVerticalStackElement::Create();
-    stack->Style()
-        .Padding({24,16,24,16})
-        .HorizontalAlignment(LvtkAlignment::Stretch)
-        ;
-    stack->Children(paragraphs);
-    return stack;
+    return false;
 }
 
-LvtkElement::ptr AboutDialog::Render(const std::string&text)
+LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
+{
+    LvtkTableElement::ptr table = LvtkTableElement::Create();
+    table->Style()
+        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .MarginBottom(16);
+    table->ColumnDefinitions(
+        {
+            {
+                LvtkAlignment::Start,
+                LvtkAlignment::Start,
+                0,
+            },
+            {
+                LvtkAlignment::Start,
+                LvtkAlignment::Stretch,
+                1,
+            },
+        });
+    table->Style()
+        .CellPadding({4})
+        .BorderWidth({1})
+        .BorderColor(Theme().dividerColor);
+    for (auto &port : pluginInfo.ports())
+    {
+        auto comment = port.comment();
+        if (port.is_control_port() && port.is_input() && comment.length())
+        {
+            LvtkTypographyElement::ptr nameElement = LvtkTypographyElement::Create();
+            nameElement->Variant(LvtkTypographyVariant::BodyPrimary)
+                .Text(port.name());
+            nameElement->Style().SingleLine(true);
+
+            auto textElement = Markup(comment);
+            // remove bottom padding from the last typographyElement.
+            if (textElement->ChildCount() > 0)
+            {
+                auto lastParagraph = textElement->Children()[textElement->ChildCount() - 1];
+                lastParagraph->Style().PaddingBottom({4.0});
+                lastParagraph->Style().MarginBottom({0.0});
+            }
+
+            table->AddRow({nameElement, textElement});
+        }
+    }
+
+    return table;
+}
+
+LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
 {
 
     LvtkScrollContainerElement::ptr scrollContainer = LvtkScrollContainerElement::Create();
-        scrollContainer->Style()
+    scrollContainer->Style()
         .HorizontalAlignment(LvtkAlignment::Stretch)
         .VerticalAlignment(LvtkAlignment::Stretch)
-        ;
+        .Background(Theme().paper);
 
-    scrollContainer->Child(Markup(text));
+    {
+        primaryText = true;
+        LvtkVerticalStackElement::ptr textContainer = LvtkVerticalStackElement::Create();
+        textContainer->Style()
+            .HorizontalAlignment(LvtkAlignment::Stretch)
+            .Margin({32, 16, 32, 16});
+
+        if (HasControlDocs(pluginInfo))
+        {
+            textContainer->AddChild(RenderPortDocs(pluginInfo));
+        }
+        {
+            auto element = LvtkMarkdownElement::Create();
+            element->SetMarkdown(pluginInfo.comment());
+            textContainer->AddChild(element);
+        }
+        {
+            // spacer above copyrights.
+            auto element = LvtkElement::Create();
+            element->Style().Height(24);
+            textContainer->AddChild(element);
+        }
+        primaryText = false;
+        textContainer->AddChild(RenderLicenses());
+        scrollContainer->Child(textContainer);
+    }
     return scrollContainer;
+}
 
+LvtkElement::ptr AboutDialog::RenderLicenses()
+{
+    auto textContainer = LvtkVerticalStackElement::Create();
+    {
+        textContainer->AddChild(RenderDivider());
+        {
+            LvtkTypographyElement::ptr typography = LvtkTypographyElement::Create();
+            typography->Variant(LvtkTypographyVariant::Heading)
+                .Text("Legal Notices");
+            textContainer->AddChild(typography);
+        }
+        {
+            auto element = LvtkMarkdownElement::Create();
+            element->AddMarkdownFile(std::filesystem::path(this->toobUi->BundlePath()) / "LICENSE.md");
+            textContainer->AddChild(element);
+        }
+    }
+    return textContainer;
+}
+
+void AboutDialog::OnClosing()
+{
+    if (toobUi)
+    {
+        toobUi->OnAboutDialogClosed(this);
+        toobUi = nullptr;
+    }
 }

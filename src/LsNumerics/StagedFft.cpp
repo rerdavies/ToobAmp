@@ -43,10 +43,10 @@ static constexpr size_t maxL1CacheSize = CacheInfo::L1DataBlockSize;
 static constexpr size_t l1CacheFftSize = maxL1CacheSize / (sizeof(complex_t));
 static size_t l1Log2CacheSize = log2(l1CacheFftSize);
 
-static inline size_t pow2(size_t x)
-{
-    return 1 << x;
-}
+// static inline size_t pow2(size_t x)
+// {
+//     return 1 << x;
+// }
 static size_t log2(size_t x)
 {
     size_t result = 0;
@@ -80,10 +80,10 @@ static uint32_t BitReverse(uint32_t value, size_t bits)
     return result;
 }
 
-static inline StagedFftPlan::complex_t Wn(size_t i, size_t n, StagedFftPlan::Direction dir)
-{
-    return std::exp(StagedFftPlan::complex_t(0, 2 * LsNumerics::Pi * i / n * (double)dir));
-}
+// static inline StagedFftPlan::complex_t Wn(size_t i, size_t n, StagedFftPlan::Direction dir)
+// {
+//     return std::exp(StagedFftPlan::complex_t(0, 2 * LsNumerics::Pi * i / n * (double)dir));
+// }
 
 void StagedFftPlan::SetSize(size_t size)
 {
@@ -702,8 +702,6 @@ static void StageNShufflePass(VectorRange<complex_t> &output, const StageNShuffl
     double conj = dir == StagedFft::Direction::Forward ? 1 : -1;
 
     // complex_t wInc = std::exp(complex_t(0, Pi / twiddleOffset * double(dir)));
-    complex_t wj;
-    complex_t wInc;
 
     for (size_t j = 0; j < twiddleOffset; j += 1)
     {

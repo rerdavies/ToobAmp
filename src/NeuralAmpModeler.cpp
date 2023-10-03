@@ -28,6 +28,8 @@ SOFTWARE.
 
 *************/
 
+#pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
+
 #include <algorithm> // std::clamp
 #include <cmath>
 #include <filesystem>
@@ -101,7 +103,6 @@ public:
 
 private:
     DSP *dsp;
-    dsp::ImpulseResponse *ir;
 };
 
 class NamLoadMessage : public NamMessage
@@ -369,6 +370,10 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
         std::string dspFilename = "";
         std::unique_ptr<DSP> dspResult;
         std::string irFilename = "";
+
+#ifdef __clang__
+        #pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
+#endif
         std::unique_ptr<IR> irResult;
 
         NamLoadMessage *pLoadMessage = static_cast<NamLoadMessage *>(message);

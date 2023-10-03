@@ -204,7 +204,6 @@ namespace toob {
 		float *pData = nullptr;
 		float lastValue;
 		int minValue,maxValue;
-		int value;
 	public:
 		SteppedInputPort(int minValue, int maxValue)
 		{

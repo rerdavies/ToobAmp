@@ -20,24 +20,14 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-
 #pragma once
 
-#include "../std.h"
-#include "../Filters/AudioFilter3.h"
 
-namespace LsNumerics {
-
-    class ToneStackFilter : public toob::AudioFilter3 {
-        using FilterCoefficients3 = toob::FilterCoefficients3;
-    public:
-        enum class AmpModel { Bassman, JCM800};
-    private:
-        void BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result);
-        //AmpModel ampModel = AmpModel::Bassman;
-    public:
-        void UpdateFilter(AmpModel model,float bass_, float mid_, float treble_);
-
-    };
-
-}
+// define restrict keyword for C++ compilers (which don't yet support it)
+#ifndef restrict
+#if defined(__GNUC__) || defined(__clang__)
+#define restrict __restrict__
+#elif defined(_MSC_VER)
+#define restrict __restrict
+#endif
+#endif

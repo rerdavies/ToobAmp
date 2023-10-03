@@ -37,7 +37,7 @@ namespace toob {
 
 
         // frequency not setable.
-		int Frequency;
+		//int Frequency;
 		void Disable() { }
 		virtual void SetCutoffFrequency(float frequency) { UNUSED(frequency);}
 

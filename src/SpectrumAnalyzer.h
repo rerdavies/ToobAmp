@@ -44,7 +44,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "OutputPort.h"
 #include "Filters/AudioFilter2.h"
 #include "Filters/ShelvingLowCutFilter2.h"
-#include "CombFilter.h"
 #include "NoiseGate.h"
 #include "GainStage.h"
 #include "LsNumerics/StagedFft.hpp"
@@ -271,9 +270,9 @@ namespace toob {
 
 
 		FilterResponse filterResponse;
-		int32_t peakDelay = 0;
-		float peakValueL = 0;
-		float peakValueR = 0;
+		// int32_t peakDelay = 0;
+		// float peakValueL = 0;
+		// float peakValueR = 0;
 	private:
 		bool enabled = false;
 
