@@ -45,7 +45,7 @@ toob:frequencyResponseVector
     doap:name "TooB Cab Simulator" ,
             "TooB Cab Simulator"@en-gb 
             ;
-    uiext:ui <http://two-play.com/plugins/toob-cab-sim-ui>;                
+    uiext:ui <http://two-play.com/plugins/toob-cab-sim-ui>;
     doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
     doap:maintainer <http://two-play.com/rerdavies#me> ;
     lv2:minorVersion 0 ;

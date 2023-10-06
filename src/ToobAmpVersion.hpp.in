@@ -1,4 +1,4 @@
-// Copyright (c) 2022 Robin E. R. Davies
+// Copyright (c) 2023 Robin E. R. Davies
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -19,8 +19,9 @@
 
 #pragma once
 
-#include <sstream>
-#include <iostream>
 
-// usage:   SS("xyz" << 123 << 45.6) returning a std::string rvalue.
-#define SS(x) ( ((std::stringstream&)(std::stringstream() << x )).str())
+#define TOOBAMP_VERSION_MAJOR ${CMAKE_PROJECT_VERSION_MINOR}
+#define TOOBAMP_VERSION_MINOR ${CMAKE_PROJECT_VERSION_MINOR}
+#define TOOBAMP_VERSION_PATCH ${CMAKE_PROJECT_VERSION_PATCH}
+
+#define TOOBAMP_BUILD_LABEL "${TOOBAMP_SEMANTIC_VERSION}"

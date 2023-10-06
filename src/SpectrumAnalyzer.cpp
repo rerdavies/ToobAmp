@@ -54,6 +54,8 @@ using namespace LsNumerics;
 #endif
 
 
+
+
 constexpr size_t MAX_BLOCKSIZE = 32*1024;
 const char *SpectrumAnalyzer::URI = SPECTRUM_ANALZER_URI;
 
@@ -171,8 +173,8 @@ void SpectrumAnalyzer::WriteSpectrum()
 	LV2_Atom_Forge_Frame tupleFrame;
 	lv2_atom_forge_tuple(&forge,&tupleFrame);
 	{
-		lv2_atom_forge_string(&forge, this->pSvgPath->c_str(), (uint32_t)(this->pSvgPath->length() + 1));
-		lv2_atom_forge_string(&forge, this->pSvgHoldPath->c_str(), (uint32_t)(this->pSvgHoldPath->length() + 1));
+		lv2_atom_forge_string(&forge, this->pSvgPath->c_str(), (uint32_t)(this->pSvgPath->length()));
+		lv2_atom_forge_string(&forge, this->pSvgHoldPath->c_str(), (uint32_t)(this->pSvgHoldPath->length()));
 	}
 	lv2_atom_forge_pop(&forge,&tupleFrame);
 

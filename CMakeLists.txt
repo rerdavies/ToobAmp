@@ -6,7 +6,14 @@ cmake_minimum_required (VERSION 3.9)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "OFF")
 
-project(ToobAmp VERSION 1.0.29 DESCRIPTION "TooBAmp LV2 Plugin")
+project(ToobAmp VERSION 1.0.29 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+
+# Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
+
+set(PROJECT_RELEASE_QUALIFIER "-alpha")
+
+set(TOOBAMP_SEMANTIC_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PROJECT_RELEASE_QUALIFIER}")
+
 
 include(CTest)
 enable_testing()

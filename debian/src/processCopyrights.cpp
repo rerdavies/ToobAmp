@@ -795,6 +795,32 @@ public:
     {
         std::set<std::string> usedLicenses;
 
+        outputStream << "© 2020-2023, Robin E. R. Davies  " << endl;
+        outputStream << "  " << endl;
+        auto toobLicense = this->licenseMap.find("Expat");
+        
+        for (auto line : toobLicense->second->licenseText)
+        {
+            if (line == ".")
+            {
+                outputStream << endl;    
+            } else {
+                if (line.starts_with("* ")) // convert to markdown bullet.
+                {
+                    line = std::string("- ") + std::string(line.begin()+2,line.end());
+                }
+                outputStream << line << endl;
+            }
+        }
+        outputStream << endl;
+        outputStream << "---" << endl << endl;
+
+        outputStream << "TooB Lv2 Guitar Effects source code is available at https://github.com/rerdavies/ToobAmp" << endl << endl;
+        
+
+        outputStream << "TooB Lv2 Guitar Effects use third-party source code and components that are " << endl;
+        outputStream << "provided under the following licenses." << endl << endl;
+
         for (auto &licensePair : this->licenseMap)
         {
             auto license = licensePair.second;
@@ -825,7 +851,7 @@ public:
                         }
                         outputStream << "  " << endl;
                     }
-                    outputStream << endl;
+                    outputStream << "  " << endl;
                     
                     for (auto &line : license->licenseText)
                     {
@@ -835,7 +861,7 @@ public:
                         } else {
                             if (line.starts_with("* ")) // convert to markdown bullet.
                             {
-                                line = std::string("- ") + std::string(line.begin()+3,line.end());
+                                line = std::string("- ") + std::string(line.begin()+2,line.end());
                             }
                             outputStream << line << endl;
                         }

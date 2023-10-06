@@ -65,6 +65,7 @@ namespace toob {
 	private:
 		enum class PortId {
 			TRIM = 0,
+			TRIM_OUT,
 			AMP_MODEL,
 			GAIN,
 			MASTER,
@@ -72,10 +73,11 @@ namespace toob {
 			MID,
 			TREBLE,
 
-			GAIN_ENABLE,
-
 			SAG,
 			SAGD,
+			SAGF,
+
+			GAIN_ENABLE,
 
 
 			AUDIO_IN,
@@ -83,7 +85,6 @@ namespace toob {
 			CONTROL_IN,
 			NOTIFY_OUT,
 
-			SAGF,
 
 		};
 
@@ -92,6 +93,7 @@ namespace toob {
 
 		const float* input = nullptr;
 		const float* trimData = nullptr;
+		float* trimOutData = nullptr;
 		const float* gainData = nullptr;
 		const float* masterData = nullptr;
 		const float* modelData = nullptr;
@@ -102,6 +104,7 @@ namespace toob {
 
 		float modelValue;
 		float gainValue = 0;
+		float trimOutValue = -96;
 		float trimDb = 0;
 		float masterDb = 0;
 		float bassValue = 0;
@@ -112,6 +115,9 @@ namespace toob {
 		float trim = 1;
 		float master = 1;
 		float gain = 0;
+
+		int trimOutputCount = 0;
+		int trimOutputSampleRate = 10000;
 
 		SagProcessor sagProcessor;
 

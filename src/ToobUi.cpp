@@ -40,7 +40,8 @@ ToobUi::ToobUi(
 , defaultHelpWindowSize(defaultHelpWindowsize)
 , logoSvg(logoSvg)
 {
-
+    // TO-DO: remove the argument.
+    defaultHelpWindowSize = LvtkSize(600,600);
 }
 
 

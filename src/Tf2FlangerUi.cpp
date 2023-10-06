@@ -45,15 +45,13 @@ public:
     using super=ToobUi;
     using self=PLUGIN_CLASS;
     PLUGIN_CLASS();
-protected:
-    virtual LvtkContainerElement::ptr RenderClientArea() override;
 };
 
 
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(320,200), // default window size.
+    LvtkSize(490,210), // default window size.
     LvtkSize(470,320), // default help window size.
     "ToobFlangerLogo.svg"
     )
@@ -62,23 +60,6 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 }
 
 
-
-LvtkContainerElement::ptr PLUGIN_CLASS::RenderClientArea() {
-    LvtkContainerElement::ptr controlContainer = LvtkContainerElement::Create();
-    controlContainer->Style()
-        .HorizontalAlignment(LvtkAlignment::Stretch)
-        .VerticalAlignment(LvtkAlignment::Stretch)
-        ;
-    {
-        auto controls = super::RenderControls();
-        controls->Style()
-            .FlexJustification(LvtkFlexJustification::Center)
-            .VerticalAlignment(LvtkAlignment::Center)
-            ;
-        controlContainer->AddChild(controls);
-    }
-    return controlContainer;
-}
 
 
 

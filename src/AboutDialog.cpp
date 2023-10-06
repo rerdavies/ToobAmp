@@ -28,6 +28,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ToobUi.hpp"
 #include <fstream>
 #include "lvtk/LvtkMarkdownElement.hpp"
+#include "ToobAmpVersion.hpp"
 
 using namespace toob;
 using namespace lvtk;
@@ -48,7 +49,7 @@ void AboutDialog::Show(
 
     LvtkCreateWindowParameters windowParameters;
 
-    windowParameters.backgroundColor = Theme().paper;
+    windowParameters.backgroundColor = Theme().popupBackground;
     windowParameters.positioning = LvtkWindowPositioning::CenterOnParent;
     windowParameters.title = title;
     windowParameters.settingsKey = settingsKey;
@@ -159,7 +160,7 @@ LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
     scrollContainer->Style()
         .HorizontalAlignment(LvtkAlignment::Stretch)
         .VerticalAlignment(LvtkAlignment::Stretch)
-        .Background(Theme().paper);
+        .Background(Theme().popupBackground);
 
     {
         primaryText = true;
@@ -197,12 +198,18 @@ LvtkElement::ptr AboutDialog::RenderLicenses()
         textContainer->AddChild(RenderDivider());
         {
             LvtkTypographyElement::ptr typography = LvtkTypographyElement::Create();
-            typography->Variant(LvtkTypographyVariant::Heading)
-                .Text("Legal Notices");
+            typography->Variant(LvtkTypographyVariant::BodySecondary)
+                .Text("TooB LV2 Guitar Effects v" TOOBAMP_BUILD_LABEL);
+            typography->Style()
+                .MarginTop(16)
+                .MarginBottom(16)
+                ;
             textContainer->AddChild(typography);
         }
         {
             auto element = LvtkMarkdownElement::Create();
+            element->TextVariant(LvtkTypographyVariant::BodySecondary);
+            
             element->AddMarkdownFile(std::filesystem::path(this->toobUi->BundlePath()) / "LICENSE.md");
             textContainer->AddChild(element);
         }

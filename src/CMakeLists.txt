@@ -266,12 +266,43 @@ target_link_libraries(ToobAmp
     ../modules    
 )
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
+
+
 ####################################################
 
 
 set(LVTK_INCLUDE_DIRS
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk/include
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
+)
+
+
+configure_file(ToobAmp.lv2/SpectrumAnalyzer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl)
+add_custom_command(
+    OUTPUT  SpectrumAnalyzerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-spectrum
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
+              --class SpectrumAnalyzerInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ToobML.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl)
+add_custom_command(
+    OUTPUT  ToobMLInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-ml
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
+              --class ToobMLInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl    
+        generate_lvtk_plugin_info
 )
 
 
@@ -289,6 +320,8 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
+
+configure_file(ToobAmpVersion.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.hpp)
 
 configure_file(ToobAmp.lv2/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
 add_custom_command(
@@ -394,6 +427,11 @@ add_custom_command(
 
 
 add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
+    SpectrumAnalyzerUi.cpp
+    
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
+    ToobMlUi.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
     ToobFreeverbUi.cpp
@@ -694,6 +732,7 @@ INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/l
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/models/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/models)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
 INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lvtk/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/MPL-2.0.md DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 
 
 # TODO: Add tests if needed.

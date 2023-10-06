@@ -58,10 +58,11 @@ using namespace toob;
 
 #pragma GCC diagnostic push
 
-constexpr float MODEL_FADE_RATE = 0.2f; // seconds.
-constexpr float MASTER_DEZIP_RATE = 0.1f; // seconds.
-constexpr float GAIN_DEZIP_RATE = 0.1f; // seconds.
-const int MAX_UPDATES_PER_SECOND = 10;
+static constexpr float MODEL_FADE_RATE = 0.2f; // seconds.
+static constexpr float MASTER_DEZIP_RATE = 0.1f; // seconds.
+static constexpr float GAIN_DEZIP_RATE = 0.1f; // seconds.
+static const int MAX_UPDATES_PER_SECOND = 10;
+static constexpr double TRIMOUT_UPDATE_RATE_S = 0.1; // seconds.
 
 const char* ToobML::URI= TOOB_ML_URI;
 
@@ -239,6 +240,7 @@ ToobML::ToobML(double _rate,
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
+	this->trimOutputSampleRate = (int)(_rate/TRIMOUT_UPDATE_RATE_S);
 }
 
 ToobML::~ToobML()
@@ -269,6 +271,12 @@ void ToobML::ConnectPort(uint32_t port, void* data)
 	case PortId::TRIM:
 		this->trimData  = (const float*)data;
 		break;
+	case PortId::TRIM_OUT:
+		this->trimOutData = (float*)data;
+		if (trimOutData)
+		{
+			*trimOutData = 0;
+		}
 	case PortId::GAIN:
 		this->gainData = (const float*)data;
 		break;
@@ -418,7 +426,7 @@ float ToobML::CalculateFrequencyResponse(float f)
 
 LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 {
-
+	
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
 		filterResponse.SetResponse(
@@ -624,6 +632,11 @@ void ToobML::Run(uint32_t n_samples)
 	{
 		float val = trimDezipper.Tick()*input[i];
 
+		float absVal = std::abs(val);
+		if (absVal > trimOutValue)
+		{
+			trimOutValue = absVal;
+		}
 		if (!bypassToneFilter)
 		{
 			val = baxandallToneStack.Tick(val);
@@ -639,6 +652,13 @@ void ToobML::Run(uint32_t n_samples)
 	}
 	frameTime += n_samples;
 
+	trimOutputCount -= n_samples;
+	if (trimOutputCount < 0)
+	{
+		trimOutputCount += trimOutputSampleRate;
+		*this->trimOutData = Af2Db(trimOutValue);
+		trimOutValue = 0;
+	}
 
 	if (responseChanged)
 	{
