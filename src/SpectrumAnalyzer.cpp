@@ -103,12 +103,15 @@ void SpectrumAnalyzer::ConnectPort(uint32_t port, void *data)
 	case PortId::MAX_F:
 		this->maxF.SetData(data);
 		break;
+	case PortId::LEVEL:
+		this->level.SetData(data);
+		break;
 	}
 }
 
 void SpectrumAnalyzer::Activate()
 {
-	fftWorker.Initialize(getSampleRate(),FFT_SIZE,minF.GetValue(),maxF.GetValue());
+	fftWorker.Initialize(getSampleRate(),FFT_SIZE,minF.GetValue(),maxF.GetValue(),level.GetValue());
 }
 void SpectrumAnalyzer::Deactivate()
 {
@@ -130,9 +133,9 @@ void SpectrumAnalyzer::Run(uint32_t n_samples)
 
 	this->HandleEvents(this->controlIn);
 
-	if (this->minF.HasChanged() || this->maxF.HasChanged())
+	if (this->minF.HasChanged() || this->maxF.HasChanged() || this->level.HasChanged() )
 	{
-		fftWorker.Reinitialize(minF.GetValue(),maxF.GetValue());
+		fftWorker.Reinitialize(minF.GetValue(),maxF.GetValue(),level.GetValue());
 	}
 
 	fftWorker.Tick();
@@ -241,7 +244,14 @@ void SpectrumAnalyzer::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom*value)
 	if (propertyUrid == urids.patchProperty__spectrumEnable)
 	{
 		LV2_Atom_Bool *pVal = (LV2_Atom_Bool*)value;
-		bool enabled = pVal->body != 0;
+		bool enabledVal = pVal->body != 0;
+		if (enabledVal)
+		{
+			++enabledCount;
+		} else {
+			--enabledCount;
+		}
+		bool enabled = enabledCount != 0;
 		if (enabled != this->enabled)
 		{
 			this->enabled = enabled;
@@ -264,11 +274,12 @@ void SpectrumAnalyzer::FftWorker::Reset()
 	sampleCount = 0;
 }
 
-void SpectrumAnalyzer::FftWorker::Reinitialize(float minFrequency,float maxFrequency)
+void SpectrumAnalyzer::FftWorker::Reinitialize(float minFrequency,float maxFrequency, float dbLevel)
 {
 	// force block size to power of two.
 	this->minFrequency = minFrequency;
 	this->maxFrequency = maxFrequency;
+	this->dbLevel = dbLevel;
 
 	if (state == FftState::Capturing)
 	{
@@ -328,7 +339,7 @@ void SpectrumAnalyzer::FftWorker::BackgroundTask::Initialize(FftWorker*fftWorker
 
 	fftWindow = LsNumerics::Window::FlatTop<double>(blockSize);
 }
-void SpectrumAnalyzer::FftWorker::Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency)
+void SpectrumAnalyzer::FftWorker::Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency, float dbLevel)
 {
 
 	captureBuffer.resize(MAX_BUFFER_SIZE + sampleRate*0.5);
@@ -336,6 +347,7 @@ void SpectrumAnalyzer::FftWorker::Initialize(double sampleRate, size_t blockSize
 	this->sampleRate = sampleRate;
 	this->minFrequency = minFrequency;
 	this->maxFrequency = maxFrequency;
+	this->dbLevel = dbLevel;
 	size_t t = 1;
 	while (t < blockSize)
 	{
@@ -411,7 +423,7 @@ void SpectrumAnalyzer::FftWorker::BackgroundTask::CopyFromCaptureBuffer()
 		}
 	}
 }
-void SpectrumAnalyzer::FftWorker::BackgroundTask::CalculateSvgPaths(size_t blockSize,float minF, float maxF)
+void SpectrumAnalyzer::FftWorker::BackgroundTask::CalculateSvgPaths(size_t blockSize,float minF, float maxF, float dbLevel)
 {
 	if (this->resetHoldValues)
 	{
@@ -432,7 +444,7 @@ void SpectrumAnalyzer::FftWorker::BackgroundTask::CalculateSvgPaths(size_t block
 
 	for (size_t i = 0; i < fftValues.size(); ++i)
 	{
-		fftValues[i] = Af2Db(norm*std::abs(fftResult[i]));
+		fftValues[i] = Af2Db(norm*std::abs(fftResult[i]))+ dbLevel;
 	}
 
 	for (size_t i = 0; i < fftValues.size(); ++i)
@@ -481,7 +493,7 @@ std::string SpectrumAnalyzer::FftWorker::BackgroundTask::FftToSvg(const std::vec
 		float logF = std::log(f);
 		int x = (logF-logMinF)*SPECTRUM_POINTS/(logMaxF-logMinF);
 		constexpr float MAX_DB = 0;
-		constexpr float MIN_DB = -100;
+		constexpr float MIN_DB = -80;
 		constexpr float MAX_Y = 0;
 		constexpr float MIN_Y = 1000;
 		constexpr float SCALE = (MAX_Y-MIN_Y)/(MAX_DB-MIN_DB);
@@ -497,7 +509,7 @@ std::string SpectrumAnalyzer::FftWorker::BackgroundTask::FftToSvg(const std::vec
 				{
 					float blend = (SPECTRUM_POINTS-lastX)/(x-lastX);
 					float xN = lastValue*(1-blend)+value*blend;
-					s << " L" << SPECTRUM_POINTS << ',' << xN;	
+					s << " L" << SPECTRUM_POINTS << ',' << (int)std::round(xN);	
 					break;
 				}
 				else if (lastX < 0 && x != 0)
@@ -505,8 +517,8 @@ std::string SpectrumAnalyzer::FftWorker::BackgroundTask::FftToSvg(const std::vec
 					float blend = -lastX/(x-lastX);
 					float x0 = lastValue*(1-blend)+value*blend;
 				
-					s << " L" << 0 << ',' << x0;	
-					s << " L" << x << ',' << value;	
+					s << " L" << 0 << ',' << (int)std::round(x0);	
+					s << " L" << x << ',' << (int)std::round(value);	
 				} else {
 					s << " L" << x << ',' << value;
 				}
@@ -519,7 +531,7 @@ std::string SpectrumAnalyzer::FftWorker::BackgroundTask::FftToSvg(const std::vec
 			}
 		}
 	}
-	s << " L" << lastX << "," << lastValue;
+	s << " L" << lastX << "," << (int)std::round(lastValue);
 	s << " L" << lastX << "," << 1000;
 	s << " L" << 0 << "," << 1000; // close the path.
 		

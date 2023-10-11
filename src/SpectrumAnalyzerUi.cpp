@@ -50,12 +50,16 @@ public:
     using ptr = std::shared_ptr<self>;
     static ptr Create() { return std::make_shared<self>(); }
 
-    void SetMinF(double minF);
-    void SetMaxF(double maxF);
+    void MinF(double minF);
+    void MaxF(double maxF);
+    void Level(double level);
     void SetResponse(const std::string &svgResponse, const std::string&svgHoldResponse);
 
 protected:
-    using PlotValues = std::vector<LvtkPoint>;
+    struct PointF {
+        float x,y;
+    };
+    using PlotValues = std::vector<PointF>;
 
     virtual void OnDraw(LvtkDrawingContext &dc) override;
 
@@ -65,15 +69,18 @@ protected:
         this->AddClass(Theme().plotStyle);
         PreComputeGridXs();
         this->Style().Width(width);
+
+
     }
 private:
     LvtkColor holdColor { "#80800060"};
     LvtkColor plotColor { "#008000E0"};
-    double width = 236.0;
+
+    double width = 200.0;
     double xLeft = 60.0;
     double xRight = 22000;
     double yBottom = 0;
-    double yTop = -40;
+    double yTop = -80;
 
     void PreComputeGridXs();
     void DrawGrid(LvtkDrawingContext &dc);
@@ -111,6 +118,8 @@ protected:
 
     virtual void OnPatchPropertyReceived(LV2_URID type, const uint8_t*data) override;
 private:
+    observer_handle_t minFObserverHandle, maxFObserverHandle,levelObserverHandle;
+
     SpectrumPlotElement::ptr spectrumPlotElement;
 
     struct Urids {
@@ -128,24 +137,32 @@ private:
 PLUGIN_CLASS::PLUGIN_CLASS()
     : super(
           PLUGIN_INFO_CLASS::Create(),
-          LvtkSize(536, 208), // default window size.
+          LvtkSize(596, 208), // default window size.
           LvtkSize(470, 800),
           "SpectrumAnalyzerLogo.svg")
 {
-    observer_handle_t minFObserverHandle, maxFObserverHandle;
     minFObserverHandle = GetControlProperty("minF").addObserver(
         [this](double value) {
             if (this->spectrumPlotElement)
             {
-                spectrumPlotElement->SetMinF(value);
+                spectrumPlotElement->MinF(value);
             }
 
         });
+    levelObserverHandle = GetControlProperty("level").addObserver(
+        [this](double value) {
+            if (this->spectrumPlotElement)
+            {
+                spectrumPlotElement->Level(value);
+            }
+
+        });
+
     maxFObserverHandle = GetControlProperty("maxF").addObserver(
         [this](double value) {
             if (this->spectrumPlotElement)
             {
-                spectrumPlotElement->SetMaxF(value);
+                spectrumPlotElement->MaxF(value);
             }
         });
 }
@@ -177,6 +194,7 @@ bool PLUGIN_CLASS::instantiate(
     urids.atom__String = GetUrid(LV2_ATOM__String);
 
     WriteSpectrumEnable(true);
+    spectrumPlotElement->Level(GetControlProperty("level").get());
 
     return true;
 }
@@ -237,11 +255,21 @@ LvtkContainerElement::ptr PLUGIN_CLASS::RenderControls() {
 void SpectrumPlotElement::ConvertSvg(PlotValues&result, const std::string&svg)
 {
      std::stringstream s(svg);
+    result.resize(0);
+     while (!s.eof())
+     {
+        char cmd, comma;
+        float x,y;
+        s >> cmd;
+        if (!s) break;
+        s >> x >> comma >> y ;
+        result.push_back(PointF{x,y});
+     }
 }
 
 void SpectrumPlotElement::SetResponse(const std::string &svgResponse, const std::string&svgHoldResponse)
 {
-    ConvertSvg(this->holdValues,svgResponse);
+    ConvertSvg(this->values,svgResponse);
     ConvertSvg(this->holdValues,svgHoldResponse);
     Invalidate();
 }
@@ -283,7 +311,12 @@ void SpectrumPlotElement::PreComputeGridXs()
     }
 }
 
-void SpectrumPlotElement::SetMinF(double minF)
+void SpectrumPlotElement::Level(double value)
+{
+    this->yBottom = -80+value;
+    this->yTop = value;
+}
+void SpectrumPlotElement::MinF(double minF)
 {
     if (minF != this->xLeft)
     {
@@ -291,7 +324,7 @@ void SpectrumPlotElement::SetMinF(double minF)
         PreComputeGridXs();
     }
 }
-void SpectrumPlotElement::SetMaxF(double maxF)
+void SpectrumPlotElement::MaxF(double maxF)
 {
     if (maxF != this->xRight)
     {
@@ -313,7 +346,6 @@ void SpectrumPlotElement::OnDraw(LvtkDrawingContext &dc)
         dc.round_corner_rectangle(clientRect, corners);
         dc.clip();
 
-        DrawGrid(dc);
         size_t count = this->values.size();
         if (count > 1)
         {
@@ -325,6 +357,7 @@ void SpectrumPlotElement::OnDraw(LvtkDrawingContext &dc)
             dc.set_source(plotColor);
             dc.fill();
         }
+        DrawGrid(dc);
     }
     dc.restore();
 }
@@ -382,10 +415,21 @@ void SpectrumPlotElement::DrawGrid(LvtkDrawingContext &dc)
 
 void SpectrumPlotElement::DrawPlot(LvtkDrawingContext&dc,PlotValues&values)
 {
-    // if (values.size() > 1)
-    // {
-        
-    // }
+    LvtkSize size = clientSize;
+    // points are in range [0..1000].
+    double scaleX = size.Width()/200;
+    double scaleY = size.Height()*0.001;
+    if (values.size() > 2)
+    {
+        dc.move_to(scaleX*values[0].x,scaleY*values[0].y);
+        for (auto i = values.begin()+1; i != values.end(); ++i)
+        {
+            dc.line_to(scaleX*i->x,scaleY*i->y);
+        }
+        dc.close_path();
+    } else {
+        dc.rectangle(0,0,0,0);
+    }
 }
 
 // Make the plugin visible to LV2 hosts.

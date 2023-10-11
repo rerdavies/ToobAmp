@@ -370,7 +370,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
@@ -382,7 +382,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 12;
                 lv2:symbol "notify" ;

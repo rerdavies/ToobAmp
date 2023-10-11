@@ -3,6 +3,16 @@ Upstream-Name: ToobAmp
 Upstream-Contact: rerdavies@gmail.com
 Source: https://github.com/rerdavies/ToobAmp
 
+
+Files: impulseFiles/reverb
+Copyright: www.openairlib.net, University of York
+ www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
+ www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
+ www.openairlib.net, AudioLab University of York, www.ncem.co.uk
+ www.openairlib.net
+License: CC-By-4.0
+
+
 Files: modules/RTNeural/modules/xsimd/docs/source/api/xsimd_batch.hpp
 Copyright: 2016, Johan Mabille and Sylvain Corlay
 License: BSD-3-clause
@@ -577,3 +587,4 @@ License: MIT~Boehm
  Permission to modify the code and to distribute modified code is
  granted, provided the above notices are retained, and a notice that
  the code was modified is included with the above copyright notice.
+

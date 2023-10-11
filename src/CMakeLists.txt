@@ -277,7 +277,36 @@ set(LVTK_INCLUDE_DIRS
 )
 
 
-configure_file(ToobAmp.lv2/SpectrumAnalyzer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl)
+add_custom_command(
+    OUTPUT  ConvolutionReverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-convolution-reverb
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
+              --class ConvolutionReverbInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+configure_file(ToobAmp.lv2/ttl.in/ToobTuner.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl)
+add_custom_command(
+    OUTPUT  ToobTunerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-tuner
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
+              --class ToobTunerInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/SpectrumAnalyzer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl)
 add_custom_command(
     OUTPUT  SpectrumAnalyzerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -291,7 +320,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobML.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobML.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl)
 add_custom_command(
     OUTPUT  ToobMLInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -306,7 +335,7 @@ add_custom_command(
 )
 
 
-configure_file(ToobAmp.lv2/ToobFreeverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobFreeverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl)
 add_custom_command(
     OUTPUT  ToobFreeverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -323,7 +352,7 @@ add_custom_command(
 
 configure_file(ToobAmpVersion.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.hpp)
 
-configure_file(ToobAmp.lv2/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
 add_custom_command(
     OUTPUT  ToneStackInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -336,7 +365,7 @@ add_custom_command(
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl    
         generate_lvtk_plugin_info
 )
-configure_file(ToobAmp.lv2/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
 add_custom_command(
     OUTPUT  Tf2FlangerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -350,7 +379,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobFlangerStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobFlangerStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl)
 add_custom_command(
     OUTPUT  Tf2FlangerStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -366,9 +395,9 @@ add_custom_command(
 
 
 
-configure_file(ToobAmp.lv2/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
+configure_file(ToobAmp.lv2/ttl.in/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
 
-configure_file(ToobAmp.lv2/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
+configure_file(ToobAmp.lv2/ttl.in/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
 add_custom_command(
     OUTPUT  CabSimInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -382,7 +411,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
 add_custom_command(
     OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -396,7 +425,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
 add_custom_command(
     OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -410,7 +439,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
+configure_file(ToobAmp.lv2/ttl.in/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
 add_custom_command(
     OUTPUT  InputStageInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -427,6 +456,13 @@ add_custom_command(
 
 
 add_library(ToobAmpUI  SHARED
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
+    ConvolutionReverbUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
+    ToobTunerUi.cpp
+
     ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
     SpectrumAnalyzerUi.cpp
     
@@ -457,7 +493,6 @@ add_library(ToobAmpUI  SHARED
 
     ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
     InputStageUi.cpp
-
 
     AboutDialog.hpp AboutDialog.cpp
     ToobUi.hpp ToobUi.cpp

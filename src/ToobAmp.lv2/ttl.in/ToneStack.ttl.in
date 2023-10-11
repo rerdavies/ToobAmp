@@ -136,7 +136,7 @@ tone stack used in Polytone and HiWatt amps.
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 6 ;
                 lv2:symbol "control" ;
@@ -146,7 +146,7 @@ tone stack used in Polytone and HiWatt amps.
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 7 ;
                 lv2:symbol "notify" ;

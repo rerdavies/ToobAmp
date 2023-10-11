@@ -46,10 +46,11 @@ toobimpulse:impulseFile
         doap:name "TooB Convolution Reverb" ,
                 "TooB Convolution Reverb"@en-gb 
                 ;
+        uiext:ui <http://two-play.com/plugins/convolution-reverb-ui> ;
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
-         lv2:minorVersion 0 ;
-        lv2:microVersion 29 ;
+        lv2:minorVersion 0 ;
+        lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
 
 Convolution reverb is a notoriously compute-intensive effect. If you are having performance issues,  use the Max T control to constrain the length of the impulse file to
@@ -80,13 +81,12 @@ licensing terms that are compatible with the Toob Amp project's licensing terms.
 ---
 
 Toob Convolution Reverb's impulse files were provided by the OpenAir project.
-https://www.openair.hosted.york.ac.uk, under CC-By-4.0 licenses.
+https://www.openair.hosted.york.ac.uk, under CC-By-4.0 licenses. 
 
+See the full license declaration given below for Disclaimers of Waranties and 
+Limitations of Liability that apply to works licensed under CC-By-4.0.
 
-
-Arthur Sykes Rymer Auditorium.wav
-
----------------------------------------
+### Arthur Sykes Rymer Auditorium.wav
 
 By: www.openairlib.net, University of York
 
@@ -97,9 +97,7 @@ https://creativecommons.org/licenses/by/4.0/
 Source: https://www.openair.hosted.york.ac.uk/?page_id=425
 
 
-Jack Lyons Hall, University of York.wav
-
----------------------------------------
+### Jack Lyons Hall, University of York.wav
 
 By: www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
 
@@ -111,22 +109,19 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=571
 
 
 
-Koli National Park - Winter.wav
-
----------------------------------------
+### Koli National Park - Winter.wav
 
 By: www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
 
 This work is provided under a Creative Commons Attribution 4.0 International License.
+
 https://creativecommons.org/licenses/by/4.0/
 
 Source: https://www.openair.hosted.york.ac.uk/?page_id=584
 
 
 
-St. Margaret’s Church.wav
-
----------------------------------------
+### St. Margaret’s Church.wav
 
 By: www.openairlib.net, AudioLab University of York, www.ncem.co.uk
 
@@ -137,9 +132,7 @@ https://creativecommons.org/licenses/by/4.0/
 Source: https://www.openair.hosted.york.ac.uk/?page_id=702
 
 
-Genesis 6 Studio Live Room.wav
-
----------------------------------------
+### Genesis 6 Studio Live Room.wav
 
 By: www.openairlib.net
 
@@ -155,7 +148,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         mod:label "TooB CReverb";
         lv2:requiredFeature urid:map;
         lv2:optionalFeature state::freePath, state:makePath, state:mapPath, work:schedule ;
-        lv2:extensionData state:interface;
+        lv2:extensionData state:interface, work:interface;
 
 
         lv2:optionalFeature lv2:hardRTCapable;
@@ -312,7 +305,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
@@ -324,7 +317,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 8;
                 lv2:symbol "notify" ;
@@ -345,22 +338,27 @@ toobcr:ui
                 lv2:index 4 ;
                 pipedal_ui:patchProperty toobimpulse:impulseFile ;
                 pipedal_ui:directory "ReverbImpulseFiles";
+                pipedal_ui:resourceDirectory "impulseFiles/reverb";
                 pipedal_ui:fileTypes 
                 [
                         a pipedal_ui:fileType;
-                        rdfs:label "WAV File";
+                        rdfs:label "WAV files";
                         pipedal_ui:mimeType "audio/wav";
                 ],
                 [
                         a pipedal_ui:fileType;
-                        rdfs:label "FLAC File";
+                        rdfs:label "FLAC files";
                         pipedal_ui:mimeType "audio/flac";
                 ]                ;
-        ];
-        ui:portNotification 
-        [
-                lv2:symbol "loading_state";
-                ui:plugin <http://two-play.com/plugins/toob-convolution-reverb>;
-                ui:protocol ui:floatProtocol;
         ]
         .
+
+<http://two-play.com/plugins/convolution-reverb-ui> 
+    a  uiext:X11UI ;
+    lv2:binary <ToobAmpUI.so>;
+
+    lv2:extensionData uiext::idle ;
+    lv2:extensionData uiext:resize ;
+    lv2:extensionData uiext:idleInterface;
+    lv2:requiredFeature uiext:idleInterface ;
+    .

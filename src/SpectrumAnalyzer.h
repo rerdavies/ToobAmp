@@ -64,13 +64,15 @@ namespace toob {
 			CONTROL_IN,
 			NOTIFY_OUT,
 			MIN_F,
-			MAX_F
+			MAX_F,
+			LEVEL
 		};
 		static constexpr size_t MAX_BUFFER_SIZE = 16*1024;
 		static constexpr size_t FFT_SIZE = 16*1024;
 
 		RangedInputPort minF = RangedInputPort(10.0f, 400.0f);
 		RangedInputPort maxF = RangedInputPort(1000.0f,22000.0f);
+		RangedInputPort level = RangedInputPort(-30,30);
 
 		bool svgPathReady = false;
 		const std::string *pSvgPath = nullptr;
@@ -100,6 +102,7 @@ namespace toob {
 			size_t blockSize;
 			float minFrequency;
 			float maxFrequency;
+			float dbLevel;
 			bool resetHoldValues = true;
 
 			std::vector<float> captureBuffer;
@@ -111,8 +114,8 @@ namespace toob {
 				pThis(pThis)
 			{
 			}
-			void Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency);
-			void Reinitialize(float minFrequency, float maxFrequency);
+			void Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency,float dbLevel);
+			void Reinitialize(float minFrequency, float maxFrequency, float dbLevel);
 			void Reset();
 			void Deactivate();
 			void SetEnabled(bool enabled);
@@ -153,7 +156,7 @@ namespace toob {
 			}
 		protected:
 			void OnWork() {
-				backgroundTask.CalculateSvgPaths(blockSize,minFrequency,maxFrequency);
+				backgroundTask.CalculateSvgPaths(blockSize,minFrequency,maxFrequency,dbLevel);
 			}
 			void OnResponse()
 			{
@@ -194,7 +197,7 @@ namespace toob {
 				// convenient way to make sure we don't accidentally share state with audio thread.
 				void CaptureData(FftWorker *fftWorker);
 				void CopyFromCaptureBuffer();
-				void CalculateSvgPaths(size_t blockSize,float minF, float maxF);
+				void CalculateSvgPaths(size_t blockSize,float minF, float maxF, float dbLevel);
 				std::string FftToSvg(const std::vector<float>& fft);
 			};
 
@@ -275,6 +278,8 @@ namespace toob {
 		// float peakValueR = 0;
 	private:
 		bool enabled = false;
+		int64_t enabledCount = 0;
+
 
 	protected:
 		virtual void OnPatchGet(LV2_URID propertyUrid) override;

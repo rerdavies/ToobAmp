@@ -421,7 +421,7 @@ and uses model files from the GuitarML Neural Pi project (https://github.com/Gui
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 14 ;
                 lv2:symbol "control" ;
@@ -432,7 +432,7 @@ and uses model files from the GuitarML Neural Pi project (https://github.com/Gui
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 15 ;
                 lv2:symbol "notify" ;
@@ -443,7 +443,7 @@ and uses model files from the GuitarML Neural Pi project (https://github.com/Gui
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 16 ;
                 lv2:symbol "notify" ;

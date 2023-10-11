@@ -344,7 +344,7 @@ Source: <https://www.adventurekid.se/akrt/free-reverb-impulse-responses/>
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
@@ -356,7 +356,7 @@ Source: <https://www.adventurekid.se/akrt/free-reverb-impulse-responses/>
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 10;
                 lv2:symbol "notify" ;

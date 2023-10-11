@@ -165,7 +165,7 @@ void ToobTuner::Run(uint32_t n_samples)
 
 	UpdateControls();
 
-	if (updateFrameCount <= 0 && requestState == RequestState::Idle && circularBuffer.Size() >= this->fftSize)
+	if (updateFrameIndex <= 0 && requestState == RequestState::Idle && circularBuffer.Size() >= this->fftSize)
 	{
 		requestState = RequestState::Requested;
 		this->tunerWorker.Request(circularBuffer.Lock(fftSize));
@@ -174,7 +174,11 @@ void ToobTuner::Run(uint32_t n_samples)
 		this->updateFrameIndex = this->updateFrameCount;
 
 	} else {
-		--updateFrameCount;
+		updateFrameIndex -= n_samples;
+		if (updateFrameIndex < 0)
+		{
+			updateFrameIndex = 0;
+		}
 	}
 	int subsampleCount = this->subsampleCount;
 	int subsampleIndex = this->subsampleIndex;;
@@ -213,6 +217,7 @@ void ToobTuner::UpdateControls()
 		bool muted = this->Mute.GetValue() != 0;
 		if (this->muted != muted)
 		{
+			this->muted = muted;
 			muteDezipper.To(muted ? 0:1, 0.1f);
 		}
 	}
@@ -223,7 +228,7 @@ void ToobTuner::OnPitchReceived(float value) {
 	this->Freq.SetValue(value);
 	pitchValue = value;
 	this->requestState = RequestState::Idle;
-	if (this->updateFrameIndex == 0)
+	if (this->updateFrameIndex <= 0)
 	{
 		// we underran. Restart the tuner request with a delay.
 		this->updateFrameIndex = this->updateFrameCount;

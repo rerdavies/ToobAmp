@@ -560,7 +560,7 @@ use the following plugins in the following order.
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 25 ;
                 lv2:symbol "control" ;
@@ -570,7 +570,7 @@ use the following plugins in the following order.
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 26 ;
                 lv2:symbol "notify" ;
