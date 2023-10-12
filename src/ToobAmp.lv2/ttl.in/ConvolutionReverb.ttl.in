@@ -27,10 +27,11 @@
 
 @prefix toobcr: <http://two-play.com/plugins/toob-convolution-reverb#> .
 @prefix toobimpulse: <http://two-play.com/plugins/toob-impulse#> .
-                      
+
+
 toobimpulse:impulseFile
         a lv2:Parameter;
-        rdfs:label "File";
+        rdfs:label "Reverb Impulse File";
         rdfs:range atom:Path.
 
 
@@ -57,51 +58,53 @@ Convolution reverb is a notoriously compute-intensive effect. If you are having 
 under two seconds. 
 
 The Max T control affects how much of the impulse file is used. If the length of the impulse file is longer than the specified time, samples occuring after 
-the specified time are discarded, and the tail of the impulse convolution is fed back into the imput of the convolution. This ensures a smooth reverb tail, 
+the specified time are discarded, and the tail of the impulse convolution is fed back into the input of the convolution. This ensures a smooth reverb tail, 
 and has little effect on the quality of the resulting reverb. If the impulse file is shorter than the specified time, then all samples in the impulse 
-file are used, and no feedback occurs. 
+file are used, and no feedback occurs. You can often get smooth reverbs that preserve most of the character of the impulse file with Max T set to 
+250ms or less.
 
-Because reverb impulse files typically include the original sound, you will often get strange comb filter effects if you use the Direct mix control;
+Because reverb impulse files often include the original sound, you will sometimes get strange comb filter effects if you use the Direct mix control;
 but this varies depending on the impulse file in question. Usually, the Direct mix control should be set to -INF.
 
-The Predelay control determines whether Toob Convolution Reverb will strip leading silence from the impulse data. Turning it on preserves silence in the
+The Predelay control determines whether Toob Convolution Reverb will strip leading silence from the impulse data. Turning it on preserves leading silence in the
 impulse signal; turning it off removes leading silence. If the the Direct mix control is set to -INF dB, there's no real point in 
-delaying the convolution reverb output; you want responses as quickly as possible; the Predelay control should be set to off.
+delaying the convolution reverb output; you want responses as quickly as possible. The Predelay control should be set to off.
  The leading silence in impulse files can sometimes be quite significant. 
 
-If the input file has 4 channels, Toob Convolution Reverb assumes the signal is in Ambisonic b-format, and downmixes the ambisonic channels to mono. To generate
+If the impulse file has 4 channels, Toob Convolution Reverb assumes the signal is in Ambisonic b-format, and downmixes the ambisonic channels to mono. To generate
 stereo reverb effects from ambisonic audio, use the stereo version of this plugin.
 
 Toob Convolution Reverb comes with a nominal set of reverb impulse files to get you started. You are strongly encouraged to explore the rich collections of
 reverb impulse files that are widely available on the internet. 
 
-Special thanks are extended to the the OpenAir project, wich graciously provided the base set of impulse files distributed with Toob Convolution Reverb under 
-licensing terms that are compatible with the Toob Amp project's licensing terms.
+Special thanks are extended to the the OpenAir project, wich graciously provided the base set of impulse files
+distributed with Toob Convolution Reverb under licensing terms that are compatible with the Toob Amp project's
+licensing terms.
 
 ---
 
-Toob Convolution Reverb's impulse files were provided by the OpenAir project.
-https://www.openair.hosted.york.ac.uk, under CC-By-4.0 licenses. 
+Toob Convolution Reverb's impulse files were provided by the OpenAir project 
+(https://www.openair.hosted.york.ac.uk) under CC-By-4.0 licenses. 
 
-See the full license declaration given below for Disclaimers of Waranties and 
-Limitations of Liability that apply to works licensed under CC-By-4.0.
+See the full text of the Creative Commons Attribution 4.0 International Public License given below for Disclaimers of Waranties and 
+Limitations of Liability that apply to these works.
 
-### Arthur Sykes Rymer Auditorium.wav
+##### Arthur Sykes Rymer Auditorium.wav
 
-By: www.openairlib.net, University of York
+Copyright © www.openairlib.net, University of York
 
-This work is provided under a Creative Commons Attribution 4.0 International License.
+This work is provided under a Creative Commons Attribution 4.0 International Public License.
 
 https://creativecommons.org/licenses/by/4.0/
 
 Source: https://www.openair.hosted.york.ac.uk/?page_id=425
 
 
-### Jack Lyons Hall, University of York.wav
+##### Jack Lyons Hall, University of York.wav
 
-By: www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
+Copyright © www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
 
-This work is provided under a Creative Commons Attribution 4.0 International License.
+This work is provided under a Creative Commons Attribution 4.0 International Public License.
 
 https://creativecommons.org/licenses/by/4.0/
 
@@ -109,11 +112,11 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=571
 
 
 
-### Koli National Park - Winter.wav
+##### Koli National Park - Winter.wav
 
-By: www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
+Copyright © www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
 
-This work is provided under a Creative Commons Attribution 4.0 International License.
+This work is provided under a Creative Commons Attribution 4.0 International Public License.
 
 https://creativecommons.org/licenses/by/4.0/
 
@@ -121,22 +124,22 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=584
 
 
 
-### St. Margaret’s Church.wav
+##### St. Margaret’s Church.wav
 
-By: www.openairlib.net, AudioLab University of York, www.ncem.co.uk
+Copyright © www.openairlib.net, AudioLab University of York, www.ncem.co.uk
 
-This work is provided under a Creative Commons Attribution 4.0 International License.
+This work is provided under a Creative Commons Attribution 4.0 International Public License.
 
 https://creativecommons.org/licenses/by/4.0/
 
 Source: https://www.openair.hosted.york.ac.uk/?page_id=702
 
 
-### Genesis 6 Studio Live Room.wav
+##### Genesis 6 Studio Live Room.wav
 
-By: www.openairlib.net
+Copyright © www.openairlib.net
 
-This work is provided under a Creative Commons Attribution 4.0 International License.
+This work is provided under a Creative Commons Attribution 4.0 International Public License.
 
 https://creativecommons.org/licenses/by/4.0/
 
@@ -173,7 +176,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default 1.5 ;
                 lv2:minimum 0.1 ;
-                lv2:maximum 10.0 ;    
+                lv2:maximum 10.0 ;
 
                 lv2:portProperty epp:notAutomatic ;
                 lv2:portProperty epp:expensive ;
@@ -182,7 +185,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 rdfs:comment "Maximum length of impulse data to use." ;
 
-        ],  
+        ],
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -192,7 +195,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:name "Direct";
                 lv2:default -40.0 ;
                 lv2:minimum -40.0 ;
-                lv2:maximum 20.0 ;    
+                lv2:maximum 20.0 ;
                 units:unit units:db ;
 
                 lv2:scalePoint [
@@ -201,7 +204,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 ];
                 rdfs:comment "Direct mix. Set to minimum to disable." ;
 
-        ],          
+        ],
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -212,7 +215,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default -10.0 ;
                 lv2:minimum -40.0 ;
-                lv2:maximum 20.0 ;    
+                lv2:maximum 20.0 ;
                 units:unit units:db ;
 
                 lv2:scalePoint [
@@ -231,7 +234,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default 1 ;
                 lv2:minimum 0 ;
-                lv2:maximum 1 ;    
+                lv2:maximum 1 ;
                 
                 lv2:portProperty lv2:enumeration ;
 
@@ -257,7 +260,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:portProperty lv2:enumeration ;
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 5.0 ;    
+                lv2:maximum 5.0 ;
 
 				# NotLoaded = 0,
 				# Idle = 1,
@@ -334,7 +337,7 @@ toobcr:ui
         pipedal_ui:fileProperties 
         [
                 a pipedal_ui:fileProperty;
-                rdfs:label "Impulse File" ;
+                rdfs:label "Reverb Impulse File" ;
                 lv2:index 4 ;
                 pipedal_ui:patchProperty toobimpulse:impulseFile ;
                 pipedal_ui:directory "ReverbImpulseFiles";

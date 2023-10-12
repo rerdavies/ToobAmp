@@ -24,6 +24,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lvtk/LvtkVerticalStackElement.hpp"
 #include "lvtk_ui/Lv2PluginInfo.hpp"
 
+namespace lvtk {
+    class LvtkScrollContainerElement;
+
+}
 namespace toob {
     using namespace lvtk;
     class ToobUi;
@@ -44,6 +48,7 @@ namespace toob {
         virtual void OnClosing() override;
 
     private:
+        std::shared_ptr<LvtkScrollContainerElement> scrollContainer;
         bool primaryText = true;
         LvtkElement::ptr RenderDivider();
         LvtkElement::ptr RenderLicenses();

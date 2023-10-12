@@ -43,6 +43,19 @@ ToobUi::ToobUi(
     // TO-DO: remove the argument.
     defaultHelpWindowSize = LvtkSize(600,600);
 }
+ToobUi::ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
+    const LvtkCreateWindowParameters &createWindowParams,
+    LvtkSize defaultHelpWindowSize,
+    const std::string&logoSvg)
+: super(pluginInfo,createWindowParams)
+, defaultHelpWindowSize(defaultHelpWindowSize)
+, logoSvg(logoSvg)
+{
+    // TO-DO: remove the argument.
+    defaultHelpWindowSize = LvtkSize(600,600);
+
+}
+
 
 
 LvtkContainerElement::ptr ToobUi::RenderBottomBar()

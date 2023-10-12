@@ -291,6 +291,21 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
+configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverbStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl)
+add_custom_command(
+    OUTPUT  ConvolutionReverbStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-convolution-reverb-stereo
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
+              --class ConvolutionReverbStereoInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl    
+        generate_lvtk_plugin_info
+)
+
+
 
 configure_file(ToobAmp.lv2/ttl.in/ToobTuner.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl)
 add_custom_command(
@@ -456,6 +471,8 @@ add_custom_command(
 
 
 add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
+    ConvolutionReverbStereoUi.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
     ConvolutionReverbUi.cpp

@@ -66,6 +66,7 @@ void AboutDialog::Show(
     windowParameters.owner = parent.get();
 
     super::CreateChildWindow(parent.get(), windowParameters, Render(pluginInfo));
+    scrollContainer->Focus();
 }
 
 WindowHandle AboutDialog::GetApplicationWindow(LvtkWindow::ptr parent)
@@ -130,7 +131,7 @@ LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
     for (auto &port : pluginInfo.ports())
     {
         auto comment = port.comment();
-        if (port.is_control_port() && port.is_input() && comment.length())
+        if (port.is_control_port() && port.is_input() && comment.length() && !port.not_on_gui())
         {
             LvtkTypographyElement::ptr nameElement = LvtkTypographyElement::Create();
             nameElement->Variant(LvtkTypographyVariant::BodyPrimary)
@@ -156,7 +157,8 @@ LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
 LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
 {
 
-    LvtkScrollContainerElement::ptr scrollContainer = LvtkScrollContainerElement::Create();
+    scrollContainer = LvtkScrollContainerElement::Create();
+    scrollContainer->WantsFocus(true);
     scrollContainer->Style()
         .HorizontalAlignment(LvtkAlignment::Stretch)
         .VerticalAlignment(LvtkAlignment::Stretch)

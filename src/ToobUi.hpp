@@ -37,6 +37,11 @@ namespace toob {
             LvtkSize defaultHelpWindowSize,
             const std::string&logoSvg);
 
+        ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
+            const LvtkCreateWindowParameters &createWindowParames,
+            LvtkSize defaultHelpWindowSize,
+            const std::string&logoSvg);
+
         void OnAboutDialogClosed(AboutDialog*dlg);
     protected:
         virtual LvtkContainerElement::ptr RenderClientArea();

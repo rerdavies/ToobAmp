@@ -10,7 +10,7 @@ Copyright: www.openairlib.net, University of York
  www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
  www.openairlib.net, AudioLab University of York, www.ncem.co.uk
  www.openairlib.net
-License: CC-By-4.0
+License: CC-BY-4.0
 
 
 Files: modules/RTNeural/modules/xsimd/docs/source/api/xsimd_batch.hpp
@@ -120,9 +120,10 @@ License: MPL-2.0
  .
  https://www.mozilla.org/en-US/MPL/2.0/
  .
- On Debian-derived distributions, the complete text of the Mozilla 
- Public License v 2.0 can be found in '/usr/share/common-licenses/MPL-2.0'.
-
+ The complete text of the Mozilla Public
+ License, v. 2.0 can be found at 
+ /usr/lib/lv2/ToobAmp.lv2/MPL-2.0.md
+ 
 License: ISC
  ISC License
  .
