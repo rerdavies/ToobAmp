@@ -49,7 +49,7 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 : super(
     PLUGIN_INFO_CLASS::Create(),
     LvtkCreateWindowParameters {
-        .size= LvtkSize(780,208), // default window size.
+        .size= LvtkSize(848,208), // default window size.
         .minSize= LvtkSize(420,200) // wide logo requires extra space.
     },
     LvtkSize(470,800),

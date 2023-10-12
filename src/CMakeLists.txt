@@ -276,6 +276,21 @@ set(LVTK_INCLUDE_DIRS
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
 )
 
+configure_file(ToobAmp.lv2/ttl.in/CabIR.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl)
+add_custom_command(
+    OUTPUT  CabIRInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-cab-ir
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
+              --class CabIRInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl    
+        generate_lvtk_plugin_info
+)
+
+
 
 configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl)
 add_custom_command(
@@ -471,6 +486,9 @@ add_custom_command(
 
 
 add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
+    CabIRUi.cpp
+
     ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
     ConvolutionReverbStereoUi.cpp
 
