@@ -28,7 +28,11 @@ SOFTWARE.
 
 *************/
 
+#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
+
+#ifdef __CLANG__
 #pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
+#endif
 
 #include <algorithm> // std::clamp
 #include <cmath>

@@ -51,8 +51,9 @@ using namespace toob;
 #pragma GCC diagnostic push
 
 
-#pragma GCC diagnostic ignored "-Wunknown-warning-option" //clang
+#ifndef __clang__ // GCC-only pragma
 #pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
+#endif
 
 #include "NeuralModel.h"
 

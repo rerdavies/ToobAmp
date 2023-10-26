@@ -52,7 +52,7 @@ void CombFilter::UpdateFilter(float frequency, float depth)
     int iDelay = (int)std::round(fDelay);
     float delayFraction = fDelay-iDelay;
 
-    if (iDelay >= FIR_LENGTH/2-1)
+    if (iDelay >= (int)(FIR_LENGTH/2-1))
     {
         directSampleDelay.SetDelay(0);
         combSampleDelay.SetDelay(iDelay-FIR_LENGTH/2+1);
