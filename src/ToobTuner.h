@@ -62,10 +62,10 @@ namespace toob {
 	class ToobTuner : public Lv2Plugin {
 	private:
 		enum class PortId {
-			REFFREQ = 0,
-			THRESHOLD,
+			FREQ = 0,
 			MUTE,
-			FREQ,
+			REFFREQ,
+			THRESHOLD,
 			AUDIO_IN,
 			AUDIO_OUT,
 			CONTROL_IN,

@@ -151,8 +151,6 @@ public:
 	}
 	void SetData(void* data)
 	{
-		this->minDb = minDb;
-		this->maxDb = maxDb;
 		pOut = (float*)data;
 		if (pOut != nullptr)
 		{

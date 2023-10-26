@@ -85,14 +85,16 @@ namespace toob
 
         enum class EParams
         {
-            kInputLevel = 0,
-            kOutputLevel,
+            kInputGain = 0,
+            kInputLevelOut,
+            kOutputGain,
             kNoiseGateThreshold,
             kGateOut,
+            
+            kStackType,
             kBass,
             kMid,
             kTreble,
-            kStackType,
 
             kAudioIn,
             kAudioOut,
@@ -169,10 +171,11 @@ namespace toob
         double rate = 44100;
         std::string bundle_path;
 
-        const int kNumPresets = 1;
+        //const int kNumPresets = 1;
 
-        RangedDbInputPort cInputGain{-20, 20};
+        RangedDbInputPort cInputGain{-40, 40};
         RangedDbInputPort cOutputGain{-40, 40};
+        OutputPort cInputLevelOut;
         RangedDbInputPort cNoiseGateThreshold{-100, 0};
         RangedInputPort cBass {0,10};
         RangedInputPort cMid{ 0,10};
@@ -248,7 +251,7 @@ namespace toob
         // Member data
 
         // The plugin is mono inside
-        const size_t mNUM_INTERNAL_CHANNELS = 1;
+        // const size_t mNUM_INTERNAL_CHANNELS = 1;
 
         // Input arrays to NAM
         std::vector<std::vector<nam_float_t>> mInputArray;

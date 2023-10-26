@@ -43,7 +43,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "OutputPort.h"
 #include "Filters/AudioFilter2.h"
 #include "Filters/ShelvingLowCutFilter2.h"
-#include "CombFilter.h"
+#include "CombFilter2.h"
 #include "NoiseGate.h"
 #include "GainStage.h"
 
@@ -174,7 +174,6 @@ namespace toob {
 
 		void SetProgram(uint8_t programNumber);
 		void WriteFrequencyResponse();
-		void WriteUiState();
 	protected:
 		virtual void OnPatchGet(LV2_URID propertyUrid) override;
 		double getRate() { return rate; }

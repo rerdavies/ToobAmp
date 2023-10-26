@@ -21,7 +21,7 @@
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-@prefix toobChorus: <http://two-play.com/plugins/toob-chorus#> .
+@prefix toobDelay: <http://two-play.com/plugins/toob-delay#> .
 
 
 <http://two-play.com/rerdavies#me>
@@ -30,26 +30,25 @@
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <https://github.com/sponsors/rerdavies> .
 
-<http://two-play.com/plugins/toob-flanger>
+<http://two-play.com/plugins/toob-delay>
         a lv2:Plugin ,
-                lv2:FlangerPlugin ;
-                doap:name "TooB BF-2 Flanger" ,
-                "TooB BF-2 Flanger"@en-gb 
+                lv2:DelayPlugin ;
+                doap:name "TooB Delay" ,
+                "TooB Delay"@en-gb 
                 ;
+        uiext:ui <http://two-play.com/plugins/toob-delay-ui> ;
+
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
-         lv2:minorVersion 0 ;
-        lv2:microVersion 29 ;
+        lv2:minorVersion 0 ;
+        lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-Emulation of a Boss BF-2 Flanger*.
-
-
-* Use of Boss Audio Systems trademarks is purely nominative. The TooB project is not associated in any way with, nor endorsed by Boss Audio Systems.
+A straightforward no-frills digital delay.
 
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB BF-2";
+        mod:label "TooB Delay";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port
@@ -58,78 +57,70 @@ Emulation of a Boss BF-2 Flanger*.
                 lv2:ControlPort ;
 
                 lv2:index  0;
-                lv2:symbol "manual" ;
-                rdfs:comment "LFO offset";
-                lv2:name "Manual";
-                lv2:default 0.5 ;
-                lv2:minimum 0.0;
-                lv2:maximum 1.0;
+                lv2:symbol "delay" ;
+                lv2:name "Delay";
+                lv2:default 340 ;
+                lv2:minimum 5;
+                lv2:maximum 1200;
+                units:unit units:ms;
+                lv2:portProperty <http://lv2plug.in/ns/ext/port-props#logarithmic>;
+                rdfs:comment "Delay in ms";
+
         ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 1 ;
-                lv2:symbol "depth" ;
-                rdfs:comment "LFO depth";
+                lv2:symbol "level" ;
+                lv2:name "Level";
 
-                lv2:name "Depth";
-
-                lv2:default 0.5 ;
+                lv2:default 27.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;
-        ],  
-        [
+                lv2:maximum 100.0 ;
+                units:unit units:pc;
+                rdfs:comment "Attenuation of the first echo";
+
+        ], [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 2 ;
-                lv2:symbol "rate" ;
-                lv2:name "Rate";
-                rdfs:comment "LFO rate";
+                lv2:symbol "feedback" ;
+                lv2:name "Feedback";
 
-                lv2:default 0.5 ;
+
+                lv2:default 39.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;
-        ],  
-        [
-                a lv2:OutputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 3 ;
-                lv2:symbol "lfo" ;
-                lv2:name "LFO";
-
-                lv2:minimum -1.0 ;
-                lv2:maximum 1.0 ;
-        ],  
-        [
-                a lv2:InputPort ,
-                lv2:ControlPort ;
-
-                lv2:index 4 ;
-                lv2:symbol "res" ;
-                lv2:name "Res";
-                rdfs:comment "Delay feedback";
-
-                lv2:default 0.5 ;
-                lv2:minimum 0.0 ;
-                lv2:maximum 1.0 ;
+                lv2:maximum 100.0 ;
+                units:unit units:pc;
+                rdfs:comment "Attenuation of subequent echoes";
         ],  
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 5 ;
+                lv2:index 3 ;
                 lv2:symbol "in" ;
                 lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 6 ;
-                lv2:symbol "outl" ;
-                lv2:name "OutL"
+                lv2:index 4 ;
+                lv2:symbol "out" ;
+                lv2:name "Out"
         ]
         .
+
+<http://two-play.com/plugins/toob-delay-ui> 
+    a  uiext:X11UI ;
+    lv2:binary <ToobAmpUI.so>;
+
+    lv2:extensionData uiext::idle ;
+    lv2:extensionData uiext:resize ;
+    lv2:extensionData uiext:idleInterface;
+    lv2:requiredFeature uiext:idleInterface ;
+    .
+
 
 

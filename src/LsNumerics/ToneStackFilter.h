@@ -34,7 +34,7 @@ namespace LsNumerics {
         enum class AmpModel { Bassman, JCM800};
     private:
         void BilinearTransform(float frequency, const FilterCoefficients3& prototype, FilterCoefficients3* result);
-        AmpModel ampModel = AmpModel::Bassman;
+        //AmpModel ampModel = AmpModel::Bassman;
     public:
         void UpdateFilter(AmpModel model,float bass_, float mid_, float treble_);
 

@@ -164,7 +164,7 @@ namespace toob {
 		float CalculateFrequencyResponse(float f);
 
 		void SetProgram(uint8_t programNumber);
-		LV2_Atom_Forge_Ref WriteFrequencyResponse();
+		void WriteFrequencyResponse();
 	protected:
 		double getRate() { return rate; }
 		std::string getBundlePath() { return bundle_path.c_str(); }

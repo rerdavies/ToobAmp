@@ -173,7 +173,7 @@ namespace toob {
 		GainStage gainStage;
 
 		FilterResponse filterResponse;
-		int32_t peakDelay = 0;
+		//int32_t peakDelay = 0;
 		float peakValue = 0;
 	private:
 		float CalculateFrequencyResponse(float f);

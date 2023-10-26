@@ -46,12 +46,15 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(621,379), // default window size.
+    LvtkSize(676,379), // default window size.
+    LvtkSize(430,512),
     LOGO_SVG
     )
 {
 
 }
+
+void *linkInputStage; // target to force the linker to include this modeul.
 
 // Make the plugin visible to LV2 hosts.
 

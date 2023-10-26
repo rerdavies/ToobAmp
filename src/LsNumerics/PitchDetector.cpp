@@ -30,10 +30,10 @@
 
 using namespace LsNumerics;
 
-static constexpr double GUITAR_LOW_E_FREQUENCY = 82.41;        // hz.
+//static constexpr double GUITAR_LOW_E_FREQUENCY = 82.41;        // hz.
 static constexpr double MAXIMUM_DETECTABLE_FREQUENCY = 923.33; // gutar, high E, 19th fret.
 static constexpr double MINIMUM_DETECTABLE_FREQUENCY = 55;     // guitar low E - ~5th.
-static constexpr double OCTAVE_THRESHOLD = 0.5;
+//static constexpr double OCTAVE_THRESHOLD = 0.5;
 
 static constexpr int WINDOW_PERIODS_REQUIRED = 4;
 

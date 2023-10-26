@@ -3,6 +3,17 @@ Upstream-Name: ToobAmp
 Upstream-Contact: rerdavies@gmail.com
 Source: https://github.com/rerdavies/ToobAmp
 
+
+Files: impulseFiles/reverb
+Copyright: www.openairlib.net, University of York
+ www.openairlib.net, Audiolab University of York, Alex Duffell, Aishwarya Sridhar, Zhong Li
+ www.openairlib.net, Audio Lab University of York, Andrew Chadwick, Simon Shelley
+ www.openairlib.net, AudioLab University of York, www.ncem.co.uk
+ www.openairlib.net
+ Adventure Kid Research and Technology, Kristoffer Ekstrand.
+License: CC-BY-4.0
+
+
 Files: modules/RTNeural/modules/xsimd/docs/source/api/xsimd_batch.hpp
 Copyright: 2016, Johan Mabille and Sylvain Corlay
 License: BSD-3-clause
@@ -23,10 +34,6 @@ Copyright: Johan Mabille, Sylvain Corlay, Wolf Vollprecht and QuantStack
 License: BSD-3-clause
 
 License: Apache-2.0
- This is free software, licensed under:
- .
-   The Apache License, Version 2.0, January 2004
- .
  Licensed under the Apache License, Version 2.0 (the "License");
  you may not use this file except in compliance with the License.
  You may obtain a copy of the License at
@@ -40,6 +47,8 @@ License: Apache-2.0
  limitations under the License.
  
 License: BSD-2-clause
+ BSD 2-Clause License
+ .
  Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met: 
  .
  1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
@@ -49,10 +58,6 @@ License: BSD-2-clause
  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
 
 License: BSD-3-clause
- This is free software, licensed under:
- .
-   The (three-clause) BSD License
- .
  The BSD License
  .
  Redistribution and use in source and binary forms, with or without
@@ -83,10 +88,6 @@ License: BSD-3-clause
  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 License: Expat
- This is free software, licensed under:
- .
-   The MIT (X11) License
- .
  The MIT License
  .
  Permission is hereby granted, free of charge, to any person
@@ -115,17 +116,18 @@ License: Expat
  OTHER DEALINGS IN THE SOFTWARE.
 
 License: MPL-2.0
- This is free software, licensed under:
- .
-   Mozilla Public License Version 2.0
- .
  This Source Code Form is subject to the terms of the Mozilla Public
  License, v. 2.0.
  .
- On Debian systems, the complete text of Mozilla Public License v 2.0
- can be found in '/usr/share/common-licenses/MPL-2.0'.
-
+ https://www.mozilla.org/en-US/MPL/2.0/
+ .
+ The complete text of the Mozilla Public
+ License, v. 2.0 can be found at 
+ /usr/lib/lv2/ToobAmp.lv2/MPL-2.0.md
+ 
 License: ISC
+ ISC License
+ .
  Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
  .
  THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
@@ -531,10 +533,6 @@ License: CC-BY-4.0
     processes of any jurisdiction or authority.
 
 License: Zlib
-    This is free software, licensed under:
-    .
-    The zlib License
-    .
     The zlib License
     .
     This software is provided 'as-is', without any express or implied
@@ -558,6 +556,8 @@ License: Zlib
     .
 
 License: BSL-1.0
+ The Boost Software License 1.0
+ .
  Permission is hereby granted, free of charge, to any person or organization 
  obtaining a copy of the software and accompanying documentation covered by 
  this license (the "Software") to use, reproduce, display, distribute, execute,
@@ -579,6 +579,8 @@ License: BSL-1.0
  OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 License: MIT~Boehm
+ Boehm MIT License
+ .
  THIS MATERIAL IS PROVIDED AS IS, WITH ABSOLUTELY NO WARRANTY
  EXPRESSED OR IMPLIED.  ANY USE IS AT YOUR OWN RISK.
  .
@@ -587,3 +589,4 @@ License: MIT~Boehm
  Permission to modify the code and to distribute modified code is
  granted, provided the above notices are retained, and a notice that
  the code was modified is included with the above copyright notice.
+

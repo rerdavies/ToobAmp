@@ -286,28 +286,6 @@ float CabSim::CalculateFrequencyResponse(float f)
 
 
 
-void CabSim::WriteUiState()
-{
-	// lv2_atom_forge_frame_time(&forge, frameTime);
-
-	// LV2_Atom_Forge_Frame objectFrame;
-
-	// lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
-
-    // lv2_atom_forge_key(&forge, uris.patch__property);		
-	// lv2_atom_forge_urid(&forge, uris.param_uiState);
-	// lv2_atom_forge_key(&forge, uris.patch__value);
-
-	// LV2_Atom_Forge_Frame vectorFrame;
-	// lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
-
-	// lv2_atom_forge_float(&forge,this->peakValueL);
-
-	// lv2_atom_forge_pop(&forge, &vectorFrame);
-
-	// lv2_atom_forge_pop(&forge, &objectFrame);
-
-}
 
 void CabSim::WriteFrequencyResponse()
 {
@@ -333,6 +311,12 @@ void CabSim::WriteFrequencyResponse()
 
 	LV2_Atom_Forge_Frame vectorFrame;
 	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
+
+	lv2_atom_forge_float(&forge,30.0f);
+	lv2_atom_forge_float(&forge,20000.0f);
+	lv2_atom_forge_float(&forge,5.0f);
+	lv2_atom_forge_float(&forge,-35.0f);
+
 
 	float trimAf = this->trim.GetAf();
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)

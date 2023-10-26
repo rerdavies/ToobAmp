@@ -50,7 +50,7 @@ using namespace toob;
 #include <csignal>
 #endif
 
-const int MAX_UPDATES_PER_SECOND = 10;
+const int MAX_UPDATES_PER_SECOND = 15;
 
 const char *InputStage::URI = "http://two-play.com/plugins/toob-input_stage";
 
@@ -268,8 +268,6 @@ void InputStage::Run(uint32_t n_samples)
         if (this->patchGet)
         {
             WriteFrequencyResponse();
-            this->updateSampleDelay = 0;
-            this->updateSamples = 0;
             this->patchGet = false;
             updateMs = 0;
             updateSamples = 0;
@@ -285,7 +283,10 @@ void InputStage::Run(uint32_t n_samples)
             }
             else
             {
-                this->updateSamples = this->updateSampleDelay;
+                if (this->updateSamples <= 0)
+                {
+                    this->updateSamples = this->updateSampleDelay;
+                }
             }
         }
     }
@@ -307,14 +308,14 @@ void InputStage::Run(uint32_t n_samples)
             WriteFrequencyResponse();
         }
     }
-
-    this->peakDelay -= n_samples;
-    if (this->peakDelay < 0)
-    {
-        this->peakDelay = this->updateSampleDelay;
-        WriteUiState();
-        this->peakValue = 0;
-    }
+    // TODO: delete me. superceded by an output port.
+    // this->peakDelay -= n_samples;
+    // if (this->peakDelay < 0)
+    // {
+    //     this->peakDelay = this->updateSampleDelay;
+    //     WriteUiState();
+    //     this->peakValue = 0;
+    // }
     lv2_atom_forge_pop(&forge, &out_frame);
 }
 
@@ -369,6 +370,12 @@ LV2_Atom_Forge_Ref InputStage::WriteFrequencyResponse()
 
     LV2_Atom_Forge_Frame vectorFrame;
     lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
+
+    lv2_atom_forge_float(&forge,30.0f);
+    lv2_atom_forge_float(&forge,22050);
+    lv2_atom_forge_float(&forge,10);
+    lv2_atom_forge_float(&forge,-35);
+
     for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
     {
         //lv2_atom_forge_float(&forge, filterResponse.GetFrequency(i));

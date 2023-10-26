@@ -79,6 +79,7 @@ namespace LsNumerics
         // Note that the impulse has been previously reversed.
         float DirectConvolve(const std::vector<float> &impulse) const
         {
+            if (impulse.size() == 0) return 0;
             float sum = 0;
             size_t impulseSize = impulse.size();
             size_t tail = (this->head & this->sizeMask);

@@ -156,7 +156,7 @@ int main(int argc, char **argv)
     constexpr size_t TEST_SECONDS = 20;
 
     cout << "ProfileNeuralAmpModeler" << endl;
-    cout << "Copyright (c) 2023 Robin Davies" << endl;
+    cout << "Copyright (c) 2023 Robin E. R. Davies" << endl;
     cout << endl;
     if (argc != 2 || argv[1][0] == '-')
     {
@@ -188,8 +188,8 @@ int main(int argc, char **argv)
     float inputLevel = 0, outputLevel = 0, gateThreshold = 0, gateOutput = 0;
     float bass = 0.1f, mid = 1.0f, treble = 0.1f;
     float toneStackType = 1;
-    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kInputLevel, &inputLevel);
-    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kOutputLevel, &outputLevel);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kInputGain, &inputLevel);
+    plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kOutputGain, &outputLevel);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kNoiseGateThreshold, &gateThreshold);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kGateOut, &gateOutput);
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kBass, &bass);

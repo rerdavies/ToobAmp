@@ -33,8 +33,6 @@
 
 using namespace toob;
 
-const float MAX_DELAY_MS = 4000;
-const float NOMINAL_DELAY_MS = 1600;
 
 ToobChorus::ToobChorus(
     double rate,

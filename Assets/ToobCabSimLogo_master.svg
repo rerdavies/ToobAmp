@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="256"
+   height="36"
+   viewBox="0 0 67.73333 9.525"
+   version="1.1"
+   id="svg5"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09, custom)"
+   sodipodi:docname="ToobCabSimLogo_master.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview7"
+     pagecolor="#2e2e2e"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="1.414909"
+     inkscape:cx="195.77231"
+     inkscape:cy="90.465182"
+     inkscape:window-width="1920"
+     inkscape:window-height="1008"
+     inkscape:window-x="1440"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs2">
+    <rect
+       x="-14.38694"
+       y="-5.4197793"
+       width="35.01685"
+       height="69.568077"
+       id="rect503" />
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <text
+       xml:space="preserve"
+       style="font-style:italic;font-weight:bold;font-size:5.64444px;line-height:0;font-family:Timana;-inkscape-font-specification:'Timana Bold Italic';fill:#686868;stroke:#7f7f7f;stroke-width:0.285001;stop-color:#000000"
+       x="10.006036"
+       y="7.1034565"
+       id="text236"><tspan
+         sodipodi:role="line"
+         id="tspan234"
+         style="font-style:italic;font-variant:normal;font-weight:900;font-stretch:normal;font-size:5.64444px;line-height:0;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#e0e0e0;fill-opacity:0.752941;stroke:none;stroke-width:0.285"
+         x="10.006036"
+         y="7.1034565">TooB ML</tspan></text>
+    <path
+       id="path1348"
+       style="color:#000000;fill:#e0e0e0;fill-opacity:0.752941;stroke-width:0.714406;-inkscape-stroke:none"
+       d="M 5.4193109,1.6360535 C 4.0746261,1.6465667 2.9804856,2.7485866 2.9805103,4.0933129 v 1.5080987 0.00443 0.00406 0.00702 c 0.00324,0.6351315 0.1709081,1.2397841 0.5330952,1.705241 0.091293,0.1173226 0.1960748,0.2241342 0.3126952,0.3186015 V 5.3666133 h 0.00259 V 4.0933129 C 3.8288705,3.2043172 4.5362516,2.4899017 5.4252198,2.4829515 6.3176074,2.4761075 7.0387059,3.1839609 7.0477631,4.0763306 v 0.016982 1.6742295 c 0,0.3851813 -0.1170262,0.6035969 -0.3182329,0.7675243 C 6.5283236,6.6989941 6.2034026,6.8056753 5.769664,6.8056753 H 5.437754 V 8.3957797 H 6.193851 V 7.5229912 C 6.5799202,7.4642455 6.9804539,7.4245038 7.2655789,7.1922063 7.6635843,6.8679419 7.8946602,6.354867 7.8946602,5.7675423 V 4.0933128 4.0693159 4.0682086 C 7.8809586,2.7185401 6.7690097,1.6257071 5.4193109,1.6360535 Z"
+       sodipodi:nodetypes="ccccccscccccccsssccccsscccc" />
+    <g
+       aria-label="B"
+       id="text1054"
+       style="font-style:italic;font-weight:900;font-size:6.35px;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';fill:#e0e0e0;fill-opacity:0.752941;stroke-width:0.285001;stop-color:#000000"
+       transform="matrix(0.71440613,0,0,0.71440613,-2.144828,0.00813001)">
+      <path
+         id="path1085"
+         style="font-style:normal;-inkscape-font-specification:'Roboto, Heavy';stroke-width:0.285"
+         d="M 8.865092,5.8580404 V 8.9958333 11.74073 H 9.9533976 V 8.9958333 h 0.7441404 c 0.549837,-0.00413 0.964283,-0.116789 1.243335,-0.3379638 0.281119,-0.223242 0.42168,-0.5560389 0.42168,-0.9983887 0,-0.2439125 -0.06305,-0.4506186 -0.189136,-0.6201172 -0.12609,-0.1694982 -0.306958,-0.2852537 -0.542602,-0.3472656 0.208772,-0.078548 0.366902,-0.2005048 0.474389,-0.3658692 0.107487,-0.1653644 0.161231,-0.3648358 0.161231,-0.598413 0,-0.4051429 -0.151929,-0.7141686 -0.455786,-0.9270752 C 11.508859,4.5878339 11.18123,4.4813802 10.486698,4.4813802 H 9.9533976 c -1.0883054,0 -1.0883056,1.029605 -1.0883056,1.3766602 z m 1.0883056,-0.022757 c 0,-0.3308701 0.1341694,-0.4768142 0.3334184,-0.4952 l 0.199882,-0.018444 c 0.203885,-0.018814 0.420647,0.042375 0.530201,0.127124 0.109553,0.082682 0.164331,0.2191083 0.164331,0.4092774 0,0.1653644 -0.05064,0.2904216 -0.151929,0.3751709 -0.101285,0.08475 -0.270784,0.1281579 -0.508496,0.1302246 H 9.9533976 Z m 0,1.2412875 h 0.7627444 c 0.374137,0.00207 0.561206,0.1912032 0.561206,0.5674073 0,0.1632973 -0.05271,0.2904217 -0.15813,0.381372 -0.105419,0.088883 -0.256315,0.1333252 -0.452686,0.1333252 H 9.9533976 Z"
+         sodipodi:nodetypes="cccccccsscssczccssscssccsccscscc" />
+    </g>
+    <text
+       xml:space="preserve"
+       transform="scale(0.26458333)"
+       id="text501"
+       style="font-style:italic;font-weight:bold;font-size:22.6667px;line-height:0;font-family:Timana;-inkscape-font-specification:'Timana Bold Italic';white-space:pre;shape-inside:url(#rect503);fill:#686868;stroke:#7f7f7f;stroke-width:1.07717;stop-color:#000000" />
+  </g>
+</svg>

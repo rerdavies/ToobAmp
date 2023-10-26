@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Robin Davies
+// Copyright (c) 2023 Robin E. R. Davies
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -32,7 +32,17 @@ namespace toob {
         using self = ToobUi;
         
 
-        ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, LvtkSize defaultWindowSize, const std::string&logoSvg);
+        ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
+            LvtkSize defaultWindowSize,
+            LvtkSize defaultHelpWindowSize,
+            const std::string&logoSvg);
+
+        ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
+            const LvtkCreateWindowParameters &createWindowParames,
+            LvtkSize defaultHelpWindowSize,
+            const std::string&logoSvg);
+
+        void OnAboutDialogClosed(AboutDialog*dlg);
     protected:
         virtual LvtkContainerElement::ptr RenderClientArea();
         virtual LvtkContainerElement::ptr RenderBottomBar();
@@ -43,7 +53,9 @@ namespace toob {
 
         virtual void ui_delete() override;
 
+
     private:
+        LvtkSize defaultHelpWindowSize;
         std::shared_ptr<AboutDialog> aboutDialog;
         std::string logoSvg;
     };

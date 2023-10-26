@@ -26,15 +26,10 @@
 
 @prefix cabsim: <two-play.com/plugins/toob-cab-sim#> .
 
-<http://two-play.com/plugins/toob#frequencyResponseVector>
-        a lv2:Parameter ;
-        rdfs:label "frequencyResponseVector" ;
-        rdfs:range atom:Vector .
-
-<http://two-play.com/plugins/toob-cab-sim#uiState>
-        a lv2:Parameter ;
-        rdfs:label "uiState" ;
-        rdfs:range atom:Vector .
+toob:frequencyResponseVector
+        a lv2:Parameter;
+        rdfs:label "Frequency Response";
+        rdfs:range atom:Vector.
 
 
 <http://two-play.com/rerdavies#me>
@@ -43,11 +38,6 @@
 	foaf:mbox <mailto:rerdavies@gmail.com> ;
 	foaf:homepage <https://github.com/sponsors/rerdavies> .
 
-toob:frequencyResponseVector
-        a lv2:Parameter;
-        rdfs:label "Frequency Response";
-        rdfs:range atom:Vector.
-
 
 <http://two-play.com/plugins/toob-cab-sim>
     a lv2:Plugin ,
@@ -55,14 +45,11 @@ toob:frequencyResponseVector
     doap:name "TooB Cab Simulator" ,
             "TooB Cab Simulator"@en-gb 
             ;
-    uiext:ui <http://two-play.com/plugins/toob-cab-sim-ui>;                
+    uiext:ui <http://two-play.com/plugins/toob-cab-sim-ui>;
     doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
     doap:maintainer <http://two-play.com/rerdavies#me> ;
     lv2:minorVersion 0 ;
     lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
-    rdfs:comment "TooB amplifier cabinet simulator." ;
-
-
 
     mod:brand "TooB";
     mod:label "TooB CabSim";
@@ -72,8 +59,10 @@ toob:frequencyResponseVector
             toob:frequencyResponseVector;
 
 rdfs:comment """
-The TooB Cabinet simulator provides EQ tools for emulating cabinet response. See the presets for 
-emulations of well-known cabinets. 
+TooB Cab Simulator provides EQ tools for emulating cabinet response without incurring the heavy cost of 
+impulse-response based cabinet simulators. 
+
+See the plugin's presets for emulations of well-known cabinets. 
 
 """;
     lv2:port
@@ -92,7 +81,7 @@ emulations of well-known cabinets.
                 rdfs:label "Off" ;
                 rdf:value 30.0;
         ];
-        rdfs:comment "Low cutoff frequency. 30hz to 300hz. Set to minimum to disable." ;
+        rdfs:comment "Low cutoff frequency. Set to minimum to disable." ;
     ], [
         a lv2:InputPort ,
         lv2:ControlPort ;
@@ -108,7 +97,7 @@ emulations of well-known cabinets.
                 rdfs:label "Off" ;
                 rdf:value 0.0;
         ];
-        rdfs:comment "Bright boost (0db to 20db)." ;
+        rdfs:comment "Bright filter boost. Set to minimum to disable." ;
 
     ],  [
         a lv2:InputPort ,
@@ -122,7 +111,7 @@ emulations of well-known cabinets.
         lv2:maximum 5000.0;    
         units:unit units:hz;
         lv2:designation param:cutoffFrequency ;
-        rdfs:comment "Bright boost frequency. (1khz to 8khz)" ;
+        rdfs:comment "Bright filter cutoff frequency." ;
 
     ],  [
         a lv2:InputPort ,
@@ -137,7 +126,7 @@ emulations of well-known cabinets.
         units:unit units:hz;
         lv2:portProperty epp:logarithmic;
         lv2:designation param:cutoffFrequency ;
-        rdfs:comment "Hi cutoff frequency. 2khz to 13khz. Set to maximum to disable." ;
+        rdfs:comment "Hi cutoff frequency. Set to maximum to disable." ;
         lv2:scalePoint [
                 rdfs:label "Off" ;
                 rdf:value 13000.0;
@@ -152,7 +141,7 @@ emulations of well-known cabinets.
         lv2:default 0.32 ;
         lv2:minimum 0.0 ;
         lv2:maximum 1.0;    
-        rdfs:comment "Amount of comb filtering. 0 to 1. Set to minimum to disable." ; 
+        rdfs:comment "Amount of comb filtering. Set to minimum to disable." ; 
     ],  [
         a lv2:InputPort ,
         lv2:ControlPort ;
@@ -165,7 +154,7 @@ emulations of well-known cabinets.
         lv2:maximum 10000.0;    
         units:unit units:hz;
         lv2:designation param:cutoffFrequency ;
-        rdfs:comment "Comb filter frequency. (1khz to 8khz)" ;
+        rdfs:comment "Comb filter notch frequency." ;
     ], [
         a lv2:InputPort ,
         lv2:ControlPort ;
@@ -177,7 +166,7 @@ emulations of well-known cabinets.
         lv2:minimum -30.0 ;
         lv2:maximum 30.0;    
         units:unit units:db;
-        rdfs:comment "Master volume trim. (-30db to + 30db)" ;
+        rdfs:comment "Output leveltrim." ;
     ], 
     [
         a lv2:AudioPort ,
@@ -196,7 +185,7 @@ emulations of well-known cabinets.
         a atom:AtomPort ,
             lv2:InputPort;
         atom:bufferType atom:Sequence ;
-        atom:supports patch:Message;
+        # atom:supports patch:Message;
         lv2:designation lv2:control ;
         lv2:index 9 ;
         lv2:symbol "control" ;
@@ -206,7 +195,7 @@ emulations of well-known cabinets.
         a atom:AtomPort ,
             lv2:OutputPort ;
         atom:bufferType atom:Sequence ;
-        atom:supports patch:Message;
+        # atom:supports patch:Message;
         lv2:designation lv2:control ;
         lv2:index 10 ;
         lv2:symbol "notify" ;

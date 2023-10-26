@@ -21,8 +21,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include "lvtk/LvtkWindow.hpp"
+#include "lvtk/LvtkVerticalStackElement.hpp"
+#include "lvtk_ui/Lv2PluginInfo.hpp"
+
+namespace lvtk {
+    class LvtkScrollContainerElement;
+
+}
 namespace toob {
     using namespace lvtk;
+    class ToobUi;
 
     class AboutDialog : public LvtkWindow {
     public:
@@ -33,17 +41,23 @@ namespace toob {
 
         void Show(
             LvtkWindow::ptr parent,
-            const std::string &settingsKey,
-            const std::string &title,
-            const std::string &text);
+            LvtkSize defaultDialogSize,
+            ToobUi*toobUi);
 
+    protected:
+        virtual void OnClosing() override;
 
     private:
-        LvtkElement::ptr Render(const std::string&text);
+        std::shared_ptr<LvtkScrollContainerElement> scrollContainer;
+        bool primaryText = true;
+        LvtkElement::ptr RenderDivider();
+        LvtkElement::ptr RenderLicenses();
+        LvtkVerticalStackElement::ptr Markup(const std::string &text);    
+        LvtkElement::ptr Render(const lvtk::ui::Lv2PluginInfo&pluginInfo);
+        LvtkElement::ptr RenderPortDocs(const lvtk::ui::Lv2PluginInfo&pluginInfo);
+        ToobUi*toobUi = nullptr;
 
         WindowHandle GetApplicationWindow(LvtkWindow::ptr parent);
-        std::string text;
-        std::string title;
         std::string settingsKey;
     };
 }

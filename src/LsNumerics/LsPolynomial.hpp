@@ -119,10 +119,6 @@ namespace LsNumerics
             return Polynomial(std::move(values));
         }
 
-        static Polynomial Add(double left, Polynomial right)
-        {
-            return Add(left, right);
-        }
         static Polynomial Subtract(Polynomial left, double right)
         {
             if (right == 0) return left;

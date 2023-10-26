@@ -99,20 +99,21 @@ namespace toob
 		static constexpr uint32_t SAMPLE_FILES_VERSION = 1;
 
 	public:
-		enum class PluginType {
+		enum class PluginType
+		{
 			ConvolutionReverb,
 			ConvolutionReverbStereo,
 			CabIr
 		};
 		static Lv2Plugin *CreateMonoConvolutionReverb(double rate,
-												  const char *bundle_path,
-												  const LV2_Feature *const *features)
+													  const char *bundle_path,
+													  const LV2_Feature *const *features)
 		{
 			return new ToobConvolutionReverb(PluginType::ConvolutionReverb, rate, bundle_path, features);
 		}
 		static Lv2Plugin *CreateStereoConvolutionReverb(double rate,
-												  const char *bundle_path,
-												  const LV2_Feature *const *features)
+														const char *bundle_path,
+														const LV2_Feature *const *features)
 		{
 			return new ToobConvolutionReverb(PluginType::ConvolutionReverbStereo, rate, bundle_path, features);
 		}
@@ -287,28 +288,34 @@ namespace toob
 			const LV2_Feature *const *features,
 			const std::string &input);
 
-		std::string UnmapFilename(const LV2_Feature*const* features,const std::string &fileName);
+		std::string UnmapFilename(const LV2_Feature *const *features, const std::string &fileName);
+		void SaveLv2Filename(
+			LV2_State_Store_Function store,
+			LV2_State_Handle handle,
+			const LV2_Feature *const *features,
+			LV2_URID urid,
+			const std::string &filename);
 
 		PluginType pluginType = PluginType::ConvolutionReverb;
 		bool isConvolutionReverb = false;
 		void PublishResourceFiles(const LV2_Feature *const *features);
 
-		std::string StringFromAtomPath(const LV2_Atom*pAtom);
+		std::string StringFromAtomPath(const LV2_Atom *pAtom);
 
 		class Urids
 		{
 		public:
 			void Init(Lv2Plugin *plugin)
 			{
-				#define TOOB_Impulse__Prefix "http://two-play.com/plugins/toob-impulse#"
-				#define TOOB_CABIR__Prefix "http://two-play.com/plugins/toob-cab-ir#"
+#define TOOB_Impulse__Prefix "http://two-play.com/plugins/toob-impulse#"
+#define TOOB_CABIR__Prefix "http://two-play.com/plugins/toob-cab-ir#"
 				reverb__propertyFileName = plugin->MapURI(TOOB_Impulse__Prefix "impulseFile");
 				cabir__propertyFileName = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile");
 				cabir__propertyFileName2 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile2");
 				cabir__propertyFileName3 = plugin->MapURI(TOOB_CABIR__Prefix "impulseFile3");
 				atom__path = plugin->MapURI(LV2_ATOM__Path);
 				atom__string = plugin->MapURI(LV2_ATOM__String);
-				//convolution__state = plugin->MapURI(TOOB_Impulse__Prefix "state");
+				// convolution__state = plugin->MapURI(TOOB_Impulse__Prefix "state");
 			}
 			LV2_URID reverb__propertyFileName;
 			LV2_URID cabir__propertyFileName;
@@ -316,7 +323,7 @@ namespace toob
 			LV2_URID cabir__propertyFileName3;
 			LV2_URID atom__path;
 			LV2_URID atom__string;
-			//LV2_URID convolution__state;
+			// LV2_URID convolution__state;
 		};
 		Urids urids;
 
@@ -377,11 +384,10 @@ namespace toob
 		void NotifyProperties();
 
 		bool stateChanged = false;
-    	bool notifyReverbFileName = false; 
-		bool notifyCabIrFileName  = false;
-		bool notifyCabIrFileName2  = false;
-		bool notifyCabIrFileName3  = false;
-
+		bool notifyReverbFileName = false;
+		bool notifyCabIrFileName = false;
+		bool notifyCabIrFileName2 = false;
+		bool notifyCabIrFileName3 = false;
 	};
 
 } // namespace toob

@@ -1,5 +1,5 @@
 /*
- Copyright (c) 2022 Robin Davies
+ Copyright (c) 2022 Robin E. R. Davies
 
  Permission is hereby granted, free of charge, to any person obtaining a copy of
  this software and associated documentation files (the "Software"), to deal in
@@ -281,11 +281,11 @@ static inline float AudioInputConvert(int16_t value) {
     return CVT16*value; 
 }
 
-constexpr float CVT8 = 1.0f/(256.0);
+//constexpr float CVT8 = 1.0f/(256.0);
 
-static inline float AudioInputConvert(uint8_t value) { 
-    return CVT8*value-0.5; 
-}
+// static inline float AudioInputConvert(uint8_t value) { 
+//     return CVT8*value-0.5; 
+// }
 
 template<typename T>
 void WavReader::ReadTypedData(float**channels,size_t offset,size_t length)

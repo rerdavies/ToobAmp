@@ -1,3 +1,4 @@
 sed -f copyrightReplacements.sed <copyrights-raw > copyrights-base
 mkdir -p ../build/debian
 ../build/debian/src/processCopyrights copyrights-base copyright-fixups --output ../build/debian/copyright
+../build/debian/src/processCopyrights copyrights-base copyright-fixups --md --output ../build/src/ToobAmp.lv2/LICENSE.md

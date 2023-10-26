@@ -34,11 +34,6 @@
         rdfs:range atom:Vector .
 
 
-<http://two-play.com/plugins/toob#frequencyResponseVector>
-        a lv2:Parameter ;
-        rdfs:label "frequencyResponseVector" ;
-        rdfs:range atom:Vector .
-
 <http://two-play.com/plugins/toob-input_stage#uiState>
         a lv2:Parameter ;
         rdfs:label "uiState" ;
@@ -134,7 +129,7 @@ The GateT control provides a noise gate. Set to minimum value to disable.
                 lv2:maximum 10.0 ;    
                 units:unit units:db ;
         ],
-[
+        [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
@@ -259,7 +254,7 @@ The GateT control provides a noise gate. Set to minimum value to disable.
                 a atom:AtomPort ,
                   lv2:InputPort;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 10 ;
                 lv2:symbol "control" ;
@@ -269,7 +264,7 @@ The GateT control provides a noise gate. Set to minimum value to disable.
                 a atom:AtomPort ,
                   lv2:OutputPort ;
                 atom:bufferType atom:Sequence ;
-                atom:supports patch:Message;
+                # atom:supports patch:Message;
                 lv2:designation lv2:control ;
                 lv2:index 11 ;
                 lv2:symbol "notify" ;

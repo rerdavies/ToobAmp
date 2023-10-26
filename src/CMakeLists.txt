@@ -33,8 +33,9 @@ execute_process(COMMAND
 
 
 
+message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
-if (CMAKE_COMPILER_IS_GNUCXX)
+if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
         set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4. cortex-a72
@@ -57,9 +58,9 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
 endif()
 
-message(STATUS "CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
-message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "src: CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
+message(STATUS "src: CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "src: CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -159,7 +160,9 @@ add_library(ToobAmp  SHARED
         ToobFlanger.cpp ToobFlanger.h
         ToobTuner.cpp ToobTuner.h
         InputStage.cpp InputStage.h Plugin.cpp Lv2Plugin.h MidiProcessor.h MidiProcessor.cpp std.h 
-        InputPort.h CabSim.h CabSim.cpp CombFilter.h DbDezipper.cpp DbDezipper.h
+        InputPort.h CabSim.h CabSim.cpp CombFilter2.h DbDezipper.cpp DbDezipper.h
+        CombFilter2.cpp
+        restrict.hpp
         WavReader.hpp
         WavReader.cpp
         WavWriter.hpp
@@ -252,7 +255,7 @@ target_link_libraries(ToobAmp
     z
     ogg
     FLAC
-    FLAC++
+    FLAC++.a
     )
 
     target_include_directories(ToobAmp PRIVATE
@@ -263,8 +266,9 @@ target_link_libraries(ToobAmp
     ../modules    
 )
 set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
-####################################################
 
+
+####################################################
 
 
 set(LVTK_INCLUDE_DIRS
@@ -272,9 +276,175 @@ set(LVTK_INCLUDE_DIRS
    ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
 )
 
-configure_file(ToobAmp.lv2/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobNeuralAmpModeler.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNeuralAmpModeler.ttl)
+add_custom_command(
+    OUTPUT  ToobNeuralAmpModelerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-nam
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 
+              --class NeuralAmpModelerInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNeuralAmpModeler.ttl    
+        generate_lvtk_plugin_info
+)
 
-configure_file(ToobAmp.lv2/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
+
+
+
+configure_file(ToobAmp.lv2/ttl.in/CabIR.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl)
+add_custom_command(
+    OUTPUT  CabIRInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-cab-ir
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
+              --class CabIRInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+
+configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl)
+add_custom_command(
+    OUTPUT  ConvolutionReverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-convolution-reverb
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
+              --class ConvolutionReverbInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverbStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl)
+add_custom_command(
+    OUTPUT  ConvolutionReverbStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-convolution-reverb-stereo
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
+              --class ConvolutionReverbStereoInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+
+configure_file(ToobAmp.lv2/ttl.in/ToobTuner.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl)
+add_custom_command(
+    OUTPUT  ToobTunerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-tuner
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
+              --class ToobTunerInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/SpectrumAnalyzer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl)
+add_custom_command(
+    OUTPUT  SpectrumAnalyzerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-spectrum
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
+              --class SpectrumAnalyzerInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobML.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl)
+add_custom_command(
+    OUTPUT  ToobMLInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-ml
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
+              --class ToobMLInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+configure_file(ToobAmp.lv2/ttl.in/ToobFreeverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl)
+add_custom_command(
+    OUTPUT  ToobFreeverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-freeverb
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
+              --class ToobFreeverbInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+configure_file(ToobAmpVersion.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.hpp)
+
+configure_file(ToobAmp.lv2/ttl.in/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
+add_custom_command(
+    OUTPUT  ToneStackInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-tone-stack
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
+              --class ToneStackPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl    
+        generate_lvtk_plugin_info
+)
+configure_file(ToobAmp.lv2/ttl.in/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
+add_custom_command(
+    OUTPUT  Tf2FlangerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-flanger
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
+              --class Tf2FlangerPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl    
+        generate_lvtk_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobFlangerStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl)
+add_custom_command(
+    OUTPUT  Tf2FlangerStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lvtk_plugin_info 
+               http://two-play.com/plugins/toob-flanger-stereo
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
+              --class Tf2FlangerStereoPluginInfo
+    DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl    
+        generate_lvtk_plugin_info
+)
+
+
+
+configure_file(ToobAmp.lv2/ttl.in/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl)
+
+configure_file(ToobAmp.lv2/ttl.in/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
 add_custom_command(
     OUTPUT  CabSimInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -288,7 +458,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
 add_custom_command(
     OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -302,7 +472,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
 add_custom_command(
     OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -316,7 +486,7 @@ add_custom_command(
         generate_lvtk_plugin_info
 )
 
-configure_file(ToobAmp.lv2/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
+configure_file(ToobAmp.lv2/ttl.in/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
 add_custom_command(
     OUTPUT  InputStageInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lvtk_plugin_info 
@@ -332,7 +502,41 @@ add_custom_command(
 
 
 
-add_library(ToobAmpUI SHARED
+add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 
+    ToobNeuralAmpModelerUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
+    CabIRUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
+    ConvolutionReverbStereoUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
+    ConvolutionReverbUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
+    ToobTunerUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
+    SpectrumAnalyzerUi.cpp
+    
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
+    ToobMlUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
+    ToobFreeverbUi.cpp
+
+
+    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
+    Tf2FlangerUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
+    Tf2FlangerStereoUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
+    ToneStackUi.cpp
+
     ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
     CabSimUi.cpp
 
@@ -345,7 +549,6 @@ add_library(ToobAmpUI SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
     InputStageUi.cpp
 
-
     AboutDialog.hpp AboutDialog.cpp
     ToobUi.hpp ToobUi.cpp
 
@@ -354,7 +557,11 @@ set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
 set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 
 target_link_options(ToobAmpUI PRIVATE
-    "-Wl,-z,nodelete"
+    -Wl,-z,nodelete 
+    # -Wl,-utoobChorusLinkage    # demand-link plugin.
+    # -Wl,-ulinkInputStage    # demand-link plugin.
+    # -Wl,-ulinkCabSimUi   # demand-link plugin.
+    # -Wl,-ulinkToobDelayUi   # demand-link plugin.
 )
 
 
@@ -366,10 +573,8 @@ target_include_directories(
 )
 target_link_libraries(
     ToobAmpUI PRIVATE 
-    -Wl,--whole-archive
-     lvtk lvtk_ui
-    -Wl,--no-whole-archive
-    )
+    lvtk lvtk_ui
+)
 
 
 # Tests.
@@ -490,6 +695,17 @@ endif()
 
 add_test(ConvolutionReverbTest ConvolutionReverbTest "--build")
 
+add_executable(CombFilterTest
+    CombFilterTest.cpp
+    CombFilter2.cpp CombFilter2.h
+    IDelay.h
+    restrict.hpp
+    LsNumerics/LsMath.cpp
+)
+
+add_test(CombFilterTest CombFilterTest)
+
+
 add_executable(Ce2ChorusTest 
     TestAssert.hpp
 
@@ -527,6 +743,7 @@ add_test(Ce2ChorusTest Ce2ChorusTest)
 
 # check for missing linkages.
 add_executable(linkageTest 
+
     linkageTest.cpp )
 
 target_link_libraries(linkageTest ToobAmp z.a ogg.a FLAC.a FLAC++.a)
@@ -585,6 +802,7 @@ install(TARGETS ToobAmp ToobAmpUI
 
 
 add_executable(UiLinkageTest 
+
     UiLinkageTest.cpp 
     MapFeature.cpp MapFeature.h)
 
@@ -604,6 +822,7 @@ INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/l
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/models/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/models)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
 INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lvtk/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/MPL-2.0.md DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 
 
 # TODO: Add tests if needed.

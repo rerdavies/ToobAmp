@@ -34,13 +34,13 @@ using namespace LsNumerics;
 
 
 // Measurements taken from LTSPICE simulation.
-constexpr float MAX_DELAY_MS = 60;
+// constexpr float MAX_DELAY_MS = 60;
 
 // LFO seconds per cycle.
 constexpr float LFO_S_R0 = 14.77-3.55; // 11.2
-constexpr float LFO_S_R05 = 10.68-4.97; // 5.71
-constexpr float LFO_S_R075 = 4.27-1.38; // 2.89
-constexpr float LFO_S_R08 = 3.54-1.17; // 2.37
+// constexpr float LFO_S_R05 = 10.68-4.97; // 5.71
+// constexpr float LFO_S_R075 = 4.27-1.38; // 2.89
+// constexpr float LFO_S_R08 = 3.54-1.17; // 2.37
 constexpr float LFO_S_R1 = 1.104-1.021; // 0.83
 
 
@@ -60,23 +60,23 @@ constexpr float LFO_MAX_V_M0_D1 = 3.00f; // LFO min voltage measured before VR7,
 
 
 constexpr float MANUAL_V_M1_D0 = 0.814f; // MANUAL voltage measured before VR7, MANUAL=0, DEPTH=0
-constexpr float MANUAL_V_M05_D0 = 2.31f; // MANUAL voltage measured before VR7, MANUAL=0.5, DEPTH=0
+// constexpr float MANUAL_V_M05_D0 = 2.31f; // MANUAL voltage measured before VR7, MANUAL=0.5, DEPTH=0
 constexpr float MANUAL_V_M0_D0 = 3.7585f; // MANUAL voltage measured before VR7, MANUAL=1, DEPTH=0
 
 // check values measured before R48
-constexpr float LFO_BLEND_V_M1_D0 = 0.8142f; // Before R48 DEPTH=0, MANUAL=0.0
-constexpr float LFO_BLEND_V_M05_D0 = 2.318f; // Before R48 DEPTH=0, MANUAL=0.5
-constexpr float LFO_BLEND_V_M0_D0 = 3.756f; // Before R48 DEPTH=0, MANUAL=1
+// constexpr float LFO_BLEND_V_M1_D0 = 0.8142f; // Before R48 DEPTH=0, MANUAL=0.0
+// constexpr float LFO_BLEND_V_M05_D0 = 2.318f; // Before R48 DEPTH=0, MANUAL=0.5
+// constexpr float LFO_BLEND_V_M0_D0 = 3.756f; // Before R48 DEPTH=0, MANUAL=1
 
-constexpr float LFO_BLEND_V_M1_D05 = 1.441f; // Before R48 DEPTH=0.5, MANUAL=0.0
-constexpr float LFO_BLEND_V_M05_D05 = 1.753f; // Before R48 DEPTH=0.5, MANUAL=0.5
-constexpr float LFO_BLEND_V_M0_D05_MIN = 2.837f; // Before R48 DEPTH=0.5, MANUAL=1
-constexpr float LFO_BLEND_V_M0_D05_MAX = 3.145f; // Before R48 DEPTH=0.5, MANUAL=1
+// constexpr float LFO_BLEND_V_M1_D05 = 1.441f; // Before R48 DEPTH=0.5, MANUAL=0.0
+// constexpr float LFO_BLEND_V_M05_D05 = 1.753f; // Before R48 DEPTH=0.5, MANUAL=0.5
+// constexpr float LFO_BLEND_V_M0_D05_MIN = 2.837f; // Before R48 DEPTH=0.5, MANUAL=1
+// constexpr float LFO_BLEND_V_M0_D05_MAX = 3.145f; // Before R48 DEPTH=0.5, MANUAL=1
 
-constexpr float LFO_BLEND_V_M1_D1_MIN = 2.1f; // Before R48 DEPTH=1, MANUAL=0
-constexpr float LFO_BLEND_V_M1_D1_MAX = 2.82f; // Before R48 DEPTH=1, MANUAL=0
-constexpr float LFO_BLEND_V_M0_D1_MIN = 2.17; // Before R48 DEPTH=1, MANUAL=1
-constexpr float LFO_BLEND_V_M0_D1_MAX = 2.82f; // Before R48 DEPTH=1, MANUAL=1
+// constexpr float LFO_BLEND_V_M1_D1_MIN = 2.1f; // Before R48 DEPTH=1, MANUAL=0
+// constexpr float LFO_BLEND_V_M1_D1_MAX = 2.82f; // Before R48 DEPTH=1, MANUAL=0
+// constexpr float LFO_BLEND_V_M0_D1_MIN = 2.17; // Before R48 DEPTH=1, MANUAL=1
+// constexpr float LFO_BLEND_V_M0_D1_MAX = 2.82f; // Before R48 DEPTH=1, MANUAL=1
 
 // Values from service manual.
 constexpr float DELAY_M0_CLOCK_FREQ = 1/0.000025f;  // 25us
@@ -247,10 +247,10 @@ void Tf2Flanger::SetRes(float value)
     this->res = value;
 }
 
-static inline float VBlend(float value, float v0, float v1)
-{
-    return (1-value)*v0+(value)*v1;
-}
+// static inline float VBlend(float value, float v0, float v1)
+// {
+//     return (1-value)*v0+(value)*v1;
+// }
 inline void Tf2Flanger::UpdateLfoRange()
 {
     using namespace std;

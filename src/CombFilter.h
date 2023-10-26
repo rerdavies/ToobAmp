@@ -42,7 +42,7 @@ namespace toob {
         IDelay delayR; 
     public:
         RangedInputPort Comb = RangedInputPort(0.0f,1.0f);
-        RangedInputPort CombF = RangedInputPort(1000.0f,8000.0f);
+        RangedInputPort CombF = RangedInputPort(1000.0f,10000.0f);
 
         void SetSampleRate(double rate)
         {
@@ -63,7 +63,7 @@ namespace toob {
             if (CombF.HasChanged())
             {
                 float f = CombF.GetValue();
-                uint32_t iDelay = (int32_t)(2*(sampleRate/f)+0.5f);
+                uint32_t iDelay = (int32_t)(0.5*(sampleRate/f)+0.5f);
                 delay.SetDelay(iDelay);
                 delayR.SetDelay(iDelay);
                 changed = true;
