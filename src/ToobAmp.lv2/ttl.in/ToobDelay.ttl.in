@@ -43,7 +43,7 @@
         lv2:minorVersion 0 ;
         lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-A straighforward no-frills digital delay.
+A straightforward no-frills digital delay.
 
 """ ;
 

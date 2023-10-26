@@ -53,6 +53,7 @@ namespace toob {
 
         virtual void ui_delete() override;
 
+
     private:
         LvtkSize defaultHelpWindowSize;
         std::shared_ptr<AboutDialog> aboutDialog;

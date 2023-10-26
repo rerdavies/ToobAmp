@@ -130,7 +130,11 @@ LvtkContainerElement::ptr ToobUi::RenderClientArea()
         .VerticalScrollEnabled(true);
     scrollElement->Style().Background(Theme()->paper).HorizontalAlignment(LvtkAlignment::Stretch).VerticalAlignment(LvtkAlignment::Stretch);
 
-    scrollElement->Child(RenderControls());
+    auto controls = RenderControls();
+    controls->Style()
+        .FlexJustification(LvtkFlexJustification::Center)
+        ;
+    scrollElement->Child(controls);
     return scrollElement;
 
 }

@@ -51,7 +51,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(490,210), // default window size.
+    LvtkSize(510,210), // default window size.
     LvtkSize(470,470), // default help window size.
     "ToobFlangerStereoLogo.svg"
     )

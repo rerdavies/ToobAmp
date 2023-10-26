@@ -240,7 +240,7 @@ ToobML::ToobML(double _rate,
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
-	this->trimOutputSampleRate = (int)(_rate/TRIMOUT_UPDATE_RATE_S);
+	this->trimOutputSampleRate = (int)(_rate*TRIMOUT_UPDATE_RATE_S);
 }
 
 ToobML::~ToobML()

@@ -45,7 +45,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(300,208), // default window size.
+    LvtkSize(383,208), // default window size.
     LvtkSize(470,800),
     "ToobFreeverbLogo.svg"
     )

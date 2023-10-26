@@ -43,7 +43,7 @@
          lv2:minorVersion 0 ;
         lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-ToobFreeverb is an Lv2 implementation of the famous Freeverb reverb effect. FreeVerb delivers a well-balanced reverb with very little tonal coloration.
+Toob Freeverb is an Lv2 implementation of the famous Freeverb reverb effect. FreeVerb delivers a well-balanced reverb with very little tonal coloration.
 
 The original FreeVerb implementation was placed into the public domain by "Jezar at Dreampoint".
 

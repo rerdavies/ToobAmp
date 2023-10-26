@@ -48,7 +48,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(320,729), // default window size.
+    LvtkSize(383,729), // default window size.
     LvtkSize(470,800),
     LOGO_SVG
     )

@@ -227,7 +227,7 @@ namespace toob {
 		class LoadWorker: public WorkerAction
 		{
 		private: 
-			ToobML*pThis;
+			ToobML*pThis = nullptr;
 			size_t modelIndex;
 			ToobMlModel*pModelResult = nullptr;
 		public:
@@ -259,7 +259,7 @@ namespace toob {
 		class DeleteWorker: public WorkerAction
 		{
 		private: 
-			ToobML*pThis;
+			ToobML*pThis = nullptr;
 			ToobMlModel*pModel = nullptr;
 		public:
 			DeleteWorker(ToobML *pThis)

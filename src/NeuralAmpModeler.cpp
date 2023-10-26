@@ -444,10 +444,14 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
 {
     switch ((EParams)port)
     {
-    case EParams::kInputLevel:
+    case EParams::kInputGain:
         cInputGain.SetData(data);
         break;
-    case EParams::kOutputLevel:
+    case EParams::kInputLevelOut:
+        cInputLevelOut.SetData(data);
+        cInputLevelOut.SetValue(-96);
+        break;
+    case EParams::kOutputGain:
         cOutputGain.SetData(data);
         break;
     case EParams::kNoiseGateThreshold:
@@ -970,7 +974,7 @@ void NeuralAmpModeler::WriteFrequencyResponse()
     }
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
-		lv2_atom_forge_float(&outputForge,filterResponse.GetFrequency(i));
+		// lv2_atom_forge_float(&outputForge,filterResponse.GetFrequency(i));
 		lv2_atom_forge_float(&outputForge,filterResponse.GetResponse(i));
 	}
 	lv2_atom_forge_pop(&outputForge, &vectorFrame);

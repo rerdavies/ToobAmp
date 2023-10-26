@@ -50,7 +50,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    LvtkSize(1015,208), // default window size.
+    LvtkSize(1084,208), // default window size.
     LvtkSize(470,538),
     "ToobCabSimLogo.svg"
     )

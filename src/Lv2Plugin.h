@@ -118,6 +118,8 @@ namespace toob
 		void LogNote(const char *fmt, ...);
 		void LogTrace(const char *fmt, ...);
 
+		void LogError(const std::string&message) { LogError("%s",message.c_str()); }
+
 	public:
 		virtual ~Lv2Plugin() {}
 
