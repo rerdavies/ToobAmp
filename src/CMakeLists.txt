@@ -26,10 +26,8 @@ execute_process(COMMAND
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(DBUS REQUIRED dbus-1)
-# include_directories(${DBUS_INCLUDE_DIRS})
-# link_directories(${DBUS_LIBRARY_DIRS})
+
+set (FLAC_LIBS ogg.a FLAC.a FLAC++.a)
 
 
 
@@ -246,16 +244,17 @@ add_library(ToobAmp  SHARED
          
          )
 
+target_link_options(ToobAmp PRIVATE
+         -Wl,-z,nodelete 
+)
+
 target_link_libraries(ToobAmp 
     #${DBUS_LIBRARIES}
     RTNeural
     namSources
     dl pthread
     boost_iostreams
-    z
-    ogg
-    FLAC
-    FLAC++.a
+    ${FLAC_LIBS}
     )
 
     target_include_directories(ToobAmp PRIVATE
@@ -741,12 +740,20 @@ add_executable(Ce2ChorusTest
 
 add_test(Ce2ChorusTest Ce2ChorusTest)
 
+add_executable(soLinkageTest 
+    soLinkageTest.cpp 
+)
+
+target_link_libraries(soLinkageTest dl)
+
+
+
 # check for missing linkages.
 add_executable(linkageTest 
 
     linkageTest.cpp )
 
-target_link_libraries(linkageTest ToobAmp z.a ogg.a FLAC.a FLAC++.a)
+target_link_libraries(linkageTest ToobAmp ${FLAC_LIBS})
 
 
 
@@ -778,10 +785,10 @@ target_include_directories(ProfileNeuralAmpModeler PRIVATE
 )
 
 if(PROFILER)
-    target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler)
+    target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler ${FLAC_LIBS})
     target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
 else()
-    target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp)
+    target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp ${FLAC_LIBS})
 endif()
 
 
