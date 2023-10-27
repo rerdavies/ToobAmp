@@ -27,7 +27,7 @@ execute_process(COMMAND
 )
 
 
-set (FLAC_LIBS ogg.a FLAC.a FLAC++.a)
+set (FLAC_LIBS ogg FLAC++.a FLAC)
 
 
 
@@ -45,7 +45,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 
 
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder ")   # --param=max-vartrack-size=400000
+    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder -Wno-restrict ")   # --param=max-vartrack-size=400000
 
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS}")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
@@ -99,7 +99,9 @@ set(NAM_SOURCES
 )
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR CMAKE_CXX_COMPILER_ID MATCHES "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-    set(NAM_EXTRA_FLAGS -fPIC -Wno-sign-compare -Wno-pedantic -Wno-deprecated-declarations -Wno-unused-but-set-variable -Wno-effc++)
+    set(NAM_EXTRA_FLAGS -fPIC -Wno-sign-compare -Wno-pedantic -Wno-deprecated-declarations -Wno-unused-but-set-variable
+      -Wno-deprecated-enum-enum-conversion 
+      -Wno-effc++)
 endif()
 
 add_library(namSources STATIC ${NAM_SOURCES})
@@ -246,7 +248,9 @@ add_library(ToobAmp  SHARED
 
 target_link_options(ToobAmp PRIVATE
          -Wl,-z,nodelete 
+    -Wl,-uFLAC__stream_decoder_get_blocksize   # demand-link plugin.
 )
+
 
 target_link_libraries(ToobAmp 
     #${DBUS_LIBRARIES}
@@ -561,7 +565,8 @@ target_link_options(ToobAmpUI PRIVATE
     # -Wl,-ulinkInputStage    # demand-link plugin.
     # -Wl,-ulinkCabSimUi   # demand-link plugin.
     # -Wl,-ulinkToobDelayUi   # demand-link plugin.
-)
+    
+    )
 
 
 

@@ -39,7 +39,7 @@ SOFTWARE.
 #include <cstring> // memcpy
 #include <cmath> // pow
 #include <sstream>
-
+#include <algorithm>
 #include "NoiseGate.h"
 
 using namespace dsp;

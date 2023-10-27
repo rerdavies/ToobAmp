@@ -411,27 +411,27 @@ public:
 
         }
     }
-    template<
-    class Category,
-    class T,
-    class Distance = std::ptrdiff_t,
-    class Pointer = T*,
-    class Reference = T&
-    >  void write(std::iterator<Category,T,Distance,Pointer,Reference> &it) {
-        start_array();
-        bool first = true;
-        for( Reference ref: it)
-        {
-            if (!first)
-            {
-                os << ", ";
-                os << CRLF;
-            }
-            indent();
-            os << ref;
-        }
-        end_array();
-    }
+    // template<
+    // class Category,
+    // class T,
+    // class Distance = std::ptrdiff_t,
+    // class Pointer = T*,
+    // class Reference = T&
+    // >  void write(std::iterator<Category,T,Distance,Pointer,Reference> &it) {
+    //     start_array();
+    //     bool first = true;
+    //     for( Reference ref: it)
+    //     {
+    //         if (!first)
+    //         {
+    //             os << ", ";
+    //             os << CRLF;
+    //         }
+    //         indent();
+    //         os << ref;
+    //     }
+    //     end_array();
+    // }
 
     void write_json_member(const std::string&name, const char*json_text)
     {

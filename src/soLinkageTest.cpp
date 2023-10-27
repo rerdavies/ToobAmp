@@ -20,7 +20,7 @@ int main(int argc, char**argv)
 
     std::filesystem::path soName = std::filesystem::path(argv[0]).parent_path() / "ToobAmp.so";
 
-    soName = "/usr/lib/lv2/ToobAmp.lv2/ToobAmp.so";
+    //soName = "/usr/lib/lv2/ToobAmp.lv2/ToobAmp.so";
     if (!std::filesystem::exists(soName))
     {
         cerr << "File not found: " << soName << endl;
@@ -45,6 +45,7 @@ int main(int argc, char**argv)
     using Lv2Fn = void*(*)(uint32_t v);
     Lv2Fn fn = Lv2Fn(entryPoint);
     fn(0);
+cerr << "Success." << endl;
 
     
     return EXIT_SUCCESS;

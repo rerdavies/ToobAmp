@@ -45,6 +45,8 @@ SOFTWARE.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
+
 
 #include "Eigen/Eigen"
 #include "NeuralAmpModelerCore/NAM/activations.h"
