@@ -213,7 +213,6 @@ namespace toob {
 		RangedInputPort Threshold =RangedInputPort(-60,0);
 		RangedInputPort Mute =RangedInputPort(0,1);
 		OutputPort Freq {0};
-		double pitchValue = -1;
 
 		void OnPitchReceived(float value);
 

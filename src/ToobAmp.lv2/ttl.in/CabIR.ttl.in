@@ -79,7 +79,7 @@ cabir:impulseFile3
 
 <http://two-play.com/plugins/toob-cab-ir>
         a lv2:Plugin ,
-                lv2:ReverbPlugin ;
+                lv2:SimulatorPlugin ;
         doap:name "TooB Cab IR" ,
                 "TooB Cab IR"@en-gb 
                 ;
@@ -145,7 +145,7 @@ Limitations of Liability that apply to these works.
 """ ;
 
         mod:brand "TooB";
-        mod:label "Convolution Reverb";
+        mod:label "Cab IR";
         lv2:requiredFeature urid:map;
         lv2:optionalFeature state::freePath, state:makePath, state:mapPath, work:schedule ;
         

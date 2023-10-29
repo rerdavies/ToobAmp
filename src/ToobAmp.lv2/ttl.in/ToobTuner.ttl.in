@@ -57,11 +57,11 @@ TooB Tuner is a chromatic guitar tuner.
                 lv2:index 0 ;
                 lv2:symbol "FREQ" ;
                 lv2:name "Freq";
-                lv2:designation pipedalui:tunerFrequency ;
+                units:unit units:midiNote ;
 
-                lv2:default 0.0 ;
-                lv2:minimum 0.0 ;
-                lv2:maximum 1200.0 ;
+                lv2:default -1.0 ;
+                lv2:minimum -1.0 ;
+                lv2:maximum 128.0 ;
         ],        
         [
                 a lv2:InputPort ,

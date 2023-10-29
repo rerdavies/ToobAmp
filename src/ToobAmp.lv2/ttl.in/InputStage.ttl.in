@@ -157,8 +157,8 @@ The GateT control provides a noise gate. Set to minimum value to disable.
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
                 lv2:maximum 1.0;    
-                lv2:portProperty lv2:integer; # Display as Lamp.
-
+                lv2:portProperty lv2:integer ; # Display as Lamp.
+                lv2:portProperty lv2:toggled ;
                 rdfs:comment "Noise gate" ;
 
         ],                    

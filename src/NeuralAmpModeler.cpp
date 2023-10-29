@@ -45,6 +45,7 @@ SOFTWARE.
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+#pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
 
 
@@ -563,7 +564,7 @@ void NeuralAmpModeler::UpdateToneStack()
     float m = cMid.GetValue()*0.1f;
     float t = cTreble.GetValue()*0.1f;
 
-    std::cout << "b: " << b << " m: " << m << " t: " << t << std::endl;
+    // std::cout << "b: " << b << " m: " << m << " t: " << t << std::endl;
     switch (this->toneStackType)
     {
     case ToneStackType::Bassman:

@@ -66,6 +66,7 @@ LvtkElement::ptr PLUGIN_CLASS::RenderControl(LvtkBindingProperty<double> &value,
         auto tunerControl = Lv2TunerElement::Create();
         value.Bind(tunerControl->ValueProperty);
         auto &referenceFrequencyProperty = this->GetControlProperty("REFFREQ");
+        tunerControl->ValueIsMidiNote(true);
         referenceFrequencyProperty.Bind(tunerControl->ReferenceFrequencyProperty);
         return tunerControl;
     } else {

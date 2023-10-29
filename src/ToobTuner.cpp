@@ -224,9 +224,15 @@ void ToobTuner::UpdateControls()
 }
 
 
-void ToobTuner::OnPitchReceived(float value) {
-	this->Freq.SetValue(value);
-	pitchValue = value;
+void ToobTuner::OnPitchReceived(float valueHz) {
+
+	// convert to Midi Note.
+	float midiNote = -1;
+	if (valueHz != 0)
+	{
+		midiNote = std::log2(valueHz/RefFrequency.GetValue())*12 + 69;
+	} 
+	this->Freq.SetValue(midiNote);
 	this->requestState = RequestState::Idle;
 	if (this->updateFrameIndex <= 0)
 	{
