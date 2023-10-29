@@ -19,11 +19,11 @@
 
 #include "ToobUi.hpp"
 #include "AboutDialog.hpp"
-#include "lvtk/LvtkVerticalStackElement.hpp"
-#include "lvtk/LvtkFlexGridElement.hpp"
-#include "lvtk/LvtkSvgElement.hpp"
-#include "lvtk/LvtkButtonElement.hpp"
-#include "lvtk/LvtkScrollContainerElement.hpp"
+#include "lv2c/Lv2cVerticalStackElement.hpp"
+#include "lv2c/Lv2cFlexGridElement.hpp"
+#include "lv2c/Lv2cSvgElement.hpp"
+#include "lv2c/Lv2cButtonElement.hpp"
+#include "lv2c/Lv2cScrollContainerElement.hpp"
 
 using namespace lvtk::ui;
 using namespace lvtk;
@@ -33,44 +33,44 @@ using namespace toob;
 
 ToobUi::ToobUi(
     std::shared_ptr<Lv2PluginInfo> pluginInfo, 
-    LvtkSize defaultWindowSize, 
-    LvtkSize defaultHelpWindowsize,
+    Lv2cSize defaultWindowSize, 
+    Lv2cSize defaultHelpWindowsize,
     const std::string&logoSvg)
 : super(pluginInfo,defaultWindowSize)
 , defaultHelpWindowSize(defaultHelpWindowsize)
 , logoSvg(logoSvg)
 {
     // TO-DO: remove the argument.
-    defaultHelpWindowSize = LvtkSize(600,600);
+    defaultHelpWindowSize = Lv2cSize(600,600);
 }
 ToobUi::ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
-    const LvtkCreateWindowParameters &createWindowParams,
-    LvtkSize defaultHelpWindowSize,
+    const Lv2cCreateWindowParameters &createWindowParams,
+    Lv2cSize defaultHelpWindowSize,
     const std::string&logoSvg)
 : super(pluginInfo,createWindowParams)
 , defaultHelpWindowSize(defaultHelpWindowSize)
 , logoSvg(logoSvg)
 {
     // TO-DO: remove the argument.
-    defaultHelpWindowSize = LvtkSize(600,600);
+    defaultHelpWindowSize = Lv2cSize(600,600);
 
 }
 
 
 
-LvtkContainerElement::ptr ToobUi::RenderBottomBar()
+Lv2cContainerElement::ptr ToobUi::RenderBottomBar()
 {
-    auto bottomBar = LvtkFlexGridElement::Create();
+    auto bottomBar = Lv2cFlexGridElement::Create();
     bottomBar->Style()
         .BorderWidthTop(1)
-        .BorderColor(LvtkColor("#E0E0E080"))
-        .FlexAlignItems(LvtkAlignment::Center)
-        .FlexDirection(LvtkFlexDirection::Row)
-        .FlexWrap(LvtkFlexWrap::NoWrap)
-        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .BorderColor(Lv2cColor("#E0E0E080"))
+        .FlexAlignItems(Lv2cAlignment::Center)
+        .FlexDirection(Lv2cFlexDirection::Row)
+        .FlexWrap(Lv2cFlexWrap::NoWrap)
+        .HorizontalAlignment(Lv2cAlignment::Stretch)
         ;
     {
-        auto img = LvtkSvgElement::Create();
+        auto img = Lv2cSvgElement::Create();
         img->Source(logoSvg);
         img->Style()
             .MarginLeft(8)
@@ -81,18 +81,18 @@ LvtkContainerElement::ptr ToobUi::RenderBottomBar()
         bottomBar->AddChild(img);
     }
     {
-        auto item = LvtkElement::Create();
+        auto item = Lv2cElement::Create();
         item->Style()
-            .HorizontalAlignment(LvtkAlignment::Stretch);
+            .HorizontalAlignment(Lv2cAlignment::Stretch);
         bottomBar->AddChild(item);
     }
     {
-        auto button = LvtkButtonElement::Create();
+        auto button = Lv2cButtonElement::Create();
         button
-            ->Variant(LvtkButtonVariant::ImageButton)
+            ->Variant(Lv2cButtonVariant::ImageButton)
             .Icon("help.svg");
         button->Clicked.AddListener(
-            [this](const LvtkMouseEventArgs&args)
+            [this](const Lv2cMouseEventArgs&args)
             {
                 OnHelpClicked();
                 return true;
@@ -103,12 +103,12 @@ LvtkContainerElement::ptr ToobUi::RenderBottomBar()
     return bottomBar;
 }
 
-LvtkContainerElement::ptr ToobUi::Render()
+Lv2cContainerElement::ptr ToobUi::Render()
 {
-    auto container = LvtkVerticalStackElement::Create();
+    auto container = Lv2cVerticalStackElement::Create();
     container->Style()
-        .VerticalAlignment(LvtkAlignment::Stretch)
-        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .VerticalAlignment(Lv2cAlignment::Stretch)
+        .HorizontalAlignment(Lv2cAlignment::Stretch)
         .Background(Theme()->paper);
 
     {
@@ -123,16 +123,16 @@ LvtkContainerElement::ptr ToobUi::Render()
 
 }
 
-LvtkContainerElement::ptr ToobUi::RenderClientArea()
+Lv2cContainerElement::ptr ToobUi::RenderClientArea()
 {
-    LvtkScrollContainerElement::ptr scrollElement = LvtkScrollContainerElement::Create();
+    Lv2cScrollContainerElement::ptr scrollElement = Lv2cScrollContainerElement::Create();
     scrollElement->HorizontalScrollEnabled(false)
         .VerticalScrollEnabled(true);
-    scrollElement->Style().Background(Theme()->paper).HorizontalAlignment(LvtkAlignment::Stretch).VerticalAlignment(LvtkAlignment::Stretch);
+    scrollElement->Style().Background(Theme()->paper).HorizontalAlignment(Lv2cAlignment::Stretch).VerticalAlignment(Lv2cAlignment::Stretch);
 
     auto controls = RenderControls();
     controls->Style()
-        .FlexJustification(LvtkFlexJustification::Center)
+        .FlexJustification(Lv2cFlexJustification::Center)
         ;
     scrollElement->Child(controls);
     return scrollElement;

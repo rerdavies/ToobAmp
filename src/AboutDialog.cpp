@@ -20,14 +20,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "AboutDialog.hpp"
-#include "lvtk/LvtkTypographyElement.hpp"
-#include "lvtk/LvtkVerticalStackElement.hpp"
-#include "lvtk/LvtkTableElement.hpp"
-#include "lvtk/LvtkScrollContainerElement.hpp"
-#include "lvtk_ui/Lv2PluginInfo.hpp"
+#include "lv2c/Lv2cTypographyElement.hpp"
+#include "lv2c/Lv2cVerticalStackElement.hpp"
+#include "lv2c/Lv2cTableElement.hpp"
+#include "lv2c/Lv2cScrollContainerElement.hpp"
+#include "lv2c_ui/Lv2PluginInfo.hpp"
 #include "ToobUi.hpp"
 #include <fstream>
-#include "lvtk/LvtkMarkdownElement.hpp"
+#include "lv2c/Lv2cMarkdownElement.hpp"
 #include "ToobAmpVersion.hpp"
 
 using namespace toob;
@@ -35,8 +35,8 @@ using namespace lvtk;
 using namespace lvtk::ui;
 
 void AboutDialog::Show(
-    LvtkWindow::ptr parent,
-    LvtkSize defaultDialogSize,
+    Lv2cWindow::ptr parent,
+    Lv2cSize defaultDialogSize,
     ToobUi *toobUi)
 {
     this->toobUi = toobUi;
@@ -47,15 +47,15 @@ void AboutDialog::Show(
     std::string settingsKey = "dlg-" + pluginInfo.uri();
     std::string title = "Help - " + pluginInfo.name();
 
-    LvtkCreateWindowParameters windowParameters;
+    Lv2cCreateWindowParameters windowParameters;
 
     windowParameters.backgroundColor = Theme().popupBackground;
-    windowParameters.positioning = LvtkWindowPositioning::CenterOnParent;
+    windowParameters.positioning = Lv2cWindowPositioning::CenterOnParent;
     windowParameters.title = title;
     windowParameters.settingsKey = settingsKey;
-    windowParameters.windowType = LvtkWindowType::Utility;
-    windowParameters.minSize = LvtkSize(320, 200);
-    windowParameters.maxSize = LvtkSize(10000, 10000);
+    windowParameters.windowType = Lv2cWindowType::Utility;
+    windowParameters.minSize = Lv2cSize(320, 200);
+    windowParameters.maxSize = Lv2cSize(10000, 10000);
     windowParameters.size = defaultDialogSize;
     windowParameters.x11Windowclass = "com.twoplay.lvtk-plugin"; // Maybe used for settings by Window Managers.
     windowParameters.gtkApplicationId = windowParameters.x11Windowclass;
@@ -69,26 +69,26 @@ void AboutDialog::Show(
     scrollContainer->Focus();
 }
 
-WindowHandle AboutDialog::GetApplicationWindow(LvtkWindow::ptr parent)
+WindowHandle AboutDialog::GetApplicationWindow(Lv2cWindow::ptr parent)
 {
     return parent->Handle();
 }
 
-LvtkElement::ptr AboutDialog::RenderDivider()
+Lv2cElement::ptr AboutDialog::RenderDivider()
 {
-    auto element = LvtkElement::Create();
+    auto element = Lv2cElement::Create();
     element->Style()
         .Height(1)
-        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .HorizontalAlignment(Lv2cAlignment::Stretch)
         .Background(Theme().dividerColor)
         .MarginTop({4})
         .MarginBottom({8});
     return element;
 }
 
-LvtkVerticalStackElement::ptr AboutDialog::Markup(const std::string &text)
+Lv2cVerticalStackElement::ptr AboutDialog::Markup(const std::string &text)
 {
-    auto element = LvtkMarkdownElement::Create();
+    auto element = Lv2cMarkdownElement::Create();
     element->SetMarkdown(text);
     return element;
 }
@@ -105,22 +105,22 @@ static bool HasControlDocs(const Lv2PluginInfo &pluginInfo)
     return false;
 }
 
-LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
+Lv2cElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
 {
-    LvtkTableElement::ptr table = LvtkTableElement::Create();
+    Lv2cTableElement::ptr table = Lv2cTableElement::Create();
     table->Style()
-        .HorizontalAlignment(LvtkAlignment::Stretch)
+        .HorizontalAlignment(Lv2cAlignment::Stretch)
         .MarginBottom(16);
     table->ColumnDefinitions(
         {
             {
-                LvtkAlignment::Start,
-                LvtkAlignment::Start,
+                Lv2cAlignment::Start,
+                Lv2cAlignment::Start,
                 0,
             },
             {
-                LvtkAlignment::Start,
-                LvtkAlignment::Stretch,
+                Lv2cAlignment::Start,
+                Lv2cAlignment::Stretch,
                 1,
             },
         });
@@ -133,8 +133,8 @@ LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
         auto comment = port.comment();
         if (port.is_control_port() && port.is_input() && comment.length() && !port.not_on_gui())
         {
-            LvtkTypographyElement::ptr nameElement = LvtkTypographyElement::Create();
-            nameElement->Variant(LvtkTypographyVariant::BodyPrimary)
+            Lv2cTypographyElement::ptr nameElement = Lv2cTypographyElement::Create();
+            nameElement->Variant(Lv2cTypographyVariant::BodyPrimary)
                 .Text(port.name());
             nameElement->Style().SingleLine(true);
 
@@ -154,21 +154,21 @@ LvtkElement::ptr AboutDialog::RenderPortDocs(const Lv2PluginInfo &pluginInfo)
     return table;
 }
 
-LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
+Lv2cElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
 {
 
-    scrollContainer = LvtkScrollContainerElement::Create();
+    scrollContainer = Lv2cScrollContainerElement::Create();
     scrollContainer->WantsFocus(true);
     scrollContainer->Style()
-        .HorizontalAlignment(LvtkAlignment::Stretch)
-        .VerticalAlignment(LvtkAlignment::Stretch)
+        .HorizontalAlignment(Lv2cAlignment::Stretch)
+        .VerticalAlignment(Lv2cAlignment::Stretch)
         .Background(Theme().popupBackground);
 
     {
         primaryText = true;
-        LvtkVerticalStackElement::ptr textContainer = LvtkVerticalStackElement::Create();
+        Lv2cVerticalStackElement::ptr textContainer = Lv2cVerticalStackElement::Create();
         textContainer->Style()
-            .HorizontalAlignment(LvtkAlignment::Stretch)
+            .HorizontalAlignment(Lv2cAlignment::Stretch)
             .Margin({32, 16, 32, 16});
 
         if (HasControlDocs(pluginInfo))
@@ -176,13 +176,13 @@ LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
             textContainer->AddChild(RenderPortDocs(pluginInfo));
         }
         {
-            auto element = LvtkMarkdownElement::Create();
+            auto element = Lv2cMarkdownElement::Create();
             element->SetMarkdown(pluginInfo.comment());
             textContainer->AddChild(element);
         }
         {
             // spacer above copyrights.
-            auto element = LvtkElement::Create();
+            auto element = Lv2cElement::Create();
             element->Style().Height(24);
             textContainer->AddChild(element);
         }
@@ -193,14 +193,14 @@ LvtkElement::ptr AboutDialog::Render(const Lv2PluginInfo &pluginInfo)
     return scrollContainer;
 }
 
-LvtkElement::ptr AboutDialog::RenderLicenses()
+Lv2cElement::ptr AboutDialog::RenderLicenses()
 {
-    auto textContainer = LvtkVerticalStackElement::Create();
+    auto textContainer = Lv2cVerticalStackElement::Create();
     {
         textContainer->AddChild(RenderDivider());
         {
-            LvtkTypographyElement::ptr typography = LvtkTypographyElement::Create();
-            typography->Variant(LvtkTypographyVariant::BodySecondary)
+            Lv2cTypographyElement::ptr typography = Lv2cTypographyElement::Create();
+            typography->Variant(Lv2cTypographyVariant::BodySecondary)
                 .Text("TooB LV2 Guitar Effects v" TOOBAMP_BUILD_LABEL);
             typography->Style()
                 .MarginTop(16)
@@ -209,8 +209,8 @@ LvtkElement::ptr AboutDialog::RenderLicenses()
             textContainer->AddChild(typography);
         }
         {
-            auto element = LvtkMarkdownElement::Create();
-            element->TextVariant(LvtkTypographyVariant::BodySecondary);
+            auto element = Lv2cMarkdownElement::Create();
+            element->TextVariant(Lv2cTypographyVariant::BodySecondary);
             
             element->AddMarkdownFile(std::filesystem::path(this->toobUi->BundlePath()) / "LICENSE.md");
             textContainer->AddChild(element);

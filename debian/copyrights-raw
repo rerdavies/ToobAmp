@@ -843,13 +843,13 @@ Files: modules/NeuralAmpModelerCore/Dependencies/eigen/.gitlab/issue_templates/B
  modules/lvtk/bin/install_app_icons
  modules/lvtk/install-test-plugin.sh
  modules/lvtk/install.sh
- modules/lvtk/src/lvtk/LvtkDbVuElement.cpp
- modules/lvtk/src/lvtk/LvtkGroupElement.cpp
- modules/lvtk/src/lvtk/LvtkIndefiniteProgressElement.cpp
- modules/lvtk/src/lvtk/LvtkLampElement.cpp
- modules/lvtk/src/lvtk/LvtkPngStripElement.cpp
- modules/lvtk/src/lvtk/LvtkScrollBarElement.cpp
- modules/lvtk/src/lvtk/LvtkSwitchElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDbVuElement.cpp
+ modules/lvtk/src/lvtk/Lv2cGroupElement.cpp
+ modules/lvtk/src/lvtk/Lv2cIndefiniteProgressElement.cpp
+ modules/lvtk/src/lvtk/Lv2cLampElement.cpp
+ modules/lvtk/src/lvtk/Lv2cPngStripElement.cpp
+ modules/lvtk/src/lvtk/Lv2cScrollBarElement.cpp
+ modules/lvtk/src/lvtk/Lv2cSwitchElement.cpp
  modules/lvtk/src/lvtk_ui/Lv2PortViewFactory.cpp
  modules/lvtk/src/test/MaterialColorTest.cpp
  modules/lvtk/src/test/NiceEditStringTest.cpp
@@ -880,121 +880,121 @@ License: UNKNOWN
  FIXME
 
 Files: modules/lvtk/LICENSE
- modules/lvtk/src/generate_lvtk_plugin_info/AutoLilvNode.cpp
- modules/lvtk/src/generate_lvtk_plugin_info/AutoLilvNode.hpp
- modules/lvtk/src/generate_lvtk_plugin_info/ClassFileWriter.cpp
- modules/lvtk/src/generate_lvtk_plugin_info/ClassFileWriter.hpp
- modules/lvtk/src/generate_lvtk_plugin_info/CommandLineParser.hpp
- modules/lvtk/src/generate_lvtk_plugin_info/LilvPiPedalUI.cpp
- modules/lvtk/src/generate_lvtk_plugin_info/LilvPiPedalUI.hpp
- modules/lvtk/src/generate_lvtk_plugin_info/LilvPluginInfo.cpp
- modules/lvtk/src/generate_lvtk_plugin_info/LilvPluginInfo.hpp
- modules/lvtk/src/generate_lvtk_plugin_info/main.cpp
- modules/lvtk/src/generate_lvtk_plugin_info/ss.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/AutoLilvNode.cpp
+ modules/lvtk/src/generate_lv2c_plugin_info/AutoLilvNode.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/ClassFileWriter.cpp
+ modules/lvtk/src/generate_lv2c_plugin_info/ClassFileWriter.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/CommandLineParser.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/LilvPiPedalUI.cpp
+ modules/lvtk/src/generate_lv2c_plugin_info/LilvPiPedalUI.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/LilvPluginInfo.cpp
+ modules/lvtk/src/generate_lv2c_plugin_info/LilvPluginInfo.hpp
+ modules/lvtk/src/generate_lv2c_plugin_info/main.cpp
+ modules/lvtk/src/generate_lv2c_plugin_info/ss.hpp
  modules/lvtk/src/lvtk/IcuString.cpp
  modules/lvtk/src/lvtk/JsonIo.cpp
  modules/lvtk/src/lvtk/JsonVariant.cpp
- modules/lvtk/src/lvtk/LvtkAnimator.cpp
- modules/lvtk/src/lvtk/LvtkBindingProperty.cpp
- modules/lvtk/src/lvtk/LvtkButtonBaseElement.cpp
- modules/lvtk/src/lvtk/LvtkButtonElement.cpp
- modules/lvtk/src/lvtk/LvtkContainerElement.cpp
- modules/lvtk/src/lvtk/LvtkDamageList.cpp
- modules/lvtk/src/lvtk/LvtkDialBaseElement.cpp
- modules/lvtk/src/lvtk/LvtkDialElement.cpp
- modules/lvtk/src/lvtk/LvtkDialog.cpp
- modules/lvtk/src/lvtk/LvtkDrawingContext.cpp
- modules/lvtk/src/lvtk/LvtkDropShadowElement.cpp
- modules/lvtk/src/lvtk/LvtkDropdownElement.cpp
- modules/lvtk/src/lvtk/LvtkDropdownItemElement.cpp
- modules/lvtk/src/lvtk/LvtkEditBoxElement.cpp
- modules/lvtk/src/lvtk/LvtkElement.cpp
- modules/lvtk/src/lvtk/LvtkFlexGridElement.cpp
- modules/lvtk/src/lvtk/LvtkLog.cpp
- modules/lvtk/src/lvtk/LvtkMarkdownElement.cpp
- modules/lvtk/src/lvtk/LvtkMessageDialog.cpp
- modules/lvtk/src/lvtk/LvtkMotionBlurElement.cpp
- modules/lvtk/src/lvtk/LvtkNumericEditBoxElement.cpp
- modules/lvtk/src/lvtk/LvtkPangoContext.cpp
- modules/lvtk/src/lvtk/LvtkPngDialElement.cpp
- modules/lvtk/src/lvtk/LvtkPngElement.cpp
- modules/lvtk/src/lvtk/LvtkRootElement.cpp
- modules/lvtk/src/lvtk/LvtkScrollContainerElement.cpp
- modules/lvtk/src/lvtk/LvtkSettingsFile.cpp
- modules/lvtk/src/lvtk/LvtkSlideInOutAnimationElement.cpp
- modules/lvtk/src/lvtk/LvtkStatusTextElement.cpp
- modules/lvtk/src/lvtk/LvtkStyle.cpp
- modules/lvtk/src/lvtk/LvtkSvg.cpp
- modules/lvtk/src/lvtk/LvtkSvgElement.cpp
- modules/lvtk/src/lvtk/LvtkTableElement.cpp
- modules/lvtk/src/lvtk/LvtkTheme.cpp
- modules/lvtk/src/lvtk/LvtkTypes.cpp
- modules/lvtk/src/lvtk/LvtkTypographyElement.cpp
- modules/lvtk/src/lvtk/LvtkValueElement.cpp
- modules/lvtk/src/lvtk/LvtkVerticalStackElement.cpp
- modules/lvtk/src/lvtk/LvtkVuElement.cpp
- modules/lvtk/src/lvtk/LvtkWindow.cpp
- modules/lvtk/src/lvtk/LvtkX11Window.cpp
- modules/lvtk/src/lvtk/LvtkX11Window.hpp
+ modules/lvtk/src/lvtk/Lv2cAnimator.cpp
+ modules/lvtk/src/lvtk/Lv2cBindingProperty.cpp
+ modules/lvtk/src/lvtk/Lv2cButtonBaseElement.cpp
+ modules/lvtk/src/lvtk/Lv2cButtonElement.cpp
+ modules/lvtk/src/lvtk/Lv2cContainerElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDamageList.cpp
+ modules/lvtk/src/lvtk/Lv2cDialBaseElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDialElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDialog.cpp
+ modules/lvtk/src/lvtk/Lv2cDrawingContext.cpp
+ modules/lvtk/src/lvtk/Lv2cDropShadowElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDropdownElement.cpp
+ modules/lvtk/src/lvtk/Lv2cDropdownItemElement.cpp
+ modules/lvtk/src/lvtk/Lv2cEditBoxElement.cpp
+ modules/lvtk/src/lvtk/Lv2cElement.cpp
+ modules/lvtk/src/lvtk/Lv2cFlexGridElement.cpp
+ modules/lvtk/src/lvtk/Lv2cLog.cpp
+ modules/lvtk/src/lvtk/Lv2cMarkdownElement.cpp
+ modules/lvtk/src/lvtk/Lv2cMessageDialog.cpp
+ modules/lvtk/src/lvtk/Lv2cMotionBlurElement.cpp
+ modules/lvtk/src/lvtk/Lv2cNumericEditBoxElement.cpp
+ modules/lvtk/src/lvtk/Lv2cPangoContext.cpp
+ modules/lvtk/src/lvtk/Lv2cPngDialElement.cpp
+ modules/lvtk/src/lvtk/Lv2cPngElement.cpp
+ modules/lvtk/src/lvtk/Lv2cRootElement.cpp
+ modules/lvtk/src/lvtk/Lv2cScrollContainerElement.cpp
+ modules/lvtk/src/lvtk/Lv2cSettingsFile.cpp
+ modules/lvtk/src/lvtk/Lv2cSlideInOutAnimationElement.cpp
+ modules/lvtk/src/lvtk/Lv2cStatusTextElement.cpp
+ modules/lvtk/src/lvtk/Lv2cStyle.cpp
+ modules/lvtk/src/lvtk/Lv2cSvg.cpp
+ modules/lvtk/src/lvtk/Lv2cSvgElement.cpp
+ modules/lvtk/src/lvtk/Lv2cTableElement.cpp
+ modules/lvtk/src/lvtk/Lv2cTheme.cpp
+ modules/lvtk/src/lvtk/Lv2cTypes.cpp
+ modules/lvtk/src/lvtk/Lv2cTypographyElement.cpp
+ modules/lvtk/src/lvtk/Lv2cValueElement.cpp
+ modules/lvtk/src/lvtk/Lv2cVerticalStackElement.cpp
+ modules/lvtk/src/lvtk/Lv2cVuElement.cpp
+ modules/lvtk/src/lvtk/Lv2cWindow.cpp
+ modules/lvtk/src/lvtk/Lv2cX11Window.cpp
+ modules/lvtk/src/lvtk/Lv2cX11Window.hpp
  modules/lvtk/src/lvtk/Utf8Utils.cpp
  modules/lvtk/src/lvtk/Utf8Utils.hpp
  modules/lvtk/src/lvtk/cleanup.hpp
  modules/lvtk/src/lvtk/include/lvtk/IcuString.hpp
  modules/lvtk/src/lvtk/include/lvtk/JsonIo.hpp
  modules/lvtk/src/lvtk/include/lvtk/JsonVariant.hpp
- modules/lvtk/src/lvtk/include/lvtk/Lvtk.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkAnimator.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkBindingProperty.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkButtonBaseElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkButtonElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkCieColors.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkContainerElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDamageList.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDbVuElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDialBaseElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDialElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDialog.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDrawingContext.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDropShadowElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDropdownElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkDropdownItemElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkEditBoxElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkFlexGridElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkGroupElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkHorizontalStackElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkIndefiniteProgressElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkLampElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkLog.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkMarkdownElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkMessageDialog.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkMotionBlurElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkNumericEditBoxElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkObject.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkOnOffSwitchElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkPangoContext.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkPngDialElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkPngElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkPngStripElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkRootElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkScrollBarElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkScrollContainerElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkSettingsFile.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkSlideInOutAnimationElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkStatusTextElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkStyle.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkSvg.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkSvgElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkSwitchElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkTableElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkTheme.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkTypes.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkTypographyElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkUserData.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkValueElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkVerticalStackElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkVuElement.hpp
- modules/lvtk/src/lvtk/include/lvtk/LvtkWindow.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2c.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cAnimator.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cBindingProperty.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cButtonBaseElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cButtonElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cCieColors.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cContainerElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDamageList.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDbVuElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDialBaseElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDialElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDialog.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDrawingContext.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDropShadowElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDropdownElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cDropdownItemElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cEditBoxElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cFlexGridElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cGroupElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cHorizontalStackElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cIndefiniteProgressElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cLampElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cLog.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cMarkdownElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cMessageDialog.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cMotionBlurElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cNumericEditBoxElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cObject.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cOnOffSwitchElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cPangoContext.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cPngDialElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cPngElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cPngStripElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cRootElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cScrollBarElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cScrollContainerElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cSettingsFile.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cSlideInOutAnimationElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cStatusTextElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cStyle.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cSvg.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cSvgElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cSwitchElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cTableElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cTheme.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cTypes.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cTypographyElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cUserData.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cValueElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cVerticalStackElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cVuElement.hpp
+ modules/lvtk/src/lvtk/include/lvtk/Lv2cWindow.hpp
  modules/lvtk/src/lvtk/keysym_names.cpp
  modules/lvtk/src/lvtk/keysym_names.hpp
  modules/lvtk/src/lvtk/ss.hpp
@@ -1047,8 +1047,8 @@ Files: modules/lvtk/LICENSE
  modules/lvtk/src/test/Lv2ControlTestPage.hpp
  modules/lvtk/src/test/Lv2UiTestPage.cpp
  modules/lvtk/src/test/Lv2UiTestPage.hpp
- modules/lvtk/src/test/LvtkMinimumMain.cpp
- modules/lvtk/src/test/LvtkTestMain.cpp
+ modules/lvtk/src/test/Lv2cMinimumMain.cpp
+ modules/lvtk/src/test/Lv2cTestMain.cpp
  modules/lvtk/src/test/MotionBlurTestPage.cpp
  modules/lvtk/src/test/MotionBlurTestPage.hpp
  modules/lvtk/src/test/PaletteTestPage.cpp
@@ -3348,7 +3348,7 @@ Copyright: 2022, Steven Atkinson, 2023 Robin E. R. Davies
 License: Expat
  FIXME
 
-Files: modules/lvtk/src/lvtk/LvtkCieColors.cpp
+Files: modules/lvtk/src/lvtk/Lv2cCieColors.cpp
 Copyright: 2018, Yuki Koyama, 2023 Robin Davies
 License: Expat
  FIXME

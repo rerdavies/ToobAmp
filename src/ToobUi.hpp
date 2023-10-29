@@ -18,7 +18,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
-#include "lvtk_ui/Lv2UI.hpp"
+#include "lv2c_ui/Lv2UI.hpp"
 
 namespace toob {
     using namespace lvtk::ui;
@@ -33,21 +33,21 @@ namespace toob {
         
 
         ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
-            LvtkSize defaultWindowSize,
-            LvtkSize defaultHelpWindowSize,
+            Lv2cSize defaultWindowSize,
+            Lv2cSize defaultHelpWindowSize,
             const std::string&logoSvg);
 
         ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
-            const LvtkCreateWindowParameters &createWindowParames,
-            LvtkSize defaultHelpWindowSize,
+            const Lv2cCreateWindowParameters &createWindowParames,
+            Lv2cSize defaultHelpWindowSize,
             const std::string&logoSvg);
 
         void OnAboutDialogClosed(AboutDialog*dlg);
     protected:
-        virtual LvtkContainerElement::ptr RenderClientArea();
-        virtual LvtkContainerElement::ptr RenderBottomBar();
+        virtual Lv2cContainerElement::ptr RenderClientArea();
+        virtual Lv2cContainerElement::ptr RenderBottomBar();
 
-        virtual LvtkContainerElement::ptr Render() override;
+        virtual Lv2cContainerElement::ptr Render() override;
     
         virtual void OnHelpClicked();
 
@@ -55,7 +55,7 @@ namespace toob {
 
 
     private:
-        LvtkSize defaultHelpWindowSize;
+        Lv2cSize defaultHelpWindowSize;
         std::shared_ptr<AboutDialog> aboutDialog;
         std::string logoSvg;
     };

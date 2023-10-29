@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.18)
 
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lvtk)
-#find_package(Lvtk REQUIRED)
+#find_package(Lv2c REQUIRED)
 
 
 set (CMAKE_CXX_STANDARD 20)
@@ -274,15 +274,15 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 ####################################################
 
 
-set(LVTK_INCLUDE_DIRS
-   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk/include
-   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lvtk_ui/include
+set(LV2C_INCLUDE_DIRS
+   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lv2c/include
+   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lv2c_ui/include
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobNeuralAmpModeler.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNeuralAmpModeler.ttl)
 add_custom_command(
     OUTPUT  ToobNeuralAmpModelerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-nam
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 
@@ -290,7 +290,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNeuralAmpModeler.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -299,7 +299,7 @@ add_custom_command(
 configure_file(ToobAmp.lv2/ttl.in/CabIR.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl)
 add_custom_command(
     OUTPUT  CabIRInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-cab-ir
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
@@ -307,7 +307,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabIR.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -315,7 +315,7 @@ add_custom_command(
 configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl)
 add_custom_command(
     OUTPUT  ConvolutionReverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-convolution-reverb
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
@@ -323,13 +323,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverb.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ConvolutionReverbStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl)
 add_custom_command(
     OUTPUT  ConvolutionReverbStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-convolution-reverb-stereo
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
@@ -337,7 +337,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ConvolutionReverbStereo.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -345,7 +345,7 @@ add_custom_command(
 configure_file(ToobAmp.lv2/ttl.in/ToobTuner.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl)
 add_custom_command(
     OUTPUT  ToobTunerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-tuner
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
@@ -353,13 +353,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTuner.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/SpectrumAnalyzer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl)
 add_custom_command(
     OUTPUT  SpectrumAnalyzerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-spectrum
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
@@ -367,13 +367,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/SpectrumAnalyzer.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobML.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl)
 add_custom_command(
     OUTPUT  ToobMLInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-ml
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
@@ -381,14 +381,14 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobML.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
 configure_file(ToobAmp.lv2/ttl.in/ToobFreeverb.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl)
 add_custom_command(
     OUTPUT  ToobFreeverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-freeverb
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
@@ -396,7 +396,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFreeverb.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -405,7 +405,7 @@ configure_file(ToobAmpVersion.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.
 configure_file(ToobAmp.lv2/ttl.in/ToneStack.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl)
 add_custom_command(
     OUTPUT  ToneStackInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-tone-stack
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
@@ -413,12 +413,12 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 configure_file(ToobAmp.lv2/ttl.in/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
 add_custom_command(
     OUTPUT  Tf2FlangerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-flanger
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
@@ -426,13 +426,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobFlangerStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl)
 add_custom_command(
     OUTPUT  Tf2FlangerStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-flanger-stereo
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
@@ -440,7 +440,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlangerStereo.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -450,7 +450,7 @@ configure_file(ToobAmp.lv2/ttl.in/manifest.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/To
 configure_file(ToobAmp.lv2/ttl.in/CabSim.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl)
 add_custom_command(
     OUTPUT  CabSimInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-cab-sim
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
@@ -458,13 +458,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/CabSim.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
 add_custom_command(
     OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-delay
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp 
@@ -472,13 +472,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobChorus.ttl.in ToobAmp.lv2/ToobChorus.ttl)
 add_custom_command(
     OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-chorus
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
@@ -486,13 +486,13 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobChorus.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 configure_file(ToobAmp.lv2/ttl.in/InputStage.ttl.in ToobAmp.lv2/InputStage.ttl)
 add_custom_command(
     OUTPUT  InputStageInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lvtk_plugin_info 
+    COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-input_stage
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
               --out ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
@@ -500,7 +500,7 @@ add_custom_command(
     DEPENDS 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/InputStage.ttl    
-        generate_lvtk_plugin_info
+        generate_lv2c_plugin_info
 )
 
 
@@ -572,12 +572,12 @@ target_link_options(ToobAmpUI PRIVATE
 
 target_include_directories(
     ToobAmpUI PRIVATE
-    ${LVTK_INCLUDE_DIRS}
+    ${LV2C_INCLUDE_DIRS}
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 target_link_libraries(
     ToobAmpUI PRIVATE 
-    lvtk lvtk_ui
+    lv2c lv2c_ui
 )
 
 
@@ -822,7 +822,7 @@ target_link_libraries(UiLinkageTest ToobAmpUI)
 
 target_include_directories(
     UiLinkageTest  PRIVATE
-    ${LVTK_INCLUDE_DIRS}
+    ${LV2C_INCLUDE_DIRS}
 )
 
 

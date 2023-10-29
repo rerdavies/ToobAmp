@@ -20,44 +20,44 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #pragma once
 
-#include "lvtk/LvtkWindow.hpp"
-#include "lvtk/LvtkVerticalStackElement.hpp"
-#include "lvtk_ui/Lv2PluginInfo.hpp"
+#include "lv2c/Lv2cWindow.hpp"
+#include "lv2c/Lv2cVerticalStackElement.hpp"
+#include "lv2c_ui/Lv2PluginInfo.hpp"
 
 namespace lvtk {
-    class LvtkScrollContainerElement;
+    class Lv2cScrollContainerElement;
 
 }
 namespace toob {
     using namespace lvtk;
     class ToobUi;
 
-    class AboutDialog : public LvtkWindow {
+    class AboutDialog : public Lv2cWindow {
     public:
         using self=AboutDialog;
-        using super=LvtkWindow;
+        using super=Lv2cWindow;
         using ptr = std::shared_ptr<self>;
         static ptr Create() { return std::make_shared<AboutDialog>(); }
 
         void Show(
-            LvtkWindow::ptr parent,
-            LvtkSize defaultDialogSize,
+            Lv2cWindow::ptr parent,
+            Lv2cSize defaultDialogSize,
             ToobUi*toobUi);
 
     protected:
         virtual void OnClosing() override;
 
     private:
-        std::shared_ptr<LvtkScrollContainerElement> scrollContainer;
+        std::shared_ptr<Lv2cScrollContainerElement> scrollContainer;
         bool primaryText = true;
-        LvtkElement::ptr RenderDivider();
-        LvtkElement::ptr RenderLicenses();
-        LvtkVerticalStackElement::ptr Markup(const std::string &text);    
-        LvtkElement::ptr Render(const lvtk::ui::Lv2PluginInfo&pluginInfo);
-        LvtkElement::ptr RenderPortDocs(const lvtk::ui::Lv2PluginInfo&pluginInfo);
+        Lv2cElement::ptr RenderDivider();
+        Lv2cElement::ptr RenderLicenses();
+        Lv2cVerticalStackElement::ptr Markup(const std::string &text);    
+        Lv2cElement::ptr Render(const lvtk::ui::Lv2PluginInfo&pluginInfo);
+        Lv2cElement::ptr RenderPortDocs(const lvtk::ui::Lv2PluginInfo&pluginInfo);
         ToobUi*toobUi = nullptr;
 
-        WindowHandle GetApplicationWindow(LvtkWindow::ptr parent);
+        WindowHandle GetApplicationWindow(Lv2cWindow::ptr parent);
         std::string settingsKey;
     };
 }
