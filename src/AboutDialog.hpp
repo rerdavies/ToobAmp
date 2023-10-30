@@ -24,12 +24,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "lv2c/Lv2cVerticalStackElement.hpp"
 #include "lv2c_ui/Lv2PluginInfo.hpp"
 
-namespace lvtk {
+namespace lv2c {
     class Lv2cScrollContainerElement;
 
 }
 namespace toob {
-    using namespace lvtk;
+    using namespace lv2c;
     class ToobUi;
 
     class AboutDialog : public Lv2cWindow {
@@ -53,8 +53,8 @@ namespace toob {
         Lv2cElement::ptr RenderDivider();
         Lv2cElement::ptr RenderLicenses();
         Lv2cVerticalStackElement::ptr Markup(const std::string &text);    
-        Lv2cElement::ptr Render(const lvtk::ui::Lv2PluginInfo&pluginInfo);
-        Lv2cElement::ptr RenderPortDocs(const lvtk::ui::Lv2PluginInfo&pluginInfo);
+        Lv2cElement::ptr Render(const lv2c::ui::Lv2PluginInfo&pluginInfo);
+        Lv2cElement::ptr RenderPortDocs(const lv2c::ui::Lv2PluginInfo&pluginInfo);
         ToobUi*toobUi = nullptr;
 
         WindowHandle GetApplicationWindow(Lv2cWindow::ptr parent);

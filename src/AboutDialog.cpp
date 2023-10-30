@@ -31,8 +31,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ToobAmpVersion.hpp"
 
 using namespace toob;
-using namespace lvtk;
-using namespace lvtk::ui;
+using namespace lv2c;
+using namespace lv2c::ui;
 
 void AboutDialog::Show(
     Lv2cWindow::ptr parent,
@@ -57,7 +57,7 @@ void AboutDialog::Show(
     windowParameters.minSize = Lv2cSize(320, 200);
     windowParameters.maxSize = Lv2cSize(10000, 10000);
     windowParameters.size = defaultDialogSize;
-    windowParameters.x11Windowclass = "com.twoplay.lvtk-plugin"; // Maybe used for settings by Window Managers.
+    windowParameters.x11Windowclass = "lv2c.github.io-plugin"; // Maybe used for settings by Window Managers.
     windowParameters.gtkApplicationId = windowParameters.x11Windowclass;
     windowParameters.x11WindowName = title;
 

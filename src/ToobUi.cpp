@@ -25,8 +25,8 @@
 #include "lv2c/Lv2cButtonElement.hpp"
 #include "lv2c/Lv2cScrollContainerElement.hpp"
 
-using namespace lvtk::ui;
-using namespace lvtk;
+using namespace lv2c::ui;
+using namespace lv2c;
 using namespace toob;
 
 

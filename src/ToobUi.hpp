@@ -21,12 +21,12 @@
 #include "lv2c_ui/Lv2UI.hpp"
 
 namespace toob {
-    using namespace lvtk::ui;
-    using namespace lvtk;
+    using namespace lv2c::ui;
+    using namespace lv2c;
 
     class AboutDialog;
 
-    class ToobUi: public lvtk::ui::Lv2UI {
+    class ToobUi: public lv2c::ui::Lv2UI {
     public:
         using super = Lv2UI;
         using self = ToobUi;
