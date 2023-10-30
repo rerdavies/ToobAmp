@@ -3,7 +3,7 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
-set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lvtk)
+set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)
 
 
@@ -275,8 +275,8 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
 
 set(LV2C_INCLUDE_DIRS
-   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lv2c/include
-   ${PROJECT_SOURCE_DIR}/modules/lvtk/src/lv2c_ui/include
+   ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2c/include
+   ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2c_ui/include
 )
 
 configure_file(ToobAmp.lv2/ttl.in/ToobNeuralAmpModeler.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNeuralAmpModeler.ttl)
@@ -833,7 +833,7 @@ INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/reverb/ DESTINATION /usr/lib/
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/impulseFiles/CabIR/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/impulseFiles/CabIR)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/ToobAmp.lv2/models/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/models)
 INSTALL(DIRECTORY ${CMAKE_SOURCE_DIR}/src/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
-INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lvtk/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
+INSTALL(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lv2cairo/resources/ DESTINATION /usr/lib/lv2/ToobAmp.lv2/resources)
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/MPL-2.0.md DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 
 
