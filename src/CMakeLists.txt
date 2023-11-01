@@ -27,7 +27,7 @@ execute_process(COMMAND
 )
 
 
-set (FLAC_LIBS ogg FLAC++.a FLAC)
+set (FLAC_LIBS  FLAC++.a FLAC.a ogg)
 
 
 
@@ -249,6 +249,7 @@ add_library(ToobAmp  SHARED
 target_link_options(ToobAmp PRIVATE
          -Wl,-z,nodelete 
     -Wl,-uFLAC__stream_decoder_get_blocksize   # demand-link plugin.
+    -Wl,-uogg_sync_init   # demand-link plugin.
 )
 
 
@@ -663,6 +664,14 @@ target_link_libraries(BalancedConvolution
     #${DBUS_LIBRARIES} 
     pthread boost_iostreams.a z.a)
 
+
+add_executable(TestFlac 
+    TestFlac.cpp
+    FlacReader.hpp
+    )
+
+target_link_libraries(TestFlac PRIVATE  ToobAmp
+)
 
 
 add_executable(ConvolutionReverbTest
