@@ -438,7 +438,7 @@ LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 	}
 
 
-	lv2_atom_forge_frame_time(&forge, frameTime);
+	lv2_atom_forge_frame_time(&forge, 0);
 
 	LV2_Atom_Forge_Frame objectFrame;
 	LV2_Atom_Forge_Ref   set =
@@ -459,7 +459,7 @@ LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
-		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
+		// lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
 		lv2_atom_forge_float(&forge,filterResponse.GetResponse(i));
 	}
 	lv2_atom_forge_pop(&forge, &vectorFrame);
