@@ -27,7 +27,7 @@ execute_process(COMMAND
 )
 
 
-set (FLAC_LIBS  FLAC++.a FLAC.a ogg)
+set (FLAC_LIBS  FLAC++.a FLAC.a ogg.a)
 
 
 
