@@ -36,6 +36,7 @@ public:
 	OutputPort(float defaultValue = 0)
 	{
 		this->defaultValue = defaultValue;
+
 	}
 	void SetData(void* data)
 	{
