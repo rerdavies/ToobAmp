@@ -338,7 +338,7 @@ toobNam:ui
         pipedal_ui:frequencyPlot 
         [
                 pipedal_ui:patchProperty toobNam:FrequencyResponse;
-                lv2:index 7 ;
+                lv2:index 9 ;
                 pg:group toobNam:eqGroup ;
                 pipedal_ui:width: 200;
         ]

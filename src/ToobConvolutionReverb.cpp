@@ -557,7 +557,7 @@ void ToobConvolutionReverb::LoadWorker::Initialize(size_t sampleRate, ToobConvol
         bufferSize = 256;
     if (bufferSize > 1024)
         bufferSize = 1024;
-    // pReverb->LogNote("%s\n", SS("Buffer size: " << bufferSize).c_str());
+
     this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
 }
@@ -1099,7 +1099,6 @@ std::string ToobConvolutionReverb::MapFilename(
         const LV2_FileBrowser_Files *browserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
         if (browserFiles != nullptr)
         {
-            LogNote("Found it.");
             char *t = nullptr;
             if (IsConvolutionReverb())
             {

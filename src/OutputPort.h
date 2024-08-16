@@ -50,7 +50,7 @@ public:
 			*pOut = defaultValue;
 		}
 	}
-
+	
 	void SetValue(float value)
 	{
 		if (pOut != 0)

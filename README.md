@@ -1,20 +1,20 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.31
+v1.1.36
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
 # Releases Notes
 
-v1.1.31 now provides native interfaces on hosts other than PiPedal.
+v1.1.36 now provides native interfaces on hosts other than PiPedal.
 
 ## Install ToobAmp
 
 Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the best versions of PiPedal plugins already.
 
-ToobAmp v1.1.31 has only been tested on Rasberry PI OS 64-bit bookworm. You can download a .deb install package here:
+ToobAmp v1.1.36 has only been tested on Rasberry PI OS 64-bit bookworm. You can download a .deb install package here:
 
-* [Rasberry PI OS 64-bit bookworm or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_arm64.deb)
+* [Rasberry PI OS 64-bit bookworm or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.36/toobamp_1.1.36_arm64.deb)
 
 This release is currently being tested on Ubuntu. Expect install packages for Ubuntu shortly. If you want to try ToobAmp on Ubuntu in the 
 meantime, you can build the package from  source. If you encounter problems on Ubuntu, feel free to log bug reports.
@@ -22,7 +22,7 @@ meantime, you can build the package from  source. If you encounter problems on U
 If you are using a different platform, you may want to consider using the following install packages, although the plugins in these packages do not
 have native UIs.
 
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_arm64.deb)
+* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) ](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_arm64.deb)
 
 * [Ubuntu 21.04 or later; amd64/x64](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_amd64.deb)
 
@@ -30,7 +30,7 @@ Run the following shell commands:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install ./toobamp_1.0.17_arm64.deb
+    sudo dpkg -i ./toobamp_1.1.36_arm64.deb
     
 --------------------
 

@@ -192,6 +192,9 @@ namespace toob
 		ToneStackFilter toneStackFilter;
 		BaxandallToneStack baxandallToneStack;
 
+        float vuValue = 0;
+        uint32_t vuSampleCount = 0;
+        uint32_t vuMaxSampleCount = 1;
 
         bool noiseGateActive = false;
         OutputPort cGateOutput;

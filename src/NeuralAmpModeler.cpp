@@ -66,6 +66,10 @@ using namespace toob;
 uint64_t timeMs();
 
 
+const int INPUT_LEVEL_MIN=-35;
+const int INPUT_LEVEL_MAX=10;
+
+
 // clang-format on
 // #include "architecture.hpp"
 
@@ -191,6 +195,10 @@ NeuralAmpModeler::NeuralAmpModeler(
 
     this->toneStackFilter.SetSampleRate(rate);
     this->baxandallToneStack.SetSampleRate(rate);
+
+    // INPUT sample rate
+    const int32_t INPUT_UPDATES_PER_SEC = 15;
+    vuMaxSampleCount = uint32_t(rate/INPUT_UPDATES_PER_SEC);
 }
 void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
 {
@@ -456,7 +464,7 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
         break;
     case EParams::kInputLevelOut:
         cInputLevelOut.SetData(data);
-        cInputLevelOut.SetValue(-96);
+        cInputLevelOut.SetValue(INPUT_LEVEL_MIN);
         break;
     case EParams::kOutputGain:
         cOutputGain.SetData(data);
@@ -511,7 +519,7 @@ void NeuralAmpModeler::Activate()
     {
         maxBufferSize = 2048;
     }
-
+    
     this->_PrepareIOPointers(1);
     this->mInputArray.resize(1);
     this->mOutputArray.resize(1);
@@ -712,6 +720,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
 void NeuralAmpModeler::OnReset()
 {
+    
 }
 
 void NeuralAmpModeler::OnIdle()
@@ -870,7 +879,7 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
     {
         for (size_t s = 0; s < nFrames; s++)
         {
-            this->mInputArray[0][s] = inputs[0][s];
+            this->mInputArray[0][s] = gain * inputs[0][s];
         }
     }
     for (size_t c = 1; c < nChansIn; c++)
@@ -880,6 +889,31 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
             this->mInputArray[0][s] += gain * inputs[c][s];
         }
     }
+    float vuValue = this->vuValue;
+    for (size_t i = 0; i < nFrames; ++i)
+    {
+        float v = std::abs(this->mInputArray[0][i]);
+        if (v > vuValue) vuValue = v;
+    }
+    this->vuValue = vuValue;
+    this->vuSampleCount += nFrames;
+    if (this->vuSampleCount >= this->vuMaxSampleCount)
+    {
+        float vuDb;
+        if (this->vuValue == 0)
+        {
+            vuDb = INPUT_LEVEL_MIN;
+        } else {
+            vuDb = Af2Db(this->vuValue);
+            if (vuDb > INPUT_LEVEL_MAX) vuDb = INPUT_LEVEL_MAX;
+            if (vuDb < INPUT_LEVEL_MIN) vuDb = INPUT_LEVEL_MIN;
+        
+        }
+        cInputLevelOut.SetValue(vuDb);
+        this->vuSampleCount = 0;
+        this->vuValue = 0;
+    }
+
 }
 
 void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames,

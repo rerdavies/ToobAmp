@@ -23,7 +23,7 @@
 
 
 #include "ToobML.h"
-
+#include "ss.hpp"
 #include "lv2/atom/atom.h"
 #include "lv2/atom/util.h"
 #include "lv2/core/lv2.h"
@@ -231,8 +231,8 @@ ToobML::ToobML(double _rate,
 	bundle_path(_bundle_path),
 	programNumber(0)
 {
-	uris.Map(this);
-	lv2_atom_forge_init(&forge, map);
+	currentModel.reserve(1024);
+	urids.Map(this);
 	this->masterDezipper.SetSampleRate(_rate);
 	this->trimDezipper.SetSampleRate(_rate);
 	this->gainDezipper.SetSampleRate(_rate);
@@ -246,8 +246,14 @@ ToobML::ToobML(double _rate,
 
 ToobML::~ToobML()
 {
-	delete pCurrentModel;
-	delete pPendingLoad;
+	try {
+		delete pCurrentModel;
+	} catch(const std::exception&)
+	{
+	}
+	try {
+		delete pPendingLoad;
+	} catch (const std::exception&) {}
 }
 
 void ToobML::ConnectPort(uint32_t port, void* data)
@@ -327,7 +333,36 @@ void ToobML::Activate()
 	modelValue = *(modelData);
 	LoadModelIndex();
 
-	pCurrentModel = LoadModel((size_t)(modelValue));
+	if (modelValue == -1) // created from a fresh instance? then we're v1.
+	{
+		version = 1;
+	}
+	if (version == 0)
+	{
+		// loaded from an old version? Convert the modelValue to a path.
+		auto index = (int)modelValue;
+		if (modelFiles.size() != 0)
+		{
+			if (index < 0)
+			{
+				index = 0;
+			}
+			if  ((size_t)index >= this->modelFiles.size())
+			{
+				index = this->modelFiles.size()-1;
+			}
+			this->currentModel = modelFiles[index];
+			pCurrentModel = LoadModel(currentModel);
+			loadWorker.SetFileName(this->currentModel.c_str());
+			this->modelChanged = false;
+			version = 1;
+		}
+	} else {
+		this->currentModel  = loadWorker.GetFileName();
+		this->pCurrentModel = LoadModel(this->currentModel);
+		this->modelChanged = false;
+	}
+	modelPatchGetRequested	= true;
 
 
 
@@ -392,17 +427,12 @@ void ToobML::LoadModelIndex()
 	}
 }
 
-ToobMlModel* ToobML::LoadModel(size_t index)
+ToobMlModel* ToobML::LoadModel(const std::string&fileName)
 {
-	if (modelFiles.size() == 0) 
+	if (fileName == "")
 	{
 		return nullptr;
 	}
-	if (index >= modelFiles.size())
-	{
-		index = modelFiles.size()-1;
-	}
-	const std::string &fileName = modelFiles[index];
 	try {
 		ToobMlModel *result = ToobMlModel::Load(fileName);
 		return result;
@@ -438,33 +468,33 @@ LV2_Atom_Forge_Ref ToobML::WriteFrequencyResponse()
 	}
 
 
-	lv2_atom_forge_frame_time(&forge, frameTime);
+	lv2_atom_forge_frame_time(&outputForge, 0);
 
 	LV2_Atom_Forge_Frame objectFrame;
 	LV2_Atom_Forge_Ref   set =
-		lv2_atom_forge_object(&forge, &objectFrame, 0, uris.patch__Set);
+		lv2_atom_forge_object(&outputForge, &objectFrame, 0, urids.patch__Set);
 
-    lv2_atom_forge_key(&forge, uris.patch__property);		
-	lv2_atom_forge_urid(&forge, uris.param_frequencyResponseVector);
-	lv2_atom_forge_key(&forge, uris.patch__value);
+    lv2_atom_forge_key(&outputForge, urids.patch__property);		
+	lv2_atom_forge_urid(&outputForge, urids.property__frequencyResponseVector);
+	lv2_atom_forge_key(&outputForge, urids.patch__value);
 
 	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&forge, &vectorFrame, sizeof(float), uris.atom__float);
+	lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), urids.atom__Float);
 
-	lv2_atom_forge_float(&forge,30.0f);
-	lv2_atom_forge_float(&forge,20000.0f);
-	lv2_atom_forge_float(&forge,20.0f);
-	lv2_atom_forge_float(&forge,-20.0f);
+	lv2_atom_forge_float(&outputForge,30.0f);
+	lv2_atom_forge_float(&outputForge,20000.0f);
+	lv2_atom_forge_float(&outputForge,20.0f);
+	lv2_atom_forge_float(&outputForge,-20.0f);
 
 
 	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
 	{
-		lv2_atom_forge_float(&forge,filterResponse.GetFrequency(i));
-		lv2_atom_forge_float(&forge,filterResponse.GetResponse(i));
+		// lv2_atom_forge_float(&outputForge,filterResponse.GetFrequency(i));
+		lv2_atom_forge_float(&outputForge,filterResponse.GetResponse(i));
 	}
-	lv2_atom_forge_pop(&forge, &vectorFrame);
+	lv2_atom_forge_pop(&outputForge, &vectorFrame);
 
-	lv2_atom_forge_pop(&forge, &objectFrame);
+	lv2_atom_forge_pop(&outputForge, &objectFrame);
 	return set;
 }
 
@@ -473,7 +503,35 @@ void ToobML::SetProgram(uint8_t programNumber)
 {
 	this->programNumber = programNumber;
 }
+const char* StringFromAtomPath(const LV2_Atom *atom)
+{
+    // LV2 declaration is insufficient to locate the body.
+    typedef struct
+    {
+        LV2_Atom atom;   /**< Atom header. */
+        const char c[1]; /* Contents (a null-terminated UTF-8 string) follow here. */
+    } LV2_Atom_String_x;
 
+    const char *p = ((const LV2_Atom_String_x *)atom)->c;
+	return p;
+}
+
+void ToobML::SetModel(const char *szFileName)
+{
+	bool changed = loadWorker.SetFileName(szFileName);
+	if (changed)
+	{
+		this->modelChanged = true;
+	}
+	
+}
+void ToobML::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom*atom)
+{
+    if (propertyUrid == urids.ml__modelFile)
+    {
+		SetModel(StringFromAtomPath(atom));
+	}
+}
 
 void ToobML::OnMidiCommand(int , int , int )
 {
@@ -481,28 +539,28 @@ void ToobML::OnMidiCommand(int , int , int )
 
 void ToobML::OnPatchGet(LV2_URID propertyUrid)
 {
-	if (propertyUrid == uris.param_frequencyResponseVector)
+	if (propertyUrid == urids.property__frequencyResponseVector)
 	{
-        this->patchGet = true; // 
+        this->responsePatchGetRequested = true; // 
+	} else if (propertyUrid == urids.ml__modelFile)
+	{
+		this->modelPatchGetRequested = true;
 	}
 
 }
 
-void ToobML::AsyncLoad(size_t model)
-{
-	if (asyncState == AsyncState::Idle)
-	{
-		asyncState = AsyncState::Loading;
-		loadWorker.Request(model);
-	}
-}
-
-void ToobML::AsyncLoadComplete(size_t modelIndex, ToobMlModel *pNewModel)
+void ToobML::AsyncLoadComplete(const std::string&path, ToobMlModel *pNewModel)
 {
 	asyncState = AsyncState::Loaded;
-	this->pendingModelIndex = modelIndex;
+	if (pNewModel == nullptr && !path.empty()) // failed. do nothing.
+	{
+		asyncState = AsyncState::Idle;
+		return;
+	}
+	this->currentModel = path;
+	this->modelPatchGetRequested = true; 
 	this->pPendingLoad = pNewModel;
-	this->gainEnable = pNewModel->IsGainEnabled() ? 1.0f: 0.0f;
+	this->gainEnable = pNewModel != nullptr && pNewModel->IsGainEnabled() ? 1.0f: 0.0f;
 	if (this->gainEnableData)
 	{
 		*(this->gainEnableData) = this->gainEnable;
@@ -518,14 +576,13 @@ inline void ToobML::HandleAsyncLoad()
 			ToobMlModel *oldModel = this->pCurrentModel;
 			this->pCurrentModel = this->pPendingLoad;
 			this->pPendingLoad = nullptr;
-			AsyncDelete(oldModel);
-			if (this->pendingModelIndex == this->modelValue)
+			if (oldModel == nullptr)
 			{
-				masterDezipper.To(this->master,MODEL_FADE_RATE);
+				this->asyncState = AsyncState::Idle;
 			} else {
-				// Run the model, but don't ramp up the volume. We'll fix this mess 
-				// once the delete request completes.
+				AsyncDelete(oldModel);
 			}
+			masterDezipper.To(this->master,MODEL_FADE_RATE);
 		}
 	}
 }
@@ -539,12 +596,6 @@ void ToobML::AsyncDelete(ToobMlModel*pOldModel)
 void ToobML::AsyncDeleteComplete()
 {
 	this->asyncState = AsyncState::Idle;
-	if (this->pendingModelIndex != this->modelValue)
-	{
-		// We've had (one or more) model requests since the start of the last load.
-		// Restart the load.
-		AsyncLoad((size_t)this->modelValue);
-	}
 }
 
 
@@ -563,12 +614,6 @@ void ToobML::DeleteWorker::OnWork() {
 }
 
 
-// static inline double clampValue(double value)
-// {
-// 	if (value < 0) return 0;
-// 	if (value > 1) return 1;
-// 	return value;
-// }
 
 inline void ToobML::UpdateFilter()
 {
@@ -578,16 +623,7 @@ inline void ToobML::UpdateFilter()
 }
 void ToobML::Run(uint32_t n_samples)
 {
-	// prepare forge to write to notify output port.
-	// Set up forge to write directly to notify output port.
-	const uint32_t notify_capacity = this->notifyOut->atom.size;
-	lv2_atom_forge_set_buffer(
-		&(this->forge), (uint8_t*)(this->notifyOut), notify_capacity);
-
-	// Start a sequence in the notify output port.
-	LV2_Atom_Forge_Frame out_frame;
-
-	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
+	BeginAtomOutput(notifyOut);
 
 
 	HandleEvents(this->controlIn);
@@ -619,16 +655,25 @@ void ToobML::Run(uint32_t n_samples)
 		this->responseChanged = true;
 
 	}
-	if (*modelData != modelValue)
-	{
-		modelValue = *modelData;
-		AsyncLoad((size_t)modelValue);
-		masterDezipper.To(0,MODEL_FADE_RATE);
-	}
+	// All conversions are done at init time.
+	// if (*modelData != modelValue)
+	// {
+	// 	modelValue = *modelData;
+	// 	if (version == 0)
+	// 	{
+	// 		LegacyLoad((size_t)modelValue);
+	// 		masterDezipper.To(0,MODEL_FADE_RATE);
+	// 	}
+	// }
 	sagProcessor.UpdateControls();
 
-	HandleAsyncLoad(); // trasnfer in a freshly loaded model if one is ready.
 
+	HandleAsyncLoad(); // trasnfer in a freshly loaded model if one is ready.
+	if (asyncState == AsyncState::Idle && modelChanged)
+	{
+		modelChanged = false;
+		loadWorker.StartRequest();
+	}
 	for (uint32_t i = 0; i < n_samples; ++i)
 	{
 		float val = trimDezipper.Tick()*input[i];
@@ -672,13 +717,18 @@ void ToobML::Run(uint32_t n_samples)
 			this->updateSamples = this->updateSampleDelay;
 		}
 	}
-    if (this->patchGet)
+    if (this->responsePatchGetRequested)
     {
-        this->patchGet = false;
+        this->responsePatchGetRequested = false;
         this->updateSampleDelay = 0;
         this->updateMs = 0;
         WriteFrequencyResponse();
     }
+	if (this->modelPatchGetRequested)
+	{
+		this->modelPatchGetRequested = false;
+		this->PutPatchPropertyPath(0,urids.ml__modelFile,currentModel.c_str());
+	}
 	if (this->updateSamples != 0)
 	{
 		this->updateSamples -= n_samples;
@@ -697,7 +747,145 @@ void ToobML::Run(uint32_t n_samples)
 			WriteFrequencyResponse();
 		}
 	}
-	lv2_atom_forge_pop(&forge, &out_frame);
 }
 
- 
+std::string ToobML::UnmapFilename(const LV2_Feature *const *features, const std::string &fileName)
+{
+    // const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    if (mapPath && fileName.length() != 0)
+    {
+        char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
+        std::string t = result;
+        if (freePath)
+        {
+            freePath->free_path(freePath->handle, result);
+        }
+        else
+        {
+            free(result);
+        }
+        return t;
+    }
+    else
+    {
+        return fileName;
+    }
+}
+
+void ToobML::SaveLv2Filename(
+    LV2_State_Store_Function store,
+    LV2_State_Handle handle,
+    const LV2_Feature *const *features,
+    LV2_URID urid,
+    const std::string &filename_)
+{
+    std::string fileName = UnmapFilename(features, filename_);
+    auto status = store(handle,
+                        urid,
+                        fileName.c_str(),
+                        fileName.length() + 1,
+                        fileName.length() == 0 ? urids.atom__String : urids.atom__Path,
+                        LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    if (status != LV2_State_Status::LV2_STATE_SUCCESS)
+    {
+        LogError(SS("`State property save failed. (" << status << ")"));
+        return;
+    }
+}
+
+LV2_State_Status
+ToobML::OnSaveLv2State(
+    LV2_State_Store_Function store,
+    LV2_State_Handle handle,
+    uint32_t flags,
+    const LV2_Feature *const *features)
+{
+	SaveLv2Filename(
+		store, handle, features,
+		urids.ml__modelFile,
+		this->currentModel);
+	float version = 1.0f;
+    auto status = store(handle,
+                        urids.ml__version,
+                        &version,
+                        sizeof(version),
+                        urids.atom__Float,
+                        LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    if (status != LV2_State_Status::LV2_STATE_SUCCESS)
+    {
+        LogError(SS("State property save failed. (" << status << ")"));
+        return status;
+    }
+
+    return LV2_State_Status::LV2_STATE_SUCCESS;
+}
+
+
+std::string ToobML::MapFilename(
+    const LV2_Feature *const *features,
+    const std::string &input)
+{
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    if (mapPath == nullptr || input.length() == 0)
+    {
+        return input;
+    }
+    else
+    {
+        char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
+        std::string result = t;
+        if (freePath)
+        {
+            freePath->free_path(freePath->handle, t);
+        }
+        else
+        {
+            free(t);
+        }
+        return result;
+    }
+}
+
+
+
+LV2_State_Status
+ToobML::OnRestoreLv2State(
+    LV2_State_Retrieve_Function retrieve,
+    LV2_State_Handle handle,
+    uint32_t flags,
+    const LV2_Feature *const *features)
+{
+    size_t size;
+    uint32_t type;
+    uint32_t myFlags;
+
+    // PublishResourceFiles(features);
+
+	const void *data = retrieve(
+		handle, urids.ml__modelFile, &size, &type, &myFlags);
+	if (data)
+	{
+		if (type != this->urids.atom__Path && type != this->urids.atom__String)
+		{
+			return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
+		}
+		std::string input((const char *)data);
+		if (type == this->urids.atom__Path)
+		{
+			input = MapFilename(features,input);
+		}
+		this->modelChanged = this->loadWorker.SetFileName(input.c_str());
+	}
+	data = retrieve(
+		handle,urids.ml__version,&size,&type,&myFlags);
+	if (data != nullptr && size == sizeof(float) && type == urids.atom__Float)
+	{
+		this->version = (int)*(float*)data;
+	}
+    return LV2_State_Status::LV2_STATE_SUCCESS;
+}
