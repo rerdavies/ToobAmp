@@ -311,7 +311,6 @@ namespace toob
 
 		DeleteWorker deleteWorker;
 
-		void LegacyLoad(size_t modelIndex);
 		void AsyncLoadComplete(const std::string &modelPath, ToobMlModel *pNewModel);
 		void HandleAsyncLoad();
 		void AsyncDelete(ToobMlModel *pNewModel);
