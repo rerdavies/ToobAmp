@@ -129,7 +129,7 @@ add_library(ToobAmp  SHARED
         util.hpp util.cpp
         SvgPathWriter.hpp
         SvgPathWriter.cpp
-
+        LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
         LsNumerics/BinaryReader.hpp
         LsNumerics/BinaryReader.cpp
         LsNumerics/BinaryWriter.cpp
@@ -630,6 +630,15 @@ add_executable(BaxandallToneStackTest
 
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
+add_executable(TestMlModels
+    CheckMlModels.cpp
+)
+target_link_libraries(
+    TestMlModels 
+    ToobAmp
+)
+
+add_test(TestMlModels TestMlModels)
 
 
 add_library(BalancedConvolution STATIC

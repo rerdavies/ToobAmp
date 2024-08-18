@@ -24,6 +24,7 @@
  */
 
 
+#include <cstdint>
 
 namespace toob {
 

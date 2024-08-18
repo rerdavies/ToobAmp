@@ -47,10 +47,12 @@ private:
     size_t output_size_;
     std::string unit_type_;
     size_t hidden_size_;
-    bool bias_fl_;
+    bool bias_fl_ = false;
+    size_t num_layers_ = 999;
 public:
     const std::string&model() const { return model_; }
     size_t input_size() const { return input_size_; }
+    size_t num_layers() const { return num_layers_; }
     size_t skip() const { return skip_; }
     size_t output_size() const { return output_size_; }
     const std::string& unit_type() const { return unit_type_; }

@@ -33,6 +33,7 @@
 #include "lv2/midi/midi.h"
 #include "lv2/urid/urid.h"
 
+#include "LsNumerics/Denorms.hpp"
 #include <exception>
 #include <fstream>
 #include <stdbool.h>
@@ -75,6 +76,7 @@ const char* ToobML::URI= TOOB_ML_URI;
 #include "RTNeural/RTNeural.h"
 #pragma GCC diagnostic pop
 
+#define TOOB_ML_PATCH_VERSION 1
 namespace toob {
 
 
@@ -88,18 +90,6 @@ public:
 	const char*what() const noexcept {
 		return this->message.c_str();
 	}
-};
-class ToobMlModel {
-protected:
-	ToobMlModel() { };
-public:
-	virtual ~ToobMlModel() {}
-	static ToobMlModel*  Load(const std::string&fileName);
-	virtual void Reset() = 0;
-	virtual void Process(int numSamples,const float*input, float*output,float param, float param2) = 0;
-	virtual float Process(float input, float param, float param2) = 0;
-	virtual bool IsGainEnabled() const = 0;
-	
 };
 
 static std::vector<std::vector<float> > Transpose(const std::vector<std::vector<float> > &value)
@@ -123,13 +113,13 @@ static std::vector<std::vector<float> > Transpose(const std::vector<std::vector<
 
 	return result;
 }
-template <int N_INPUTS>
+template <int N_INPUTS, int HIDDEN_SIZE = 20>
 class MlModelInstance: public ToobMlModel
 {
 private:
     RTNeural::ModelT<float, N_INPUTS, 1,
-        RTNeural::LSTMLayerT<float, N_INPUTS, 20>,
-        RTNeural::DenseT<float, 20, 1>> model;
+        RTNeural::LSTMLayerT<float, N_INPUTS, HIDDEN_SIZE>,
+        RTNeural::DenseT<float, HIDDEN_SIZE, 1>> model;
 
 	using FloatMatrix = std::vector<std::vector<float> >;
 	float inData[3];
@@ -153,7 +143,7 @@ public:
 		{
 			throw MLException("Invalid model.");
 		}
-		for (size_t i = 0; i < 80; ++i) 
+		for (size_t i = 0; i < lstm_bias_ih.size(); ++i) 
 			lstm_bias_hh[i] += lstm_bias_ih[i];
 		lstm.setBVals(lstm_bias_hh);
 
@@ -194,20 +184,58 @@ ToobMlModel* ToobMlModel::Load(const std::string&fileName)
 {
 	NeuralModel jsonModel;
 	jsonModel.Load(fileName);
-	switch (jsonModel.model_data().input_size())
+
+	const auto& modelData = jsonModel.model_data();
+	if (modelData.model() != "SimpleRNN")
 	{
-	case 1:
-		return new MlModelInstance<1>(jsonModel);
-	case 2:
-		return new MlModelInstance<2>(jsonModel);
-	case 3:
-		return new MlModelInstance<3>(jsonModel);
-
-	default:
-		throw MLException("Invalid model");
-		break;
+		throw MLException(SS("Unsupported model. model=" <<modelData.model()));
 	}
+	if (modelData.unit_type() !="LSTM")
+	{
+		throw MLException(SS("Unsupported model. unit_type=" <<modelData.unit_type()));
+	}
+	if (modelData.num_layers() != 1)
+	{
+		throw MLException(SS("Unsupported model. num_layers=" <<modelData.num_layers()));
+	}
+	if (modelData.unit_type() !="LSTM")
+	{
+		throw MLException(SS("Unsupported model. unit_type=" <<modelData.unit_type()));
+	}
+	if (jsonModel.model_data().hidden_size() == 20)
+	{
+		switch (jsonModel.model_data().input_size())
+		{
+		case 1:
+			return new MlModelInstance<1,20>(jsonModel);
+		case 2:
+			return new MlModelInstance<2,20>(jsonModel);
+		case 3:
+			return new MlModelInstance<3,20>(jsonModel);
 
+		default:
+			throw MLException("Invalid model");
+			break;
+		}
+ 	} else if (jsonModel.model_data().hidden_size() == 40)
+	{
+		switch (jsonModel.model_data().input_size())
+		{
+		case 1:
+			return new MlModelInstance<1,40>(jsonModel);
+		case 2:
+			return new MlModelInstance<2,40>(jsonModel);
+		case 3:
+			return new MlModelInstance<3,40>(jsonModel);
+
+		default:
+			throw MLException("Invalid model");
+			break;
+		}
+	} else {
+		throw MLException(SS("Unsupported model. hidden_size=" << jsonModel.model_data().hidden_size()));
+			
+	}
 }
 
 
@@ -223,7 +251,7 @@ ToobML::ToobML(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
-	Lv2Plugin(_bundle_path,features),
+	Lv2PluginWithState(_bundle_path,features),
 	loadWorker(this),
 	deleteWorker(this),
 	rate(_rate),
@@ -322,6 +350,7 @@ void ToobML::ConnectPort(uint32_t port, void* data)
 void ToobML::Activate()
 {
 	
+	dcBlocker.setup(this->rate,30,1);
 	responseChanged = true;
 	frameTime = 0;
 	this->baxandallToneStack.Reset();
@@ -335,11 +364,11 @@ void ToobML::Activate()
 
 	if (modelValue == -1) // created from a fresh instance? then we're v1.
 	{
-		version = 1;
+		version = TOOB_ML_PATCH_VERSION;
 	}
 	if (version == 0)
 	{
-		// loaded from an old version? Convert the modelValue to a path.
+		// loaded from an old ve? Convert the modelValue to a path.
 		auto index = (int)modelValue;
 		if (modelFiles.size() != 0)
 		{
@@ -355,7 +384,7 @@ void ToobML::Activate()
 			pCurrentModel = LoadModel(currentModel);
 			loadWorker.SetFileName(this->currentModel.c_str());
 			this->modelChanged = false;
-			version = 1;
+			version = TOOB_ML_PATCH_VERSION;
 		}
 	} else {
 		this->currentModel  = loadWorker.GetFileName();
@@ -623,6 +652,9 @@ inline void ToobML::UpdateFilter()
 }
 void ToobML::Run(uint32_t n_samples)
 {
+	using namespace LsNumerics;
+	auto oldFpState  = disable_denorms();
+	restore_denorms(oldFpState);
 	BeginAtomOutput(notifyOut);
 
 
@@ -655,16 +687,20 @@ void ToobML::Run(uint32_t n_samples)
 		this->responseChanged = true;
 
 	}
-	// All conversions are done at init time.
-	// if (*modelData != modelValue)
-	// {
-	// 	modelValue = *modelData;
-	// 	if (version == 0)
-	// 	{
-	// 		LegacyLoad((size_t)modelValue);
-	// 		masterDezipper.To(0,MODEL_FADE_RATE);
-	// 	}
-	// }
+	
+	if (*modelData != modelValue)
+	{
+		// it chanaged. Must have loaded a legacy preset.
+		modelValue = *modelData;
+		if (modelValue >= 0)
+		{
+			// legacy settings. convert to new style.
+			LegacyLoad((size_t)modelValue);
+
+			masterDezipper.To(0,MODEL_FADE_RATE);
+			
+		}
+	}
 	sagProcessor.UpdateControls();
 
 
@@ -693,7 +729,7 @@ void ToobML::Run(uint32_t n_samples)
 		{
 			val = this->pCurrentModel->Process(val,gainDezipper.Tick(),0);
 		}
-		val = sagProcessor.TickOutput(val);
+		val = dcBlocker.filter(sagProcessor.TickOutput(val));
 		output[i] = val*masterDezipper.Tick();
 	}
 	frameTime += n_samples;
@@ -747,6 +783,9 @@ void ToobML::Run(uint32_t n_samples)
 			WriteFrequencyResponse();
 		}
 	}
+
+	restore_denorms(oldFpState);
+
 }
 
 std::string ToobML::UnmapFilename(const LV2_Feature *const *features, const std::string &fileName)
@@ -807,7 +846,7 @@ ToobML::OnSaveLv2State(
 		store, handle, features,
 		urids.ml__modelFile,
 		this->currentModel);
-	float version = 1.0f;
+	float version = TOOB_ML_PATCH_VERSION;
     auto status = store(handle,
                         urids.ml__version,
                         &version,
@@ -889,3 +928,15 @@ ToobML::OnRestoreLv2State(
 	}
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
+
+void ToobML::LegacyLoad(size_t patchNumber)
+{
+	if (patchNumber >= 0 ||patchNumber < this->modelFiles.size())
+	{
+		std::string filename = this->modelFiles[patchNumber];
+		this->modelChanged = this->loadWorker.SetFileName(filename.c_str());
+		this->version = 1;
+		this->modelPatchGetRequested = true;
+	}
+}
+		

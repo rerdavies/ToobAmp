@@ -53,6 +53,7 @@ JSON_MAP_BEGIN(ModelData)
     JSON_MAP_REFERENCE(ModelData,unit_type)
     JSON_MAP_REFERENCE(ModelData,hidden_size)
     JSON_MAP_REFERENCE(ModelData,bias_fl)
+    JSON_MAP_REFERENCE(ModelData,num_layers)
 JSON_MAP_END()
 
 JSON_MAP_BEGIN(StateDict)

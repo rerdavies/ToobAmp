@@ -35,6 +35,7 @@
 #include "lv2/patch/patch.h"
 #include "lv2/parameters/parameters.h"
 #include "lv2/units/units.h"
+#include "iir/ChebyshevI.h"
 #include "FilterResponse.h"
 #include <string>
 
@@ -55,10 +56,24 @@
 namespace toob
 {
 
-	class ToobMlModel;
-
-	class ToobML : public Lv2Plugin
+	class ToobMlModel
 	{
+	protected:
+		ToobMlModel() {};
+
+	public:
+		virtual ~ToobMlModel() {}
+		static ToobMlModel *Load(const std::string &fileName);
+		virtual void Reset() = 0;
+		virtual void Process(int numSamples, const float *input, float *output, float param, float param2) = 0;
+		virtual float Process(float input, float param, float param2) = 0;
+		virtual bool IsGainEnabled() const = 0;
+	};
+
+	class ToobML : public Lv2PluginWithState
+	{
+	public:
+		using super = Lv2PluginWithState;
 	private:
 		enum class PortId
 		{
@@ -122,6 +137,7 @@ namespace toob
 		void UpdateFilter();
 		ToobMlModel *pCurrentModel = nullptr;
 		std::vector<std::string> modelFiles;
+		Iir::ChebyshevI::HighPass<3> dcBlocker;
 
 		void LoadModelIndex();
 		ToobMlModel *LoadModel(const std::string &fileName);
@@ -142,7 +158,6 @@ namespace toob
 		uint64_t updateMs = 0;
 
 		int programNumber;
-
 
 		struct Urids
 		{
@@ -247,7 +262,8 @@ namespace toob
 			}
 			virtual ~LoadWorker();
 
-			const std::string&GetFileName() const {
+			const std::string &GetFileName() const
+			{
 				return this->modelFileName;
 			}
 			bool SetFileName(const char *szFileName)
@@ -361,6 +377,7 @@ namespace toob
 			const LV2_Feature *const *features);
 
 	private:
+		void LegacyLoad(size_t patchNumber);
 		std::string MapFilename(
 			const LV2_Feature *const *features,
 			const std::string &input);
