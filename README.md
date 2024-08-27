@@ -1,20 +1,20 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.36
+v1.1.43
 
 ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
 
 # Releases Notes
 
-v1.1.36 now provides native interfaces on hosts other than PiPedal.
+v1.1.43 now provides native interfaces on hosts other than PiPedal.
 
 ## Install ToobAmp
 
 Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the best versions of PiPedal plugins already.
 
-ToobAmp v1.1.36 has only been tested on Rasberry PI OS 64-bit bookworm. You can download a .deb install package here:
+ToobAmp v1.1.43 has only been tested on Rasberry PI OS 64-bit bookworm. You can download a .deb install package here:
 
-* [Rasberry PI OS 64-bit bookworm or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.36/toobamp_1.1.36_arm64.deb)
+* [Rasberry PI OS 64-bit bookworm or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.43/toobamp_1.1.43_arm64.deb)
 
 This release is currently being tested on Ubuntu. Expect install packages for Ubuntu shortly. If you want to try ToobAmp on Ubuntu in the 
 meantime, you can build the package from  source. If you encounter problems on Ubuntu, feel free to log bug reports.
@@ -30,7 +30,7 @@ Run the following shell commands:
 
     sudo apt update
     cd ~/Downloads
-    sudo dpkg -i ./toobamp_1.1.36_arm64.deb
+    sudo dpkg -i ./toobamp_1.1.43_arm64.deb
     
 --------------------
 
