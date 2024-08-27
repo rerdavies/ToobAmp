@@ -43,6 +43,10 @@ void LocklessQueue::ReadWait()
 {
     while (readCount == 0)
     {
+        if (this->atomicClosed)
+        {
+            throw std::runtime_error("Closed");
+        }
         if (borrowedReads != 0)
         {
             auto previousValue = atomicWriteCount.fetch_sub(borrowedReads);
@@ -96,6 +100,10 @@ void LocklessQueue::ReadWait()
 
                 while (true)
                 {
+                    if (atomicClosed)
+                    {
+                        throw DelayLineClosedException();
+                    }
                     bool done = false;
                     // spin for a bit.
                     for (size_t i = 0; i < 10000; ++i)

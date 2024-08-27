@@ -339,7 +339,7 @@ namespace LsNumerics
             }
 
         private:
-            bool closed = false;
+            std::atomic<bool> closed = false;
             std::mutex mutex;
             std::condition_variable read_cv;
             std::condition_variable write_cv;
@@ -622,6 +622,7 @@ namespace LsNumerics
                     ix += nRead;
                     remaining -= nRead;
                     audioThreadToBackgroundQueue.SynchWrite();
+                    
                 }
             }
         }
@@ -836,6 +837,9 @@ namespace LsNumerics
                 feedbackDelayRight.SetSize(1);
                 feedbackScale = 0;
             }
+        }
+        ~ConvolutionReverb() {
+            
         }
         void SetFeedback(float feedback, size_t tapPosition)
         {

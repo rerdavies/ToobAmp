@@ -1280,6 +1280,13 @@ BalancedConvolution::~BalancedConvolution()
 
 void BalancedConvolution::Close()
 {
+    this->audioThreadToBackgroundQueue.Close();
+
+    // shut down Direct Convolution Threads in an orderly manner.
+    for (auto &thread : directSectionThreads)
+    {
+        thread->Close(); // close the thread's delay line.
+    }
     assemblyQueue.Close();
     if (assemblyThread)
     {
@@ -1287,12 +1294,6 @@ void BalancedConvolution::Close()
         assemblyThread = nullptr; // joins the assembly thread.
     }
 
-    // shut down Direct Convolution Threads in an orderly manner.
-    for (auto &thread : directSectionThreads)
-    {
-        thread->Close(); // close the thread's delay line.
-    }
-    audioThreadToBackgroundQueue.Close(); // shut down all delayLine threads.
 }
 
 bool BalancedConvolution::ThreadedDirectSection::Execute(AudioThreadToBackgroundQueue &delayLine)
