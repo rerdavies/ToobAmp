@@ -214,8 +214,6 @@ namespace toob
         bool responseGet = false;
         int64_t responseDelaySamplesMax = 0;
         int64_t responseDelaySamples = 0;
-        uint64_t responseDelayMsMax = 0;
-        uint64_t responseDelayMs = 0;
 
     private:
         // Update tone stack filter designs.

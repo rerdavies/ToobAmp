@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2022 Steven Atkinson, 2023 Robin E. R. Davies
+Copyright (c) 2022 Steven Atkinson, 2023-2024 Robin E. R. Davies
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -191,7 +191,6 @@ NeuralAmpModeler::NeuralAmpModeler(
     // frequency response variables.
     constexpr double UPDATE_RATE = (1.0/15.0); // 15 times a second.
     responseDelaySamplesMax = (int64_t)(UPDATE_RATE*rate);
-    responseDelayMsMax = (uint64_t)(UPDATE_RATE*1000.0);
 
     this->toneStackFilter.SetSampleRate(rate);
     this->baxandallToneStack.SetSampleRate(rate);
@@ -627,9 +626,6 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         if (responseDelaySamples == 0)
         {
             responseDelaySamples = responseDelaySamplesMax;
-            if (numFrames == 0) { // freewheeling? use a clock.
-                responseDelayMs = ::timeMs() + responseDelayMsMax;
-            }
         }
     }
 
@@ -710,10 +706,19 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         this->cGateOutput.SetValue(1 - noiseGateOut);
     }
 
+    if (responseDelaySamples != 0)
+    {
+        responseDelaySamples -= nFrames;
+        if (responseDelaySamples < 0 || nFrames == 0)
+        {
+            responseGet = true;
+            responseDelaySamples = 0;
+
+        }
+    }
     if (responseGet)
     {
         responseDelaySamples = 0;
-        responseDelayMs = 0;
         WriteFrequencyResponse();
     }
 }
