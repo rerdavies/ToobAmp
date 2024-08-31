@@ -14,8 +14,8 @@ if (DEFINED BUILD_MACHINE)
     message(STATUS "Google Profiler support disabled.}")
     set (PROFILER 0) #no google-perf install on build machine.
 else()
-    #set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler. Requires google-perftools-dev
-    set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
+    set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler. Requires google-perftools-dev
+    #set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
 endif()
 
 execute_process(COMMAND
@@ -36,7 +36,7 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        set(CXX_ARCH_FLAGS "-mtune=cortex-a72") # raspberry pi 4. cortex-a72
+        set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native" ) # raspberry pi 4. cortex-a72
     else()
         # MMX, SSE, SSE2 are enabled by default.
         
@@ -54,6 +54,8 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 
     SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
+
+
 endif()
 
 message(STATUS "src: CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
@@ -106,7 +108,7 @@ endif()
 
 add_library(namSources STATIC ${NAM_SOURCES})
 target_compile_options(namSources PRIVATE ${NAM_EXTRA_FLAGS} )
-target_compile_definitions(namSources PUBLIC NAM_SAMPLE_FLOAT)
+target_compile_definitions(namSources PUBLIC NAM_SAMPLE_FLOAT EIGEN_NO_MALLOC )
 target_include_directories(namSources PUBLIC
 ../modules/NeuralAmpModelerCore
 ../modules/NeuralAmpModelerCore/Dependencies/eigen
@@ -798,6 +800,7 @@ add_test(LinkageTest linkageTest)
 
 add_executable(ProfileNeuralAmpModeler 
     ProfileNeuralAmpModeler.cpp
+    CommandLineParser.hpp
 ) 
 
 

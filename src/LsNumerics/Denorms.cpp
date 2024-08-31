@@ -27,11 +27,20 @@ using namespace LsNumerics;
 #if defined(__aarch64__) || defined(__ARM_ARCH_ISA_A64) || defined(_M_ARM64) // clang, gcc, MSVC, respectively
 fp_state_t LsNumerics::disable_denorms()
 {
-    uint64_t original_fpcr;
-    __asm__ volatile("mrs %0, fpcr" : "=r"(original_fpcr));
-    uint64_t new_fpcr = original_fpcr | (1ULL << 24); // Set the FZ (Flush-to-Zero) bit
-    __asm__ volatile("msr fpcr, %0" : : "r"(new_fpcr));
-    return original_fpcr;
+    uint64_t old_fpcr;
+    uint64_t new_fpcr;
+
+    // Read the current FPCR value
+    __asm__ __volatile__("mrs %0, fpcr" : "=r"(old_fpcr));
+
+    // Set the FZ (Flush-to-zero), FZ16 (Flush-to-zero for half-precision),
+    // and AH (Alternative half-precision) bits
+    new_fpcr = old_fpcr | (1ULL << 24);
+
+    // Write the new FPCR value
+    __asm__ __volatile__("msr fpcr, %0" : : "r"(new_fpcr));
+
+    return old_fpcr;
 }
 void LsNumerics::restore_denorms(fp_state_t originalValue)
 {

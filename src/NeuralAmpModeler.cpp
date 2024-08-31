@@ -34,20 +34,28 @@ SOFTWARE.
 #pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
 #endif
 
+#if __INTELLISENSE__
+#undef __ARM_NEON
+#undef __ARM_NEON__
+#endif
+
+#include <Eigen/Core>
 #include <algorithm> // std::clamp
 #include <cmath>
 #include <filesystem>
 #include <iostream>
 #include <utility>
+#include <vector>
 #include "lv2ext/filedialog.h"
 #include "ss.hpp"
 #include <cfenv>
-
+#include "LsNumerics/Denorms.hpp"
+#include <Eigen/Dense>
+#include <filesystem>
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wdeprecated-enum-enum-conversion"
-
 
 #include "Eigen/Eigen"
 #include "NeuralAmpModelerCore/NAM/activations.h"
@@ -68,7 +76,6 @@ uint64_t timeMs();
 
 const int INPUT_LEVEL_MIN=-35;
 const int INPUT_LEVEL_MAX=10;
-
 
 // clang-format on
 // #include "architecture.hpp"
@@ -189,15 +196,15 @@ NeuralAmpModeler::NeuralAmpModeler(
 
     // frequecy response out latency
     // frequency response variables.
-    constexpr double UPDATE_RATE = (1.0/15.0); // 15 times a second.
-    responseDelaySamplesMax = (int64_t)(UPDATE_RATE*rate);
+    constexpr double UPDATE_RATE = (1.0 / 15.0); // 15 times a second.
+    responseDelaySamplesMax = (int64_t)(UPDATE_RATE * rate);
 
     this->toneStackFilter.SetSampleRate(rate);
     this->baxandallToneStack.SetSampleRate(rate);
 
     // INPUT sample rate
     const int32_t INPUT_UPDATES_PER_SEC = 15;
-    vuMaxSampleCount = uint32_t(rate/INPUT_UPDATES_PER_SEC);
+    vuMaxSampleCount = uint32_t(rate / INPUT_UPDATES_PER_SEC);
 }
 void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
 {
@@ -304,17 +311,62 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
 {
     try
     {
-        auto dspResult = _GetNAM(modelFileName);
-        this->mNAM = std::move(dspResult);
         this->mNAMPath = modelFileName;
-        this->requestFileUpdate = true;
+        std::unique_ptr<DSP> dspResult;
+        if (modelFileName.length() != 0)
+        {
+            dspResult = _GetNAM(modelFileName);
+        }
+        this->mNAM = std::move(dspResult);
+
+        if (mNAM)
+        {
+            PrepareModel(this->mNAM.get());
+        }
+        else
+        {
+            if (!mNAMPath.empty())
+            {
+                std::string fileNameOnly = std::filesystem::path(modelFileName).filename().replace_extension();
+
+                LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
+            }
+        }
+
         return true;
     }
     catch (const std::exception &e)
     {
-        LogError("%s\n", e.what());
+        LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
+        mNAM = nullptr;
         return false;
     }
+}
+
+void NeuralAmpModeler::PrepareModel(DSP *pDSP)
+{
+    pDSP->SetNormalize(true);
+
+    // Make the model allocate all of it's Matrices, which aren't initialized
+    // until first execution. We don't want to be doing mallocs on the realtime thread.
+    const double inputGain = 0.0; 
+    const double outputGain = 0.0;
+    const int nChans = 1;
+    int nFrames = (int)this->nominalBlockLength;
+    if (nFrames > 128)
+        nFrames = 128;
+
+    std::vector<nam_float_t> outputBuffer(nFrames);
+    nam_float_t *outputPointers[2];
+    outputPointers[0] = outputBuffer.data();
+    outputPointers[1] = nullptr;
+
+    std::vector<nam_float_t> inputBuffer(nFrames);
+    nam_float_t *inputPointers[2];
+    inputPointers[0] = inputBuffer.data();
+    inputPointers[1] = nullptr;
+    pDSP->process(inputPointers, outputPointers, nChans, nFrames, inputGain, outputGain, mNAMParams);
+    pDSP->finalize_(nFrames);
 }
 
 LV2_State_Status
@@ -338,33 +390,8 @@ NeuralAmpModeler::OnRestoreLv2State(
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             modelFileName = MapFilename(features, (const char *)data, nullptr);
+            RequestLoad(modelFileName.c_str());
         }
-    }
-
-    NamLoadMessage loadMessage{modelFileName.c_str()};
-
-    const LV2_Worker_Schedule *schedule = GetLv2WorkerSchedule();
-    if (schedule && isActivated)
-    {
-        schedule->schedule_work(
-            schedule->handle,
-            sizeof(loadMessage), &loadMessage); // must be POD!
-    }
-    else
-    {
-        try
-        {
-            auto dspResult = _GetNAM(modelFileName);
-            this->mNAM = std::move(dspResult);
-            this->mNAMPath = modelFileName;
-        }
-        catch (const std::exception &e)
-        {
-            LogError("%s\n", SS("Can't load file " << modelFileName << "(" << e.what() << ")").c_str());
-            this->mNAM = nullptr;
-            this->mNAMPath = "";
-        }
-        this->requestFileUpdate = true;
     }
 
     return LV2_State_Status::LV2_STATE_SUCCESS;
@@ -386,22 +413,31 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
         std::string irFilename = "";
 
 #ifdef __clang__
-        #pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
+#pragma GCC diagnostic ignored "-Wdelete-non-abstract-non-virtual-dtor"
 #endif
-        std::unique_ptr<IR> irResult;
 
         NamLoadMessage *pLoadMessage = static_cast<NamLoadMessage *>(message);
         if (pLoadMessage->ModelFileName() != nullptr)
         {
-            std::string filename = pLoadMessage->ModelFileName();
+            std::filesystem::path filename = pLoadMessage->ModelFileName();
             try
             {
                 dspResult = _GetNAM(filename);
                 dspFilename = filename;
+                if (dspResult)
+                {
+                    dspResult->SetNormalize(true);
+
+                    PrepareModel(dspResult.get());
+                }
+                else
+                {
+                    LogError("%s\n", SS("Can't load model " << filename.filename().replace_extension() << ".").c_str());
+                }
             }
             catch (const std::exception &e)
             {
-                LogError("%s\n", SS("Can't load file " << filename << "(" << e.what() << ")").c_str());
+                LogError("%s\n", SS("Can't load model " << filename.filename().replace_extension() << ".").c_str());
             }
         }
         NamLoadResponseMessage reply{
@@ -431,14 +467,10 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
     {
         NamLoadResponseMessage *loadResponse = (NamLoadResponseMessage *)response;
         DSP *oldModel = nullptr;
-        if (loadResponse->HasModel())
-        {
-            oldModel = this->mNAM.release();
-            this->mNAMPath = loadResponse->ModelFileName();
-            this->mNAM = std::unique_ptr<DSP>(loadResponse->modelObject);
+        oldModel = this->mNAM.release();
 
-            this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
-        }
+        this->mNAM = std::unique_ptr<DSP>(loadResponse->modelObject);
+
         if (oldModel != nullptr)
         {
             const LV2_Worker_Schedule *schedule = this->GetLv2WorkerSchedule();
@@ -514,11 +546,12 @@ void NeuralAmpModeler::Activate()
     this->baxandallToneStack.Reset();
 
     size_t maxBufferSize = this->GetBuffSizeOptions().maxBlockLength;
+    this->nominalBlockLength = this->GetBuffSizeOptions().nominalBlockLength;
     if (maxBufferSize == BufSizeOptions::INVALID_VALUE)
     {
         maxBufferSize = 2048;
     }
-    
+
     this->_PrepareIOPointers(1);
     this->mInputArray.resize(1);
     this->mOutputArray.resize(1);
@@ -538,7 +571,7 @@ void NeuralAmpModeler::Activate()
     this->mNoiseGateTrigger.PrepareBuffers(1, maxBufferSize);
     this->mNoiseGateGain.PrepareBuffers(1, maxBufferSize);
 
-
+    LoadModel(this->mNAMPath);
 }
 void NeuralAmpModeler::Run(uint32_t n_samples)
 {
@@ -567,9 +600,9 @@ void NeuralAmpModeler::UpdateToneStack()
     this->toneStackType = (ToneStackType)cToneStackType.GetValue();
     bool toneStackChanged = this->toneStackType != previousToneStack;
 
-    float b = cBass.GetValue()*0.1f;
-    float m = cMid.GetValue()*0.1f;
-    float t = cTreble.GetValue()*0.1f;
+    float b = cBass.GetValue() * 0.1f;
+    float m = cMid.GetValue() * 0.1f;
+    float t = cTreble.GetValue() * 0.1f;
 
     // std::cout << "b: " << b << " m: " << m << " t: " << t << std::endl;
     switch (this->toneStackType)
@@ -613,9 +646,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
     // Disable floating point denormals
 
-    std::fenv_t fe_state;
-    std::feholdexcept(&fe_state);
-    disable_denormals();
+    fp_state_t fp_state = LsNumerics::disable_denorms();
 
     this->_PrepareBuffers(numFrames);
 
@@ -658,26 +689,28 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
     switch (this->toneStackType)
     {
-        case ToneStackType::Bassman:
-        case ToneStackType::Jcm8000:
-            toneStackFilter.Process(nFrames,triggerOutput[0],mToneStackPointer);
-            toneStackOutput = &this->mToneStackPointer;
-            break;
-        case ToneStackType::Baxandall:
-            baxandallToneStack.Process(nFrames,triggerOutput[0],mToneStackPointer);
-            toneStackOutput = &this->mToneStackPointer;
-            break;
-        case ToneStackType::Bypass:
-            break;
+    case ToneStackType::Bassman:
+    case ToneStackType::Jcm8000:
+        toneStackFilter.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        toneStackOutput = &this->mToneStackPointer;
+        break;
+    case ToneStackType::Baxandall:
+        baxandallToneStack.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        toneStackOutput = &this->mToneStackPointer;
+        break;
+    case ToneStackType::Bypass:
+        break;
     }
 
     if (mNAM != nullptr)
     {
         // mNAM->SetNormalize(cOutNorm.GetValue());
         // TODO remove input / output gains from here.
-        const double inputGain = 1.0;
+        const double inputGain = 1.0; 
         const double outputGain = 1.0;
         const int nChans = 1;
+
+        // normalize input.
         mNAM->process(toneStackOutput, this->mOutputPointers, nChans, nFrames, inputGain, outputGain, mNAMParams);
         mNAM->finalize_(nFrames);
     }
@@ -696,9 +729,6 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     // * Output of input leveling (inputs -> mInputPointers),
     // * Output of output leveling (mOutputPointers -> outputs)
 
-    // restore previous floating point state
-    std::feupdateenv(&fe_state);
-
     this->gateOutputUpdateCount += numFrames;
     if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
     {
@@ -713,7 +743,6 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         {
             responseGet = true;
             responseDelaySamples = 0;
-
         }
     }
     if (responseGet)
@@ -721,11 +750,16 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         responseDelaySamples = 0;
         WriteFrequencyResponse();
     }
+    if (sendFileName)
+    {
+        this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
+    }
+    // restore previous floating point state
+    LsNumerics::restore_denorms(fp_state);
 }
 
 void NeuralAmpModeler::OnReset()
 {
-    
 }
 
 void NeuralAmpModeler::OnIdle()
@@ -792,8 +826,6 @@ void NeuralAmpModeler::OnIdle()
 
 // Private methods ============================================================
 
-
-
 void NeuralAmpModeler::_FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels,
                                     const size_t numFrames)
 {
@@ -855,10 +887,10 @@ void NeuralAmpModeler::_PrepareBuffers(const size_t numFrames)
 void NeuralAmpModeler::_PrepareIOPointers(const size_t numChannels)
 {
     this->mInputPointerMemory.resize(numChannels);
-    this->mInputPointers = numChannels == 0? nullptr: &(mInputPointerMemory[0]);
+    this->mInputPointers = numChannels == 0 ? nullptr : &(mInputPointerMemory[0]);
 
     this->mOutputPointerMemory.resize(numChannels);
-    this->mOutputPointers = numChannels == 0? nullptr: &(mOutputPointerMemory[0]);
+    this->mOutputPointers = numChannels == 0 ? nullptr : &(mOutputPointerMemory[0]);
 }
 
 void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrames, const size_t nChansIn,
@@ -898,7 +930,8 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
     for (size_t i = 0; i < nFrames; ++i)
     {
         float v = std::abs(this->mInputArray[0][i]);
-        if (v > vuValue) vuValue = v;
+        if (v > vuValue)
+            vuValue = v;
     }
     this->vuValue = vuValue;
     this->vuSampleCount += nFrames;
@@ -908,17 +941,19 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
         if (this->vuValue == 0)
         {
             vuDb = INPUT_LEVEL_MIN;
-        } else {
+        }
+        else
+        {
             vuDb = Af2Db(this->vuValue);
-            if (vuDb > INPUT_LEVEL_MAX) vuDb = INPUT_LEVEL_MAX;
-            if (vuDb < INPUT_LEVEL_MIN) vuDb = INPUT_LEVEL_MIN;
-        
+            if (vuDb > INPUT_LEVEL_MAX)
+                vuDb = INPUT_LEVEL_MAX;
+            if (vuDb < INPUT_LEVEL_MIN)
+                vuDb = INPUT_LEVEL_MIN;
         }
         cInputLevelOut.SetValue(vuDb);
         this->vuSampleCount = 0;
         this->vuValue = 0;
     }
-
 }
 
 void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
@@ -945,88 +980,108 @@ void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 
     if (propertyUrid == urids.nam__ModelFileName && (value->type == urids.atom__Path || value->type == urids.atom__String))
     {
-        std::string modelFileName = ((const char *)value) + sizeof(LV2_Atom);
-        NamLoadMessage loadMessage{modelFileName.c_str()};
-
-        const LV2_Worker_Schedule *schedule = GetLv2WorkerSchedule();
-        if (schedule)
-        {
-            schedule->schedule_work(
-                schedule->handle,
-                sizeof(loadMessage), &loadMessage); // must be POD!
-        }
+        const char *modelFileName = ((const char *)value) + sizeof(LV2_Atom);
+        RequestLoad(modelFileName);
     }
 }
 void NeuralAmpModeler::OnPatchGet(LV2_URID propertyUrid)
 {
     if (propertyUrid == this->urids.nam__ModelFileName)
     {
-        this->PutPatchPropertyPath(0, this->urids.nam__ModelFileName, this->mNAMPath.c_str());
-    } else if (propertyUrid == this->urids.nam__FrequencyResponse)
+        this->sendFileName = true;
+    }
+    else if (propertyUrid == this->urids.nam__FrequencyResponse)
     {
         this->responseGet = true;
     }
 }
 
-
 float NeuralAmpModeler::CalculateFrequencyResponse(float f)
 {
     switch (this->toneStackType)
     {
-        case ToneStackType::Bassman:
-        case ToneStackType::Jcm8000:
-		    return toneStackFilter.GetFrequencyResponse(f);
-        case ToneStackType::Baxandall:
-		    return baxandallToneStack.GetFrequencyResponse(f);
-        default:
-            return 0;
+    case ToneStackType::Bassman:
+    case ToneStackType::Jcm8000:
+        return toneStackFilter.GetFrequencyResponse(f);
+    case ToneStackType::Baxandall:
+        return baxandallToneStack.GetFrequencyResponse(f);
+    default:
+        return 0;
     }
 }
 
 void NeuralAmpModeler::WriteFrequencyResponse()
 {
-	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
-	{
-		filterResponse.SetResponse(
-			i,
-			this->CalculateFrequencyResponse(
-				filterResponse.GetFrequency(i)
-				));
-	}
+    for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
+    {
+        filterResponse.SetResponse(
+            i,
+            this->CalculateFrequencyResponse(
+                filterResponse.GetFrequency(i)));
+    }
 
-	lv2_atom_forge_frame_time(&outputForge, 0);
+    lv2_atom_forge_frame_time(&outputForge, 0);
 
-	LV2_Atom_Forge_Frame objectFrame;
+    LV2_Atom_Forge_Frame objectFrame;
     lv2_atom_forge_object(&outputForge, &objectFrame, 0, urids.patch__Set);
 
-    lv2_atom_forge_key(&outputForge, urids.patch__property);		
-	lv2_atom_forge_urid(&outputForge, urids.nam__FrequencyResponse);
-	lv2_atom_forge_key(&outputForge, urids.patch__value);
+    lv2_atom_forge_key(&outputForge, urids.patch__property);
+    lv2_atom_forge_urid(&outputForge, urids.nam__FrequencyResponse);
+    lv2_atom_forge_key(&outputForge, urids.patch__value);
 
-	LV2_Atom_Forge_Frame vectorFrame;
-	lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), urids.atom__float);
+    LV2_Atom_Forge_Frame vectorFrame;
+    lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), urids.atom__float);
     if (this->toneStackType == ToneStackType::Baxandall)
     {
-		lv2_atom_forge_float(&outputForge,30.0f);
-		lv2_atom_forge_float(&outputForge,20000.0f);
-		lv2_atom_forge_float(&outputForge,20.0f);
-		lv2_atom_forge_float(&outputForge,-20.0f);
-    } else {
-		lv2_atom_forge_float(&outputForge,30.0f);
-		lv2_atom_forge_float(&outputForge,20000.0f);
-		lv2_atom_forge_float(&outputForge,5.0f);
-		lv2_atom_forge_float(&outputForge,-30.0f);
-
+        lv2_atom_forge_float(&outputForge, 30.0f);
+        lv2_atom_forge_float(&outputForge, 20000.0f);
+        lv2_atom_forge_float(&outputForge, 20.0f);
+        lv2_atom_forge_float(&outputForge, -20.0f);
     }
-	for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
-	{
-		// lv2_atom_forge_float(&outputForge,filterResponse.GetFrequency(i));
-		lv2_atom_forge_float(&outputForge,filterResponse.GetResponse(i));
-	}
-	lv2_atom_forge_pop(&outputForge, &vectorFrame);
+    else
+    {
+        lv2_atom_forge_float(&outputForge, 30.0f);
+        lv2_atom_forge_float(&outputForge, 20000.0f);
+        lv2_atom_forge_float(&outputForge, 5.0f);
+        lv2_atom_forge_float(&outputForge, -30.0f);
+    }
+    for (int i = 0; i < filterResponse.RESPONSE_BINS; ++i)
+    {
+        // lv2_atom_forge_float(&outputForge,filterResponse.GetFrequency(i));
+        lv2_atom_forge_float(&outputForge, filterResponse.GetResponse(i));
+    }
+    lv2_atom_forge_pop(&outputForge, &vectorFrame);
 
-	lv2_atom_forge_pop(&outputForge, &objectFrame);
+    lv2_atom_forge_pop(&outputForge, &objectFrame);
 }
 
+void NeuralAmpModeler::RequestLoad(const char *fileName)
+{
+    this->mNAMPath = fileName;
+    this->sendFileName = true;
+    if (!this->isActivated)
+    {
+        // will be picked up in Activate.
+        this->mNAMPath = fileName;
+        this->sendFileName = fileName;
+        return;
+    }
 
+    const LV2_Worker_Schedule *schedule = GetLv2WorkerSchedule();
+    if (schedule)
+    {
+        this->mNAMPath = fileName;
+        this->sendFileName = true;
+
+        NamLoadMessage loadMessage(fileName);
+
+        schedule->schedule_work(
+            schedule->handle,
+            sizeof(loadMessage), &loadMessage); // must be POD!
+    }
+    else
+    {
+        LoadModel(fileName); // do it on the foreground.
+    }
+}
 //----------------------------------------------

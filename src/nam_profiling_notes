@@ -1,0 +1,11 @@
+Optimization History:
+
+    initial: 
+       0   0.0% 100.0%      758  96.9% wavenet::WaveNet::_process_core_ [clone .localalias]
+    Matrix temporaries, and mallocs in Conv1x1::process:
+       1   0.2%  99.7%      617  96.6% wavenet::WaveNet::_process_core_ [clone .localalias]
+       15   2.3%  85.9%       60   9.4% activations::ActivationFastTanh::apply
+    allow vectorization of ActivationFastTahn
+       0   0.0% 100.0%      614  94.8% wavenet::WaveNet::_process_core_ [clone .localalias]
+      22   3.4%  76.1%       65  10.0% activations::ActivationFastTanh::apply
+

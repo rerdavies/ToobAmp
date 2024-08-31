@@ -219,7 +219,7 @@ namespace toob
         {
             options.push_back(new Option<T>(option, pResult));
         }
-        bool Parse(int argc, const char *argv[])
+        bool Parse(int argc, const char **argv)
         {
             for (int i = 1; i < argc; ++i)
             {
@@ -236,6 +236,15 @@ namespace toob
             }
             return true;
         }
+        bool Parse(int argc, char**argv)
+        {
+            return Parse(argc,(const char**)argv);
+        }
+        bool Parse(int argc, char*const*argv)
+        {
+            return Parse(argc,(const char**)argv);
+        }
+
 
         const std::vector<std::string> Arguments() { return args; }
     };

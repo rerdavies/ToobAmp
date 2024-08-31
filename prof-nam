@@ -1,1 +1,2 @@
+build/src/ProfileNeuralAmpModeler '/var/pipedal/audio_uploads/NeuralAmpModels/BLUE GAIN 2.nam'
 host=localhost google-pprof --web ./build/src/ProfileNeuralAmpModeler /tmp/ProfileNeuralAmpModeler.perf

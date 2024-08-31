@@ -102,6 +102,7 @@ namespace toob
             kControlOut
         };
         bool LoadModel(const std::string&filename); // (for tests)
+
     private:
         struct Urids
         {
@@ -126,6 +127,9 @@ namespace toob
 
 
         Urids urids;
+
+        void PrepareModel(DSP*pDSP);
+
         void ConnectPort(uint32_t port, void *data) override;
         void Activate() override;
         void Run(uint32_t n_samples) override;
@@ -168,6 +172,7 @@ namespace toob
         virtual LV2_Worker_Status OnWorkResponse(uint32_t size, const void *data) override;
 
     private:
+        size_t nominalBlockLength = 64;
         double rate = 44100;
         std::string bundle_path;
 
@@ -212,10 +217,12 @@ namespace toob
         FilterResponse filterResponse;
 
         bool responseGet = false;
+        bool sendFileName = false;
         int64_t responseDelaySamplesMax = 0;
         int64_t responseDelaySamples = 0;
 
     private:
+        void RequestLoad(const char *fileName);
         // Update tone stack filter designs.
         void UpdateToneStack();
         // Write frequency response for UI.

@@ -39,7 +39,7 @@ namespace LsNumerics
 #include <xmmintrin.h>
 namespace LsNumerics
 {
-    using fp_state = unsigned int;
+    using fp_state_t = unsigned int;
 
     inline fp_state_t disable_denorms()
     {

@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include "NeuralAmpModeler.h"
+#include "CommandLineParser.hpp"
 #include <vector>
 #include "lv2/core/lv2.h"
 #include "lv2/atom/atom.h"
@@ -144,25 +145,42 @@ namespace pipedal
 
 }
 using namespace pipedal;
+using namespace std;
 
 //////////////////////////////////////////////////////////////
 
 int main(int argc, char **argv)
 {
-
     constexpr size_t FRAME_SIZE = 64;
     constexpr size_t SEQUENCE_SIZE = 16 * 1024;
     constexpr uint64_t SAMPLE_RATE = 44100;
     constexpr size_t TEST_SECONDS = 20;
 
     cout << "ProfileNeuralAmpModeler" << endl;
-    cout << "Copyright (c) 2023 Robin E. R. Davies" << endl;
+    cout << "Copyright (c) 2024 Robin E. R. Davies" << endl;
     cout << endl;
-    if (argc != 2 || argv[1][0] == '-')
+
+    bool noProfile = false;
+    bool help = false;
+    CommandLineParser commandLineParser;
+    commandLineParser.AddOption("","no-profile",&noProfile);
+    commandLineParser.AddOption("h","help",&help);
+
+    commandLineParser.Parse(argc,argv);
+
+    if (commandLineParser.Arguments().size() != 1 || help)
     {
-        cout << "Syntax:  ProfileNeuralAmpModeler filename" << endl;
+        cout << "Syntax:  ProfileNeuralAmpModeler filename [options...]" << endl;
         cout << "         where filename is a path to a valid .nam model file." << endl;
-        return EXIT_FAILURE;
+        cout << endl;
+        cout << "          A google-perf profile capture will be written to " << endl;
+        cout << "          /tmp/ProfileNeuralAmpModeler.perf" << endl;      
+        cout << endl;
+        cout << "Options:" << endl;
+        cout << "    --no-profile: do NOT generate a perf file." << endl;
+        cout << "     -h, --help:  display this message." << endl;
+        cout << endl;
+        return help ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
 
@@ -204,10 +222,11 @@ int main(int argc, char **argv)
     plugin->ConnectPort((int32_t)NeuralAmpModeler::EParams::kControlOut, controlOutput);
 
 
-    if (!namModeler->LoadModel(argv[1]))
+    if (!namModeler->LoadModel(commandLineParser.Arguments()[0]))
     {
         return EXIT_FAILURE;
     }
+
     plugin->Activate();
 
     LV2_URID atom__Sequence = mapFeature.GetUrid(LV2_ATOM__Sequence);
@@ -215,7 +234,10 @@ int main(int argc, char **argv)
 
 
 #ifdef  WITHGPERFTOOLS
-    ProfilerStart("/tmp/ProfileNeuralAmpModeler.perf");
+    if (!noProfile)
+    {
+        ProfilerStart("/tmp/ProfileNeuralAmpModeler.perf");
+    }
 #endif
     auto start = std::chrono::high_resolution_clock::now();
 
@@ -240,7 +262,10 @@ int main(int argc, char **argv)
     }
     auto elapsed = std::chrono::high_resolution_clock::now()-start;
 #ifdef  WITHGPERFTOOLS
-    ProfilerStop();
+    if (!noProfile)
+    {
+        ProfilerStop();
+    }
 #endif
 
 
