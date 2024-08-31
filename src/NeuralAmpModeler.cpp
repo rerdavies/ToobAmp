@@ -68,6 +68,7 @@ SOFTWARE.
 #include "NeuralAmpModeler.h"
 
 using namespace toob;
+using namespace nam;
 
 
 #include <time.h>
@@ -337,6 +338,7 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
     }
     catch (const std::exception &e)
     {
+        std::string fileNameOnly = std::filesystem::path(modelFileName).filename().replace_extension();
         LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
         mNAM = nullptr;
         return false;
@@ -345,27 +347,18 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
 
 void NeuralAmpModeler::PrepareModel(DSP *pDSP)
 {
-    pDSP->SetNormalize(true);
+    //pDSP->SetNormalize(true);
 
     // Make the model allocate all of it's Matrices, which aren't initialized
     // until first execution. We don't want to be doing mallocs on the realtime thread.
-    const double inputGain = 0.0; 
-    const double outputGain = 0.0;
-    const int nChans = 1;
     int nFrames = (int)this->nominalBlockLength;
     if (nFrames > 128)
         nFrames = 128;
 
     std::vector<nam_float_t> outputBuffer(nFrames);
-    nam_float_t *outputPointers[2];
-    outputPointers[0] = outputBuffer.data();
-    outputPointers[1] = nullptr;
 
     std::vector<nam_float_t> inputBuffer(nFrames);
-    nam_float_t *inputPointers[2];
-    inputPointers[0] = inputBuffer.data();
-    inputPointers[1] = nullptr;
-    pDSP->process(inputPointers, outputPointers, nChans, nFrames, inputGain, outputGain, mNAMParams);
+    pDSP->process(inputBuffer.data(), outputBuffer.data(), nFrames);
     pDSP->finalize_(nFrames);
 }
 
@@ -426,8 +419,6 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
                 dspFilename = filename;
                 if (dspResult)
                 {
-                    dspResult->SetNormalize(true);
-
                     PrepareModel(dspResult.get());
                 }
                 else
@@ -561,8 +552,8 @@ void NeuralAmpModeler::Activate()
     const double threshold = cNoiseGateThreshold.GetDb();
     const double ratio = 0.1; // Quadratic...
     const double openTime = 0.005;
-    const double holdTime = 0.01;
-    const double closeTime = 0.05;
+    const double holdTime = 0.02;
+    const double closeTime = 0.03;
     dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
     this->mNoiseGateTrigger.SetParams(triggerParams);
     this->mNoiseGateTrigger.SetSampleRate(rate);
@@ -706,12 +697,8 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     {
         // mNAM->SetNormalize(cOutNorm.GetValue());
         // TODO remove input / output gains from here.
-        const double inputGain = 1.0; 
-        const double outputGain = 1.0;
-        const int nChans = 1;
-
         // normalize input.
-        mNAM->process(toneStackOutput, this->mOutputPointers, nChans, nFrames, inputGain, outputGain, mNAMParams);
+        mNAM->process(toneStackOutput[0], this->mOutputPointers[0], nFrames);
         mNAM->finalize_(nFrames);
     }
     else

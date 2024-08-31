@@ -55,7 +55,6 @@ const double MINIMUM_LOUDNESS_POWER = pow(10.0, MINIMUM_LOUDNESS_DB / 10.0);
 // forward declaration.
 
 // The class that applies the gain reductions calculated by a trigger instance.
-#include "NamDSP.h"
 
 
 class Gain : public NamDSP

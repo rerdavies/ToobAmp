@@ -9,3 +9,5 @@ Optimization History:
        0   0.0% 100.0%      614  94.8% wavenet::WaveNet::_process_core_ [clone .localalias]
       22   3.4%  76.1%       65  10.0% activations::ActivationFastTanh::apply
 
+
+RTNEural: commit b8dc376f7053ba1c99a005af1287e59f503f110d

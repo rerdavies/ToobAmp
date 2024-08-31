@@ -84,19 +84,15 @@ set(NAM_SOURCES
     ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
     ../modules/NeuralAmpModelerCore/NAM/convnet.h
 
-    ../modules/NeuralAmpModelerCore/dsp/dsp.cpp
-    ../modules/NeuralAmpModelerCore/dsp/dsp.h
-    ../modules/NeuralAmpModelerCore/dsp/ImpulseResponse.cpp
-    ../modules/NeuralAmpModelerCore/dsp/ImpulseResponse.h
     namFixes/NamDSP.cpp 
     namFixes/NamDSP.h
     namFixes/NoiseGate.cpp
     namFixes//NoiseGate.h
-    ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.cpp
-    ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h
-    ../modules/NeuralAmpModelerCore/dsp/Resample.h
-    ../modules/NeuralAmpModelerCore/dsp/wav.cpp
-    ../modules/NeuralAmpModelerCore/dsp/wav.h
+    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.cpp
+    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h
+    # ../modules/NeuralAmpModelerCore/dsp/Resample.h
+    # ../modules/NeuralAmpModelerCore/dsp/wav.cpp
+    # ../modules/NeuralAmpModelerCore/dsp/wav.h
 
 )
 

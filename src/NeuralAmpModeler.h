@@ -35,11 +35,6 @@ SOFTWARE.
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 #include "NeuralAmpModelerCore/NAM/dsp.h"
-#include "NeuralAmpModelerCore/dsp/ImpulseResponse.h"
-#include "namFixes/NoiseGate.h"
-#include "NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h"
-#include "NeuralAmpModelerCore/dsp/dsp.h"
-#include "NeuralAmpModelerCore/dsp/wav.h"
 #include "LsNumerics/BaxandallToneStack.hpp"
 #include "LsNumerics/ToneStackFilter.h"
 
@@ -53,12 +48,17 @@ SOFTWARE.
 #include "InputPort.h"
 #include "OutputPort.h"
 #include <cstddef>
+#include "NAM/dsp.h"
+#include "namFixes/NoiseGate.h"
+
+using namespace nam;
 
 namespace toob
 {
 
     class NeuralAmpModeler final : public Lv2PluginWithState
     {
+
     public:
         static const char URI[];
 
@@ -69,7 +69,6 @@ namespace toob
         using nam_float_t = double; // internal float type.
 #endif
 
-        using IR = dsp::ImpulseResponse;
 
         static Lv2Plugin *Create(double rate,
                                  const char *bundle_path,

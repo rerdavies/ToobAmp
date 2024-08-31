@@ -24,7 +24,11 @@ SOFTWARE.
 #pragma once
 
   
-#include "dsp/dsp.h"
+// #include "dsp/dsp.h"
+
+#include <vector>
+#include <cstddef>
+#include <cstdint>
 
 namespace dsp {
 
