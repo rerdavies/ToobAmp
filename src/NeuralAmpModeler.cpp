@@ -734,11 +734,13 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     }
     if (responseGet)
     {
+        responseGet = false;
         responseDelaySamples = 0;
         WriteFrequencyResponse();
     }
     if (sendFileName)
     {
+        sendFileName = false;
         this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
     }
     // restore previous floating point state

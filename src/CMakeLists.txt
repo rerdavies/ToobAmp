@@ -104,9 +104,8 @@ endif()
 
 add_library(namSources STATIC ${NAM_SOURCES})
 target_compile_options(namSources PRIVATE ${NAM_EXTRA_FLAGS} )
-target_compile_definitions(namSources PUBLIC NAM_SAMPLE_FLOAT EIGEN_NO_MALLOC )
-target_include_directories(namSources PUBLIC
-../modules/NeuralAmpModelerCore
+target_compile_definitions(namSources PUBLIC NAM_SAMPLE_FLOAT )
+target_include_directories(namSources PUBLIC ../modules/NeuralAmpModelerCore
 ../modules/NeuralAmpModelerCore/Dependencies/eigen
 ../modules/NeuralAmpModelerCore/Dependencies/nlohmann
 )

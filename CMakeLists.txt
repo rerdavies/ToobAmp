@@ -2,7 +2,7 @@
 # and include sub-projects here.
 #
 cmake_minimum_required (VERSION 3.9)
-
+set(VERBOSE true)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "OFF")
 
@@ -36,6 +36,7 @@ add_subdirectory("debian/src")
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "Default C++ standard")
 # Include sub-projects.
 add_subdirectory ("src")
+add_subdirectory("Test")
 
 
 set(CPACK_GENERATOR "DEB")
