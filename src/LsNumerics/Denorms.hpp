@@ -37,6 +37,8 @@ namespace LsNumerics
 
 // x64 implemetnation
 #include <xmmintrin.h>
+#include <float.h>
+
 namespace LsNumerics
 {
     using fp_state_t = unsigned int;
@@ -47,12 +49,15 @@ namespace LsNumerics
         _controlfp_s(&current_word, 0, 0);
         new_word = current_word | _DN_FLUSH;
         _controlfp_s(&current_word, new_word, _MCW_DN);
+        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
         return current_word;
     }
     inline void restore_denorms(fp_state_t originalState)
     {
         unsigned int unused;
         _controlfp_s(&unused, originalState, _MCW_DN );
+        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
+
     }
 }
 #else
