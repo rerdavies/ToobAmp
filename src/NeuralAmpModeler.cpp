@@ -410,11 +410,13 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
 #endif
 
         NamLoadMessage *pLoadMessage = static_cast<NamLoadMessage *>(message);
-        if (pLoadMessage->ModelFileName() != nullptr)
+        dspFilename = pLoadMessage->ModelFileName();
+        if (!dspFilename.empty())
         {
             std::filesystem::path filename = pLoadMessage->ModelFileName();
             try
             {
+
                 dspResult = _GetNAM(filename);
                 dspFilename = filename;
                 if (dspResult)
