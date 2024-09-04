@@ -36,7 +36,9 @@ add_subdirectory("debian/src")
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "Default C++ standard")
 # Include sub-projects.
 add_subdirectory ("src")
-add_subdirectory("Test")
+
+# -- this code has been replaced by redavies/pipedal's profilePlugin, which provides a full LV2 Host implementation.
+# add_subdirectory("Test") - not currently working.
 
 
 set(CPACK_GENERATOR "DEB")

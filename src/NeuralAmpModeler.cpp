@@ -670,6 +670,10 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
         this->mNoiseGateTrigger.SetParams(triggerParams);
         this->mNoiseGateTrigger.SetSampleRate(sampleRate);
+        if (!noiseGateActive) {
+            this->cGateOutput.SetValue(0);
+        }
+
     }
     float noiseGateOut = 1;
     if (noiseGateActive)
@@ -721,7 +725,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     this->gateOutputUpdateCount += numFrames;
     if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
     {
-        this->gateOutputUpdateCount -= this->gateOutputUpdateRate;
+        this->gateOutputUpdateCount = 0;
         this->cGateOutput.SetValue(1 - noiseGateOut);
     }
 

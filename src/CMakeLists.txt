@@ -115,6 +115,8 @@ set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COM
 set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-pedantic")
 
 # Add source to this project's executable.
+
+
 add_library(ToobAmp  SHARED
         NeuralAmpModeler.cpp NeuralAmpModeler.h
         nam_architecture.hpp
@@ -242,6 +244,9 @@ add_library(ToobAmp  SHARED
          LsNumerics/PitchDetector.cpp
          
          )
+
+set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
+set_target_properties(ToobAmp PROPERTIES PREFIX "")
 
 target_link_options(ToobAmp PRIVATE
          -Wl,-z,nodelete 
@@ -815,9 +820,9 @@ endif()
 
 
 
-set_target_properties(ToobAmp PROPERTIES VERSION ${PROJECT_VERSION})
+# set_target_properties(ToobAmp PROPERTIES VERSION ${PROJECT_VERSION})
 
-set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
+# set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
 
 set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 set_target_properties(ToobAmp PROPERTIES PREFIX "")
