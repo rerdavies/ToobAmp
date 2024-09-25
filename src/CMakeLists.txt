@@ -14,8 +14,8 @@ if (DEFINED BUILD_MACHINE)
     message(STATUS "Google Profiler support disabled.}")
     set (PROFILER 0) #no google-perf install on build machine.
 else()
-    set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler. Requires google-perftools-dev
-    #set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
+    # set(PROFILER 1)  # enables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler. Requires google-perftools-dev
+    set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
 endif()
 
 execute_process(COMMAND
@@ -36,7 +36,7 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native" ) # raspberry pi 4. cortex-a72
+        #set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native" ) # raspberry pi 4. cortex-a72
     else()
         # MMX, SSE, SSE2 are enabled by default.
         
@@ -44,12 +44,16 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         # set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
     endif()
 
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reolv2 rder ")   # --param=max-vartrack-size=400000
+    else() # if Clang
+        set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder -Wno-restrict ")   # --param=max-vartrack-size=400000
+    endif()
 
-    set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder -Wno-restrict ")   # --param=max-vartrack-size=400000
-
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS}")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden 
+")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS}")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden ")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 
@@ -249,6 +253,7 @@ set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
 set_target_properties(ToobAmp PROPERTIES PREFIX "")
 
 target_link_options(ToobAmp PRIVATE
+      -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.version
          -Wl,-z,nodelete 
     -Wl,-uFLAC__stream_decoder_get_blocksize   # demand-link plugin.
     -Wl,-uogg_sync_init   # demand-link plugin.
@@ -564,6 +569,7 @@ set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
 set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 
 target_link_options(ToobAmpUI PRIVATE
+    -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmpUi.version
     -Wl,-z,nodelete 
     # -Wl,-utoobChorusLinkage    # demand-link plugin.
     # -Wl,-ulinkInputStage    # demand-link plugin.
@@ -633,15 +639,16 @@ add_executable(BaxandallToneStackTest
 
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
-add_executable(TestMlModels
-    CheckMlModels.cpp
-)
-target_link_libraries(
-    TestMlModels 
-    ToobAmp
-)
+# Exports no longer available.
+# add_executable(TestMlModels
+#     CheckMlModels.cpp
+# )
+# target_link_libraries(
+#     TestMlModels 
+#     ToobAmp
+# )
 
-add_test(TestMlModels TestMlModels)
+# add_test(TestMlModels TestMlModels)
 
 
 add_library(BalancedConvolution STATIC
@@ -677,13 +684,14 @@ target_link_libraries(BalancedConvolution
     pthread boost_iostreams.a z.a)
 
 
-add_executable(TestFlac 
-    TestFlac.cpp
-    FlacReader.hpp
-    )
+# Can't access ToobAmp.so exports anymore.
+# add_executable(TestFlac 
+#     TestFlac.cpp
+#     FlacReader.hpp
+#     )
 
-target_link_libraries(TestFlac PRIVATE  ToobAmp
-)
+# target_link_libraries(TestFlac PRIVATE  ToobAmp
+# )
 
 
 add_executable(ConvolutionReverbTest
@@ -775,11 +783,11 @@ target_link_libraries(soLinkageTest dl)
 
 
 # check for missing linkages.
-add_executable(linkageTest 
+# add_executable(linkageTest 
 
-    linkageTest.cpp )
+#     linkageTest.cpp )
 
-target_link_libraries(linkageTest ToobAmp ${FLAC_LIBS})
+# target_link_libraries(linkageTest ToobAmp ${FLAC_LIBS})
 
 
 
@@ -799,24 +807,25 @@ add_test(PitchDetectorTest PitchDetectorTest)
 
 add_test(LinkageTest linkageTest)
 
-add_executable(ProfileNeuralAmpModeler 
-    ProfileNeuralAmpModeler.cpp
-    CommandLineParser.hpp
-) 
+# add_executable(ProfileNeuralAmpModeler 
+#     ProfileNeuralAmpModeler.cpp
+#     CommandLineParser.hpp
+# ) 
 
 
-target_include_directories(ProfileNeuralAmpModeler PRIVATE
-../modules/NeuralAmpModelerCore/Dependencies/eigen
-../modules/NeuralAmpModelerCore/Dependencies/nlohmann
-../modules    
-)
+# Can't access ToobAmp.so exports anymore. Use the pipedal plugin profiling tool instead.
+# target_include_directories(ProfileNeuralAmpModeler PRIVATE
+# ../modules/NeuralAmpModelerCore/Dependencies/eigen
+# ../modules/NeuralAmpModelerCore/Dependencies/nlohmann
+# ../modules    
+# )
 
-if(PROFILER)
-    target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler ${FLAC_LIBS})
-    target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
-else()
-    target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp ${FLAC_LIBS})
-endif()
+# if(PROFILER)
+#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler ${FLAC_LIBS})
+#     target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
+# else()
+#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp ${FLAC_LIBS})
+# endif()
 
 
 
@@ -835,17 +844,17 @@ install(TARGETS ToobAmp ToobAmpUI
     )
 
 
-add_executable(UiLinkageTest 
+# add_executable(UiLinkageTest 
 
-    UiLinkageTest.cpp 
-    MapFeature.cpp MapFeature.h)
+#     UiLinkageTest.cpp 
+#     MapFeature.cpp MapFeature.h)
 
-target_link_libraries(UiLinkageTest ToobAmpUI)
+# target_link_libraries(UiLinkageTest ToobAmpUI)
 
-target_include_directories(
-    UiLinkageTest  PRIVATE
-    ${LV2C_INCLUDE_DIRS}
-)
+# target_include_directories(
+#     UiLinkageTest  PRIVATE
+#     ${LV2C_INCLUDE_DIRS}
+# )
 
 
 # Copy all assets to resources file

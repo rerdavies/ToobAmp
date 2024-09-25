@@ -361,10 +361,10 @@ namespace toob
 		static const char *URI;
 
 	protected:
-		virtual void ConnectPort(uint32_t port, void *data);
-		virtual void Activate();
-		virtual void Run(uint32_t n_samples);
-		virtual void Deactivate();
+		virtual void ConnectPort(uint32_t port, void *data) override;
+		virtual void Activate() override;
+		virtual void Run(uint32_t n_samples) override;
+		virtual void Deactivate() override;
 		virtual LV2_State_Status OnSaveLv2State(
 			LV2_State_Store_Function store,
 			LV2_State_Handle handle,
@@ -374,7 +374,7 @@ namespace toob
 			LV2_State_Retrieve_Function retrieve,
 			LV2_State_Handle handle,
 			uint32_t flags,
-			const LV2_Feature *const *features);
+			const LV2_Feature *const *features) override;
 
 	private:
 		void LegacyLoad(size_t patchNumber);
