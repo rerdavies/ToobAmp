@@ -5,6 +5,7 @@
 [submodule "modules/NeuralAmpModelerCore"]
 	path = modules/NeuralAmpModelerCore
 	url = https://github.com/rerdavies/NeuralAmpModelerCore.git
+	update = merge
 [submodule "modules/lv2cairo"]
 	path = modules/lv2cairo
 	url = https://github.com/rerdavies/lv2cairo
