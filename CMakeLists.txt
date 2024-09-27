@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.9)
 set(VERBOSE true)
 
-set(CMAKE_VERBOSE_MAKEFILE OFF CACHE BOOL "OFF")
+set(CMAKE_VERBOSE_MAKEFILE ON)
 
 project(ToobAmp VERSION 1.1.48 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
