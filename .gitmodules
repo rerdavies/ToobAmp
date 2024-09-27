@@ -9,3 +9,4 @@
 [submodule "modules/lv2cairo"]
 	path = modules/lv2cairo
 	url = https://github.com/rerdavies/lv2cairo
+	update = merge
