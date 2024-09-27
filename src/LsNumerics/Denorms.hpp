@@ -57,7 +57,7 @@ namespace LsNumerics
     }
     inline void restore_denorms(fp_state_t originalState)
     {
-        _mm_setcsr(originalstate);
+        _mm_setcsr(originalState);
     }
 }
 #else
