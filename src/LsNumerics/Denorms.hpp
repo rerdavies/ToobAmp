@@ -36,28 +36,28 @@ namespace LsNumerics
 #elif defined(__x86_64__) || (defined(_M_X64) || defined(_M_AMD64)) // clang/gcc and msvc respectively.
 
 // x64 implemetnation
-#include <xmmintrin.h>
 #include <float.h>
+#include <x86intrin.h>
 
 namespace LsNumerics
 {
     using fp_state_t = unsigned int;
 
+// Flags for Flush-To-Zero (FTZ) and Denormals-Are-Zero (DAZ)
+#define MXCSR_FTZ (1 << 15)
+#define MXCSR_DAZ (1 << 6)
+
     inline fp_state_t disable_denorms()
     {
-        unsigned int current_word, new_word;
-        _controlfp_s(&current_word, 0, 0);
-        new_word = current_word | _DN_FLUSH;
-        _controlfp_s(&current_word, new_word, _MCW_DN);
-        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-        return current_word;
+        unsigned int original_mxcsr = _mm_getcsr();
+
+        // Enable FTZ and DAZ
+        _mm_setcsr(original_mxcsr | MXCSR_FTZ | MXCSR_DAZ);
+        return original_mxcsr;
     }
     inline void restore_denorms(fp_state_t originalState)
     {
-        unsigned int unused;
-        _controlfp_s(&unused, originalState, _MCW_DN );
-        _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_OFF);
-
+        _mm_setcsr(originalstate);
     }
 }
 #else
