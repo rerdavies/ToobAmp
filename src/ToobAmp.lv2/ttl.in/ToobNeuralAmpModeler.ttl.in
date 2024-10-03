@@ -23,6 +23,8 @@
 @prefix state: <http://lv2plug.in/ns/ext/state#> .
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix mod: <http://moddevices.com/ns/mod#>.
+
 @prefix toobNam: <http://two-play.com/plugins/toob-nam#> .
 
 
@@ -36,6 +38,7 @@
 toobNam:modelFile
         a lv2:Parameter;
         rdfs:label "Model";
+	mod:fileTypes "nam,nammodel";
         rdfs:range atom:Path.
 
 toobNam:eqGroup

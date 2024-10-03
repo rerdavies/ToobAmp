@@ -65,8 +65,8 @@ const StkFloat Freeverb::scaleDry = 2;
 const StkFloat Freeverb::scaleDamp = 0.4;
 const StkFloat Freeverb::scaleRoom = 0.28;
 const StkFloat Freeverb::offsetRoom = 0.7;
-int Freeverb::cDelayLengths[] = {1617, 1557, 1491, 1422, 1356, 1277, 1188, 1116};
-int Freeverb::aDelayLengths[] = {225, 556, 441, 341};
+const int Freeverb::kcDelayLengths[] = {1617, 1557, 1491, 1422, 1356, 1277, 1188, 1116};
+const int Freeverb::kaDelayLengths[] = {225, 556, 441, 341};
 
 Freeverb::Freeverb(StkFloat sampleRate)
 {
@@ -94,32 +94,32 @@ void Freeverb::Init(StkFloat sampleRate)
     // scale comb filter delay lines
     for (int i = 0; i < nCombs; i++)
     {
-      cDelayLengths[i] = (int)floor(fsScale * cDelayLengths[i]);
+      m_cDelayLengths[i] = (int)floor(fsScale * kcDelayLengths[i]);
     }
 
     // Scale allpass filter delay lines
     for (int i = 0; i < nAllpasses; i++)
     {
-      aDelayLengths[i] = (int)floor(fsScale * aDelayLengths[i]);
+      m_aDelayLengths[i] = (int)floor(fsScale * kaDelayLengths[i]);
     }
   }
 
   // Initialize delay lines for the LBFC filters
   for (int i = 0; i < nCombs; i++)
   {
-    combDelayL_[i].setMaximumDelay(cDelayLengths[i]);
-    combDelayL_[i].setDelay(cDelayLengths[i]);
-    combDelayR_[i].setMaximumDelay(cDelayLengths[i] + stereoSpread);
-    combDelayR_[i].setDelay(cDelayLengths[i] + stereoSpread);
+    combDelayL_[i].setMaximumDelay(m_cDelayLengths[i]);
+    combDelayL_[i].setDelay(m_cDelayLengths[i]);
+    combDelayR_[i].setMaximumDelay(m_cDelayLengths[i] + stereoSpread);
+    combDelayR_[i].setDelay(m_cDelayLengths[i] + stereoSpread);
   }
 
   // initialize delay lines for the allpass filters
   for (int i = 0; i < nAllpasses; i++)
   {
-    allPassDelayL_[i].setMaximumDelay(aDelayLengths[i]);
-    allPassDelayL_[i].setDelay(aDelayLengths[i]);
-    allPassDelayR_[i].setMaximumDelay(aDelayLengths[i] + stereoSpread);
-    allPassDelayR_[i].setDelay(aDelayLengths[i] + stereoSpread);
+    allPassDelayL_[i].setMaximumDelay(m_aDelayLengths[i]);
+    allPassDelayL_[i].setDelay(m_aDelayLengths[i]);
+    allPassDelayR_[i].setMaximumDelay(m_aDelayLengths[i] + stereoSpread);
+    allPassDelayR_[i].setDelay(m_aDelayLengths[i] + stereoSpread);
   }
 }
 

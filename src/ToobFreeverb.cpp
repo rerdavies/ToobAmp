@@ -21,8 +21,11 @@
  *   SOFTWARE.
  */
 #include "ToobFreeverb.h"
+#include "LsNumerics/Denorms.hpp"
 
 using namespace toob;
+using namespace LsNumerics;
+
 
 ToobFreeverb::ToobFreeverb(
     double rate,
@@ -79,6 +82,8 @@ void ToobFreeverb::Activate()
 }
 void ToobFreeverb::Run(uint32_t n_samples)
 {
+    fp_state_t oldstate = disable_denorms();
+
     if (dryWetValue != *dryWet)
     {
         dryWetValue = *dryWet;
@@ -101,6 +106,8 @@ void ToobFreeverb::Run(uint32_t n_samples)
     {
         freeverb.tick(inL[i],inR[i],&outL[i],&outR[i]);
     }
+    restore_denorms(oldstate);
+
 }
 void ToobFreeverb::Deactivate()
 {

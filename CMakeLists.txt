@@ -6,7 +6,7 @@ set(VERBOSE true)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-project(ToobAmp VERSION 1.1.48 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+project(ToobAmp VERSION 1.1.49 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 

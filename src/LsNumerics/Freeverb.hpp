@@ -54,7 +54,7 @@ namespace LsNumerics
               zero, the maximum delay parameter is less than one, or the delay
               parameter is greater than the maxDelay value.
              */
-            Delay(unsigned long delay = 0, unsigned long maxDelay = 4095)
+            Delay(unsigned long delay = 0, unsigned long maxDelay = 0)
             {
                 // Writing before reading allows delays from 0 to length-1.
                 // If we want to allow a delay of maxDelay, we need a
@@ -339,8 +339,7 @@ namespace LsNumerics
         void update(void);
 
         static inline StkFloat undenormalize(  StkFloat s ) {
-          s += 9.8607615E-32f;
-          return s - 9.8607615E-32f;
+            return s; // switched to turning off denorms in machine status word instead.
         }
 
         static const int nCombs = 8;
@@ -355,9 +354,11 @@ namespace LsNumerics
 
 
         // Delay line lengths for 44100Hz sampling rate.
-        static int cDelayLengths[nCombs];
-        static int aDelayLengths[nAllpasses];
+        static const int kcDelayLengths[nCombs];
+        static const int kaDelayLengths[nAllpasses];
 
+        int m_cDelayLengths[nCombs];
+        int m_aDelayLengths[nAllpasses];
         StkFloat sampleRate_;
         StkFloat effectMix_;
         StkFloat g_; // allpass coefficient
