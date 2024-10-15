@@ -1,0 +1,77 @@
+{
+  "name": "TooB NAM",
+  "nextInstanceId": 1,
+  "selectedPreset": 1,
+  "presets": [
+    {
+      "instanceId": 1,
+      "preset": {
+        "name": "TooB NAM",
+        "input_volume_db": 0,
+        "output_volume_db": 0,
+        "items": [
+          {
+            "instanceId": 2,
+            "uri": "http://two-play.com/plugins/toob-nam",
+            "isEnabled": true,
+            "controlValues": [
+              {
+                "key": "inputGain",
+                "value": 0
+              },
+              {
+                "key": "inputGainOut",
+                "value": -35
+              },
+              {
+                "key": "outputGain",
+                "value": 0
+              },
+              {
+                "key": "gate",
+                "value": -100
+              },
+              {
+                "key": "gateOut",
+                "value": 0
+              },
+              {
+                "key": "toneStack",
+                "value": 3
+              },
+              {
+                "key": "bass",
+                "value": 5
+              },
+              {
+                "key": "mid",
+                "value": 5
+              },
+              {
+                "key": "treble",
+                "value": 5
+              }
+            ],
+            "pluginName": "TooB Neural Amp Modeler",
+            "midiBindings": [ ],
+            "stateUpdateCount": 3,
+            "lv2State":             [
+true,{
+                "http://two-play.com/plugins/toob-nam#modelFile": {
+"flags": 3,"atomType": "http://lv2plug.in/ns/ext/atom#Path","value": "NeuralAmpModels/Fender Bassman 50 (0.5.2)/Fender Bassman 50 - Bass Channel - Deep Off - G1.nam"
+                }
+              }            ]
+,
+            "lilvPresetUri": "",
+            "pathProperties": {
+              "http://two-play.com/plugins/toob-nam#modelFile": "{\"otype_\": \"Path\",\"value\": \"/var/pipedal/audio_uploads/NeuralAmpModels/Fender Bassman 50 (0.5.2)/Fender Bassman 50 - Bass Channel - Deep Off - G1.nam\"}"
+            }
+          }
+        ],
+        "nextInstanceId": 2,
+        "snapshots": [ ],
+        "selectedSnapshot": -1
+      }
+    }
+  ]
+}

@@ -36,7 +36,8 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        #set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native" ) # raspberry pi 4. cortex-a72
+        # set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a72
+        set(CXX_ARCH_FLAGS "-DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # 
     else()
         # MMX, SSE, SSE2 are enabled by default.
         

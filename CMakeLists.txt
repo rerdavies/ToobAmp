@@ -33,6 +33,8 @@ add_subdirectory("modules")
 # debian copyright utils.
 add_subdirectory("debian/src")
 
+add_subdirectory("ToobNamProfiling")
+
 set(CMAKE_CXX_STANDARD 20 CACHE STRING "Default C++ standard")
 # Include sub-projects.
 add_subdirectory ("src")

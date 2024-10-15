@@ -1,0 +1,2 @@
+3 - Nam Core customization. - 40s
+Model: "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam"

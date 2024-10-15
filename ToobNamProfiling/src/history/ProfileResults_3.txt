@@ -1,0 +1,13 @@
+3 - Nam Core customization. - 40s
+Model: "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 16.882s
+L1 Cache Misses: 228477311
+Model: "NeuralAmpModels/Tone King Imperial Mk 11 - 15 Feather Captures/Tone King Imperial Mk 11 - 01.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 7.782s
+L1 Cache Misses: 91592604
+Model: "NeuralAmpModels/Fender Hotrod Deluxe Pushed Clean_Breakup NANO!/Fender Hotrod Deluxe Clean BreakupPerfect Nano  .nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 5.511s
+L1 Cache Misses: 44141285
