@@ -40,5 +40,6 @@ endif()
 # Tests.
 add_executable(ToobNamProfiling 
   main.cpp ss.hpp
+  util.cpp util.hpp
 )
 

@@ -61,6 +61,9 @@ SOFTWARE.
 #include "NeuralAmpModelerCore/NAM/activations.h"
 #include "nam_architecture.hpp"
 
+#include "namFixes/dsp_ex.h"
+
+
 #pragma GCC diagnostic pop
 
 // clang-format off
@@ -185,6 +188,7 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
+
     mNAMPath.reserve(MAX_NAM_FILENAME + 1);
 
     urids.Initialize(*this);
@@ -355,6 +359,10 @@ void NeuralAmpModeler::PrepareModel(DSP *pDSP)
     if (nFrames > 128)
         nFrames = 128;
 
+    if (nFrames < 32)
+    {
+        nFrames = 32;
+    }
     std::vector<nam_float_t> outputBuffer(nFrames);
 
     std::vector<nam_float_t> inputBuffer(nFrames);
@@ -836,7 +844,7 @@ std::unique_ptr<DSP> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
         return nullptr;
     }
     auto dspPath = std::filesystem::u8path(modelPath);
-    std::unique_ptr<DSP> nam = get_dsp(dspPath);
+    std::unique_ptr<DSP> nam = get_dsp_ex(dspPath,(int)(this->GetBuffSizeOptions().minBlockLength),(int)(this->GetBuffSizeOptions().maxBlockLength));
     return nam;
 }
 

@@ -1,0 +1,13 @@
+6 - NAM wavenet_t.h Fixed Matrixes. (x32 buffers) - 40s
+Model: "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 14.398s
+L1 Cache Misses: 247920102
+Model: "NeuralAmpModels/Tone King Imperial Mk 11 - 15 Feather Captures/Tone King Imperial Mk 11 - 01.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 7.875s
+L1 Cache Misses: 88199779
+Model: "NeuralAmpModels/Fender Hotrod Deluxe Pushed Clean_Breakup NANO!/Fender Hotrod Deluxe Clean BreakupPerfect Nano  .nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 5.71s
+L1 Cache Misses: 43314476

@@ -28,14 +28,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "ss.hpp"
 #include "Finally.hpp"
 #include <stdexcept>
+#include "util.hpp"
 
 using namespace std;
 using namespace pipedal;
 
 namespace fs = std::filesystem;
 
-const std::string version = "3";
-const std::string title = "Nam Core customization.";
+const std::string version = "8";
+const std::string title = "1.1.50 Release";
 
 static const float PROFILE_TIME = 40;
 
@@ -223,6 +224,7 @@ static const float PROFILE_TIME = 40;
 
 static std::vector<std::string> testModels{
     "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam",
+    "./NeuralAmpModels/Fender Bassman 50 (0.5.2)/FENDER BASSMAN 50 - JUMPED - DO - BO - G10.nam",
     "NeuralAmpModels/Tone King Imperial Mk 11 - 15 Feather Captures/Tone King Imperial Mk 11 - 01.nam",
     "NeuralAmpModels/Fender Hotrod Deluxe Pushed Clean_Breakup NANO!/Fender Hotrod Deluxe Clean BreakupPerfect Nano  .nam",
 
@@ -286,7 +288,7 @@ static void ProfileModel(const std::string &model, ostream *outputFile)
     WritePreset(model, "./Toob Nam.preset", "/tmp/namPreset.preset");
 
 
-    std::string tmpName = std::tmpnam(nullptr);
+    std::string tmpName = toob::TemporaryFilename();
     Finally ff { [tmpName]() {
         fs::remove(tmpName);
     }};

@@ -1,0 +1,17 @@
+8 - 1.1.50 Release - 40s
+Model: "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 14.545s
+L1 Cache Misses: 289029361
+Model: "./NeuralAmpModels/Fender Bassman 50 (0.5.2)/FENDER BASSMAN 50 - JUMPED - DO - BO - G10.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 14.503s
+L1 Cache Misses: 269761051
+Model: "NeuralAmpModels/Tone King Imperial Mk 11 - 15 Feather Captures/Tone King Imperial Mk 11 - 01.nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 7.847s
+L1 Cache Misses: 97545647
+Model: "NeuralAmpModels/Fender Hotrod Deluxe Pushed Clean_Breakup NANO!/Fender Hotrod Deluxe Clean BreakupPerfect Nano  .nam"
+uri: http://two-play.com/plugins/toob-nam
+Ellapsed time: 5.608s
+L1 Cache Misses: 45126866

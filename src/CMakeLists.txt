@@ -80,7 +80,6 @@ set(NAM_SOURCES
     ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
     ../modules/NeuralAmpModelerCore/NAM/dsp.h
     ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
-    ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
     ../modules/NeuralAmpModelerCore/NAM/util.cpp
     ../modules/NeuralAmpModelerCore/NAM/util.h
     ../modules/NeuralAmpModelerCore/NAM/wavenet.cpp
@@ -88,6 +87,10 @@ set(NAM_SOURCES
     ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
     ../modules/NeuralAmpModelerCore/NAM/convnet.h
 
+    namFixes/dsp_ex.h
+    namFixes/get_dsp.cpp
+    namFixes/wavenet_t.h
+    namFixes/wavenet_t.inl.h
     namFixes/NamDSP.cpp 
     namFixes/NamDSP.h
     namFixes/NoiseGate.cpp
@@ -589,6 +592,14 @@ target_link_libraries(
     ToobAmpUI PRIVATE 
     lv2c lv2c_ui
 )
+
+
+add_executable(NamTTest 
+    NamTTestMain.cpp
+)
+
+target_link_libraries(NamTTest PRIVATE namSources)
+add_test(NamTTest Nam_T_Test)
 
 
 # Tests.
