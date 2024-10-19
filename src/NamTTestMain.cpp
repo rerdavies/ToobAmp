@@ -91,6 +91,7 @@ inline void SetRandomWeights(T1&v1,T2&v2,size_t nWeights = 60)
         auto nWeights2 = iWeights2-weights.begin();
 
         gassert(nWeights1 == nWeights2);
+        //cout << "nWeights: " << nWeights1 << endl;
 
 
 }
@@ -345,6 +346,9 @@ inline void Test_LayerArray(const LayerArrayParams&layerArrayParams)
         );
         layerArray.advance_buffers_(FIXED_BUFFER_SIZE_T);
 
+        CompareOutputs(layer_outputs,layer_outputs_F);
+        CompareOutputs(head_outputs,head_outputs_F);
+
 
     }
 }
@@ -375,6 +379,81 @@ void Test_LayerArray()
 
 }
 
+
+template <size_t INPUT_SIZE,size_t HEAD_SIZE,size_t CHANNELS,size_t KERNEL_SIZE>
+void Test_Layer(bool gated, int dilation)
+{
+    _Layer_T<INPUT_SIZE,HEAD_SIZE,CHANNELS,KERNEL_SIZE> layer_t;
+    layer_t.initialize(
+        INPUT_SIZE,CHANNELS,KERNEL_SIZE,
+        dilation,"Tanh",gated);
+    
+    _Layer layer(
+        INPUT_SIZE,CHANNELS,KERNEL_SIZE,
+        dilation,"Tanh",gated);
+
+    SetRandomWeights(layer_t,layer,5000);
+
+    layer_t.set_num_frames_(FIXED_BUFFER_SIZE_T);
+    layer.set_num_frames_(FIXED_BUFFER_SIZE_T);
+
+
+    Eigen::Matrix<float,CHANNELS,Eigen::Dynamic> input;
+    input.resize(input.rows(),1024);
+    Eigen::Matrix<float,INPUT_SIZE,FIXED_BUFFER_SIZE_T> condition;
+    Eigen::Matrix<float,CHANNELS,FIXED_BUFFER_SIZE_T> head_input;
+    Eigen::Matrix<float,CHANNELS,Eigen::Dynamic> output;
+    output.resize(output.rows(),1024);
+    output.setZero();
+
+    SetRandomInput(input);
+    SetRandomInput(condition);
+
+
+    MatrixXf input_x;
+    MatrixXf condition_x;
+    MatrixXf head_input_x;
+    MatrixXf output_x; 
+
+    input_x.resize(input.rows(),input.cols());
+    input_x = input;
+    condition_x.resize(condition.rows(),condition.cols());
+    condition_x = condition;
+    head_input_x.resize(head_input.rows(),head_input.cols());
+    output_x.resize(output.rows(),output.cols());
+    output_x.setZero();
+
+
+    layer_t.set_num_frames_(FIXED_BUFFER_SIZE_T);
+    layer.set_num_frames_(FIXED_BUFFER_SIZE_T);
+
+
+    for (size_t i = 0; i < 1; ++i)
+    {
+        SetRandomInput(head_input);
+        head_input_x = head_input;
+
+        layer_t.process_(input,condition,head_input,output,512,0);
+
+        layer.process_(input_x,condition_x,head_input_x,output_x,512,0);
+        CompareOutputs(head_input,head_input_x);
+        CompareOutputs(output,output_x);
+    }
+}
+
+void Test_Layer()
+{
+    cout << "//// _Layer" << endl;
+
+    Test_Layer<1,8,16,3>(false,2);
+
+    Test_Layer<1,8,16,3>(true,1);
+    Test_Layer<1,8,16,3>(false,1);
+    Test_Layer<1,8,16,3>(false,1);
+    Test_Layer<1,8,16,3>(true,2);
+
+}
+
 void TestDsp()
 {
     cout << "//// DSP" << endl;
@@ -394,6 +473,8 @@ void TestDsp()
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
     {
         dsp->process(inputData.data()+i,dspOutput.data()+i,32);
+        dsp->finalize_(32);
+
     }
 
     std::unique_ptr<nam::DSP> originalDsp =  nam::get_dsp_ex(presetPath, -2,-2);
@@ -401,7 +482,8 @@ void TestDsp()
     originalDspOutput.resize(inputData.size()); 
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
     {
-        dsp->process(inputData.data()+i,originalDspOutput.data()+i,32);
+        originalDsp->process(inputData.data()+i,originalDspOutput.data()+i,32);
+        originalDsp->finalize_(32);
     }
 
 
@@ -411,7 +493,8 @@ void TestDsp()
 
     for (size_t i = 0; i+17 <= inputData.size(); i += 17)
     {
-        dsp->process(inputData.data()+i,bufferedDspOutput.data()+i,17);
+        bufferedDsp->process(inputData.data()+i,bufferedDspOutput.data()+i,17);
+        bufferedDsp->finalize_(17);
     }
 
 
@@ -429,11 +512,14 @@ void TestDsp()
 
 int main(void)
 {
-    TestDsp();
-    Test_LayerArray();
+    cout << "WaveNet_T Unit Test" << endl;
     Test_DilatedConv();
     TestConv1D();
     TestConv1x1();
+    Test_Layer();
+    Test_LayerArray();
+    TestDsp();
+    cout << "//// " << endl;
     cout << "Success." << endl;
     return EXIT_SUCCESS;
 }

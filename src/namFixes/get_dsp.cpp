@@ -226,7 +226,15 @@ std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize)
             minBlockSize == maxBlockSize && minBlockSize != -1 && minBlockSize >= 32 && isPowerOfTwo(maxBlockSize)
           );
           auto result = wavenet_factory.create(layer_array_params,head_scale,with_head,weights,expectedSampleRate,noBufferFlipRequired);
+          if (haveLoudness)
+          {
+            result->SetLoudness(loudness);
+          }
+
+          // "pre-warm" the model to settle initial conditions
+          result->prewarm();
           return result;
+
         } catch (const std::exception&) {
 
         }

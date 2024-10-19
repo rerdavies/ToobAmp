@@ -41,12 +41,25 @@ inline nam::wavenet::_DilatedConv_T<IN_ROWS, OUT_ROWS, OUT_COLUMNS, KERNEL_SIZE>
   this->set_size_(in_channels, out_channels, kernel_size, bias, dilation);
 }
 
+
+template <size_t IN_ROWS, size_t OUT_ROWS, size_t OUT_COLUMNS, size_t KERNEL_SIZE>
+inline void nam::wavenet::_DilatedConv_T<IN_ROWS, OUT_ROWS, OUT_COLUMNS, KERNEL_SIZE>::initialize(
+      const int bias,
+      const int dilation)
+{
+  this->set_size_(IN_ROWS, OUT_ROWS, KERNEL_SIZE, bias, dilation);
+  
+}
+
+
 template <size_t IN_ROWS, size_t OUT_ROWS, size_t OUT_COLUMNS, size_t KERNEL_SIZE>
 nam::wavenet::_DilatedConv_T<IN_ROWS, OUT_ROWS, OUT_COLUMNS, KERNEL_SIZE>::_DilatedConv_T(
     const int bias,
     const int dilation) : _DilatedConv_T((int)IN_ROWS, (int)OUT_ROWS, (int)KERNEL_SIZE, bias, dilation)
 {
 }
+
+
 
 //////////// _LayerArray_T /////////////////////////////
 
@@ -364,9 +377,14 @@ inline void nam::wavenet::_Head_T::_apply_activation_(Eigen::MatrixXf &x)
 template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
 inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::finalize_(const int num_frames)
 {
+}
+template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
+inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::finalize__(const int num_frames)
+{
   this->DSP::finalize_(num_frames);
   this->_advance_buffers_(num_frames);
 }
+
 
 template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
 inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::set_weights_(std::vector<float> &weights)
@@ -454,6 +472,7 @@ NOINLINE inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::
     float out = this->_head_scale * _head_2(0, s);
     output[s] = out;
   }
+  finalize__(FIXED_BUFFER_SIZE_T);
 }
 
 template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
@@ -561,6 +580,10 @@ inline nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::WaveNet_T(cons
 
   // round up to next fixed-buffer boundarary.
   _prewarm_samples += (_prewarm_samples + FIXED_BUFFER_SIZE_T - 1) / FIXED_BUFFER_SIZE_T * FIXED_BUFFER_SIZE_T;
+
+
+  //_prewarm_samples = 0; 
+
 }
 
 /////////////////////////////////////////////////
@@ -681,6 +704,9 @@ inline void nam::wavenet::_Layer_T<INPUT_SIZE, HEAD_SIZE, CHANNELS, KERNEL_SIZE>
   this->_dilation = dilation;
   this->_gated = gated;
   this->_activation = activations::Activation::get_activation(activation);
+  this->_conv_gated.initialize(true,dilation);
+  this->_conv_ungated.initialize(true,dilation);
+
 }
 
 ///////// Conv1x1_T ////////////////

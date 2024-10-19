@@ -179,6 +179,9 @@ public:
     const int kernel_size, 
     const int bias,
     const int dilation);
+  void initialize(
+      const int bias,
+      const int dilation);
 };
 
 template <size_t INPUT_SIZE, size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
@@ -364,6 +367,8 @@ public:
   void set_weights_(std::vector<float>& weights);
 
 private:
+  void finalize__(const int num_frames);
+
   bool _no_buffer_required = false;
   long _num_frames = 0;;
 
