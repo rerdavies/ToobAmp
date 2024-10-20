@@ -473,7 +473,6 @@ void TestDsp()
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
     {
         dsp->process(inputData.data()+i,dspOutput.data()+i,32);
-        dsp->finalize_(32);
 
     }
 
@@ -483,7 +482,6 @@ void TestDsp()
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
     {
         originalDsp->process(inputData.data()+i,originalDspOutput.data()+i,32);
-        originalDsp->finalize_(32);
     }
 
 
@@ -494,7 +492,6 @@ void TestDsp()
     for (size_t i = 0; i+17 <= inputData.size(); i += 17)
     {
         bufferedDsp->process(inputData.data()+i,bufferedDspOutput.data()+i,17);
-        bufferedDsp->finalize_(17);
     }
 
 

@@ -274,7 +274,7 @@ public:
   void prepare_for_frames_(const long num_frames);
 
   // All arrays are "short".
-  void process_( //yyx
+  void process_(
     Eigen::Matrix<float,INPUT_SIZE,FIXED_BUFFER_SIZE_T>& layer_inputs, 
     const Eigen::Matrix<float,CONDITION_SIZE,FIXED_BUFFER_SIZE_T>& condition,
     Eigen::Matrix<float,CHANNELS,FIXED_BUFFER_SIZE_T>& head_inputs, 
@@ -363,11 +363,13 @@ public:
             std::vector<float> weights, const double expected_sample_rate = -1.0,bool noBufferingRequired= false);
   ~WaveNet_T() = default;
 
-  void finalize_(const int num_frames) override;
   void set_weights_(std::vector<float>& weights);
 
 private:
-  void finalize__(const int num_frames);
+
+  int mPrewarmSamples = 0; // Pre-compute during initialization
+  int PrewarmSamples() override { return mPrewarmSamples; };
+
 
   bool _no_buffer_required = false;
   long _num_frames = 0;;

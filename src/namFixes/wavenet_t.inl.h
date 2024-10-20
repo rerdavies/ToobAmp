@@ -99,7 +99,6 @@ inline void nam::wavenet::_Layer_T<INPUT_SIZE, HEAD_SIZE, CHANNELS, KERNEL_SIZE>
 
     constexpr int channels = (int)CHANNELS;
 
-    // yyyx Check this for allocations/memory efficiency.
     // this->_activation->apply(this->_z_gated.topRows(channels));
     apply_activation_to_block(this->_activation, this->_z_gated.topRows(channels));
 
@@ -374,17 +373,6 @@ inline void nam::wavenet::_Head_T::_apply_activation_(Eigen::MatrixXf &x)
 
 // WaveNet_T ====================================================================
 
-template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
-inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::finalize_(const int num_frames)
-{
-}
-template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
-inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::finalize__(const int num_frames)
-{
-  this->DSP::finalize_(num_frames);
-  this->_advance_buffers_(num_frames);
-}
-
 
 template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
 inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::set_weights_(std::vector<float> &weights)
@@ -472,7 +460,7 @@ NOINLINE inline void nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::
     float out = this->_head_scale * _head_2(0, s);
     output[s] = out;
   }
-  finalize__(FIXED_BUFFER_SIZE_T);
+  _advance_buffers_(FIXED_BUFFER_SIZE_T);
 }
 
 template <size_t HEAD_SIZE, size_t CHANNELS, size_t KERNEL_SIZE>
@@ -574,15 +562,12 @@ inline nam::wavenet::WaveNet_T<HEAD_SIZE, CHANNELS, KERNEL_SIZE>::WaveNet_T(cons
 
   this->set_weights_(weights);
 
-  _prewarm_samples = 1;
-  _prewarm_samples += _layer_array_0._get_receptive_field() + 1;
-  _prewarm_samples += _layer_array_1._get_receptive_field() + 1;
+  mPrewarmSamples = 1;
+  mPrewarmSamples += _layer_array_0._get_receptive_field() + 1;
+  mPrewarmSamples += _layer_array_1._get_receptive_field() + 1;
 
   // round up to next fixed-buffer boundarary.
-  _prewarm_samples += (_prewarm_samples + FIXED_BUFFER_SIZE_T - 1) / FIXED_BUFFER_SIZE_T * FIXED_BUFFER_SIZE_T;
-
-
-  //_prewarm_samples = 0; 
+  mPrewarmSamples += (mPrewarmSamples + FIXED_BUFFER_SIZE_T - 1) / FIXED_BUFFER_SIZE_T * FIXED_BUFFER_SIZE_T;
 
 }
 
@@ -734,28 +719,3 @@ inline void nam::wavenet::Conv1x1_T<IN_CHANNELS, OUT_CHANNELS>::set_weights_(std
       this->_bias(i) = *(weights++);
 }
 
-// yyyx: duplicate. Delete me.
-// template <size_t IN_ROWS, size_t OUT_ROWS, size_t OUT_COLUMNS,size_t KERNEL_SIZE>
-// void nam::wavenet::Conv1D_T<IN_ROWS,OUT_ROWS,OUT_COLUMNS,KERNEL_SIZE>::process_(
-//   const Eigen::Matrix<float,IN_ROWS,Eigen::Dynamic>& input,
-//   Eigen::Matrix<float,OUT_ROWS,OUT_COLUMNS>& output, const long i_start,
-//     const long ncols,
-//     const long j_start) const
-// {
-//   WNT_ASSERT(nCols == OUT_COLUMNS);
-//   WNT_ASSERT(i_start == 0);
-
-//   // This is the clever part ;)
-//   for (size_t k = 0; k < this->_weight.size(); k++)
-//   {
-//     const long offset = this->_dilation * (k + 1 - this->_weight.size());
-//     if (k == 0)
-//       output = this->_weight[k] * input.middleCols(i_start + offset, ncols);
-//     else
-//       output += this->_weight[k] * input.middleCols(i_start + offset, ncols);
-//   }
-//   if (this->_bias.size() > 0)
-//     // is bias inverted?
-//     // output.middleCols(j_start, ncols).colwise() += this->_bias;
-//     output += this->bias;
-// }
