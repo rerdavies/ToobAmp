@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,7 +20,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-// ToobTuner.h 
+// ToobTuner.h
 
 #pragma once
 
@@ -48,20 +48,20 @@
 #include "InputPort.h"
 #include "OutputPort.h"
 
-
-
 #define TOOB_TUNER_URI "http://two-play.com/plugins/toob-tuner"
 #ifndef TOOB_URI
 #define TOOB_URI "http://two-play.com/plugins/toob"
 #endif
 
-
-namespace toob {
+namespace toob
+{
 	using namespace LsNumerics;
-	
-	class ToobTuner : public Lv2Plugin {
+
+	class ToobTuner : public Lv2Plugin
+	{
 	private:
-		enum class PortId {
+		enum class PortId
+		{
 			FREQ = 0,
 			MUTE,
 			REFFREQ,
@@ -75,11 +75,11 @@ namespace toob {
 		double rate;
 		std::string bundle_path;
 
-		const float* input = NULL;
-		float* output = NULL;
+		const float *input = NULL;
+		float *output = NULL;
 
-		LV2_Atom_Sequence* controlIn = NULL;
-		LV2_Atom_Sequence* notifyOut = NULL;
+		LV2_Atom_Sequence *controlIn = NULL;
+		LV2_Atom_Sequence *notifyOut = NULL;
 		uint64_t frameTime = 0;
 
 		ChebyshevDownsamplingFilter lowpassFilter;
@@ -90,7 +90,8 @@ namespace toob {
 		int updateFrameCount;
 		int updateFrameIndex;
 
-		enum class RequestState {
+		enum class RequestState
+		{
 			Idle,
 			Requested
 		};
@@ -99,11 +100,12 @@ namespace toob {
 
 		CircularBuffer<float> circularBuffer;
 
-		LV2_Atom_Forge       forge;        ///< Forge for writing atoms in run thread
+		LV2_Atom_Forge forge; ///< Forge for writing atoms in run thread
 
-		struct Uris {
+		struct Uris
+		{
 		public:
-			void Map(Lv2Plugin* plugin)
+			void Map(Lv2Plugin *plugin)
 			{
 				pluginUri = plugin->MapURI(TOOB_TUNER_URI);
 
@@ -149,39 +151,116 @@ namespace toob {
 
 		Uris uris;
 
-
 		FilterResponse filterResponse;
 
-		class TunerWorker: public WorkerAction
+		class TunerWorker : public WorkerAction
 		{
-		private: 
-			ToobTuner*pThis;
-			CircularBuffer<float>::LockResult lockResult;
+		private:
+			ToobTuner *pThis;
 			float pitchResult;
-		public:
+			uint64_t currentSampleFrame = 0;
 
+			class PitchFilter
+			{
+			public:
+				void Initialize(double sampleRate)
+				{
+					this->filterWindowLengthSamples = (uint64_t)(0.2 /*seconds*/*sampleRate);
+				}
+
+				static const double MIN_RATIO; // pitch ratio for current-node - 500 cents.
+				static const double  MAX_RATIO; // pitch ratio for current-node + 500 cents.
+
+
+				bool PitchMatches(float currentValue, float historicalValue) 
+				{
+					if (historicalValue == 0) return false;
+
+					double ratio = currentValue/(double)historicalValue;
+
+					// off by an octave still counts as a miss.
+					if (ratio < 0.75) ratio *= 2;
+					if (ratio > 1.5) ratio *= 0.5;
+
+					return ratio >= MIN_RATIO && ratio <= MAX_RATIO;
+
+
+				}
+
+				float Filter(uint64_t currentSampleFrame, float value) {
+
+					// remove stale entries.
+					while (pitchHistory.size() > 5)
+					{
+						pitchHistory.erase(pitchHistory.begin());
+					}
+					pitchHistory.push_back({currentSampleFrame, value});
+
+
+					if (value != 0) {
+						size_t matchingSamples = 0;
+						for (size_t i = 0; i < pitchHistory.size(); ++i)
+						{
+							if (PitchMatches(value,pitchHistory[i].value))
+							{
+								++matchingSamples;
+							}
+						}
+						// N% of samples over the last 0.1 seconds must be within 500 cents.
+						if (matchingSamples < pitchHistory.size()) //yyx disabled.
+						{
+							value = 0;
+						}
+
+					}
+
+					return value;
+				}
+
+			private:
+				uint64_t currentSampleFrame = 0;
+				uint64_t filterWindowLengthSamples = 0;
+				struct PitchHistoryEntry
+				{
+					uint64_t sampleFrame;
+					float value;
+				};
+				std::vector<PitchHistoryEntry> pitchHistory;
+			};
+
+			PitchFilter pitchFilter;
+			std::vector<float> capturedData;
+
+		public:
 			PitchDetector pitchDetector;
 			float thresholdValue = 0;
 
 			TunerWorker(ToobTuner *pThis)
-			:	WorkerAction(pThis),
-				pThis(pThis)
+				: WorkerAction(pThis),
+				  pThis(pThis)
 			{
-			}
-			void Initialize(double subSampleRate)
-			{
-				pitchDetector.Initialize((int)subSampleRate);
 			}
 
-			void Request(const CircularBuffer<float>::LockResult & lockResult)
+			void Initialize(double sampleRate, double subSampleRate)
 			{
-				this->lockResult = lockResult;
+				pitchFilter.Initialize(sampleRate);
+				constexpr size_t FFT_SIZE = 2048;
+				pitchDetector.Initialize((int)subSampleRate,FFT_SIZE);
+				capturedData.resize(pitchDetector.getFftSize());
+			}
+
+			void Request(const CircularBuffer<float>&circularBuffer, uint64_t currentFrame)
+			{
+				circularBuffer.CopyTo(capturedData);
+				this->currentSampleFrame = currentFrame;
 				this->WorkerAction::Request();
-			}	
+			}
+
 		protected:
-			void OnWork() {
+			void OnWork()
+			{
 				bool aboveThreshold = false;
-				for (auto i = this->lockResult.begin(); i != this->lockResult.end(); ++i)
+				for (auto i = this->capturedData.begin() ; i != capturedData.end(); ++i)
 				{
 					if (*i > this->thresholdValue)
 					{
@@ -191,10 +270,14 @@ namespace toob {
 				}
 				if (aboveThreshold)
 				{
-					pitchResult = pitchDetector.detectPitch(this->lockResult.begin());
-				} else {
+					pitchResult = pitchDetector.detectPitch(this->capturedData.data());
+				}
+				else
+				{
 					pitchResult = 0;
 				}
+
+				pitchResult = pitchFilter.Filter(currentSampleFrame, pitchResult);
 			}
 			void OnResponse()
 			{
@@ -204,20 +287,19 @@ namespace toob {
 
 		TunerWorker tunerWorker;
 
-
 	protected:
 		virtual void OnPatchGet(LV2_URID propertyUrid);
 
 	private:
-        RangedInputPort RefFrequency =RangedInputPort(425,455);
-		RangedInputPort Threshold =RangedInputPort(-60,0);
-		RangedInputPort Mute =RangedInputPort(0,1);
-		OutputPort Freq {0};
+		RangedInputPort RefFrequency = RangedInputPort(425, 455);
+		RangedInputPort Threshold = RangedInputPort(-60, 0);
+		RangedInputPort Mute = RangedInputPort(0, 1);
+		OutputPort Freq{0};
 
 		void OnPitchReceived(float value);
 
 		bool muted = false;
-		ControlDezipper muteDezipper {0};
+		ControlDezipper muteDezipper{0};
 
 		void UpdateControls();
 
@@ -226,25 +308,23 @@ namespace toob {
 		std::string getBundlePath() { return bundle_path.c_str(); }
 
 	public:
-		static Lv2Plugin* Create(double rate,
-			const char* bundle_path,
-			const LV2_Feature* const* features)
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
 		{
 			return new ToobTuner(rate, bundle_path, features);
 		}
 
-
-
 		ToobTuner(double rate,
-			const char* bundle_path,
-			const LV2_Feature* const* features
-		);
+				  const char *bundle_path,
+				  const LV2_Feature *const *features);
 		virtual ~ToobTuner();
 
 	public:
-		static const char* URI;
+		static const char *URI;
+
 	protected:
-		virtual void ConnectPort(uint32_t port, void* data);
+		virtual void ConnectPort(uint32_t port, void *data);
 		virtual void Activate();
 		virtual void Run(uint32_t n_samples);
 		virtual void Deactivate();

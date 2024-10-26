@@ -55,7 +55,7 @@ cabir:impulseFile
         a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile1Group ;
-        mod:fileTypes "wav,flac";
+        mod:fileTypes "ir,wav,flac";
 
         rdfs:range atom:Path.
 
@@ -63,14 +63,14 @@ cabir:impulseFile2
         a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile2Group ;
-        mod:fileTypes "wav,flac";
+        mod:fileTypes "ir,wav,flac";
         rdfs:range atom:Path.
 
 cabir:impulseFile3
         a lv2:Parameter;
         rdfs:label "IR";
         pg:group cabir:impulseFile3Group ;
-        mod:fileTypes "wav,flac";
+        mod:fileTypes "ir,wav,flac";
         rdfs:range atom:Path.
 
 

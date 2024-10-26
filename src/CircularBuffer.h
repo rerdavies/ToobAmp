@@ -39,11 +39,12 @@ namespace toob {
             SetSize(size);
         }
 
-        bool Overrun() const { return overrun; }
-        void Overrun(bool value) { overrun = value;}
         void Reset() {
-            overrun = false;
-            head = 0; count = 0;
+            for (size_t i = 0; i < buffer.size(); ++i)
+            {
+                buffer[i] = 0;
+            }
+            head = 0;
         }
         void SetSize(size_t size)
         {
@@ -52,121 +53,39 @@ namespace toob {
         }
         void Add(const T &value)
         {
-            if (count == buffer.size())
-            {
-                if (locked) {
-                    overrun = true;
-                    return;
-                }
-            } else {
-                ++count;
-            }
             buffer[head++] = value;
             if (head == buffer.size())
             {
                 head = 0;
             }
         }
-        struct LockResult;
 
-        class ReadIterator {
-        public:
-            ReadIterator(const LockResult*lockResult, T*p)
-            :   lockResult(lockResult),
-                p(p)
+        void CopyTo(std::vector<float> &buffer) const {
+            size_t count = buffer.size();
+            if (head >= count)
             {
-            }
-            using iterator_category = std::forward_iterator_tag;
-            using value_type = T;
-            using difference_type = std::ptrdiff_t;
-            using pointer = T*;
-            using reference = T&;
-
-            bool operator==(const ReadIterator&other) const
-            {
-                return p == other.p;
-            }
-            bool operator!=(const ReadIterator&other) const
-            {
-                return p != other.p;
-            }
-            const T operator*() const { return *p; }
-            const T* operator->() const { return p; }
-
-
-
-            T&operator*() { return *p; }
-            // pre-increment.
-            ReadIterator&operator++()
-            {
-                ++p;
-                if (p == lockResult->p0+lockResult->count0)
+                size_t ix = 0;
+                for (size_t i = head-count; i != head; ++i)
                 {
-                    p = lockResult->p1;
+                    buffer[ix++] = this->buffer[i];
                 }
-                return *this;
-            }
-            // post-increment
-            ReadIterator operator++(int)
-            {
-                ReadIterator t(*this);
-                operator++();
-                return t;
-            }
-
-        private:
-            const LockResult *lockResult;
-            T*p;
-        };
-        struct LockResult {
-            T * p0;
-            size_t count0;
-            T* p1;
-            size_t count1;
-
-            ReadIterator begin() const {
-                return ReadIterator(this,p0);
-            }
-            ReadIterator end() const {
-                return ReadIterator(this,p1+count1);
-            }
-            using iterator = ReadIterator;
-        };
-        LockResult Lock(size_t count) {
-            assert(count <= this->count);
-            locked = true;
-            LockResult result;
-            this->count = count;
-            size_t readTail = this->head;
-            if (count > readTail)
-            {
-                result.count0 = count-readTail;
-                result.p0 = &(buffer[buffer.size()-result.count0]);
-                result.p1 = &(buffer[0]);
-                result.count1 = count-result.count0;
             } else {
-                result.p0 = &buffer[readTail-count];
-                result.count0 = count;
-                result.p1 = result.p0+result.count0; // for a useful iterator end()
-                result.count1 = 0;
+                size_t ix = 0;
+                size_t start = this->head + this->buffer.size()-count;
+                for (size_t i = start; i < buffer.size(); ++i)
+                {
+                    buffer[ix++] = this->buffer[i]; 
+                }
+                for (size_t i = 0; i < this->head; ++i)
+                {
+                    buffer[ix++] = this->buffer[i];
+                }
             }
-            return result;
-        }
-        void Unlock() {
-            locked = false;
-            if (overrun)
-            {
-                // just start over.
-                Reset();
-            }
-        }
-        size_t Size() const { return count;}
-    private:
-        bool locked = false;
-        bool overrun = false;
-        std::vector<T> buffer;
 
-        // TODO: Originally written with volatile. Re-write with appropriate mem barriers.
-        std::atomic<size_t> head, count;
+        }
+        size_t Size() const { return buffer.size();}
+    private:
+        std::vector<T> buffer;
+        size_t head = 0;
     };
 } // namespace

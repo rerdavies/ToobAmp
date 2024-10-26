@@ -125,6 +125,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 
 add_library(ToobAmp  SHARED
+        DebugPlot.cpp
         NeuralAmpModeler.cpp NeuralAmpModeler.h
         nam_architecture.hpp
 

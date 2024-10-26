@@ -93,10 +93,12 @@ namespace LsNumerics
         Fft fftPlan;
 
     private:
-        int cepstrumFftSize;
+        size_t bufferSize = -1;
+        size_t autoCorrelationFftSize = -1;
 
-        int minimumCepstrumBin;
-        int maximumCepstrumBin;
+
+        size_t minimumCepstrumBin;
+        size_t maximumCepstrumBin;
         double frequencyAdustmentFactor = 0;
 
         double calculateFrequencyAdjustmentFactor();
@@ -115,21 +117,22 @@ namespace LsNumerics
 
     private:
         WindowT window;
-        std::vector<complex> conversionBuffer;
-        std::vector<complex> scratchBuffer;
+        std::vector<complex> inputBuffer;
         std::vector<complex> fftBuffer;
         std::vector<complex> cepstrumBuffer;
         std::vector<double> cepstrum;
 
         std::vector<complex> lastFftBuffer;
 
-#if LS_ENABLE_AUTO_CORRELATION_CODE
-        Fft crossCorrelationFft;
-        int crossCorrelationSize;
-        int crossCorrelationSamples;
-        std::vector<double> autoCorrelation;
-        std::vector<double> speciallyNormalizedAutoCorrelation;
-#endif
+        struct BinPeak {
+            size_t index;
+            double frequency;
+            double value;
+        };
+
+        static constexpr size_t MAX_BIN_PEAK = 10;
+        std::vector<BinPeak> binPeaks;
+
     public:
         WindowT &Window() { return window; }
 
@@ -138,9 +141,9 @@ namespace LsNumerics
 
 
     private:
+        float *biasTable = nullptr;
         void allocateBuffers();
-        size_t findCepstrumBin(std::vector<double> &cepstrum);
-        double refineWithCrossCorrelation(std::vector<double> &crossCorrelation, double cepstrumFrequency);
+        double findCepstrumValue(std::vector<double> &cepstrum);
     public:
         /**
          * @brief Construct a new Pitch Detector object
@@ -210,7 +213,7 @@ namespace LsNumerics
          * 
          * @return size_t Size of the internal FFT.
          */
-        size_t getFftSize() const { return this->cepstrumFftSize; }
+        size_t getFftSize() const { return this->bufferSize; }
 
         /**
          * @brief Detect the pitch of the supplied audio data.
@@ -221,16 +224,15 @@ namespace LsNumerics
          */
         double detectPitch(short *signal)
         {
-            for (int i = 0; i < cepstrumFftSize; ++i)
+            for (size_t i = 0; i < bufferSize; ++i)
             {
 
-                scratchBuffer[i] = window[i] * signal[i] * (1.0 / 32768); // non-linearity reduces cepstrum octave errors ;
+                inputBuffer[i] = window[i] * signal[i] * (1.0 / 32768); 
             }
 
             return detectPitch();
         }
 
-        double instantaneousPitch(int bin);
 
         /**
          * @brief Detect the pitch of the supplied audio data.
@@ -247,9 +249,9 @@ namespace LsNumerics
         double detectPitch(const ITERATOR &begin)
         {
             ITERATOR iter = begin;
-            for (int i = 0; i < cepstrumFftSize; ++i)
+            for (size_t i = 0; i < bufferSize; ++i)
             {
-                scratchBuffer[i] = window[i]*(*iter++);
+                inputBuffer[i] = window[i]*(*iter++);
             }
             return detectPitch();
         }
@@ -262,27 +264,26 @@ namespace LsNumerics
          * @param signal A buffer of audio data.
          * @return double MIDI pitch of the signal, or zero if no signal detected.
          */
-        double detectPitch(float *signal)
+        double detectPitch(const float *signal)
         {
-            for (int i = 0; i < cepstrumFftSize; ++i)
+            for (size_t i = 0; i < bufferSize; ++i)
             {
-                scratchBuffer[i] = window[i]* signal[i];
+                inputBuffer[i] = window[i]* signal[i];
             }
             return detectPitch();
         }
-        double detectPitch(float *signal, size_t sampleStride)
+        double detectPitch(const float *signal, size_t sampleStride)
         {
-            for (int i = 0; i < cepstrumFftSize; ++i)
+            for (size_t i = 0; i < bufferSize; ++i)
             {
-                scratchBuffer[i] = window[i]* signal[i];
+                inputBuffer[i] = window[i]* signal[i*sampleStride];
             }
-            return detectPitch(sampleStride);
+            return detectPitch();
         }
 
     private:
         double ifPhase(size_t bin);
         double detectPitch();
-        double detectPitch(size_t sampleStride);
 
     public:
         /**

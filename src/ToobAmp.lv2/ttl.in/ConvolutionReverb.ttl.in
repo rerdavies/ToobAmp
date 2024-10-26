@@ -32,7 +32,7 @@
 toobimpulse:impulseFile
         a lv2:Parameter;
         rdfs:label "Reverb Impulse File";
-        mod:fileTypes "wav,flac";
+        mod:fileTypes "ir,wav,flac";
         rdfs:range atom:Path.
 
 

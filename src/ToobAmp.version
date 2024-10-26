@@ -3,6 +3,7 @@
 VERS_1.0 {  
     global: 
         lv2_descriptor;
+        plotArray;
     local: 
         *;
 };
