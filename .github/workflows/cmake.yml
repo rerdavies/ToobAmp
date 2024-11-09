@@ -44,7 +44,7 @@ jobs:
       run: echo Disabled # ctest -C ${{env.BUILD_TYPE}}
 
     - name: Make Package
-       run ./makePackage.sh
+      run: ./makePackage.sh
        
     - name: Generate Artifacts
       uses: actions/upload-artifact@v4
