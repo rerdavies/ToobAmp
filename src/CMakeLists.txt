@@ -146,10 +146,10 @@ add_library(ToobAmp  SHARED
         SvgPathWriter.hpp
         SvgPathWriter.cpp
         LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
-        LsNumerics/BinaryReader.hpp
-        LsNumerics/BinaryReader.cpp
-        LsNumerics/BinaryWriter.cpp
-        LsNumerics/BinaryWriter.hpp
+        # LsNumerics/BinaryReader.hpp
+        # LsNumerics/BinaryReader.cpp
+        # LsNumerics/BinaryWriter.cpp
+        # LsNumerics/BinaryWriter.hpp
 
         LsNumerics/FftConvolution.cpp
         LsNumerics/FftConvolution.hpp
@@ -675,10 +675,10 @@ add_test(BaxandallToneStackTest BaxandallToneStackTest)
 add_library(BalancedConvolution STATIC
     LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
 
-    LsNumerics/BinaryReader.hpp
-    LsNumerics/BinaryReader.cpp
-    LsNumerics/BinaryWriter.cpp
-    LsNumerics/BinaryWriter.hpp
+    # LsNumerics/BinaryReader.hpp
+    # LsNumerics/BinaryReader.cpp
+    # LsNumerics/BinaryWriter.cpp
+    # LsNumerics/BinaryWriter.hpp
 
     LsNumerics/FftConvolution.cpp
     LsNumerics/FftConvolution.hpp
