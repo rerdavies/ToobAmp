@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <iostream>
 
 class DebugPlotter
 {
@@ -32,10 +33,14 @@ public:
 
 // Launch gnuplot
 #ifdef _WIN32
-        system("start gnuplot plot_script.gnu");
+        int retval = system("start gnuplot plot_script.gnu");
 #else
-        system("gnuplot plot_script.gnu &");
+        int retval = system("gnuplot plot_script.gnu &");
 #endif
+        if (retval != EXIT_SUCCESS)
+        {
+            std::cerr << "Error: Failed to execut gnuplot." << std::endl;
+        }
     }
 
     // Overload for multiple datasets
