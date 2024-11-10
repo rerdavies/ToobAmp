@@ -76,11 +76,16 @@ public:
         scriptFile.close();
 
 // Launch gnuplot
+        int retval;
 #ifdef _WIN32
-        system("start gnuplot plot_script.gnu");
+        retval = system("start gnuplot plot_script.gnu");
 #else
-        system("gnuplot plot_script.gnu &");
+        retval = system("gnuplot plot_script.gnu &");
 #endif
+        if (retval != EXIT_SUCCESS)
+        {
+            throw std::runtime_error("Error: Failed to execute gnuplot.");
+        }
     }
 };
 
