@@ -6,6 +6,8 @@ cmake_minimum_required (VERSION 3.18)
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)
 
+set(Boost_USE_STATIC_LIBS   ON)
+find_package(Boost REQUIRED COMPONENTS iostreams )
 
 set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -269,7 +271,7 @@ target_link_libraries(ToobAmp
     RTNeural
     namSources
     dl pthread
-    boost_iostreams
+    ${Boost_LIBRARIES}
     ${FLAC_LIBS}
     )
 
