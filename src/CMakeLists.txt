@@ -3,9 +3,25 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
+
+execute_process(COMMAND
+  dpkg-architecture
+    -qDEB_HOST_ARCH
+  OUTPUT_VARIABLE
+    CMAKE_DEB_HOST_ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)
 
+
+# Ubuuntu 21.04 boost static libraries don't have -fPIC, so linking fails.
+if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+    set(Boost_USE_STATIC_LIBS   ON)
+endif()
+find_package(Boost REQUIRED COMPONENTS iostreams )
 
 set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,13 +34,6 @@ else()
     set(PROFILER 0)  # disables google profiler in ConvolutionReverbTest, ProfileNeuralAmpModeler
 endif()
 
-execute_process(COMMAND
-  dpkg-architecture
-    -qDEB_HOST_ARCH
-  OUTPUT_VARIABLE
-    CMAKE_DEB_HOST_ARCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
 
 
 set (FLAC_LIBS  FLAC++.a FLAC.a ogg.a)
@@ -125,6 +134,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 
 add_library(ToobAmp  SHARED
+        DebugPlot.cpp
         NeuralAmpModeler.cpp NeuralAmpModeler.h
         nam_architecture.hpp
 
@@ -268,7 +278,7 @@ target_link_libraries(ToobAmp
     RTNeural
     namSources
     dl pthread
-    boost_iostreams
+    ${Boost_LIBRARIES}
     ${FLAC_LIBS}
     )
 

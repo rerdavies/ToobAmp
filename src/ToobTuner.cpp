@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -55,23 +55,24 @@ using namespace toob;
 
 static const int MAX_UPDATES_PER_SECOND = 15;
 
+const char *ToobTuner::URI = TOOB_TUNER_URI;
 
-const char* ToobTuner::URI= TOOB_TUNER_URI;
+const double ToobTuner::TunerWorker::PitchFilter::MIN_RATIO = // pitch ratio for current-node - 500 cents.
+	std::pow(2, -0.5 / 12);
 
-
+const double ToobTuner::TunerWorker::PitchFilter::MAX_RATIO = // pitch ratio for current-node + 500 cents.
+	std::pow(2, 0.5 / 12);
 
 uint64_t timeMs();
 
-
 ToobTuner::ToobTuner(double _rate,
-	const char* _bundle_path,
-	const LV2_Feature* const* features)
-	: 
-	Lv2Plugin(_bundle_path,features),
-	rate(_rate),
-	bundle_path(_bundle_path),
-	filterResponse(),
-	tunerWorker(this)
+					 const char *_bundle_path,
+					 const LV2_Feature *const *features)
+	: Lv2Plugin(_bundle_path, features),
+	  rate(_rate),
+	  bundle_path(_bundle_path),
+	  filterResponse(),
+	  tunerWorker(this)
 {
 	uris.Map(this);
 	lv2_atom_forge_init(&forge, map);
@@ -80,25 +81,24 @@ ToobTuner::ToobTuner(double _rate,
 	while (subsampleRate > 48000/2)
 		subsampleRate /= 2;
 
-	this->tunerWorker.Initialize(subsampleRate);
+	this->tunerWorker.Initialize(getRate(), subsampleRate);
 	this->fftSize = this->tunerWorker.pitchDetector.getFftSize();
-	circularBuffer.SetSize(fftSize*3);
+	circularBuffer.SetSize(fftSize * 8);
 
-	this->lowpassFilter.Design(_rate,0.1,1200,-60,subsampleRate/2);
+	this->lowpassFilter.Design(_rate, 0.1, 1200, -60, subsampleRate / 2);
 
-	this->updateFrameCount = (size_t)(rate/MAX_UPDATES_PER_SECOND);
+	this->updateFrameCount = (size_t)(rate / MAX_UPDATES_PER_SECOND);
 	this->updateFrameIndex = 0;
-
 }
 
 ToobTuner::~ToobTuner()
 {
-
 }
 
-void ToobTuner::ConnectPort(uint32_t port, void* data)
+void ToobTuner::ConnectPort(uint32_t port, void *data)
 {
-	switch ((PortId)port) {
+	switch ((PortId)port)
+	{
 
 	case PortId::REFFREQ:
 		RefFrequency.SetData(data);
@@ -113,16 +113,16 @@ void ToobTuner::ConnectPort(uint32_t port, void* data)
 		this->Freq.SetData(data);
 		break;
 	case PortId::AUDIO_IN:
-		this->input = (const float*)data;
+		this->input = (const float *)data;
 		break;
 	case PortId::AUDIO_OUT:
-		this->output = (float*)data;
+		this->output = (float *)data;
 		break;
 	case PortId::CONTROL_IN:
-		this->controlIn = (LV2_Atom_Sequence*)data;
+		this->controlIn = (LV2_Atom_Sequence *)data;
 		break;
 	case PortId::NOTIFY_OUT:
-		this->notifyOut = (LV2_Atom_Sequence*)data;
+		this->notifyOut = (LV2_Atom_Sequence *)data;
 		break;
 	}
 }
@@ -134,14 +134,13 @@ void ToobTuner::Activate()
 	this->lowpassFilter.Reset();
 	this->circularBuffer.Reset();
 
-
 	this->updateFrameIndex = 0;
 
 	this->subsampleIndex = 0;
-	this->subsampleCount = (int)(this->rate/this->subsampleRate);
+	this->subsampleCount = (int)(this->rate / this->subsampleRate);
 
 	this->muted = Mute.GetValue() != 0;
-	muteDezipper.To(this->muted? 0: 1, 0);
+	muteDezipper.To(this->muted ? 0 : 1, 0);
 }
 void ToobTuner::Deactivate()
 {
@@ -153,27 +152,27 @@ void ToobTuner::Run(uint32_t n_samples)
 	// Set up forge to write directly to notify output port.
 	const uint32_t notify_capacity = this->notifyOut->atom.size;
 	lv2_atom_forge_set_buffer(
-		&(this->forge), (uint8_t*)(this->notifyOut), notify_capacity);
+		&(this->forge), (uint8_t *)(this->notifyOut), notify_capacity);
 
 	// Start a sequence in the notify output port.
 	LV2_Atom_Forge_Frame out_frame;
 
 	lv2_atom_forge_sequence_head(&this->forge, &out_frame, uris.units__Frame);
 
-
 	HandleEvents(this->controlIn);
 
 	UpdateControls();
 
-	if (updateFrameIndex <= 0 && requestState == RequestState::Idle && circularBuffer.Size() >= this->fftSize)
+	if (updateFrameIndex <= 0 && requestState == RequestState::Idle )
 	{
 		requestState = RequestState::Requested;
-		this->tunerWorker.Request(circularBuffer.Lock(fftSize));
+		this->tunerWorker.Request(circularBuffer,this->frameTime);
 
 		// set time (in samples) to next request.
 		this->updateFrameIndex = this->updateFrameCount;
-
-	} else {
+	}
+	else
+	{
 		updateFrameIndex -= n_samples;
 		if (updateFrameIndex < 0)
 		{
@@ -181,7 +180,8 @@ void ToobTuner::Run(uint32_t n_samples)
 		}
 	}
 	int subsampleCount = this->subsampleCount;
-	int subsampleIndex = this->subsampleIndex;;
+	int subsampleIndex = this->subsampleIndex;
+	;
 
 	for (uint32_t i = 0; i < n_samples; ++i)
 	{
@@ -193,7 +193,6 @@ void ToobTuner::Run(uint32_t n_samples)
 			circularBuffer.Add((float)subV);
 		}
 		output[i] = (float)(v * muteDezipper.Tick());
-
 	}
 	this->subsampleCount = subsampleCount;
 	this->subsampleIndex = subsampleIndex;
@@ -218,20 +217,20 @@ void ToobTuner::UpdateControls()
 		if (this->muted != muted)
 		{
 			this->muted = muted;
-			muteDezipper.To(muted ? 0:1, 0.1f);
+			muteDezipper.To(muted ? 0 : 1, 0.1f);
 		}
 	}
 }
 
-
-void ToobTuner::OnPitchReceived(float valueHz) {
+void ToobTuner::OnPitchReceived(float valueHz)
+{
 
 	// convert to Midi Note.
 	float midiNote = -1;
 	if (valueHz != 0)
 	{
-		midiNote = std::log2(valueHz/RefFrequency.GetValue())*12 + 69;
-	} 
+		midiNote = std::log2(valueHz / RefFrequency.GetValue()) * 12 + 69;
+	}
 	this->Freq.SetValue(midiNote);
 	this->requestState = RequestState::Idle;
 	if (this->updateFrameIndex <= 0)
@@ -241,12 +240,9 @@ void ToobTuner::OnPitchReceived(float valueHz) {
 	}
 }
 
-
-
 void ToobTuner::OnPatchGet(LV2_URID propertyUrid)
 {
 	if (propertyUrid == uris.param_frequencyResponseVector)
 	{
 	}
-
 }

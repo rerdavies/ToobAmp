@@ -32,7 +32,7 @@ using namespace LsNumerics;
 
 //static constexpr double GUITAR_LOW_E_FREQUENCY = 82.41;        // hz.
 static constexpr double MAXIMUM_DETECTABLE_FREQUENCY = 923.33; // gutar, high E, 19th fret.
-static constexpr double MINIMUM_DETECTABLE_FREQUENCY = 55;     // guitar low E - ~5th.
+static constexpr double MINIMUM_DETECTABLE_FREQUENCY = 40;     // octave++ below guitar low E - 
 //static constexpr double OCTAVE_THRESHOLD = 0.5;
 
 static constexpr int WINDOW_PERIODS_REQUIRED = 4;
@@ -42,74 +42,1002 @@ static inline double abs2(const std::complex<double> &c)
     return c.real() * c.real() + c.imag() * c.imag();
 }
 
+/*
+   Bias tables: 
+
+   The current code has a consistent small bias in results. Probably because the weight 
+   adjustments at [1] are not quite right. 
+
+   The following tables are used to de-bias the resulting frequency response.
+
+*/
+
+static float BIAS_ENTRY(int,double minVal, double maxVal)
+{
+    if (minVal > 6) minVal -= 12;
+    if (maxVal > 6) maxVal -= 12;
+    double midiAdjustment =  (minVal+maxVal)*0.5;
+    return pow(2,-(midiAdjustment)/12.0); // fraction of a midi note to frequency ratio
+}
+
+float fs24000_bias_table[] = 
+{
+    
+//Fs: 24000 fftSize: 4096
+    BIAS_ENTRY(40,  11.9293,  12.0413),
+    BIAS_ENTRY(42,  11.9293,  11.9402),
+    BIAS_ENTRY(44,  11.9402,  12.0833),
+    BIAS_ENTRY(46,  11.9402,  12.0152),
+    BIAS_ENTRY(48,  11.9402,  11.9482),
+    BIAS_ENTRY(50,  11.9402,  11.9482),
+    BIAS_ENTRY(52,  11.9482,  11.9482),
+    BIAS_ENTRY(54,  11.9481,  11.9543),
+    BIAS_ENTRY(56,  11.9481,  11.9543),
+    BIAS_ENTRY(58,  11.9482,  11.9544),
+    BIAS_ENTRY(60,  -0.0145,  11.9543),
+    BIAS_ENTRY(62,  -0.0145,  11.9543),
+    BIAS_ENTRY(64,  -0.0145,  11.9542),
+    BIAS_ENTRY(66,  -0.0145,  -0.0130),
+    BIAS_ENTRY(68,  -0.0145,  -0.0130),
+    BIAS_ENTRY(70,  -0.0145,  -0.0130),
+    BIAS_ENTRY(72,  -0.0130,  -0.0118),
+    BIAS_ENTRY(74,  -0.0130,  -0.0118),
+    BIAS_ENTRY(76,  -0.0130,  -0.0118),
+    BIAS_ENTRY(78,  -0.0119,  -0.0108),
+    BIAS_ENTRY(80,  -0.0118,  -0.0109),
+    BIAS_ENTRY(82,  -0.0118,  -0.0108),
+    BIAS_ENTRY(84,  -0.0109,  -0.0100),
+    BIAS_ENTRY(86,  -0.0109,  -0.0099),
+    BIAS_ENTRY(88,  -0.0100,  -0.0099),
+    BIAS_ENTRY(90,  -0.0100,  -0.0093),
+    BIAS_ENTRY(92,  -0.0100,  -0.0092),
+    BIAS_ENTRY(94,  -0.0093,  -0.0086),
+    BIAS_ENTRY(96,  -0.0093,  -0.0087),
+    BIAS_ENTRY(98,  -0.0093,  -0.0086),
+    BIAS_ENTRY(100,  -0.0087,  -0.0081),
+    BIAS_ENTRY(102,  -0.0087,  -0.0081),
+    BIAS_ENTRY(104,  -0.0081,  -0.0081),
+    BIAS_ENTRY(106,  -0.0081,  -0.0076),
+    BIAS_ENTRY(108,  -0.0081,  -0.0076),
+    BIAS_ENTRY(110,  -0.0081,  -0.0076),
+    BIAS_ENTRY(112,  -0.0077,  -0.0072),
+    BIAS_ENTRY(114,  -0.0077,  -0.0071),
+    BIAS_ENTRY(116,  -0.0077,  -0.0071),
+    BIAS_ENTRY(118,  -0.0072,  -0.0068),
+    BIAS_ENTRY(120,  -0.0072,  -0.0069),
+    BIAS_ENTRY(122,  -0.0072,  -0.0068),
+    BIAS_ENTRY(124,  -0.0068,  -0.0064),
+    BIAS_ENTRY(126,  -0.0065,  -0.0064),
+    BIAS_ENTRY(128,  -0.0068,  -0.0065),
+    BIAS_ENTRY(130,  -0.0065,  -0.0061),
+    BIAS_ENTRY(132,  -0.0065,  -0.0061),
+    BIAS_ENTRY(134,  -0.0065,  -0.0061),
+    BIAS_ENTRY(136,  -0.0062,  -0.0058),
+    BIAS_ENTRY(138,  -0.0062,  -0.0058),
+    BIAS_ENTRY(140,  -0.0062,  -0.0058),
+    BIAS_ENTRY(142,  -0.0059,  -0.0056),
+    BIAS_ENTRY(144,  -0.0059,  -0.0056),
+    BIAS_ENTRY(146,  -0.0057,  -0.0055),
+    BIAS_ENTRY(148,  -0.0057,  -0.0053),
+    BIAS_ENTRY(150,  -0.0057,  -0.0054),
+    BIAS_ENTRY(152,  -0.0056,  -0.0053),
+    BIAS_ENTRY(154,  -0.0054,  -0.0051),
+    BIAS_ENTRY(156,  -0.0054,  -0.0051),
+    BIAS_ENTRY(158,  -0.0054,  -0.0051),
+    BIAS_ENTRY(160,  -0.0052,  -0.0050),
+    BIAS_ENTRY(162,  -0.0052,  -0.0049),
+    BIAS_ENTRY(164,  -0.0052,  -0.0049),
+    BIAS_ENTRY(166,  -0.0050,  -0.0047),
+    BIAS_ENTRY(168,  -0.0050,  -0.0047),
+    BIAS_ENTRY(170,  -0.0048,  -0.0047),
+    BIAS_ENTRY(172,  -0.0048,  -0.0045),
+    BIAS_ENTRY(174,  -0.0048,  -0.0045),
+    BIAS_ENTRY(176,  -0.0047,  -0.0044),
+    BIAS_ENTRY(178,  -0.0047,  -0.0043),
+    BIAS_ENTRY(180,  -0.0047,  -0.0044),
+    BIAS_ENTRY(182,  -0.0045,  -0.0042),
+    BIAS_ENTRY(184,  -0.0045,  -0.0042),
+    BIAS_ENTRY(186,  -0.0045,  -0.0042),
+    BIAS_ENTRY(188,  -0.0044,  -0.0041),
+    BIAS_ENTRY(190,  -0.0043,  -0.0040),
+    BIAS_ENTRY(192,  -0.0043,  -0.0042),
+    BIAS_ENTRY(194,  -0.0042,  -0.0040),
+    BIAS_ENTRY(196,  -0.0042,  -0.0039),
+    BIAS_ENTRY(198,  -0.0042,  -0.0039),
+    BIAS_ENTRY(200,  -0.0041,  -0.0039),
+    BIAS_ENTRY(202,  -0.0041,  -0.0038),
+    BIAS_ENTRY(204,  -0.0040,  -0.0038),
+    BIAS_ENTRY(206,  -0.0039,  -0.0037),
+    BIAS_ENTRY(208,  -0.0038,  -0.0037),
+    BIAS_ENTRY(210,  -0.0039,  -0.0037),
+    BIAS_ENTRY(212,  -0.0038,  -0.0036),
+    BIAS_ENTRY(214,  -0.0038,  -0.0036),
+    BIAS_ENTRY(216,  -0.0038,  -0.0036),
+    BIAS_ENTRY(218,  -0.0037,  -0.0036),
+    BIAS_ENTRY(220,  -0.0037,  -0.0035),
+    BIAS_ENTRY(222,  -0.0037,  -0.0034),
+    BIAS_ENTRY(224,  -0.0036,  -0.0035),
+    BIAS_ENTRY(226,  -0.0036,  -0.0034),
+    BIAS_ENTRY(228,  -0.0036,  -0.0033),
+    BIAS_ENTRY(230,  -0.0035,  -0.0033),
+    BIAS_ENTRY(232,  -0.0035,  -0.0032),
+    BIAS_ENTRY(234,  -0.0034,  -0.0032),
+    BIAS_ENTRY(236,  -0.0034,  -0.0031),
+    BIAS_ENTRY(238,  -0.0034,  -0.0032),
+    BIAS_ENTRY(240,  -0.0034,  -0.0033),
+    BIAS_ENTRY(242,  -0.0033,  -0.0031),
+    BIAS_ENTRY(244,  -0.0034,  -0.0031),
+    BIAS_ENTRY(246,  -0.0033,  -0.0030),
+    BIAS_ENTRY(248,  -0.0033,  -0.0030),
+    BIAS_ENTRY(250,  -0.0033,  -0.0032),
+    BIAS_ENTRY(252,  -0.0032,  -0.0030),
+    BIAS_ENTRY(254,  -0.0032,  -0.0029),
+    BIAS_ENTRY(256,  -0.0032,  -0.0029),
+    BIAS_ENTRY(258,  -0.0031,  -0.0029),
+    BIAS_ENTRY(260,  -0.0031,  -0.0028),
+    BIAS_ENTRY(262,  -0.0031,  -0.0028),
+    BIAS_ENTRY(264,  -0.0030,  -0.0028),
+    BIAS_ENTRY(266,  -0.0030,  -0.0028),
+    BIAS_ENTRY(268,  -0.0030,  -0.0027),
+    BIAS_ENTRY(270,  -0.0030,  -0.0027),
+    BIAS_ENTRY(272,  -0.0029,  -0.0027),
+    BIAS_ENTRY(274,  -0.0029,  -0.0027),
+    BIAS_ENTRY(276,  -0.0029,  -0.0027),
+    BIAS_ENTRY(278,  -0.0029,  -0.0026),
+    BIAS_ENTRY(280,  -0.0029,  -0.0026),
+    BIAS_ENTRY(282,  -0.0028,  -0.0026),
+    BIAS_ENTRY(284,  -0.0028,  -0.0026),
+    BIAS_ENTRY(286,  -0.0028,  -0.0025),
+    BIAS_ENTRY(288,  -0.0028,  -0.0026),
+    BIAS_ENTRY(290,  -0.0028,  -0.0025),
+    BIAS_ENTRY(292,  -0.0027,  -0.0025),
+    BIAS_ENTRY(294,  -0.0027,  -0.0025),
+    BIAS_ENTRY(296,  -0.0027,  -0.0024),
+    BIAS_ENTRY(298,  -0.0027,  -0.0024),
+    BIAS_ENTRY(300,  -0.0027,  -0.0026),
+    BIAS_ENTRY(302,  -0.0027,  -0.0023),
+    BIAS_ENTRY(304,  -0.0026,  -0.0024),
+    BIAS_ENTRY(306,  -0.0026,  -0.0023),
+    BIAS_ENTRY(308,  -0.0026,  -0.0023),
+    BIAS_ENTRY(310,  -0.0026,  -0.0023),
+    BIAS_ENTRY(312,  -0.0025,  -0.0023),
+    BIAS_ENTRY(314,  -0.0026,  -0.0022),
+    BIAS_ENTRY(316,  -0.0026,  -0.0023),
+    BIAS_ENTRY(318,  -0.0025,  -0.0022),
+    BIAS_ENTRY(320,  -0.0025,  -0.0025),
+    BIAS_ENTRY(322,  -0.0024,  -0.0022),
+    BIAS_ENTRY(324,  -0.0025,  -0.0022),
+    BIAS_ENTRY(326,  -0.0025,  -0.0021),
+    BIAS_ENTRY(328,  -0.0025,  -0.0022),
+    BIAS_ENTRY(330,  -0.0024,  -0.0021),
+    BIAS_ENTRY(332,  -0.0024,  -0.0021),
+    BIAS_ENTRY(334,  -0.0024,  -0.0021),
+    BIAS_ENTRY(336,  -0.0023,  -0.0021),
+    BIAS_ENTRY(338,  -0.0024,  -0.0021),
+    BIAS_ENTRY(340,  -0.0023,  -0.0020),
+    BIAS_ENTRY(342,  -0.0023,  -0.0021),
+    BIAS_ENTRY(344,  -0.0023,  -0.0020),
+    BIAS_ENTRY(346,  -0.0023,  -0.0020),
+    BIAS_ENTRY(348,  -0.0023,  -0.0020),
+    BIAS_ENTRY(350,  -0.0023,  -0.0020),
+    BIAS_ENTRY(352,  -0.0023,  -0.0020),
+    BIAS_ENTRY(354,  -0.0022,  -0.0019),
+    BIAS_ENTRY(356,  -0.0022,  -0.0019),
+    BIAS_ENTRY(358,  -0.0022,  -0.0020),
+    BIAS_ENTRY(360,  -0.0022,  -0.0020),
+    BIAS_ENTRY(362,  -0.0022,  -0.0019),
+    BIAS_ENTRY(364,  -0.0022,  -0.0019),
+    BIAS_ENTRY(366,  -0.0021,  -0.0018),
+    BIAS_ENTRY(368,  -0.0022,  -0.0019),
+    BIAS_ENTRY(370,  -0.0021,  -0.0018),
+    BIAS_ENTRY(372,  -0.0021,  -0.0018),
+    BIAS_ENTRY(374,  -0.0022,  -0.0018),
+    BIAS_ENTRY(376,  -0.0021,  -0.0018),
+    BIAS_ENTRY(378,  -0.0021,  -0.0018),
+    BIAS_ENTRY(380,  -0.0021,  -0.0018),
+    BIAS_ENTRY(382,  -0.0021,  -0.0018),
+    BIAS_ENTRY(384,  -0.0020,  -0.0019),
+    BIAS_ENTRY(386,  -0.0021,  -0.0018),
+    BIAS_ENTRY(388,  -0.0021,  -0.0017),
+    BIAS_ENTRY(390,  -0.0020,  -0.0017),
+    BIAS_ENTRY(392,  -0.0021,  -0.0017),
+    BIAS_ENTRY(394,  -0.0020,  -0.0017),
+    BIAS_ENTRY(396,  -0.0020,  -0.0016),
+    BIAS_ENTRY(398,  -0.0020,  -0.0017),
+    BIAS_ENTRY(400,  -0.0020,  -0.0019),
+    BIAS_ENTRY(402,  -0.0019,  -0.0016),
+    BIAS_ENTRY(404,  -0.0020,  -0.0016),
+    BIAS_ENTRY(406,  -0.0020,  -0.0016),
+    BIAS_ENTRY(408,  -0.0019,  -0.0016),
+    BIAS_ENTRY(410,  -0.0019,  -0.0015),
+    BIAS_ENTRY(412,  -0.0020,  -0.0016),
+    BIAS_ENTRY(414,  -0.0019,  -0.0015),
+    BIAS_ENTRY(416,  -0.0019,  -0.0015),
+    BIAS_ENTRY(418,  -0.0019,  -0.0016),
+    BIAS_ENTRY(420,  -0.0019,  -0.0016),
+    BIAS_ENTRY(422,  -0.0019,  -0.0015),
+    BIAS_ENTRY(424,  -0.0018,  -0.0015),
+    BIAS_ENTRY(426,  -0.0019,  -0.0015),
+    BIAS_ENTRY(428,  -0.0019,  -0.0015),
+    BIAS_ENTRY(430,  -0.0018,  -0.0015),
+    BIAS_ENTRY(432,  -0.0018,  -0.0015),
+    BIAS_ENTRY(434,  -0.0018,  -0.0015),
+    BIAS_ENTRY(436,  -0.0019,  -0.0015),
+    BIAS_ENTRY(438,  -0.0018,  -0.0014),
+    BIAS_ENTRY(440,  -0.0018,  -0.0014),
+    BIAS_ENTRY(442,  -0.0018,  -0.0015),
+    BIAS_ENTRY(444,  -0.0018,  -0.0014),
+    BIAS_ENTRY(446,  -0.0017,  -0.0014),
+    BIAS_ENTRY(448,  -0.0017,  -0.0014),
+    BIAS_ENTRY(450,  -0.0018,  -0.0015),
+    BIAS_ENTRY(452,  -0.0018,  -0.0014),
+    BIAS_ENTRY(454,  -0.0017,  -0.0014),
+    BIAS_ENTRY(456,  -0.0017,  -0.0013),
+    BIAS_ENTRY(458,  -0.0017,  -0.0014),
+    BIAS_ENTRY(460,  -0.0018,  -0.0014),
+    BIAS_ENTRY(462,  -0.0017,  -0.0013),
+    BIAS_ENTRY(464,  -0.0017,  -0.0013),
+    BIAS_ENTRY(466,  -0.0017,  -0.0013),
+    BIAS_ENTRY(468,  -0.0017,  -0.0014),
+    BIAS_ENTRY(470,  -0.0017,  -0.0013),
+    BIAS_ENTRY(472,  -0.0016,  -0.0013),
+    BIAS_ENTRY(474,  -0.0016,  -0.0012),
+    BIAS_ENTRY(476,  -0.0017,  -0.0013),
+    BIAS_ENTRY(478,  -0.0017,  -0.0013),
+    BIAS_ENTRY(480,  -0.0016,  -0.0016),
+    BIAS_ENTRY(482,  -0.0016,  -0.0012),
+    BIAS_ENTRY(484,  -0.0016,  -0.0012),
+    BIAS_ENTRY(486,  -0.0017,  -0.0012),
+    BIAS_ENTRY(488,  -0.0017,  -0.0013),
+    BIAS_ENTRY(490,  -0.0016,  -0.0012),
+    BIAS_ENTRY(492,  -0.0016,  -0.0012),
+    BIAS_ENTRY(494,  -0.0016,  -0.0013),
+    BIAS_ENTRY(496,  -0.0016,  -0.0012),
+    BIAS_ENTRY(498,  -0.0016,  -0.0012),
+    BIAS_ENTRY(500,  -0.0016,  -0.0015),
+    BIAS_ENTRY(502,  -0.0015,  -0.0012),
+    BIAS_ENTRY(504,  -0.0015,  -0.0011),
+    BIAS_ENTRY(506,  -0.0016,  -0.0011),
+    BIAS_ENTRY(508,  -0.0016,  -0.0012),
+    BIAS_ENTRY(510,  -0.0016,  -0.0012),
+    BIAS_ENTRY(512,  -0.0015,  -0.0011),
+    BIAS_ENTRY(514,  -0.0015,  -0.0011),
+    BIAS_ENTRY(516,  -0.0015,  -0.0011),
+    BIAS_ENTRY(518,  -0.0016,  -0.0011),
+    BIAS_ENTRY(520,  -0.0016,  -0.0012),
+    BIAS_ENTRY(522,  -0.0015,  -0.0011),
+    BIAS_ENTRY(524,  -0.0015,  -0.0011),
+    BIAS_ENTRY(526,  -0.0015,  -0.0010),
+    BIAS_ENTRY(528,  -0.0015,  -0.0011),
+    BIAS_ENTRY(530,  -0.0015,  -0.0011),
+    BIAS_ENTRY(532,  -0.0015,  -0.0011),
+    BIAS_ENTRY(534,  -0.0015,  -0.0010),
+    BIAS_ENTRY(536,  -0.0014,  -0.0010),
+    BIAS_ENTRY(538,  -0.0014,  -0.0010),
+    BIAS_ENTRY(540,  -0.0015,  -0.0010),
+    BIAS_ENTRY(542,  -0.0015,  -0.0011),
+    BIAS_ENTRY(544,  -0.0015,  -0.0011),
+    BIAS_ENTRY(546,  -0.0014,  -0.0010),
+    BIAS_ENTRY(548,  -0.0014,  -0.0009),
+    BIAS_ENTRY(550,  -0.0014,  -0.0009),
+    BIAS_ENTRY(552,  -0.0014,  -0.0009),
+    BIAS_ENTRY(554,  -0.0015,  -0.0010),
+    BIAS_ENTRY(556,  -0.0015,  -0.0011),
+    BIAS_ENTRY(558,  -0.0014,  -0.0010),
+    BIAS_ENTRY(560,  -0.0014,  -0.0010),
+    BIAS_ENTRY(562,  -0.0013,  -0.0009),
+    BIAS_ENTRY(564,  -0.0013,  -0.0009),
+    BIAS_ENTRY(566,  -0.0014,  -0.0010),
+    BIAS_ENTRY(568,  -0.0015,  -0.0010),
+    BIAS_ENTRY(570,  -0.0014,  -0.0010),
+    BIAS_ENTRY(572,  -0.0014,  -0.0009),
+    BIAS_ENTRY(574,  -0.0013,  -0.0009),
+    BIAS_ENTRY(576,  -0.0013,  -0.0010),
+    BIAS_ENTRY(578,  -0.0013,  -0.0008),
+    BIAS_ENTRY(580,  -0.0014,  -0.0009),
+    BIAS_ENTRY(582,  -0.0014,  -0.0010),
+    BIAS_ENTRY(584,  -0.0014,  -0.0010),
+    BIAS_ENTRY(586,  -0.0013,  -0.0009),
+    BIAS_ENTRY(588,  -0.0013,  -0.0008),
+    BIAS_ENTRY(590,  -0.0012,  -0.0008),
+    BIAS_ENTRY(592,  -0.0012,  -0.0008),
+    BIAS_ENTRY(594,  -0.0014,  -0.0009),
+    BIAS_ENTRY(596,  -0.0014,  -0.0009),
+    BIAS_ENTRY(598,  -0.0014,  -0.0009),
+    BIAS_ENTRY(600,  -0.0013,  -0.0013),
+    BIAS_ENTRY(602,  -0.0013,  -0.0008),
+    BIAS_ENTRY(604,  -0.0012,  -0.0007),
+    BIAS_ENTRY(606,  -0.0012,  -0.0007),
+    BIAS_ENTRY(608,  -0.0013,  -0.0008),
+    BIAS_ENTRY(610,  -0.0014,  -0.0009),
+    BIAS_ENTRY(612,  -0.0014,  -0.0009),
+    BIAS_ENTRY(614,  -0.0013,  -0.0008),
+    BIAS_ENTRY(616,  -0.0013,  -0.0008),
+    BIAS_ENTRY(618,  -0.0012,  -0.0008),
+    BIAS_ENTRY(620,  -0.0012,  -0.0007),
+    BIAS_ENTRY(622,  -0.0012,  -0.0007),
+    BIAS_ENTRY(624,  -0.0013,  -0.0008),
+    BIAS_ENTRY(626,  -0.0013,  -0.0008),
+    BIAS_ENTRY(628,  -0.0013,  -0.0009),
+    BIAS_ENTRY(630,  -0.0013,  -0.0008),
+    BIAS_ENTRY(632,  -0.0013,  -0.0008),
+    BIAS_ENTRY(634,  -0.0012,  -0.0007),
+    BIAS_ENTRY(636,  -0.0012,  -0.0007),
+    BIAS_ENTRY(638,  -0.0011,  -0.0006),
+    BIAS_ENTRY(640,  -0.0012,  -0.0009),
+    BIAS_ENTRY(642,  -0.0013,  -0.0008),
+    BIAS_ENTRY(644,  -0.0013,  -0.0008),
+    BIAS_ENTRY(646,  -0.0013,  -0.0008),
+    BIAS_ENTRY(648,  -0.0012,  -0.0007),
+    BIAS_ENTRY(650,  -0.0012,  -0.0007),
+    BIAS_ENTRY(652,  -0.0011,  -0.0006),
+    BIAS_ENTRY(654,  -0.0011,  -0.0006),
+    BIAS_ENTRY(656,  -0.0011,  -0.0006),
+    BIAS_ENTRY(658,  -0.0012,  -0.0007),
+    BIAS_ENTRY(660,  -0.0013,  -0.0008),
+    BIAS_ENTRY(662,  -0.0013,  -0.0008),
+    BIAS_ENTRY(664,  -0.0013,  -0.0008),
+    BIAS_ENTRY(666,  -0.0012,  -0.0007),
+    BIAS_ENTRY(668,  -0.0011,  -0.0006),
+    BIAS_ENTRY(670,  -0.0011,  -0.0006),
+    BIAS_ENTRY(672,  -0.0011,  -0.0006),
+    BIAS_ENTRY(674,  -0.0011,  -0.0005),
+    BIAS_ENTRY(676,  -0.0011,  -0.0006),
+    BIAS_ENTRY(678,  -0.0013,  -0.0008),
+    BIAS_ENTRY(680,  -0.0013,  -0.0008),
+    BIAS_ENTRY(682,  -0.0012,  -0.0007),
+    BIAS_ENTRY(684,  -0.0012,  -0.0007),
+    BIAS_ENTRY(686,  -0.0012,  -0.0006),
+    BIAS_ENTRY(688,  -0.0011,  -0.0006),
+    BIAS_ENTRY(690,  -0.0010,  -0.0005),
+    BIAS_ENTRY(692,  -0.0010,  -0.0005),
+    BIAS_ENTRY(694,  -0.0010,  -0.0005),
+    BIAS_ENTRY(696,  -0.0011,  -0.0006),
+    BIAS_ENTRY(698,  -0.0012,  -0.0007),
+    BIAS_ENTRY(700,  -0.0012,  -0.0007),
+    BIAS_ENTRY(702,  -0.0013,  -0.0007),
+    BIAS_ENTRY(704,  -0.0012,  -0.0007),
+    BIAS_ENTRY(706,  -0.0011,  -0.0006),
+    BIAS_ENTRY(708,  -0.0011,  -0.0005),
+    BIAS_ENTRY(710,  -0.0010,  -0.0005),
+    BIAS_ENTRY(712,  -0.0009,  -0.0004),
+    BIAS_ENTRY(714,  -0.0010,  -0.0004),
+    BIAS_ENTRY(716,  -0.0010,  -0.0005),
+    BIAS_ENTRY(718,  -0.0012,  -0.0006),
+    BIAS_ENTRY(720,  -0.0012,  -0.0008),
+    BIAS_ENTRY(722,  -0.0013,  -0.0007),
+    BIAS_ENTRY(724,  -0.0012,  -0.0007),
+    BIAS_ENTRY(726,  -0.0011,  -0.0006),
+    BIAS_ENTRY(728,  -0.0010,  -0.0005),
+    BIAS_ENTRY(730,  -0.0010,  -0.0005),
+    BIAS_ENTRY(732,  -0.0010,  -0.0004),
+    BIAS_ENTRY(734,  -0.0009,  -0.0004),
+    BIAS_ENTRY(736,  -0.0010,  -0.0004),
+    BIAS_ENTRY(738,  -0.0010,  -0.0004),
+    BIAS_ENTRY(740,  -0.0011,  -0.0005),
+    BIAS_ENTRY(742,  -0.0012,  -0.0006),
+    BIAS_ENTRY(744,  -0.0012,  -0.0007),
+    BIAS_ENTRY(746,  -0.0012,  -0.0007),
+    BIAS_ENTRY(748,  -0.0012,  -0.0006),
+    BIAS_ENTRY(750,  -0.0010,  -0.0010),
+    BIAS_ENTRY(752,  -0.0010,  -0.0004),
+    BIAS_ENTRY(754,  -0.0009,  -0.0004),
+    BIAS_ENTRY(756,  -0.0009,  -0.0003),
+    BIAS_ENTRY(758,  -0.0009,  -0.0003),
+    BIAS_ENTRY(760,  -0.0009,  -0.0003),
+    BIAS_ENTRY(762,  -0.0010,  -0.0004),
+    BIAS_ENTRY(764,  -0.0011,  -0.0006),
+    BIAS_ENTRY(766,  -0.0012,  -0.0006),
+    BIAS_ENTRY(768,  -0.0012,  -0.0008),
+    BIAS_ENTRY(770,  -0.0012,  -0.0006),
+    BIAS_ENTRY(772,  -0.0011,  -0.0006),
+    BIAS_ENTRY(774,  -0.0010,  -0.0004),
+    BIAS_ENTRY(776,  -0.0010,  -0.0004),
+    BIAS_ENTRY(778,  -0.0009,  -0.0003),
+    BIAS_ENTRY(780,  -0.0009,  -0.0003),
+    BIAS_ENTRY(782,  -0.0008,  -0.0002),
+    BIAS_ENTRY(784,  -0.0008,  -0.0003),
+    BIAS_ENTRY(786,  -0.0009,  -0.0003),
+    BIAS_ENTRY(788,  -0.0010,  -0.0004),
+    BIAS_ENTRY(790,  -0.0011,  -0.0006),
+    BIAS_ENTRY(792,  -0.0012,  -0.0006),
+    BIAS_ENTRY(794,  -0.0012,  -0.0006),
+    BIAS_ENTRY(796,  -0.0012,  -0.0006),
+    BIAS_ENTRY(798,  -0.0011,  -0.0005),
+    BIAS_ENTRY(800,  -0.0010,  -0.0010),
+    BIAS_ENTRY(802,  -0.0009,  -0.0003),
+    BIAS_ENTRY(804,  -0.0009,  -0.0003),
+    BIAS_ENTRY(806,  -0.0008,  -0.0002),
+    BIAS_ENTRY(808,  -0.0008,  -0.0002),
+    BIAS_ENTRY(810,  -0.0008,  -0.0002),
+    BIAS_ENTRY(812,  -0.0008,  -0.0003),
+    BIAS_ENTRY(814,  -0.0010,  -0.0004),
+    BIAS_ENTRY(816,  -0.0011,  -0.0005),
+    BIAS_ENTRY(818,  -0.0012,  -0.0005),
+    BIAS_ENTRY(820,  -0.0012,  -0.0006),
+    BIAS_ENTRY(822,  -0.0012,  -0.0006),
+    BIAS_ENTRY(824,  -0.0011,  -0.0005),
+    BIAS_ENTRY(826,  -0.0010,  -0.0004),
+    BIAS_ENTRY(828,  -0.0009,  -0.0003),
+    BIAS_ENTRY(830,  -0.0009,  -0.0002),
+    BIAS_ENTRY(832,  -0.0008,  -0.0002),
+    BIAS_ENTRY(834,  -0.0008,  -0.0001),
+    BIAS_ENTRY(836,  -0.0007,  -0.0002),
+    BIAS_ENTRY(838,  -0.0007,  -0.0001),
+    BIAS_ENTRY(840,  -0.0007,  -0.0002),
+    BIAS_ENTRY(842,  -0.0009,  -0.0002),
+    BIAS_ENTRY(844,  -0.0010,  -0.0004),
+    BIAS_ENTRY(846,  -0.0011,  -0.0005),
+    BIAS_ENTRY(848,  -0.0012,  -0.0006),
+    BIAS_ENTRY(850,  -0.0011,  -0.0006),
+    BIAS_ENTRY(852,  -0.0011,  -0.0005),
+    BIAS_ENTRY(854,  -0.0011,  -0.0005),
+    BIAS_ENTRY(856,  -0.0010,  -0.0004),
+    BIAS_ENTRY(858,  -0.0009,  -0.0003),
+    BIAS_ENTRY(860,  -0.0008,  -0.0002),
+    BIAS_ENTRY(862,  -0.0007,  -0.0001),
+    BIAS_ENTRY(864,  -0.0007,  -0.0001),
+    BIAS_ENTRY(866,  -0.0006,  -0.0001),
+    BIAS_ENTRY(868,  -0.0006,  -0.0000),
+    BIAS_ENTRY(870,  -0.0007,  -0.0001),
+    BIAS_ENTRY(872,  -0.0008,  -0.0002),
+    BIAS_ENTRY(874,  -0.0009,  -0.0003),
+    BIAS_ENTRY(876,  -0.0011,  -0.0004),
+    BIAS_ENTRY(878,  -0.0011,  -0.0005),
+    BIAS_ENTRY(880,  -0.0012,  -0.0005),
+    BIAS_ENTRY(882,  -0.0012,  -0.0005),
+    BIAS_ENTRY(884,  -0.0011,  -0.0005),
+    BIAS_ENTRY(886,  -0.0010,  -0.0004),
+    BIAS_ENTRY(888,  -0.0009,  -0.0003),
+    BIAS_ENTRY(890,  -0.0008,  -0.0002),
+    BIAS_ENTRY(892,  -0.0008,  -0.0001),
+    BIAS_ENTRY(894,  -0.0007,  -0.0001),
+    BIAS_ENTRY(896,  -0.0007,  -0.0000),
+    BIAS_ENTRY(898,  -0.0006,   0.0001),
+    BIAS_ENTRY(900,  -0.0005,  -0.0001),
+    BIAS_ENTRY(902,  -0.0006,   0.0001),
+    BIAS_ENTRY(904,  -0.0007,  -0.0001),
+    BIAS_ENTRY(906,  -0.0009,  -0.0002),
+    BIAS_ENTRY(908,  -0.0010,  -0.0003),
+    BIAS_ENTRY(910,  -0.0011,  -0.0004),
+    BIAS_ENTRY(912,  -0.0012,  -0.0005),
+    BIAS_ENTRY(914,  -0.0011,  -0.0005),
+    BIAS_ENTRY(916,  -0.0011,  -0.0005),
+    BIAS_ENTRY(918,  -0.0011,  -0.0004),
+    BIAS_ENTRY(920,  -0.0010,  -0.0004),
+    BIAS_ENTRY(922,  -0.0009,  -0.0003),
+// Max error:1208.3308 cents (44.0000 Hz)
+// Min error: -1.4488 cents (66.0000 Hz)
+};
+
+float fs22050_bias_table[] {
+// Fs: 22050.0000 fftSize: 4096
+    BIAS_ENTRY(40,  11.9293,  11.9402),
+    BIAS_ENTRY(42,  11.9402,  12.0481),
+    BIAS_ENTRY(44,  11.9402,  11.9482),
+    BIAS_ENTRY(46,  11.9402,  11.9482),
+    BIAS_ENTRY(48,  11.9482,  11.9799),
+    BIAS_ENTRY(50,  11.9482,  11.9543),
+    BIAS_ENTRY(52,  11.9481,  11.9543),
+    BIAS_ENTRY(54,  -0.0145,  11.9543),
+    BIAS_ENTRY(56,  -0.0145,  11.9543),
+    BIAS_ENTRY(58,  -0.0145,  11.9544),
+    BIAS_ENTRY(60,  -0.0145,  -0.0130),
+    BIAS_ENTRY(62,  -0.0145,  -0.0130),
+    BIAS_ENTRY(64,  -0.0145,  -0.0130),
+    BIAS_ENTRY(66,  -0.0130,  -0.0118),
+    BIAS_ENTRY(68,  -0.0130,  -0.0118),
+    BIAS_ENTRY(70,  -0.0118,  -0.0118),
+    BIAS_ENTRY(72,  -0.0118,  -0.0108),
+    BIAS_ENTRY(74,  -0.0119,  -0.0108),
+    BIAS_ENTRY(76,  -0.0109,  -0.0100),
+    BIAS_ENTRY(78,  -0.0109,  -0.0100),
+    BIAS_ENTRY(80,  -0.0109,  -0.0100),
+    BIAS_ENTRY(82,  -0.0100,  -0.0093),
+    BIAS_ENTRY(84,  -0.0100,  -0.0093),
+    BIAS_ENTRY(86,  -0.0100,  -0.0092),
+    BIAS_ENTRY(88,  -0.0093,  -0.0086),
+    BIAS_ENTRY(90,  -0.0093,  -0.0087),
+    BIAS_ENTRY(92,  -0.0087,  -0.0081),
+    BIAS_ENTRY(94,  -0.0087,  -0.0081),
+    BIAS_ENTRY(96,  -0.0087,  -0.0081),
+    BIAS_ENTRY(98,  -0.0081,  -0.0077),
+    BIAS_ENTRY(100,  -0.0081,  -0.0076),
+    BIAS_ENTRY(102,  -0.0081,  -0.0076),
+    BIAS_ENTRY(104,  -0.0077,  -0.0072),
+    BIAS_ENTRY(106,  -0.0077,  -0.0072),
+    BIAS_ENTRY(108,  -0.0072,  -0.0068),
+    BIAS_ENTRY(110,  -0.0072,  -0.0068),
+    BIAS_ENTRY(112,  -0.0073,  -0.0068),
+    BIAS_ENTRY(114,  -0.0069,  -0.0064),
+    BIAS_ENTRY(116,  -0.0069,  -0.0064),
+    BIAS_ENTRY(118,  -0.0069,  -0.0064),
+    BIAS_ENTRY(120,  -0.0065,  -0.0061),
+    BIAS_ENTRY(122,  -0.0065,  -0.0061),
+    BIAS_ENTRY(124,  -0.0062,  -0.0058),
+    BIAS_ENTRY(126,  -0.0062,  -0.0059),
+    BIAS_ENTRY(128,  -0.0062,  -0.0058),
+    BIAS_ENTRY(130,  -0.0059,  -0.0056),
+    BIAS_ENTRY(132,  -0.0059,  -0.0055),
+    BIAS_ENTRY(134,  -0.0059,  -0.0055),
+    BIAS_ENTRY(136,  -0.0057,  -0.0053),
+    BIAS_ENTRY(138,  -0.0057,  -0.0053),
+    BIAS_ENTRY(140,  -0.0054,  -0.0054),
+    BIAS_ENTRY(142,  -0.0054,  -0.0051),
+    BIAS_ENTRY(144,  -0.0054,  -0.0051),
+    BIAS_ENTRY(146,  -0.0052,  -0.0049),
+    BIAS_ENTRY(148,  -0.0052,  -0.0049),
+    BIAS_ENTRY(150,  -0.0052,  -0.0050),
+    BIAS_ENTRY(152,  -0.0050,  -0.0047),
+    BIAS_ENTRY(154,  -0.0050,  -0.0047),
+    BIAS_ENTRY(156,  -0.0049,  -0.0047),
+    BIAS_ENTRY(158,  -0.0048,  -0.0046),
+    BIAS_ENTRY(160,  -0.0048,  -0.0045),
+    BIAS_ENTRY(162,  -0.0047,  -0.0044),
+    BIAS_ENTRY(164,  -0.0046,  -0.0043),
+    BIAS_ENTRY(166,  -0.0047,  -0.0043),
+    BIAS_ENTRY(168,  -0.0045,  -0.0042),
+    BIAS_ENTRY(170,  -0.0045,  -0.0042),
+    BIAS_ENTRY(172,  -0.0045,  -0.0042),
+    BIAS_ENTRY(174,  -0.0044,  -0.0040),
+    BIAS_ENTRY(176,  -0.0043,  -0.0040),
+    BIAS_ENTRY(178,  -0.0042,  -0.0040),
+    BIAS_ENTRY(180,  -0.0042,  -0.0040),
+    BIAS_ENTRY(182,  -0.0042,  -0.0039),
+    BIAS_ENTRY(184,  -0.0041,  -0.0038),
+    BIAS_ENTRY(186,  -0.0041,  -0.0038),
+    BIAS_ENTRY(188,  -0.0041,  -0.0038),
+    BIAS_ENTRY(190,  -0.0039,  -0.0037),
+    BIAS_ENTRY(192,  -0.0040,  -0.0037),
+    BIAS_ENTRY(194,  -0.0038,  -0.0037),
+    BIAS_ENTRY(196,  -0.0038,  -0.0036),
+    BIAS_ENTRY(198,  -0.0038,  -0.0035),
+    BIAS_ENTRY(200,  -0.0037,  -0.0035),
+    BIAS_ENTRY(202,  -0.0037,  -0.0034),
+    BIAS_ENTRY(204,  -0.0037,  -0.0034),
+    BIAS_ENTRY(206,  -0.0036,  -0.0034),
+    BIAS_ENTRY(208,  -0.0036,  -0.0034),
+    BIAS_ENTRY(210,  -0.0035,  -0.0035),
+    BIAS_ENTRY(212,  -0.0035,  -0.0033),
+    BIAS_ENTRY(214,  -0.0035,  -0.0033),
+    BIAS_ENTRY(216,  -0.0034,  -0.0032),
+    BIAS_ENTRY(218,  -0.0034,  -0.0032),
+    BIAS_ENTRY(220,  -0.0034,  -0.0032),
+    BIAS_ENTRY(222,  -0.0033,  -0.0031),
+    BIAS_ENTRY(224,  -0.0033,  -0.0031),
+    BIAS_ENTRY(226,  -0.0033,  -0.0030),
+    BIAS_ENTRY(228,  -0.0033,  -0.0030),
+    BIAS_ENTRY(230,  -0.0032,  -0.0030),
+    BIAS_ENTRY(232,  -0.0032,  -0.0030),
+    BIAS_ENTRY(234,  -0.0032,  -0.0029),
+    BIAS_ENTRY(236,  -0.0031,  -0.0029),
+    BIAS_ENTRY(238,  -0.0031,  -0.0029),
+    BIAS_ENTRY(240,  -0.0031,  -0.0029),
+    BIAS_ENTRY(242,  -0.0030,  -0.0028),
+    BIAS_ENTRY(244,  -0.0030,  -0.0028),
+    BIAS_ENTRY(246,  -0.0030,  -0.0028),
+    BIAS_ENTRY(248,  -0.0030,  -0.0027),
+    BIAS_ENTRY(250,  -0.0030,  -0.0027),
+    BIAS_ENTRY(252,  -0.0030,  -0.0028),
+    BIAS_ENTRY(254,  -0.0029,  -0.0026),
+    BIAS_ENTRY(256,  -0.0029,  -0.0027),
+    BIAS_ENTRY(258,  -0.0029,  -0.0026),
+    BIAS_ENTRY(260,  -0.0028,  -0.0026),
+    BIAS_ENTRY(262,  -0.0029,  -0.0026),
+    BIAS_ENTRY(264,  -0.0028,  -0.0025),
+    BIAS_ENTRY(266,  -0.0028,  -0.0025),
+    BIAS_ENTRY(268,  -0.0028,  -0.0025),
+    BIAS_ENTRY(270,  -0.0027,  -0.0025),
+    BIAS_ENTRY(272,  -0.0027,  -0.0024),
+    BIAS_ENTRY(274,  -0.0027,  -0.0024),
+    BIAS_ENTRY(276,  -0.0027,  -0.0024),
+    BIAS_ENTRY(278,  -0.0027,  -0.0024),
+    BIAS_ENTRY(280,  -0.0026,  -0.0025),
+    BIAS_ENTRY(282,  -0.0026,  -0.0023),
+    BIAS_ENTRY(284,  -0.0026,  -0.0023),
+    BIAS_ENTRY(286,  -0.0026,  -0.0023),
+    BIAS_ENTRY(288,  -0.0025,  -0.0023),
+    BIAS_ENTRY(290,  -0.0026,  -0.0023),
+    BIAS_ENTRY(292,  -0.0025,  -0.0022),
+    BIAS_ENTRY(294,  -0.0025,  -0.0025),
+    BIAS_ENTRY(296,  -0.0025,  -0.0022),
+    BIAS_ENTRY(298,  -0.0025,  -0.0022),
+    BIAS_ENTRY(300,  -0.0024,  -0.0023),
+    BIAS_ENTRY(302,  -0.0024,  -0.0021),
+    BIAS_ENTRY(304,  -0.0024,  -0.0021),
+    BIAS_ENTRY(306,  -0.0024,  -0.0021),
+    BIAS_ENTRY(308,  -0.0023,  -0.0021),
+    BIAS_ENTRY(310,  -0.0024,  -0.0021),
+    BIAS_ENTRY(312,  -0.0023,  -0.0020),
+    BIAS_ENTRY(314,  -0.0022,  -0.0021),
+    BIAS_ENTRY(316,  -0.0023,  -0.0021),
+    BIAS_ENTRY(318,  -0.0023,  -0.0020),
+    BIAS_ENTRY(320,  -0.0023,  -0.0020),
+    BIAS_ENTRY(322,  -0.0023,  -0.0020),
+    BIAS_ENTRY(324,  -0.0023,  -0.0020),
+    BIAS_ENTRY(326,  -0.0022,  -0.0019),
+    BIAS_ENTRY(328,  -0.0023,  -0.0020),
+    BIAS_ENTRY(330,  -0.0022,  -0.0019),
+    BIAS_ENTRY(332,  -0.0022,  -0.0019),
+    BIAS_ENTRY(334,  -0.0022,  -0.0019),
+    BIAS_ENTRY(336,  -0.0021,  -0.0019),
+    BIAS_ENTRY(338,  -0.0022,  -0.0019),
+    BIAS_ENTRY(340,  -0.0021,  -0.0019),
+    BIAS_ENTRY(342,  -0.0021,  -0.0018),
+    BIAS_ENTRY(344,  -0.0021,  -0.0018),
+    BIAS_ENTRY(346,  -0.0021,  -0.0018),
+    BIAS_ENTRY(348,  -0.0021,  -0.0018),
+    BIAS_ENTRY(350,  -0.0021,  -0.0021),
+    BIAS_ENTRY(352,  -0.0020,  -0.0017),
+    BIAS_ENTRY(354,  -0.0021,  -0.0018),
+    BIAS_ENTRY(356,  -0.0020,  -0.0017),
+    BIAS_ENTRY(358,  -0.0020,  -0.0016),
+    BIAS_ENTRY(360,  -0.0021,  -0.0018),
+    BIAS_ENTRY(362,  -0.0020,  -0.0017),
+    BIAS_ENTRY(364,  -0.0020,  -0.0017),
+    BIAS_ENTRY(366,  -0.0020,  -0.0017),
+    BIAS_ENTRY(368,  -0.0020,  -0.0017),
+    BIAS_ENTRY(370,  -0.0019,  -0.0016),
+    BIAS_ENTRY(372,  -0.0020,  -0.0017),
+    BIAS_ENTRY(374,  -0.0019,  -0.0016),
+    BIAS_ENTRY(376,  -0.0019,  -0.0016),
+    BIAS_ENTRY(378,  -0.0019,  -0.0017),
+    BIAS_ENTRY(380,  -0.0019,  -0.0016),
+    BIAS_ENTRY(382,  -0.0019,  -0.0016),
+    BIAS_ENTRY(384,  -0.0019,  -0.0016),
+    BIAS_ENTRY(386,  -0.0019,  -0.0016),
+    BIAS_ENTRY(388,  -0.0018,  -0.0015),
+    BIAS_ENTRY(390,  -0.0018,  -0.0015),
+    BIAS_ENTRY(392,  -0.0019,  -0.0016),
+    BIAS_ENTRY(394,  -0.0018,  -0.0015),
+    BIAS_ENTRY(396,  -0.0018,  -0.0015),
+    BIAS_ENTRY(398,  -0.0018,  -0.0015),
+    BIAS_ENTRY(400,  -0.0018,  -0.0015),
+    BIAS_ENTRY(402,  -0.0018,  -0.0014),
+    BIAS_ENTRY(404,  -0.0017,  -0.0014),
+    BIAS_ENTRY(406,  -0.0018,  -0.0014),
+    BIAS_ENTRY(408,  -0.0018,  -0.0015),
+    BIAS_ENTRY(410,  -0.0018,  -0.0014),
+    BIAS_ENTRY(412,  -0.0017,  -0.0014),
+    BIAS_ENTRY(414,  -0.0018,  -0.0014),
+    BIAS_ENTRY(416,  -0.0018,  -0.0014),
+    BIAS_ENTRY(418,  -0.0017,  -0.0013),
+    BIAS_ENTRY(420,  -0.0017,  -0.0015),
+    BIAS_ENTRY(422,  -0.0018,  -0.0014),
+    BIAS_ENTRY(424,  -0.0018,  -0.0014),
+    BIAS_ENTRY(426,  -0.0017,  -0.0013),
+    BIAS_ENTRY(428,  -0.0017,  -0.0013),
+    BIAS_ENTRY(430,  -0.0017,  -0.0013),
+    BIAS_ENTRY(432,  -0.0017,  -0.0013),
+    BIAS_ENTRY(434,  -0.0016,  -0.0013),
+    BIAS_ENTRY(436,  -0.0016,  -0.0012),
+    BIAS_ENTRY(438,  -0.0017,  -0.0014),
+    BIAS_ENTRY(440,  -0.0017,  -0.0013),
+    BIAS_ENTRY(442,  -0.0016,  -0.0012),
+    BIAS_ENTRY(444,  -0.0016,  -0.0012),
+    BIAS_ENTRY(446,  -0.0016,  -0.0012),
+    BIAS_ENTRY(448,  -0.0016,  -0.0013),
+    BIAS_ENTRY(450,  -0.0016,  -0.0016),
+    BIAS_ENTRY(452,  -0.0015,  -0.0012),
+    BIAS_ENTRY(454,  -0.0015,  -0.0011),
+    BIAS_ENTRY(456,  -0.0017,  -0.0012),
+    BIAS_ENTRY(458,  -0.0016,  -0.0012),
+    BIAS_ENTRY(460,  -0.0016,  -0.0012),
+    BIAS_ENTRY(462,  -0.0015,  -0.0011),
+    BIAS_ENTRY(464,  -0.0015,  -0.0011),
+    BIAS_ENTRY(466,  -0.0016,  -0.0012),
+    BIAS_ENTRY(468,  -0.0016,  -0.0012),
+    BIAS_ENTRY(470,  -0.0015,  -0.0011),
+    BIAS_ENTRY(472,  -0.0014,  -0.0011),
+    BIAS_ENTRY(474,  -0.0015,  -0.0011),
+    BIAS_ENTRY(476,  -0.0016,  -0.0012),
+    BIAS_ENTRY(478,  -0.0016,  -0.0012),
+    BIAS_ENTRY(480,  -0.0015,  -0.0011),
+    BIAS_ENTRY(482,  -0.0015,  -0.0010),
+    BIAS_ENTRY(484,  -0.0015,  -0.0010),
+    BIAS_ENTRY(486,  -0.0015,  -0.0011),
+    BIAS_ENTRY(488,  -0.0016,  -0.0011),
+    BIAS_ENTRY(490,  -0.0015,  -0.0015),
+    BIAS_ENTRY(492,  -0.0015,  -0.0010),
+    BIAS_ENTRY(494,  -0.0014,  -0.0010),
+    BIAS_ENTRY(496,  -0.0015,  -0.0010),
+    BIAS_ENTRY(498,  -0.0015,  -0.0011),
+    BIAS_ENTRY(500,  -0.0015,  -0.0011),
+    BIAS_ENTRY(502,  -0.0014,  -0.0010),
+    BIAS_ENTRY(504,  -0.0014,  -0.0011),
+    BIAS_ENTRY(506,  -0.0014,  -0.0010),
+    BIAS_ENTRY(508,  -0.0014,  -0.0010),
+    BIAS_ENTRY(510,  -0.0015,  -0.0010),
+    BIAS_ENTRY(512,  -0.0015,  -0.0010),
+    BIAS_ENTRY(514,  -0.0014,  -0.0010),
+    BIAS_ENTRY(516,  -0.0014,  -0.0009),
+    BIAS_ENTRY(518,  -0.0013,  -0.0009),
+    BIAS_ENTRY(520,  -0.0014,  -0.0010),
+    BIAS_ENTRY(522,  -0.0014,  -0.0010),
+    BIAS_ENTRY(524,  -0.0014,  -0.0010),
+    BIAS_ENTRY(526,  -0.0014,  -0.0009),
+    BIAS_ENTRY(528,  -0.0013,  -0.0009),
+    BIAS_ENTRY(530,  -0.0013,  -0.0008),
+    BIAS_ENTRY(532,  -0.0014,  -0.0009),
+    BIAS_ENTRY(534,  -0.0014,  -0.0009),
+    BIAS_ENTRY(536,  -0.0014,  -0.0010),
+    BIAS_ENTRY(538,  -0.0014,  -0.0009),
+    BIAS_ENTRY(540,  -0.0013,  -0.0009),
+    BIAS_ENTRY(542,  -0.0013,  -0.0008),
+    BIAS_ENTRY(544,  -0.0013,  -0.0008),
+    BIAS_ENTRY(546,  -0.0014,  -0.0009),
+    BIAS_ENTRY(548,  -0.0014,  -0.0010),
+    BIAS_ENTRY(550,  -0.0014,  -0.0009),
+    BIAS_ENTRY(552,  -0.0013,  -0.0009),
+    BIAS_ENTRY(554,  -0.0012,  -0.0008),
+    BIAS_ENTRY(556,  -0.0012,  -0.0008),
+    BIAS_ENTRY(558,  -0.0012,  -0.0009),
+    BIAS_ENTRY(560,  -0.0013,  -0.0009),
+    BIAS_ENTRY(562,  -0.0014,  -0.0009),
+    BIAS_ENTRY(564,  -0.0013,  -0.0009),
+    BIAS_ENTRY(566,  -0.0013,  -0.0008),
+    BIAS_ENTRY(568,  -0.0012,  -0.0007),
+    BIAS_ENTRY(570,  -0.0012,  -0.0007),
+    BIAS_ENTRY(572,  -0.0012,  -0.0007),
+    BIAS_ENTRY(574,  -0.0013,  -0.0008),
+    BIAS_ENTRY(576,  -0.0013,  -0.0009),
+    BIAS_ENTRY(578,  -0.0013,  -0.0008),
+    BIAS_ENTRY(580,  -0.0013,  -0.0008),
+    BIAS_ENTRY(582,  -0.0012,  -0.0007),
+    BIAS_ENTRY(584,  -0.0011,  -0.0006),
+    BIAS_ENTRY(586,  -0.0011,  -0.0006),
+    BIAS_ENTRY(588,  -0.0012,  -0.0009),
+    BIAS_ENTRY(590,  -0.0013,  -0.0008),
+    BIAS_ENTRY(592,  -0.0013,  -0.0008),
+    BIAS_ENTRY(594,  -0.0013,  -0.0008),
+    BIAS_ENTRY(596,  -0.0012,  -0.0007),
+    BIAS_ENTRY(598,  -0.0011,  -0.0007),
+    BIAS_ENTRY(600,  -0.0011,  -0.0007),
+    BIAS_ENTRY(602,  -0.0011,  -0.0006),
+    BIAS_ENTRY(604,  -0.0012,  -0.0007),
+    BIAS_ENTRY(606,  -0.0013,  -0.0007),
+    BIAS_ENTRY(608,  -0.0013,  -0.0008),
+    BIAS_ENTRY(610,  -0.0013,  -0.0008),
+    BIAS_ENTRY(612,  -0.0012,  -0.0007),
+    BIAS_ENTRY(614,  -0.0011,  -0.0006),
+    BIAS_ENTRY(616,  -0.0011,  -0.0006),
+    BIAS_ENTRY(618,  -0.0011,  -0.0006),
+    BIAS_ENTRY(620,  -0.0011,  -0.0006),
+    BIAS_ENTRY(622,  -0.0012,  -0.0007),
+    BIAS_ENTRY(624,  -0.0013,  -0.0008),
+    BIAS_ENTRY(626,  -0.0013,  -0.0008),
+    BIAS_ENTRY(628,  -0.0011,  -0.0009),
+    BIAS_ENTRY(630,  -0.0011,  -0.0011),
+    BIAS_ENTRY(632,  -0.0010,  -0.0007),
+    BIAS_ENTRY(634,  -0.0011,  -0.0005),
+    BIAS_ENTRY(636,  -0.0010,  -0.0005),
+    BIAS_ENTRY(638,  -0.0010,  -0.0005),
+    BIAS_ENTRY(640,  -0.0012,  -0.0007),
+    BIAS_ENTRY(642,  -0.0012,  -0.0007),
+    BIAS_ENTRY(644,  -0.0013,  -0.0007),
+    BIAS_ENTRY(646,  -0.0012,  -0.0007),
+    BIAS_ENTRY(648,  -0.0012,  -0.0006),
+    BIAS_ENTRY(650,  -0.0011,  -0.0005),
+    BIAS_ENTRY(652,  -0.0010,  -0.0005),
+    BIAS_ENTRY(654,  -0.0010,  -0.0004),
+    BIAS_ENTRY(656,  -0.0009,  -0.0004),
+    BIAS_ENTRY(658,  -0.0010,  -0.0005),
+    BIAS_ENTRY(660,  -0.0012,  -0.0006),
+    BIAS_ENTRY(662,  -0.0013,  -0.0008),
+    BIAS_ENTRY(664,  -0.0013,  -0.0007),
+    BIAS_ENTRY(666,  -0.0012,  -0.0006),
+    BIAS_ENTRY(668,  -0.0011,  -0.0005),
+    BIAS_ENTRY(670,  -0.0010,  -0.0005),
+    BIAS_ENTRY(672,  -0.0010,  -0.0004),
+    BIAS_ENTRY(674,  -0.0009,  -0.0004),
+    BIAS_ENTRY(676,  -0.0009,  -0.0004),
+    BIAS_ENTRY(678,  -0.0010,  -0.0004),
+    BIAS_ENTRY(680,  -0.0012,  -0.0006),
+    BIAS_ENTRY(682,  -0.0012,  -0.0007),
+    BIAS_ENTRY(684,  -0.0012,  -0.0006),
+    BIAS_ENTRY(686,  -0.0012,  -0.0006),
+    BIAS_ENTRY(688,  -0.0011,  -0.0005),
+    BIAS_ENTRY(690,  -0.0011,  -0.0005),
+    BIAS_ENTRY(692,  -0.0010,  -0.0004),
+    BIAS_ENTRY(694,  -0.0009,  -0.0003),
+    BIAS_ENTRY(696,  -0.0009,  -0.0003),
+    BIAS_ENTRY(698,  -0.0009,  -0.0003),
+    BIAS_ENTRY(700,  -0.0010,  -0.0007),
+    BIAS_ENTRY(702,  -0.0010,  -0.0007),
+    BIAS_ENTRY(704,  -0.0012,  -0.0007),
+    BIAS_ENTRY(706,  -0.0012,  -0.0006),
+    BIAS_ENTRY(708,  -0.0012,  -0.0006),
+    BIAS_ENTRY(710,  -0.0011,  -0.0005),
+    BIAS_ENTRY(712,  -0.0010,  -0.0004),
+    BIAS_ENTRY(714,  -0.0010,  -0.0004),
+    BIAS_ENTRY(716,  -0.0008,  -0.0003),
+    BIAS_ENTRY(718,  -0.0008,  -0.0002),
+    BIAS_ENTRY(720,  -0.0008,  -0.0002),
+    BIAS_ENTRY(722,  -0.0009,  -0.0003),
+    BIAS_ENTRY(724,  -0.0011,  -0.0004),
+    BIAS_ENTRY(726,  -0.0011,  -0.0005),
+    BIAS_ENTRY(728,  -0.0012,  -0.0006),
+    BIAS_ENTRY(730,  -0.0012,  -0.0006),
+    BIAS_ENTRY(732,  -0.0011,  -0.0006),
+    BIAS_ENTRY(734,  -0.0011,  -0.0005),
+    BIAS_ENTRY(736,  -0.0010,  -0.0004),
+    BIAS_ENTRY(738,  -0.0009,  -0.0003),
+    BIAS_ENTRY(740,  -0.0008,  -0.0003),
+    BIAS_ENTRY(742,  -0.0008,  -0.0002),
+    BIAS_ENTRY(744,  -0.0008,  -0.0002),
+    BIAS_ENTRY(746,  -0.0009,  -0.0002),
+    BIAS_ENTRY(748,  -0.0009,  -0.0003),
+    BIAS_ENTRY(750,  -0.0011,  -0.0006),
+    BIAS_ENTRY(752,  -0.0012,  -0.0006),
+    BIAS_ENTRY(754,  -0.0012,  -0.0005),
+    BIAS_ENTRY(756,  -0.0011,  -0.0006),
+    BIAS_ENTRY(758,  -0.0011,  -0.0005),
+    BIAS_ENTRY(760,  -0.0010,  -0.0004),
+    BIAS_ENTRY(762,  -0.0009,  -0.0003),
+    BIAS_ENTRY(764,  -0.0008,  -0.0002),
+    BIAS_ENTRY(766,  -0.0007,  -0.0002),
+    BIAS_ENTRY(768,  -0.0007,  -0.0001),
+    BIAS_ENTRY(770,  -0.0006,  -0.0002),
+    BIAS_ENTRY(772,  -0.0008,  -0.0002),
+    BIAS_ENTRY(774,  -0.0009,  -0.0003),
+    BIAS_ENTRY(776,  -0.0011,  -0.0005),
+    BIAS_ENTRY(778,  -0.0011,  -0.0005),
+    BIAS_ENTRY(780,  -0.0012,  -0.0006),
+    BIAS_ENTRY(782,  -0.0012,  -0.0005),
+    BIAS_ENTRY(784,  -0.0011,  -0.0005),
+    BIAS_ENTRY(786,  -0.0010,  -0.0004),
+    BIAS_ENTRY(788,  -0.0009,  -0.0003),
+    BIAS_ENTRY(790,  -0.0007,  -0.0004),
+    BIAS_ENTRY(792,  -0.0007,  -0.0001),
+    BIAS_ENTRY(794,  -0.0007,  -0.0001),
+    BIAS_ENTRY(796,  -0.0006,   0.0000),
+    BIAS_ENTRY(798,  -0.0006,  -0.0000),
+    BIAS_ENTRY(800,  -0.0007,  -0.0001),
+    BIAS_ENTRY(802,  -0.0009,  -0.0002),
+    BIAS_ENTRY(804,  -0.0010,  -0.0004),
+    BIAS_ENTRY(806,  -0.0010,  -0.0007),
+    BIAS_ENTRY(808,  -0.0012,  -0.0005),
+    BIAS_ENTRY(810,  -0.0011,  -0.0005),
+    BIAS_ENTRY(812,  -0.0011,  -0.0005),
+    BIAS_ENTRY(814,  -0.0010,  -0.0004),
+    BIAS_ENTRY(816,  -0.0010,  -0.0003),
+    BIAS_ENTRY(818,  -0.0009,  -0.0003),
+    BIAS_ENTRY(820,  -0.0008,  -0.0002),
+    BIAS_ENTRY(822,  -0.0006,  -0.0001),
+    BIAS_ENTRY(824,  -0.0006,  -0.0000),
+    BIAS_ENTRY(826,  -0.0005,   0.0000),
+    BIAS_ENTRY(828,  -0.0006,   0.0000),
+    BIAS_ENTRY(830,  -0.0007,  -0.0001),
+    BIAS_ENTRY(832,  -0.0008,  -0.0002),
+    BIAS_ENTRY(834,  -0.0010,  -0.0004),
+    BIAS_ENTRY(836,  -0.0011,  -0.0005),
+    BIAS_ENTRY(838,  -0.0012,  -0.0005),
+    BIAS_ENTRY(840,  -0.0011,  -0.0007),
+    BIAS_ENTRY(842,  -0.0011,  -0.0004),
+    BIAS_ENTRY(844,  -0.0011,  -0.0004),
+    BIAS_ENTRY(846,  -0.0009,  -0.0003),
+    BIAS_ENTRY(848,  -0.0009,  -0.0002),
+    BIAS_ENTRY(850,  -0.0008,  -0.0001),
+    BIAS_ENTRY(852,  -0.0007,  -0.0000),
+    BIAS_ENTRY(854,  -0.0006,   0.0000),
+    BIAS_ENTRY(856,  -0.0005,   0.0002),
+    BIAS_ENTRY(858,  -0.0005,   0.0001),
+    BIAS_ENTRY(860,  -0.0005,   0.0001),
+    BIAS_ENTRY(862,  -0.0006,   0.0001),
+    BIAS_ENTRY(864,  -0.0007,  -0.0001),
+    BIAS_ENTRY(866,  -0.0009,  -0.0003),
+    BIAS_ENTRY(868,  -0.0011,  -0.0004),
+    BIAS_ENTRY(870,  -0.0012,  -0.0005),
+    BIAS_ENTRY(872,  -0.0012,  -0.0005),
+    BIAS_ENTRY(874,  -0.0012,  -0.0005),
+    BIAS_ENTRY(876,  -0.0011,  -0.0005),
+    BIAS_ENTRY(878,  -0.0011,  -0.0004),
+    BIAS_ENTRY(880,  -0.0010,  -0.0003),
+    BIAS_ENTRY(882,  -0.0008,  -0.0008),
+    BIAS_ENTRY(884,  -0.0007,  -0.0001),
+    BIAS_ENTRY(886,  -0.0007,   0.0000),
+    BIAS_ENTRY(888,  -0.0005,   0.0001),
+    BIAS_ENTRY(890,  -0.0005,   0.0002),
+    BIAS_ENTRY(892,  -0.0004,   0.0002),
+    BIAS_ENTRY(894,  -0.0005,   0.0002),
+    BIAS_ENTRY(896,  -0.0005,   0.0002),
+    BIAS_ENTRY(898,  -0.0006,   0.0001),
+    BIAS_ENTRY(900,  -0.0007,  -0.0004),
+    BIAS_ENTRY(902,  -0.0010,  -0.0003),
+    BIAS_ENTRY(904,  -0.0011,  -0.0004),
+    BIAS_ENTRY(906,  -0.0012,  -0.0005),
+    BIAS_ENTRY(908,  -0.0012,  -0.0006),
+    BIAS_ENTRY(910,  -0.0010,  -0.0005),
+    BIAS_ENTRY(912,  -0.0011,  -0.0004),
+    BIAS_ENTRY(914,  -0.0010,  -0.0003),
+    BIAS_ENTRY(916,  -0.0010,  -0.0003),
+    BIAS_ENTRY(918,  -0.0009,  -0.0002),
+    BIAS_ENTRY(920,  -0.0008,  -0.0001),
+    BIAS_ENTRY(922,  -0.0007,   0.0000),
+};
+
+static constexpr double BIAS_TABLE_MIN = 40;
+static constexpr double BIAS_TABLE_MAX = 922;
+
+//Max error:1204.8104 cents (42.0000 Hz)
+//Min error: -1.4490 cents (62.0000 Hz)
+
+static inline double debias(double frequency,float*biasTable)
+{
+
+    if (frequency <= BIAS_TABLE_MIN) frequency  = BIAS_TABLE_MIN;
+    if (frequency >= BIAS_TABLE_MAX-0.01) frequency =  BIAS_TABLE_MAX-0.01;
+    double x = (frequency-BIAS_TABLE_MIN)*0.5;
+    size_t ix = (size_t)std::floor(x);
+    double blend = x-ix;
+    double v0 = biasTable[ix];
+    double v1 = biasTable[ix+1];
+
+    double scale = blend*v1+ (1-blend)*v0;
+    return frequency*scale;
+}
+
+
 
 PitchDetector::PitchDetector()
 {
+    binPeaks.reserve(MAX_BIN_PEAK);
 }
 
-PitchDetector::PitchDetector(int sampleRate, int fftSize)
+PitchDetector::PitchDetector(int sampleRate, int bufferSize)
+: PitchDetector()
 {
-    Initialize(sampleRate, fftSize);
+    Initialize(sampleRate, bufferSize);
 }
-void PitchDetector::Initialize(int sampleRate, int fftSize)
+void PitchDetector::Initialize(int sampleRate, int bufferSize)
 {
+    if (sampleRate > 48000/2) {
+        throw std::runtime_error("Must be downsampled to a sample rate of either 24000 or 22050");
+    }
+    this->biasTable = sampleRate == 48000/2 ? fs24000_bias_table : fs22050_bias_table;
     this->sampleRate = sampleRate;
-    this->cepstrumFftSize = fftSize;
-    this->fftPlan.SetSize(fftSize);
+    this->bufferSize = bufferSize;
+    this->autoCorrelationFftSize = bufferSize*2; // extra for zero-padding.
+    this->fftPlan.SetSize(autoCorrelationFftSize);
 
-#if LS_ENABLE_AUTO_CORRELATION_CODE
-    this->crossCorrelationSize = this->cepstrumFftSize;
-    this->crossCorrelationSamples = crossCorrelationSize / 2;
-    this->crossCorrelationFft.SetSize(crossCorrelationSize);
-#endif
-
-    this->window = Window::Hann<double>(fftSize); // Grandke interpolation REQUIRES a Hann window.
+    //this->window = Window::Hann<double>(bufferSize); // Grandke interpolation REQUIRES a Hann window.
+    this->window = Window::Rect<double>(bufferSize);
 
     allocateBuffers();
     // f = this->sampleRate/(cepstrumIndex)
     this->minimumCepstrumBin = (int)(sampleRate / MAXIMUM_DETECTABLE_FREQUENCY/2);
-    this->maximumCepstrumBin = (int)(sampleRate / MINIMUM_DETECTABLE_FREQUENCY)*3/2;
-
-    // have to start scanning a bit earlier in order to detect  initial cepstrum minimum.
-    this->minimumCepstrumBin = this->minimumCepstrumBin/3*2;
+    this->maximumCepstrumBin = (int)(sampleRate / MINIMUM_DETECTABLE_FREQUENCY);
 
     // frequencyAdustmentFactor = calculateFrequencyAdjustmentFactor();
 }
 
 PitchDetector::PitchDetector(int sampleRate)
+: PitchDetector()
 {
+
     Initialize(sampleRate);
 }
 
 void PitchDetector::Initialize(int sampleRate)
 {
-    // based on analytical results by Julius O. Smith. 
-    // Adjusted empirically using test data including signal noise.
-    Initialize(sampleRate, LsNumerics::NextPowerOfTwo(
-                               2*std::max(
-                                   (double)sampleRate / MINIMUM_DETECTABLE_FREQUENCY * WINDOW_PERIODS_REQUIRED,
-                                   MAXIMUM_DETECTABLE_FREQUENCY * 2)
+    Initialize(sampleRate,4096);
+    // // based on analytical results by Julius O. Smith. 
+    // // Adjusted empirically using test data including signal noise.
+    // Initialize(sampleRate, LsNumerics::NextPowerOfTwo(
+    //                            2*std::max(
+    //                                (double)sampleRate / MINIMUM_DETECTABLE_FREQUENCY * WINDOW_PERIODS_REQUIRED,
+    //                                MAXIMUM_DETECTABLE_FREQUENCY * 2)
 
-                                   ));
+    //                                ));
 }
 
 void PitchDetector::allocateBuffers()
 {
-#if LS_ENABLE_AUTO_CORRELATION_CODE
-    size_t scratchSize = std::max(cepstrumFftSize, crossCorrelationSize);
-#else
-    size_t scratchSize = cepstrumFftSize;
-#endif
-    this->conversionBuffer.resize(scratchSize);
-    this->scratchBuffer.resize(scratchSize);
-    this->fftBuffer.resize(scratchSize);
-    this->cepstrumBuffer.resize(scratchSize);
-    this->cepstrum.resize(cepstrumFftSize / 2);
+    this->inputBuffer.resize(autoCorrelationFftSize);
+    this->fftBuffer.resize(autoCorrelationFftSize);
+    this->cepstrumBuffer.resize(autoCorrelationFftSize);
+    this->cepstrum.resize(bufferSize);
 
-#if LS_ENABLE_AUTO_CORRELATION_CODE
-    this->autoCorrelation.resize(crossCorrelationSize);
-    speciallyNormalizedAutoCorrelation.resize(crossCorrelationSize / 2);
-#endif
 }
 
 inline bool PitchDetector::findQuadraticMaximum(int binNumber, double p0, double p1, double p2, QuadResult &result)
@@ -163,88 +1091,78 @@ bool PitchDetector::findQuadraticMaximumNoLog(int binNumber, std::vector<double>
     return findQuadraticMaximum(binNumber, p0, p1, p2, result);
 }
 
-inline size_t PitchDetector::findCepstrumBin(std::vector<double> &cepstrum)
-{
-    double bestX = -1;
-    double bestValue = -std::numeric_limits<double>::max();
-    bool peaked = false;
+// one octave lowers, +/- 5 cents.
+static double SUB_OCTAVE_MIN_RATIO = std::pow(2,-1-(0.05)/12);
+static double SUB_OCTAVE_MAX_RATIO = std::pow(2,-1+(0.05)/12);
 
-    bool firstPeak = true;
-    for (int i = this->minimumCepstrumBin; i < this->maximumCepstrumBin; ++i)
+inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
+{
+
+    binPeaks.resize(0);
+
+
+    size_t ix = maximumCepstrumBin;
+
+    double bestValue = -1E8;
+    size_t bestBin = -1;
+    double bestFrequency = 0;
+
+
+
+    while (ix > minimumCepstrumBin)
     {
-        double currentValue = cepstrum[i];
-        if (firstPeak)
+        while (ix > minimumCepstrumBin &&  cepstrum[ix-1] < cepstrum[ix])
         {
-            // do NOT pick up noise spikes on very broad first peak in the 
-            // cepstrum.
-            if (currentValue > 0.4) 
-                continue; // ignore.
-            firstPeak = false; // start processing.
-        } else {
-            if (currentValue > cepstrum[i - 1] && currentValue > cepstrum[i + 1])
+            --ix;
+        }
+        while (ix > minimumCepstrumBin && cepstrum[ix-1] > cepstrum[ix])
+        {
+            --ix;
+        }
+        if (ix > minimumCepstrumBin)
+        {
+            QuadResult quadResult;
+            if (this->findQuadraticMaximum((int)ix,this->cepstrum,quadResult))
             {
-                if (currentValue > bestValue)
+                double frequency = debias(this->sampleRate/quadResult.x,this->biasTable);
+                if (binPeaks.size() != MAX_BIN_PEAK)
                 {
-                    peaked = true;
-                    bestValue = currentValue;
-                    bestX = i;
+                    binPeaks.push_back({ix,frequency,quadResult.y});
+                }
+                if (quadResult.y > bestValue)
+                {
+                    bestValue = quadResult.y;
+                    bestBin = ix;
+                    bestFrequency = frequency;
                 }
             }
-            if (peaked && currentValue < bestValue * 0.5)
+        }
+    }
+
+    if (bestValue > -1E8)
+    {
+        // look for a sub-octave root harmonic.
+        for (const auto&peak: binPeaks)
+        {
+            double ratio = peak.frequency/bestFrequency;
+            if (ratio >= SUB_OCTAVE_MAX_RATIO) // 0.5 + N cents.
             {
-                // while in the same run of high values, anything better is better.
-                // But we are well past the peak, so the next peak must be MUCH better than this one.
-                // The alternative is to do cubic evaluation to avoid quantization noise around the each
-                // candidate peak.
-                bestValue *= 2;
-                peaked = false;
+                break;
+            }
+            if (ratio >= SUB_OCTAVE_MIN_RATIO) // // 0.5 - N cents.
+            {
+                if (peak.value >= bestValue*0.98)
+                {
+                    bestFrequency = peak.frequency;
+                    break;
+                }
             }
         }
+
+        (void)bestBin;
+        return bestFrequency;
     }
-    if (bestX == -1)
-    {
-        return 0;
-    }
-
-
-#if 0
-    // debug: dump fft/cepstrum buffer for external analysis.
-    {
-        std::filesystem::path fname =
-            std::filesystem::path(getenv("HOME")) / "testOutput";
-        std::filesystem::create_directories(fname);
-        fname /= "cepstrum.csv";
-
-        std::ofstream f(fname);
-
-        for (size_t i = 1; i < cepstrumBuffer.size()/2-1; ++i)
-        {
-            auto v = std::abs(cepstrumBuffer[i]);
-            f << sampleRate/(double)i/2 << "," << v << std::endl;
-        }
-    }
-#endif
-
-
-#if 0
-    // debug: dump fft/cepstrum buffer for external analysis.
-    {
-        std::filesystem::path fname =
-            std::filesystem::path(getenv("HOME")) / "testOutput";
-        std::filesystem::create_directories(fname);
-        fname /= "fft.csv";
-
-        std::ofstream f(fname);
-
-        for (size_t i = 0; i < fftBuffer.size()/2-1; ++i)
-        {
-            auto v = std::abs(fftBuffer[i]);
-            f << i*(double)sampleRate/cepstrumFftSize << "," << v << std::endl;
-        }
-    }
-#endif
-
-    return bestX;
+    return  0;
 }
 
 double PitchDetector::getGrandkeEstimate(double frequency)
@@ -253,8 +1171,8 @@ double PitchDetector::getGrandkeEstimate(double frequency)
 }
 double PitchDetector::getGrandkeEstimate(double minFrequency, double maxFrequency)
 {
-    size_t minBin = (size_t)std::floor(minFrequency*cepstrumFftSize/sampleRate)-1;
-    size_t maxBin = (size_t)std::ceil(maxFrequency*cepstrumFftSize/sampleRate)+1;
+    size_t minBin = (size_t)std::floor(minFrequency*autoCorrelationFftSize/sampleRate)-1;
+    size_t maxBin = (size_t)std::ceil(maxFrequency*autoCorrelationFftSize/sampleRate)+1;
     if (minBin < 0) return 0;
 
     size_t bin = size_t(-1);
@@ -274,7 +1192,7 @@ double PitchDetector::getGrandkeEstimate(double minFrequency, double maxFrequenc
     double delta = (2 * alpha - 1) / (alpha + 1);
 
     double t = bin + 1 - delta;
-    return t * sampleRate / cepstrumFftSize;
+    return t * sampleRate / autoCorrelationFftSize;
 }
 
 
@@ -286,104 +1204,73 @@ double PitchDetector::ifPhase(size_t bin)
     return phase / Pi;
 }
 
-double PitchDetector::detectPitch(size_t sampleStride)
+inline std::complex<double> sq(std::complex<double> v)
 {
-    this->lastFftBuffer = fftBuffer;
-
-    double result = detectPitch();
-    if (sampleStride != 0)
-    {
-
-        size_t bin = size_t(result * cepstrumFftSize / sampleRate);
-
-        double phase0 = ifPhase(bin);
-        double phase1 = ifPhase(bin + 1);
-
-        double ifResult;
-        if (phase0 < 0)
-        {
-            ifResult = (bin + 1 + phase1) * sampleRate / cepstrumFftSize;
-        }
-        else
-        {
-            ifResult = (bin + phase0) * sampleRate / cepstrumFftSize;
-        }
-        return ifResult;
-    }
-    return result;
+    return v*v;
 }
 double PitchDetector::detectPitch()
 {
 
-    fftPlan.Forward(scratchBuffer, fftBuffer);
-
-    for (int i = 0; i < cepstrumFftSize; ++i)
+    size_t start = 0;
+    size_t end = this->bufferSize;
+    // trim start and end to +zero crossings.
     {
-        complex t = fftBuffer[i];
-
-        scratchBuffer[i] = std::abs(t);
+        while (start < bufferSize)
+        {
+            if (inputBuffer[start].real() <= 0 && inputBuffer[start+1].real() > 0)
+            {
+                break;
+            }
+            ++start;
+        }
+        while (end > start)
+        {
+            if (inputBuffer[end-1].real() <= 0 && inputBuffer[end].real() > 0) 
+            {
+                break;
+            }
+            --end;
+        }
+        // did we trim too much? Then don't trim.
+        if (end < start || this->bufferSize*0.8 > end-start)
+        {
+            start = 0;
+            end = this->bufferSize;
+        } else {
+            for (size_t i = 0; i < start; ++i)
+            {
+                inputBuffer[i] = 0;
+            }
+            for (size_t i = end; i < bufferSize; ++i)
+            {
+                inputBuffer[i] = 0;
+            }
+        }
     }
+    fftPlan.Forward(inputBuffer, fftBuffer);
 
-    fftPlan.Forward(scratchBuffer, cepstrumBuffer);
 
+    for (size_t i = 0; i < autoCorrelationFftSize; ++i)
+    {
+        std::complex<double> t = fftBuffer[i];
+        fftBuffer[i] = t * std::conj(t);
+    }
+    fftPlan.Backward(fftBuffer, cepstrumBuffer);
+
+    double frameSize = end-start;
     for (size_t i = 0; i < cepstrum.size(); ++i)
     {
         complex t = cepstrumBuffer[i];
-        cepstrum[i] = abs(t);
+        double v = sq(t).real();
+        double weight = frameSize/(double)(frameSize-i);
+        cepstrum[i] = v*weight;
     }
 
     // find the fundamental frequency, approximately, inferring fundamentals if neccessary.
-    int cepstrumBin = findCepstrumBin(cepstrum);
-
-    if (cepstrumBin <= 0) return 0;
-
-    // Cepstrum is succeptible to noise. 
-    // Determine the range of frequencies in the bin,
-    // and then calculate the frequency using the Grandke interpolation of the bin 
-    // with the maximum peak in the given range.
-    double maxFrequency = sampleRate/double(cepstrumBin-2)/2;
-    double minFrequency = sampleRate/double(cepstrumBin+2)/2;
-
-    // sharpen the estimate using Grandke interpolation.
-    return getGrandkeEstimate(minFrequency,maxFrequency);
+    double frequency = findCepstrumValue(cepstrum);
+    return frequency;
 }
 
-double PitchDetector::refineWithCrossCorrelation(std::vector<double> &crossCorrelation, double cepstrumFrequency)
-{
-    size_t crossCorrelationBin = (size_t)(sampleRate / cepstrumFrequency);
-    double p0, p1, p2;
-    while (true)
-    {
-        p0 = log(crossCorrelation[crossCorrelationBin - 1]);
-        p1 = log(crossCorrelation[crossCorrelationBin]);
-        p2 = log(crossCorrelation[crossCorrelationBin + 1]);
-        if (p0 > p1)
-        {
-            --crossCorrelationBin;
-            if (p2 > p1)
-            {
-                return false;
-            }
-        }
-        else if (p2 > p1)
-        {
-            ++crossCorrelationBin;
-        }
-        else
-        {
-            break;
-        }
-    }
-    QuadResult quadResult;
-    if (findQuadraticMaximum(crossCorrelationBin, p0, p1, p2, quadResult))
-    {
-        double correlationResult = this->sampleRate / quadResult.x;
-
-
-        return correlationResult;
-    }
-    return 0;
-}
 
 double PitchDetector::frequencyToBin(double frequency)
 {

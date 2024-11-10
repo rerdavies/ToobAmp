@@ -31,7 +31,7 @@
 toobml:modelFile
         a lv2:Parameter;
         rdfs:label "Model";
-	mod:fileTypes "nam,nammodel";
+	mod:fileTypes "json,mlmodels";
         rdfs:range atom:Path.
 
 toobml:filterGroup

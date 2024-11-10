@@ -367,7 +367,6 @@ void NeuralAmpModeler::PrepareModel(DSP *pDSP)
 
     std::vector<nam_float_t> inputBuffer(nFrames);
     pDSP->process(inputBuffer.data(), outputBuffer.data(), nFrames);
-    pDSP->finalize_(nFrames);
 }
 
 LV2_State_Status
@@ -713,7 +712,6 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         // TODO remove input / output gains from here.
         // normalize input.
         mNAM->process(toneStackOutput[0], this->mOutputPointers[0], nFrames);
-        mNAM->finalize_(nFrames);
     }
     else
     {
