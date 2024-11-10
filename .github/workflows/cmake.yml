@@ -52,7 +52,7 @@ jobs:
           name: artifact
           path: |
               build/*.deb
-              build/_CPack_Packages/Linux/DEB/
+              #build/_CPack_Packages/Linux/DEB/
           retention-days: 5
        
       
