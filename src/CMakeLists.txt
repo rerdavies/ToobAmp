@@ -305,7 +305,7 @@ add_custom_command(
     OUTPUT  ToobNeuralAmpModelerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-nam
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 
               --class NeuralAmpModelerInfo
     DEPENDS 
@@ -322,7 +322,7 @@ add_custom_command(
     OUTPUT  CabIRInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-cab-ir
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp 
               --class CabIRInfo
     DEPENDS 
@@ -338,7 +338,7 @@ add_custom_command(
     OUTPUT  ConvolutionReverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-convolution-reverb
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp 
               --class ConvolutionReverbInfo
     DEPENDS 
@@ -352,7 +352,7 @@ add_custom_command(
     OUTPUT  ConvolutionReverbStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-convolution-reverb-stereo
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp 
               --class ConvolutionReverbStereoInfo
     DEPENDS 
@@ -368,7 +368,7 @@ add_custom_command(
     OUTPUT  ToobTunerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-tuner
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp 
               --class ToobTunerInfo
     DEPENDS 
@@ -382,7 +382,7 @@ add_custom_command(
     OUTPUT  SpectrumAnalyzerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-spectrum
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp 
               --class SpectrumAnalyzerInfo
     DEPENDS 
@@ -396,7 +396,7 @@ add_custom_command(
     OUTPUT  ToobMLInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-ml
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp 
               --class ToobMLInfo
     DEPENDS 
@@ -411,7 +411,7 @@ add_custom_command(
     OUTPUT  ToobFreeverbInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-freeverb
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp 
               --class ToobFreeverbInfo
     DEPENDS 
@@ -428,7 +428,7 @@ add_custom_command(
     OUTPUT  ToneStackInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-tone-stack
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp 
               --class ToneStackPluginInfo
     DEPENDS 
@@ -441,7 +441,7 @@ add_custom_command(
     OUTPUT  Tf2FlangerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-flanger
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp 
               --class Tf2FlangerPluginInfo
     DEPENDS 
@@ -455,7 +455,7 @@ add_custom_command(
     OUTPUT  Tf2FlangerStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-flanger-stereo
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp 
               --class Tf2FlangerStereoPluginInfo
     DEPENDS 
@@ -473,7 +473,7 @@ add_custom_command(
     OUTPUT  CabSimInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-cab-sim
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp 
               --class CabSimPluginInfo
     DEPENDS 
@@ -487,7 +487,7 @@ add_custom_command(
     OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-delay
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp 
               --class ToobDelayPluginInfo
     DEPENDS 
@@ -501,7 +501,7 @@ add_custom_command(
     OUTPUT  ToobChorusInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-chorus
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp 
               --class ToobChorusPluginInfo
     DEPENDS 
@@ -515,7 +515,7 @@ add_custom_command(
     OUTPUT  InputStageInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
                http://two-play.com/plugins/toob-input_stage
-              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2
               --out ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
               --class InputStagePluginInfo
     DEPENDS 

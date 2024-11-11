@@ -194,9 +194,9 @@ Run the following commands to install prerequisites:
 
      sudo apt update
      sudo apt install -y build-essential
-     sudo apt install -ycmake
+     sudo apt install -y cmake ninja-build
      sudo apt install -y lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev
-     sudo apt install -y libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev
+     sudo apt install -y libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
      
 
 

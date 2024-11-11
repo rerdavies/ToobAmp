@@ -927,7 +927,6 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
     {
         hasWorkError = true;
         workError = e.what();
-        workError.c_str(); // allocate zero if neccessary.
     }
 }
 void ToobConvolutionReverb::LoadWorker::OnResponse()
