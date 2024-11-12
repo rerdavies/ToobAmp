@@ -523,7 +523,7 @@ add_custom_command(
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/InputStage.ttl    
         generate_lv2c_plugin_info
 )
-configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2l.ttl)
+configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl)
 
 
 
