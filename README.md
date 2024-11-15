@@ -193,17 +193,21 @@ Run the following shell commands:
 Run the following commands to install prerequisites:
 
      sudo apt update
-     sudo apt install -y build-essential
-     sudo apt install -y cmake ninja-build
-     sudo apt install -y lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev
-     sudo apt install -y libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
+     sudo apt install -y build-essential cmake ninja-build git
+     sudo apt install -y lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev \
+        -y libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
      
 
 
 Clone the repository to your local machine.
 
-In the project directory, run:
+    cd ~/src  # or wherever you keep your projects
+    git clone https://github.com/rerdavies/ToobAmp.git
+  
 
+Then, in the project directory, run:
+
+     cd ~/src/ToobAmp
      git submodule update --init --recursive
 
 If you are using Visual Studio Code, you will still need to perform the previous command after 
