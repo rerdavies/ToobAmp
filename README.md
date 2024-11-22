@@ -195,7 +195,7 @@ Run the following commands to install prerequisites:
      sudo apt update
      sudo apt install -y build-essential cmake ninja-build git
      sudo apt install -y lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev \
-        -y libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
+        libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
      
 
 
