@@ -40,13 +40,19 @@ namespace Iir {
 
 //------------------------------------------------------------------------------
 
+// GCC 13 x64 bug:   fast_math: compiler option assumes that 
+// values are not infinite so doesn't even bother comparing to see if it is.
+static bool is_infinity(complex_t c)
+{
+	return c.real() > std::numeric_limits<double>::max();
+}
 
 static const char cutoffError[] = "The cutoff frequency needs to be below the Nyquist frequency.";
 static const char cutoffNeg[] = "Cutoff frequency is negative.";
 
 complex_t LowPassTransform::transform (complex_t c)
 {
-  if (c == infinity())
+  if (is_infinity(c))
     return complex_t (-1, 0);
 
   // frequency transform
@@ -93,7 +99,7 @@ LowPassTransform::LowPassTransform (double fc,
 
 complex_t HighPassTransform::transform (complex_t c)
 {
-  if (c == infinity())
+  if (is_infinity(c))
     return complex_t (1, 0);
 
   // frequency transform
@@ -194,7 +200,7 @@ BandPassTransform::BandPassTransform (double fc,
 
 ComplexPair BandPassTransform::transform (complex_t c)
 {
-	if (c == infinity())
+	if (is_infinity(c))
 		return ComplexPair (-1, 1);
 	
 	c = (1. + c) / (1. - c); // bilinear
@@ -280,7 +286,7 @@ BandStopTransform::BandStopTransform (double fc,
 
 ComplexPair BandStopTransform::transform (complex_t c)
 {
-	if (c == infinity())
+	if (is_infinity(c))
 		c = -1;
 	else
 		c = (1. + c) / (1. - c); // bilinear
