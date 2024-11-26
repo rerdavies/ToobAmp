@@ -44,7 +44,7 @@ namespace Iir {
 // values are not infinite so doesn't even bother comparing to see if it is.
 static bool is_infinity(complex_t c)
 {
-	return c.real() > std::numeric_limits<double>::max();
+	return c.real() >= std::numeric_limits<double>::max();
 }
 
 static const char cutoffError[] = "The cutoff frequency needs to be below the Nyquist frequency.";
