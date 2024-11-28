@@ -16,11 +16,17 @@ execute_process(COMMAND
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)
 
+include("${PROJECT_SOURCE_DIR}/CMakeUtil/OsVersion.cmake")
 
 # Ubuuntu 21.04 boost static libraries don't have -fPIC, so linking fails.
-if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+if ("${OSV_LINUX_DISTRO} ${OSV_LINUX_VERSION} ${CMAKE_DEB_HOST_ARCH}"
+    STREQUAL "Ubuntu 21.04 arm64") 
+    message(STATUS "Disabling use of Boost static libraries on Ubuntu 21.04")
+    set(Boost_USE_STATIC_LIBS   OFF)
+else()
     set(Boost_USE_STATIC_LIBS   ON)
 endif()
+
 if(CMAKE_VERSION VERSION_GREATER 3.30)
    find_package(Boost CONFIG REQUIRED COMPONENTS iostreams ) # See CMake policy CMP0167
 else()
