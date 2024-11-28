@@ -21,7 +21,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     set(Boost_USE_STATIC_LIBS   ON)
 endif()
-find_package(Boost REQUIRED COMPONENTS iostreams )
+if(CMAKE_VERSION VERSION_GREATER 3.30)
+   find_package(Boost CONFIG REQUIRED COMPONENTS iostreams ) # See CMake policy CMP0167
+else()
+   find_package(Boost REQUIRED COMPONENTS iostreams )
+endif()
 
 set (CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
