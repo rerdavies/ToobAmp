@@ -326,7 +326,7 @@ toobNam:ui
         pipedal_ui:fileProperties 
         [
                 a pipedal_ui:fileProperty;
-                rdfs:label "Model (*.nam)" ;
+                rdfs:label "Model" ;
                 pipedal_ui:directory "NeuralAmpModels";
                 lv2:index 2 ;
                 pipedal_ui:patchProperty toobNam:modelFile ;

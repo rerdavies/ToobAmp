@@ -119,7 +119,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
+            this->LogError("%s\n", SS("Illegal port id: " << port).c_str());
             break;
         }
     }
@@ -173,7 +173,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
+            this->LogError("%s\n", SS("Illegal port id: " << port).c_str());
             break;
         }
     }
@@ -223,7 +223,7 @@ void ToobConvolutionReverb::ConnectPort(uint32_t port, void *data)
             this->controlOut = (LV2_Atom_Sequence *)data;
             break;
         default:
-            this->LogNote("%s\n", SS("Illegal port id: " << port).c_str());
+            this->LogError("%s\n", SS("Illegal port id: " << port).c_str());
         }
         break;
     default:
@@ -855,7 +855,7 @@ AudioData ToobConvolutionReverb::LoadWorker::LoadFile(const std::filesystem::pat
             data.ConvertToMono();
         }
     }
-    pThis->LogNote("%s\n", SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
+    pThis->LogTrace("%s\n", SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
     NormalizeConvolution(data);
     if (!predelay) // bbetter to do it on the pristine un-filtered data.
@@ -876,7 +876,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
 
     this->oldConvolutionReverb = nullptr; // destroy the old convolution reverb if it exists.
 
-    pThis->LogNote("%s\n", SS("Loading " << requestFileName).c_str());
+    pThis->LogTrace("%s\n", SS("Loading " << requestFileName).c_str());
     hasWorkError = false;
     workError = "";
     try
@@ -899,7 +899,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
             this->tailScale = GetTailScale(data.getChannel(0), maxSize);
             data.setSize(maxSize);
 
-            pThis->LogNote("%s\n", SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
+            pThis->LogTrace("%s\n", SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
         }
         if (data.getSize() == 0)
         {
@@ -921,7 +921,7 @@ void ToobConvolutionReverb::LoadWorker::OnWork()
                                                                                 audioBufferSize);
         }
         this->convolutionReverbResult->SetFeedback(tailScale, data.getSize() - 1);
-        pThis->LogNote("Load complete.\n");
+        pThis->LogTrace("Load complete.\n");
     }
     catch (const std::exception &e)
     {
@@ -1081,7 +1081,7 @@ void ToobConvolutionReverb::PublishResourceFiles(
     }
     if (status == LV2_FileBrowser_Status::LV2_FileBrowser_Status_Err_Filesystem)
     {
-        LogNote("%s: %s\n",
+        LogWarning("%s: %s\n",
                 IsConvolutionReverb() ? "TooB Convolution Reverb" : "Toob Cab IR",
                 "Failed to publish resource audio files.");
     }

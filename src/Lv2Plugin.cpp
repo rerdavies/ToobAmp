@@ -40,7 +40,7 @@ using namespace toob;
 
 static std::vector<Lv2PluginFactory> descriptorFactories;
 
-Lv2LogLevel Lv2Plugin::logLevel = Lv2LogLevel::Info;
+Lv2LogLevel Lv2Plugin::logLevel = Lv2LogLevel::Note;
 
 // Grant friend access to callback functions.
 
