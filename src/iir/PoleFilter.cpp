@@ -38,7 +38,7 @@
 
 namespace Iir {
 
-//------------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
 // GCC 13 x64 bug:   fast_math: compiler option assumes that 
 // values are not infinite so doesn't even bother comparing to see if it is.
