@@ -79,7 +79,7 @@ namespace toob {
 		RangedInputPort brightf = RangedInputPort(1000.0f, 8000.0f);
 		
 		RangedDbInputPort gateT = RangedDbInputPort(-80.0f, -20.0f);
-		RangedDbInputPort boost = RangedDbInputPort(0, 1.0f);
+		RangedInputPort boost = RangedInputPort(0, 1.0f);
 
 		static FilterCoefficients2 LOWPASS_PROTOTYPE;
 		AudioFilter2 highCutFilter = AudioFilter2(LOWPASS_PROTOTYPE,2000.0,13000.0f,13000.0f);
