@@ -1234,6 +1234,7 @@ void ToobConvolutionReverb::SetDefaultFile(const LV2_Feature *const *features)
     if (IsConvolutionReverb())
     {
         auto targetPath = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / "reverb" / "Genesis 6 Studio Live Room.wav";
+        targetPath = MapFilename(features,targetPath);
         this->loadWorker.SetFileName(targetPath.c_str());
     }
 }
