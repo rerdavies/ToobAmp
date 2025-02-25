@@ -57,8 +57,8 @@ extern "C" {
 
 typedef enum {
    LV2_FileBrowser_Status_Success = 0,
-   LV2_FileBrowser_Status_Err_Filesystem = 1,
    LV2_FileBrowser_Status_Err_InvalidParameter = 1,
+   LV2_FileBrowser_Status_Err_Filesystem = 2,
 } LV2_FileBrowser_Status;
 
 typedef void*

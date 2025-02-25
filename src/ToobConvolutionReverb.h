@@ -412,7 +412,7 @@ namespace toob
 		static const char *URI;
 
 		ToobConvolutionReverbStereo(double rate, const char *bundle_path, const LV2_Feature *const *features)
-			: ToobConvolutionReverbBase(PluginType::ConvolutionReverb, rate, bundle_path, features)
+			: ToobConvolutionReverbBase(PluginType::ConvolutionReverbStereo, rate, bundle_path, features)
 		{
 		}
 	};
