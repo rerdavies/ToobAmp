@@ -39,7 +39,7 @@
 #include "FilterResponse.h"
 #include <string>
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include "MidiProcessor.h"
 #include "InputPort.h"

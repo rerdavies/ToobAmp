@@ -37,7 +37,7 @@
 #include <string>
 #include "AudioData.hpp"
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include "MidiProcessor.h"
 #include "InputPort.h"
@@ -48,7 +48,7 @@
 namespace toob
 {
 
-	class ToobConvolutionReverb : public Lv2PluginWithState
+	class ToobConvolutionReverbBase : public Lv2PluginWithState
 	{
 	private:
 		enum class MonoReverbPortId
@@ -105,35 +105,29 @@ namespace toob
 			ConvolutionReverbStereo,
 			CabIr
 		};
-		static Lv2Plugin *CreateMonoConvolutionReverb(double rate,
-													  const char *bundle_path,
-													  const LV2_Feature *const *features)
-		{
-			return new ToobConvolutionReverb(PluginType::ConvolutionReverb, rate, bundle_path, features);
-		}
 		static Lv2Plugin *CreateStereoConvolutionReverb(double rate,
 														const char *bundle_path,
 														const LV2_Feature *const *features)
 		{
-			return new ToobConvolutionReverb(PluginType::ConvolutionReverbStereo, rate, bundle_path, features);
+			return new ToobConvolutionReverbBase(PluginType::ConvolutionReverbStereo, rate, bundle_path, features);
 		}
 
 		static Lv2Plugin *CreateCabIR(double rate,
 									  const char *bundle_path,
 									  const LV2_Feature *const *features)
 		{
-			return new ToobConvolutionReverb(PluginType::CabIr, rate, bundle_path, features);
+			return new ToobConvolutionReverbBase(PluginType::CabIr, rate, bundle_path, features);
 		}
-		ToobConvolutionReverb(
+		ToobConvolutionReverbBase(
 			PluginType pluginType,
 			double rate,
 			const char *bundle_path,
 			const LV2_Feature *const *features);
-		~ToobConvolutionReverb()
+		~ToobConvolutionReverbBase()
 		{
 		}
 
-	public:
+	protected:
 		static const char *CONVOLUTION_REVERB_URI;
 		static const char *CONVOLUTION_REVERB_STEREO_URI;
 		static const char *CAB_IR_URI;
@@ -191,13 +185,13 @@ namespace toob
 				CleaningUp = 5,
 
 			};
-			ToobConvolutionReverb *pThis;
+			ToobConvolutionReverbBase *pThis;
 
 		public:
 			using base = WorkerActionWithCleanup;
 
 			LoadWorker(Lv2Plugin *pPlugin);
-			void Initialize(size_t sampleRate, ToobConvolutionReverb *pReverb);
+			void Initialize(size_t sampleRate, ToobConvolutionReverbBase *pReverb);
 			bool SetWidth(float width);
 			bool SetPan(float pan);
 			bool SetTime(float timeInSeconds);
@@ -251,7 +245,7 @@ namespace toob
 			std::string workError;
 			double rate = 44100;
 
-			ToobConvolutionReverb *pReverb = nullptr;
+			ToobConvolutionReverbBase *pReverb = nullptr;
 			bool changed = false;
 			static constexpr size_t MAX_FILENAME = 1024;
 			size_t sampleRate = 48000;
@@ -388,6 +382,55 @@ namespace toob
 		bool notifyCabIrFileName = false;
 		bool notifyCabIrFileName2 = false;
 		bool notifyCabIrFileName3 = false;
+	};
+
+	class ToobConvolutionReverbMono : public ToobConvolutionReverbBase
+	{
+	public:
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
+		{
+			return new ToobConvolutionReverbMono(rate, bundle_path, features);
+		}
+		static const char *URI;
+
+		ToobConvolutionReverbMono(double rate, const char *bundle_path, const LV2_Feature *const *features)
+			: ToobConvolutionReverbBase(PluginType::ConvolutionReverb, rate, bundle_path, features)
+		{
+		}
+	};
+	class ToobConvolutionReverbStereo : public ToobConvolutionReverbBase
+	{
+	public:
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
+		{
+			return new ToobConvolutionReverbStereo(rate, bundle_path, features);
+		}
+		static const char *URI;
+
+		ToobConvolutionReverbStereo(double rate, const char *bundle_path, const LV2_Feature *const *features)
+			: ToobConvolutionReverbBase(PluginType::ConvolutionReverb, rate, bundle_path, features)
+		{
+		}
+	};
+	class ToobConvolutionCabIr : public ToobConvolutionReverbBase
+	{
+	public:
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
+		{
+			return new ToobConvolutionCabIr(rate, bundle_path, features);
+		}
+		static const char *URI;
+
+		ToobConvolutionCabIr(double rate, const char *bundle_path, const LV2_Feature *const *features)
+			: ToobConvolutionReverbBase(PluginType::CabIr, rate, bundle_path, features)
+		{
+		}
 	};
 
 } // namespace toob

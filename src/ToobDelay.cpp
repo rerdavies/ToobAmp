@@ -31,7 +31,7 @@ ToobDelay::ToobDelay(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2Plugin(bundle_path,features),
+    : Lv2Plugin(rate,bundle_path,features),
       rate(rate),
       bundle_path(bundle_path)
 

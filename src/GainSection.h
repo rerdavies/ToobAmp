@@ -40,13 +40,15 @@
 #include "FilterResponse.h"
 #include <string>
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include <cmath>
 
 #define RESPONSE_CURVE_URI "http://two-play.com/ToobAmp/ResponseCurve"
 #define RESPONSE_CURVE__instanceId_URI RESPONSE_CURVE_URI "#instanceId"
 #define RESPONSE_CURVE__data_URI RESPONSE_CURVE_URI "#data"
+
+using namespace lv2c::lv2_plugin;
 
 namespace toob 
 {

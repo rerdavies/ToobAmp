@@ -43,7 +43,7 @@ SOFTWARE.
 
 #pragma GCC diagnostic pop
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 #include <atomic>
 #include "InputPort.h"
 #include "OutputPort.h"

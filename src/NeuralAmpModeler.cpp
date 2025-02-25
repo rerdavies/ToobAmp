@@ -37,6 +37,7 @@ SOFTWARE.
 #if __INTELLISENSE__
 #undef __ARM_NEON
 #undef __ARM_NEON__
+#undef __AVX__
 #endif
 
 #include <Eigen/Core>
@@ -180,7 +181,7 @@ NeuralAmpModeler::NeuralAmpModeler(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2PluginWithState(bundle_path, features),
+    : Lv2PluginWithState(rate,bundle_path, features),
       rate(rate),
       mInputPointers(nullptr),
       mOutputPointers(nullptr),

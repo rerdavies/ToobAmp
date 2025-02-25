@@ -21,7 +21,10 @@
  *   SOFTWARE.
  */
 
-#include "Lv2Plugin.h"
+ #ifdef JUNK
+
+ // migrating to Lv2cairo implementation....
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include "lv2/atom/atom.h"
 #include "lv2/options/options.h"
@@ -635,3 +638,4 @@ void Lv2Plugin::InitBufSizeOptions()
         }
     }
 }
+#endif

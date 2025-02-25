@@ -71,6 +71,11 @@
      lv2:binary <ToobAmp.so> ;
      rdfs:seeAlso <ToobFlangerStereo.ttl> .
 
+<http://two-play.com/plugins/toob-record-mono> a lv2:Plugin ;
+     lv2:binary <ToobAmp.so> ;
+     rdfs:seeAlso <ToobRecordMono.ttl> .
+
+
 
 tpset:toob-flanger-preset-0
     a pset:Preset ;

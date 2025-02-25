@@ -251,7 +251,7 @@ ToobML::ToobML(double _rate,
 	const char* _bundle_path,
 	const LV2_Feature* const* features)
 	: 
-	Lv2PluginWithState(_bundle_path,features),
+	Lv2PluginWithState(_rate,_bundle_path,features),
 	loadWorker(this),
 	deleteWorker(this),
 	rate(_rate),

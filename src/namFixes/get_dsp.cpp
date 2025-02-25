@@ -1,6 +1,7 @@
 #if __INTELLISENSE__
 #undef __ARM_NEON
 #undef __ARM_NEON__
+#undef __AVX__
 #endif
 
 #pragma GCC diagnostic push
@@ -230,9 +231,9 @@ std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize)
           {
             result->SetLoudness(loudness);
           }
-
           // "pre-warm" the model to settle initial conditions
-          result->prewarm();
+          // YYY: Get actual sample rate.
+          result->ResetAndPrewarm(48000,maxBlockSize);
           return result;
 
         } catch (const std::exception&) {
@@ -254,7 +255,8 @@ std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize)
   }
 
   // "pre-warm" the model to settle initial conditions
-  out->prewarm();
+  // yyy: get actual sample rate.
+  out->ResetAndPrewarm(48000,maxBlockSize);
 
   return out;
 }

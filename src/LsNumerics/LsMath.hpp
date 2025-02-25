@@ -48,6 +48,8 @@ namespace LsNumerics {
 	const float MIN_DB = -200;
 	const float  MIN_DB_AMPLITUDE = 1e-10f;
 
+	#ifndef __Af2Db__h
+	#define __Af2Db__h
 	inline float Af2Db(float value)
 	{
 		if (value < MIN_DB_AMPLITUDE) return MIN_DB;
@@ -59,7 +61,8 @@ namespace LsNumerics {
 		if (value < MIN_DB) return 0;
 		return std::exp(value*(MathInternal::log10*0.05f));
 	}
-
+	#endif
+	
 	uint32_t NextPowerOfTwo(uint32_t value);
 
 	inline double Undenormalize(double value)

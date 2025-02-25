@@ -27,6 +27,12 @@
 #include <cmath>
 #include "LsNumerics/LsMath.hpp"
 
+
+#include <lv2_plugin/Lv2Ports.hpp>
+
+using namespace lv2c::lv2_plugin;
+
+#ifdef JUNK // use lv2cairo declarations.
 class OutputPort
 {
 private:
@@ -205,3 +211,5 @@ public:
 		}
 	}
 };
+
+#endif
