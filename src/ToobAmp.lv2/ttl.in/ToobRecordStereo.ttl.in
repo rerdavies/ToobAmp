@@ -24,10 +24,8 @@
 @prefix pprop: <http://lv2plug.in/ns/ext/port-props#>  .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 
-
 @prefix recordPrefix: <http://two-play.com/plugins/toob-record#> .
-
-@prefix myprefix: <http://two-play.com/plugins/toob-record-mono#> .
+@prefix myprefix: <http://two-play.com/plugins/toob-record-stereo#> .
 
 
 <http://two-play.com/rerdavies#me>
@@ -44,17 +42,27 @@ recordPrefix:audioFile
         lv2:index  6
         .
 
-<http://two-play.com/plugins/toob-record-mono>
+myprefix:audio_in a pg:Group ;
+   a pg:StereoGroup ;
+   lv2:symbol "in_g" .
+  
+myprefix:audio_out a pg:Group ;
+   a pg:StereoGroup ;
+   lv2:symbol "out_g" .
+  
+
+
+<http://two-play.com/plugins/toob-record-stereo>
         a lv2:Plugin ,
                 lv2:UtilityPlugin ;
-                doap:name "TooB Record Input (mono)" 
+                doap:name "TooB Record Input (stereo)" 
                 ;
         doap:license <https://opensource.org/license/mit/> ;
         doap:maintainer <http://two-play.com/rerdavies#me> ;
         lv2:minorVersion @PROJECT_VERSION_MINOR@ ;
         lv2:microVersion @PROJECT_VERSION_PATCH@ ;
 
-        ui:ui <http://two-play.com/plugins/toob-record-mono-ui>;
+        ui:ui <http://two-play.com/plugins/toob-record-stereo-ui>;
 
         patch:readable 
                 recordPrefix:audioFile;
@@ -219,14 +227,19 @@ Record the signal input to file.
                         lv2:InputPort ;
                 lv2:index 9 ;
                 lv2:symbol "in" ;
-                lv2:name "In"
+                lv2:name "In";
+                pg:inGroup myprefix:audio_in ;
+                pg:role pg:leftChannel 
+
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
                 lv2:index 10 ;
                 lv2:symbol "out" ;
-                lv2:name "Out"
+                lv2:name "Out";
+                pg:inGroup myprefix:audio_out ;
+                pg:role pg:leftChannel 
         ],  
 
         [
@@ -242,10 +255,30 @@ Record the signal input to file.
                 lv2:index 12 ;
                 lv2:symbol "controlOut" ;
                 lv2:name "ControlOut"
+        ],
+        [
+                a lv2:AudioPort ,
+                        lv2:InputPort ;
+                lv2:index 13 ;
+                lv2:symbol "inR" ;
+                lv2:name "InR" ;
+                pg:inGroup myprefix:audio_in ;
+                pg:role pg:rightChanel 
+        ],
+        [
+                a lv2:AudioPort ,
+                        lv2:OutputPort ;
+                lv2:index 14 ;
+                lv2:symbol "outR" ;
+                lv2:name "OutR" ;
+                pg:inGroup myprefix:audio_in ;
+                pg:role pg:leftChannel 
+                
         ]
         .
 
-<http://two-play.com/plugins/toob-record-mono-ui> 
+
+<http://two-play.com/plugins/toob-record-stereo-ui> 
     a  ui:X11UI ;
     lv2:binary <@RECORD_LV2_UI_SO_NAME@.so>;
 

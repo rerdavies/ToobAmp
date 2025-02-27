@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Robin E. R. Davies
+// Copyright (c) 2024 Robin Davies
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -17,35 +17,26 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ToobRecordMonoInfo.hpp"
-#include "lv2c_ui/Lv2UI.hpp"
+#pragma once
+#include <filesystem>
+namespace pipedal {
+    class TemporaryFile {
+    public:
+        TemporaryFile() {}
+        TemporaryFile(const TemporaryFile&) = delete;
+        TemporaryFile&operator=(const TemporaryFile&) = delete;
 
-using namespace lv2c::ui;
-using namespace lv2c;
-using namespace record_plugin;
+        TemporaryFile(TemporaryFile&&other) {
+            this->path = std::move(other.path);
+        }
+        TemporaryFile(const std::filesystem::path&parentDirectory, const std::string&extension=".tmp");
 
-class RecordPluginUi: public Lv2UI {
-public:
-    using super=Lv2UI;
-    RecordPluginUi();
-};
-
-
-
-RecordPluginUi::RecordPluginUi() : super(
-    MonoRecordPluginUiInfo::Create(),
-    Lv2cSize(490,360) // default window size.
-    )
-{
-    Lv2cTheme::ptr theme = Lv2cTheme::Create(true); // start with dark theme.
-    theme->paper = Lv2cColor("#081808"); // something dark.
-    this->Theme(theme);
+        void Detach();
+        ~TemporaryFile();
+        const std::filesystem::path&Path()const { return path;}
+        std::string str() const { return path.c_str(); }
+        const char*c_str() const { return path.c_str(); }
+    private:
+        std::filesystem::path path;
+    };
 }
-
-// Refereence this variable to get the linker to demand-link the entire .obj.
-
-static REGISTRATION_DECLARATION Lv2UIRegistration<RecordPluginUi> registration { MonoRecordPluginUiInfo::UI_URI};
-
-
-
-

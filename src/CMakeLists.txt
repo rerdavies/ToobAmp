@@ -155,6 +155,11 @@ add_library(ToobAmp  SHARED
 
         record_plugins/ToobRecordMono.cpp record_plugins/ToobRecordMono.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
+        record_plugins/ToobRingBuffer.hpp
+        record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
+        record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp 
+        TemporaryFile.cpp TemporaryFile.hpp
 
         DebugPlot.cpp
         NeuralAmpModeler.cpp NeuralAmpModeler.h
@@ -323,6 +328,7 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
 
 configure_file(ToobAmp.lv2/ttl.in/ToobRecordMono.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordMono.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobRecordStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordStereo.ttl)
 
 add_custom_command(
     OUTPUT  ToobRecordMonoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
@@ -330,13 +336,29 @@ add_custom_command(
              http://two-play.com/plugins/toob-record-mono
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
               --out ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp 
-              --class ToobRecordMonoInfo
+              --class MonoToobRecordInfo
               --namespace record_plugin
-              --ui-base-class RecordPluginUiInfo
-              --plugin-base-class RecordPluginBase    
+              --ui-base-class MonoRecordPluginUiInfo
+              --plugin-base-class MonoRecordPluginBase    
     DEPENDS
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordMono.ttl    
+        generate_lv2c_plugin_info
+)
+
+add_custom_command(
+    OUTPUT  ToobRecordStereoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-record-stereo
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp 
+              --class StereoRecordStereoInfo
+              --namespace record_plugin
+              --ui-base-class StereoRecordPluginUiInfo
+              --plugin-base-class StereoRecordPluginBase    
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordStereo.ttl    
         generate_lv2c_plugin_info
 )
 
@@ -571,7 +593,9 @@ configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl
 
 add_library(ToobAmpUI  SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
     record_plugins/ToobRecordMonoUi.cpp
+
 
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 

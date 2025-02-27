@@ -19,23 +19,44 @@
 
 #pragma once
 
-
 #define DEFINE_LV2_PLUGIN_BASE
 
 #include <chrono>
 #include <filesystem>
+#include <memory>
 #include "lv2ext/pipedal.lv2/ext/fileBrowser.h"
 #include "ToobRecordMonoInfo.hpp"
+#include "ToobRecordStereoInfo.hpp"
+#include "AudioFileBufferManager.hpp"
+#include <thread>
+#include "../TemporaryFile.hpp"
+#include <queue>
+#include "../Fifo.hpp"
 
+#define NO_MLOCK
+#include "ToobRingBuffer.hpp"
 
 using namespace lv2c::lv2_plugin;
 using namespace record_plugin;
 
+namespace toob
+{
+	class AudioFileBufferPool;
+	class FfmpegDecoderStream;
+};
 
-class ToobRecordMono : public record_plugin::RecordPluginBase
+enum class OutputFormat
+{
+	Wav = 0,
+	WavFloat = 1,
+	Flac = 2,
+	Mp3 = 3,
+};
+
+class ToobRecordMono : public record_plugin::StereoRecordPluginBase
 {
 public:
-	using super = record_plugin::RecordPluginBase;
+	using super = record_plugin::StereoRecordPluginBase;
 
 	static Lv2Plugin *Create(double rate,
 							 const char *bundle_path,
@@ -44,40 +65,120 @@ public:
 		return new ToobRecordMono(rate, bundle_path, features);
 	}
 	ToobRecordMono(double rate,
-				 const char *bundle_path,
-				 const LV2_Feature *const *features);
+				   const char *bundle_path,
+				   const LV2_Feature *const *features);
+
+	virtual ~ToobRecordMono() {}
+
+	static constexpr const char *URI = "http://two-play.com/plugins/toob-record-mono";
 
 protected:
-	virtual void Activate() override;
+
+	virtual void Mix(uint32_t n_samples);
+
 	virtual void Run(uint32_t n_samples) override;
+
+	virtual void Activate() override;
 	virtual void Deactivate() override;
 
-	virtual bool OnPatchPathSet(LV2_URID propertyUrid,const char*value) override;
-	virtual const char* OnGetPatchPropertyValue(LV2_URID propertyUrid) override;
+	virtual bool OnPatchPathSet(LV2_URID propertyUrid, const char *value) override;
+	virtual const char *OnGetPatchPropertyValue(LV2_URID propertyUrid) override;
 
+protected:
+	virtual OutputFormat GetOutputFormat();
 
-private:
+	bool isStereo = false;
+
+protected:
+	size_t playPosition = 0;
+	bool finished = false;
+	std::string RecordingFileExtension();
+	void SendBufferToBackground();
+
 	void MakeNewRecordingFilename();
 	void StopRecording();
-	void SetFilePath(const char*filename);
+	void StartRecording();
+	void CuePlayback(const char *filename);
+	void CuePlayback();
+	void StopPlaying();
+	void SetFilePath(const char *filename);
 	void UpdateOutputControls(uint64_t sampleInFrame);
+	void ResetPlayTime();
 
 	bool activated = false;
-	enum class PluginState {
+	enum class PluginState
+	{
 		Idle,
 		Recording,
-		Playing
+		CuePlaying,
+		Playing,
+		Error
 	};
 
-	const LV2_FileBrowser_Files* fileBrowserFilesFeature = nullptr;
+	const LV2_FileBrowser_Files *fileBrowserFilesFeature = nullptr;
 	PluginState state = PluginState::Idle;
 
 	using clock_t = std::chrono::steady_clock;
 
-	clock_t::time_point startTime;
-	float time_seconds = 0.0f;
-
 	std::string filePath;
-	std::string recordingFilePath; 
+	std::string recordingFilePath;
 	std::string recordingDirectory;
+	std::shared_ptr<toob::AudioFileBufferPool> bufferPool;
+
+	toob::AudioFileBuffer::ptr realtimeBuffer;
+	size_t realtimeWriteIndex = 0;
+
+	toob::ToobRingBuffer<false, true> toBackgroundQueue;
+	toob::ToobRingBuffer<false, false> fromBackgroundQueue;
+
+	std::unique_ptr<std::jthread> backgroundThread;
+
+	std::filesystem::path bgRecordingFilePath;
+	std::unique_ptr<pipedal::TemporaryFile> bgTemporaryFile;
+	FILE *bgFile = nullptr;
+	OutputFormat bgOutputFormat;
+
+	void fgHandleMessages();
+	void fgError(const char *message);
+
+	void bgCloseTempFile();
+	void bgStartRecording(const char *filename, OutputFormat outputFormat);
+	void bgWriteBuffer(toob::AudioFileBuffer *buffer, size_t count);
+	void bgStopRecording();
+
+	void bgStopPlaying();
+
+	std::unique_ptr<toob::FfmpegDecoderStream> decoderStream;
+
+	toob::AudioFileBuffer *bgReadDecoderBuffer();
+
+	void fgResetPlaybackQueue();
+
+	void bgCuePlayback(const char *filename);
+
+	size_t fgPlaybackIndex;
+	toob::Fifo<toob::AudioFileBuffer *, 16> fgPlaybackQueue;
+};
+
+class ToobRecordStereo : public ToobRecordMono
+{
+public:
+	using super = ToobRecordMono;
+
+	static Lv2Plugin *Create(double rate,
+							 const char *bundle_path,
+							 const LV2_Feature *const *features)
+	{
+		return new ToobRecordStereo(rate, bundle_path, features);
+	}
+
+	ToobRecordStereo(double rate,
+					 const char *bundle_path,
+					 const LV2_Feature *const *features);
+
+	virtual ~ToobRecordStereo() {}
+	static constexpr const char *URI = "http://two-play.com/plugins/toob-record-stereo";
+protected:
+	virtual void Mix(uint32_t n_samples) override;
+
 };

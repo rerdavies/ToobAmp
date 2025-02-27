@@ -29,7 +29,6 @@
 #include "InputStage.h"
 #include "PowerStage2.h"
 #include "CabSim.h"
-#include "record_plugins/ToobRecordMono.hpp"
 #include "ToneStack.h"
 #include <lv2_plugin/Lv2Plugin.hpp>
 #include <string.h>
@@ -77,7 +76,7 @@ using namespace toob;
     PLUGIN_REGISTER(NeuralAmpModeler);
     PLUGIN_REGISTER(ToobFlanger);
     PLUGIN_REGISTER(ToobFlangerStereo);
-    PLUGIN_REGISTER(ToobRecordMono);
+    // PLUGIN_REGISTER(ToobRecordMono); in ToobRecordMono.cpp
 
 
 int main(void)
