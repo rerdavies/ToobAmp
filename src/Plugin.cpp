@@ -76,11 +76,13 @@ using namespace toob;
     PLUGIN_REGISTER(NeuralAmpModeler);
     PLUGIN_REGISTER(ToobFlanger);
     PLUGIN_REGISTER(ToobFlangerStereo);
-    // PLUGIN_REGISTER(ToobRecordMono); in ToobRecordMono.cpp
+    // see also PLUGIN_REGISTER(ToobRecordMono); in ToobRecordMono.cpp
+    // see also PLUGIN_REGISTER(ToobRecorStereo); in ToobRecordMono.cpp
+    // see also PLUGIN_REGISTER(ToobLooperFour); in ToobLooperFour.cpp
 
 
-int main(void)
-{
-    return 0;
-}
+// int main(void)
+// {
+//     return 0;
+// }
 

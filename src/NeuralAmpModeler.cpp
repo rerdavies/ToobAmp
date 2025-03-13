@@ -843,7 +843,10 @@ std::unique_ptr<DSP> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
         return nullptr;
     }
     auto dspPath = std::filesystem::path(modelPath);
-    std::unique_ptr<DSP> nam = get_dsp_ex(dspPath,(int)(this->GetBuffSizeOptions().minBlockLength),(int)(this->GetBuffSizeOptions().maxBlockLength));
+    std::unique_ptr<DSP> nam = get_dsp_ex(dspPath,
+        (uint32_t)getRate(),
+        (int)(this->GetBuffSizeOptions().minBlockLength),
+        (int)(this->GetBuffSizeOptions().maxBlockLength));
     return nam;
 }
 

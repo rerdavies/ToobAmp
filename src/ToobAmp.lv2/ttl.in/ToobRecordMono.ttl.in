@@ -39,7 +39,7 @@
 recordPrefix:audioFile
         a lv2:Parameter;
         rdfs:label "File";
-	mod:fileTypes "audiorecording,audio,wav";
+	mod:fileTypes "audiorecording,audio";
         rdfs:range atom:Path;
         lv2:index  6
         .
@@ -61,6 +61,7 @@ recordPrefix:audioFile
         patch:writable 
                 recordPrefix:audioFile;
 
+        lv2:extensionData state:interface ;
 
         rdfs:comment """
 Record the signal input to file.
@@ -78,7 +79,7 @@ Record the signal input to file.
                 lv2:index  0;
                 lv2:symbol "stop" ;
                 lv2:name "⏹";
-                rdf:comment "Stop.";
+                rdfs:comment "Stop.";
                 lv2:default 0 ;
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;
@@ -91,7 +92,7 @@ Record the signal input to file.
                 lv2:index  1;
                 lv2:symbol "record" ;
                 lv2:name "⏺";
-                rdf:comment "Start recording. Click again to stop.";
+                rdfs:comment "Start recording. Click again to stop.";
                 lv2:default 0 ;
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;
@@ -116,7 +117,7 @@ Record the signal input to file.
                 lv2:index  3;
                 lv2:symbol "play" ;
                 lv2:name "⏵";
-                rdf:comment "Play. Click again to stop.";
+                rdfs:comment "Play. Click again to stop.";
                 lv2:default 0 ;
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;
@@ -140,7 +141,7 @@ Record the signal input to file.
 
                 lv2:index  5;
                 lv2:symbol "record_time" ;
-                rdf:comment "Time"; 
+                rdfs:comment "Time"; 
                 lv2:name "";
                 units:unit units:s ;
 
@@ -154,7 +155,7 @@ Record the signal input to file.
                 lv2:index  6;
                 lv2:symbol "fformat" ;
                 lv2:name "Format";
-                rdf:comment "Recording File Format";
+                rdfs:comment "Recording File Format";
 
                 lv2:portProperty lv2:integer, lv2:enumeration ;
 
@@ -207,7 +208,7 @@ Record the signal input to file.
                 lv2:index 8 ;
                 lv2:symbol "level_vu" ;
                 lv2:name "";
-                rdf:comment "Recording level";
+                rdfs:comment "Recording level";
 
                 lv2:default -60 ;
                 lv2:minimum -60 ;

@@ -136,10 +136,18 @@ namespace toob
 
         AudioFileBuffer* TakeBuffer();
         void PutBuffer(AudioFileBuffer *buffer);
+
+        void TestPoolCount(size_t expected);
+        size_t AllocationCount() const { return allocatedCount; }
+
+        size_t GetBufferSize() { return bufferSize; }
+        size_t GetChannels() { return channels; }
+
     private:
         size_t channels;
         size_t bufferSize;
-        std::atomic<size_t> freeCount { 0};
+        std::atomic<size_t> pooledCount { 0};
+        std::atomic<size_t> allocatedCount {0};
         std::atomic<AudioFileBuffer*> freeList;
     
     };

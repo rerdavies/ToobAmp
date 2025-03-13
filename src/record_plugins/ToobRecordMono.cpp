@@ -106,7 +106,7 @@ namespace
 
     struct BackgroundErrorCommmand : public BufferCommand
     {
-        BackgroundErrorCommmand(const std::string &message) : BufferCommand(MessageType::BackgroundError, sizeof(QuitCommand))
+        BackgroundErrorCommmand(const std::string &message) : BufferCommand(MessageType::BackgroundError, sizeof(BackgroundErrorCommmand))
         {
             if (message.length() > 1023)
             {
@@ -207,17 +207,24 @@ namespace
 ToobRecordMono::ToobRecordMono(
     double rate,
     const char *bundle_path,
-    const LV2_Feature *const *features)
+    const LV2_Feature *const *features,
+    int channels)
     : super(rate, bundle_path, features)
 {
+
+
+    urids.atom__Path = MapURI(LV2_ATOM__Path);
+    urids.atom__String = MapURI(LV2_ATOM__String);
 
     // reserve space so that we can use the strings without allocating on the realtime thread (unless filenames are unreasonably long).
     filePath.reserve(1024);
     recordingFilePath.reserve(1024);
     recordingDirectory.reserve(1024);
 
+    this->isStereo = channels > 1;
+
     this->recordingDirectory = "/tmp";
-    this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(1, (size_t)rate / 10);
+    this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(channels, (size_t)rate / 10);
 
     this->fileBrowserFilesFeature = this->GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
 
@@ -235,17 +242,16 @@ ToobRecordMono::ToobRecordMono(
                 fileBrowserFilesFeature->handle,
                 cRecordingDirectory);
         }
-        else
-        {
-            recordingDirectory = "/tmp";
-        }
     }
+    if (recordingDirectory.empty())
+    {   std::filesystem::path path = getenv("HOME");
+        if (!path.empty())
+        {
+            this->recordingDirectory = "/tmp";
+        }
 
-    if (this->recordingDirectory.empty())
-    {
-        // Assume that we're running under a login. This is as good as any place to put them.
-        // At least we can write here (hopefully).
-        this->recordingDirectory = "~/Music/Audio Recordings/";
+        path = path / "Music/TooB Recordings/";
+        this->recordingDirectory = path.string();
     }
     if (!this->recordingDirectory.ends_with(PREFERRED_PATH_SEPARATOR))
     {
@@ -342,8 +348,11 @@ void ToobRecordMono::Activate()
                 }
                 case MessageType::RecordBuffer:
                 {
+
                     ToobRecordBufferCommand* recordCmd = (ToobRecordBufferCommand*)cmd;
                     bgWriteBuffer(recordCmd->buffer, recordCmd->bufferSize);
+
+
                     bufferPool->PutBuffer(recordCmd->buffer);
 
                     break;
@@ -459,8 +468,6 @@ void ToobRecordMono::SendBufferToBackground()
 
         ToobRecordBufferCommand cmd{buffer, this->realtimeWriteIndex};
         this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-
-        this->realtimeBuffer.Attach(bufferPool->TakeBuffer());
     }
 }
 
@@ -479,6 +486,18 @@ void ToobRecordMono::StopRecording()
 }
 void ToobRecordMono::Run(uint32_t n_samples)
 {
+
+    if (this->loadRequested)
+    {
+        this->loadRequested = false;
+        if (!this->filePath.empty())
+        { 
+            CuePlayback();
+        } else {
+            StopPlaying();
+            StopRecording();
+        }
+    }
 
     UpdateOutputControls(n_samples);
 
@@ -572,6 +591,8 @@ void ToobRecordMono::Mix(uint32_t n_samples)
             if (this->realtimeWriteIndex >= this->realtimeBuffer->GetBufferSize())
             {
                 SendBufferToBackground();
+
+
                 this->realtimeBuffer.Attach(this->bufferPool->TakeBuffer());
                 buffer = this->realtimeBuffer->GetChannel(0);
                 this->realtimeWriteIndex = 0;
@@ -598,6 +619,7 @@ void ToobRecordMono::Mix(uint32_t n_samples)
                     if (fgPlaybackQueue.empty())
                     {
                         this->state = PluginState::Idle;
+                        CuePlayback();
                         break;
                     }
                     buffer = fgPlaybackQueue.front();
@@ -648,6 +670,8 @@ void ToobRecordStereo::Mix(uint32_t n_samples)
             if (this->realtimeWriteIndex >= this->realtimeBuffer->GetBufferSize())
             {
                 SendBufferToBackground();
+
+
                 this->realtimeBuffer.Attach(this->bufferPool->TakeBuffer());
                 bufferL = this->realtimeBuffer->GetChannel(0);
                 bufferR = this->realtimeBuffer->GetChannel(0);
@@ -667,8 +691,9 @@ void ToobRecordStereo::Mix(uint32_t n_samples)
 
             for (uint32_t i = 0; i < n_samples; ++i)
             {
-                dstL[i] = playDataL[this->fgPlaybackIndex++];
-                dstR[i] = playDataR[this->fgPlaybackIndex++];
+                dstL[i] = playDataL[this->fgPlaybackIndex];
+                dstR[i] = playDataR[this->fgPlaybackIndex];
+                this->fgPlaybackIndex++;
 
                 if (fgPlaybackIndex == buffer->GetBufferSize())
                 {
@@ -678,6 +703,8 @@ void ToobRecordStereo::Mix(uint32_t n_samples)
                     if (fgPlaybackQueue.empty())
                     {
                         this->state = PluginState::Idle;
+                        CuePlayback();
+
                         break;
                     }
                     buffer = fgPlaybackQueue.front();
@@ -711,6 +738,11 @@ void ToobRecordMono::Deactivate()
 
     bgCloseTempFile();
     bgStopPlaying();
+
+    while (!fgPlaybackQueue.empty()) {
+        bufferPool->PutBuffer(fgPlaybackQueue.pop_front());
+    }
+    this->fgPlaybackIndex = 0;
 
     this->state = PluginState::Idle;
 
@@ -805,6 +837,8 @@ void ToobRecordMono::bgStartRecording(const char *filename, OutputFormat outputF
 {
     bgStopPlaying();
     bgCloseTempFile();
+    
+    bufferPool->Reserve(10); // nominally up to ~1 second of buffering (with 0.5s pre-roll)
     this->bgRecordingFilePath = filename;
     this->bgOutputFormat = outputFormat;
 
@@ -921,7 +955,7 @@ void ToobRecordMono::bgStopRecording()
 
         std::string encodingArgs;
         std::string extension;
-        switch (bgOutputFormat)
+    switch (bgOutputFormat)
         {
         case OutputFormat::Wav:
         {
@@ -1178,9 +1212,136 @@ ToobRecordStereo::ToobRecordStereo(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : super(rate, bundle_path, features)
+    : super(rate, bundle_path, features,2)
 {
     this->isStereo = true;
+
+}
+
+ToobRecordMono::~ToobRecordMono() {
+
+}
+
+LV2_State_Status
+ToobRecordMono::OnRestoreLv2State(
+    LV2_State_Retrieve_Function retrieve,
+    LV2_State_Handle handle,
+    uint32_t flags,
+    const LV2_Feature *const *features)
+{
+    std::string modelFileName;
+
+    {
+        size_t size;
+        uint32_t type;
+        uint32_t flags;
+        const void *data = (*retrieve)(handle, this->audioFile_urid, &size, &type, &flags);
+        if (data)
+        {
+            if (type != this->urids.atom__Path && type != this->urids.atom__String)
+            {
+                return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
+            }
+            modelFileName = MapFilename(features, (const char *)data, nullptr);
+            RequestLoad(modelFileName.c_str());
+        }
+    }
+
+    return LV2_State_Status::LV2_STATE_SUCCESS;
+}
+
+
+LV2_State_Status
+ToobRecordMono::OnSaveLv2State(
+    LV2_State_Store_Function store,
+    LV2_State_Handle handle,
+    uint32_t flags,
+    const LV2_Feature *const *features)
+{
+    if (this->filePath.empty()) 
+    {
+        return LV2_State_Status::LV2_STATE_SUCCESS; // not-set => "". Avoids assuming that hosts can handle a "" path.
+    }
+    std::string abstractPath = this->UnmapFilename(features, this->filePath.c_str());
+
+    store(handle, audioFile_urid , abstractPath.c_str(), abstractPath.length() + 1, urids.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    return LV2_State_Status::LV2_STATE_SUCCESS;
+}
+
+
+std::string ToobRecordMono::UnmapFilename(const LV2_Feature *const *features, const std::string &fileName)
+{
+    // const LV2_State_Make_Path *makePath = GetFeature<LV2_State_Make_Path>(features, LV2_STATE__makePath);
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    if (mapPath)
+    {
+        char *result = mapPath->abstract_path(mapPath->handle, fileName.c_str());
+        std::string t = result;
+        if (freePath)
+        {
+            freePath->free_path(freePath->handle, result);
+        }
+        else
+        {
+            free(result);
+        }
+        return t;
+    }
+    else
+    {
+        return fileName;
+    }
+}
+
+std::string ToobRecordMono::MapFilename(
+    const LV2_Feature *const *features,
+    const std::string &input,
+    const char *browserPath)
+{
+    if (input.starts_with(this->GetBundlePath().c_str()))
+    {
+        // map bundle files to corresponding files in the browser dialog directories.
+        const LV2_FileBrowser_Files *browserFiles = GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
+        if (browserFiles != nullptr)
+        {
+            char *t = nullptr;
+            t = browserFiles->map_path(browserFiles->handle, input.c_str(), "impulseFiles/reverb", browserPath);
+            std::string result = t;
+            browserFiles->free_path(browserFiles->handle, t);
+            return result;
+        }
+        return input;
+    }
+    const LV2_State_Map_Path *mapPath = GetFeature<LV2_State_Map_Path>(features, LV2_STATE__mapPath);
+    const LV2_State_Free_Path *freePath = GetFeature<LV2_State_Free_Path>(features, LV2_STATE__freePath);
+
+    if (mapPath == nullptr)
+    {
+        return input;
+    }
+    else
+    {
+        char *t = mapPath->absolute_path(mapPath->handle, input.c_str());
+        std::string result = t;
+        if (freePath)
+        {
+            freePath->free_path(freePath->handle, t);
+        }
+        else
+        {
+            free(t);
+        }
+        return result;
+    }
+}
+
+
+void ToobRecordMono::RequestLoad(const char *filename)
+{
+    this->filePath = filename;
+    this->loadRequested = true;
 }
 
 

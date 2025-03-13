@@ -468,7 +468,7 @@ void TestDsp()
 
 
 
-    std::unique_ptr<nam::DSP> dsp =  nam::get_dsp_ex(presetPath, 32,32);
+    std::unique_ptr<nam::DSP> dsp =  nam::get_dsp_ex(presetPath, 48000,32,32);
     std::vector<float> dspOutput;
     dspOutput.resize(inputData.size());
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
@@ -477,7 +477,7 @@ void TestDsp()
 
     }
 
-    std::unique_ptr<nam::DSP> originalDsp =  nam::get_dsp_ex(presetPath, -2,-2);
+    std::unique_ptr<nam::DSP> originalDsp =  nam::get_dsp_ex(presetPath,48000, -2,-2);
     std::vector<float> originalDspOutput;
     originalDspOutput.resize(inputData.size()); 
     for (size_t i = 0; i+32 <= inputData.size(); i += 32)
@@ -486,7 +486,7 @@ void TestDsp()
     }
 
 
-    std::unique_ptr<nam::DSP> bufferedDsp =  nam::get_dsp_ex(presetPath, -1,-1);
+    std::unique_ptr<nam::DSP> bufferedDsp =  nam::get_dsp_ex(presetPath, 48000,-1,-1);
     std::vector<float> bufferedDspOutput;
     bufferedDspOutput.resize(inputData.size());
 

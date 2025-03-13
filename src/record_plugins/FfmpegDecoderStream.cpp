@@ -22,6 +22,10 @@
  */
 
 
+ // thumbname: 
+
+//  ffmpeg -i 01\ Once\ in\ Royal\ David\'s\ City.mp3 -filter:v scale=-2:250 -an output.jpeg
+
 
 
  #include "FfmpegDecoderStream.hpp"

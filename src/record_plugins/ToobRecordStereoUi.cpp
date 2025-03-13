@@ -17,23 +17,23 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-#include "ToobRecordMonoInfo.hpp"
+#include "ToobRecordStereoInfo.hpp"
 #include "lv2c_ui/Lv2UI.hpp"
-
+ 
 using namespace lv2c::ui;
 using namespace lv2c;
 using namespace record_plugin;
 
-class RecordPluginMonoUi: public Lv2UI {
+class RecordPluginStereoUi: public Lv2UI {
 public:
     using super=Lv2UI;
-    RecordPluginMonoUi();
+    RecordPluginStereoUi();
 };
 
 
 
-RecordPluginMonoUi::RecordPluginMonoUi() : super(
-    MonoRecordPluginUiInfo::Create(),
+RecordPluginStereoUi::RecordPluginStereoUi() : super(
+    StereoRecordPluginUiInfo::Create(),
     Lv2cSize(490,360) // default window size.
     )
 {
@@ -44,7 +44,7 @@ RecordPluginMonoUi::RecordPluginMonoUi() : super(
 
 // Refereence this variable to get the linker to demand-link the entire .obj.
 
-static REGISTRATION_DECLARATION Lv2UIRegistration<RecordPluginMonoUi> monoRecordRegistration { MonoRecordPluginUiInfo::UI_URI};
+static REGISTRATION_DECLARATION Lv2UIRegistration<RecordPluginStereoUi> stereoRecordRegistration { StereoRecordPluginUiInfo::UI_URI};
 
 
 

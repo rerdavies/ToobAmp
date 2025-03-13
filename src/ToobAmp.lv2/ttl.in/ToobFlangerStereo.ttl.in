@@ -99,6 +99,7 @@ should use the monophonic version of this effect.
                 a lv2:OutputPort ,
                 lv2:ControlPort ;
 
+                lv2:portProperty epp:notOnGUI;
                 lv2:index 3 ;
                 lv2:symbol "lfo" ;
                 lv2:name "LFO";

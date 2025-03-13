@@ -44,4 +44,29 @@ namespace toob
       int pidChild = -1;
    };
 
+
+   class FFMepgMetadata {
+   public:
+      FFMepgMetadata(const std::filesystem::path &file);
+      uint32_t getSampleRate() const { return sampleRate; }
+      int getChannels() const { return channels; }
+      double getDuration() const { return duration; }  
+      const std::string& getTitle() const { return title; }
+      int32_t getTrack() const { return track; }
+      int32_t getNumberOfTracks() const { return numberOfTracks; }
+      const std::string &getAlbum() const { return album; }
+      const std::string &getArtist() const { return artist; }
+
+   private:
+      uint32_t sampleRate = 0;
+      int channels = 0;
+      double duration = 0;
+      std::string title;
+      int32_t track = 0;
+      int32_t numberOfTracks = 0;
+      std::string album;
+      std::string artist;
+
+   };
+
 } // namespace toob

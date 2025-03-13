@@ -99,6 +99,7 @@ Emulation of a Boss BF-2 Flanger, based on circuit analysis and simulation of th
                 lv2:symbol "lfo" ;
                 lv2:name "LFO";
 
+                lv2:portProperty epp:notOnGUI;
                 lv2:minimum -1.0 ;
                 lv2:maximum 1.0 ;
         ],  

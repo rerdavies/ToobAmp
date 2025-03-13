@@ -152,6 +152,8 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 
 add_library(ToobAmp  SHARED
+        record_plugins/ToobLoopers.cpp record_plugins/ToobLoopers.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
 
         record_plugins/ToobRecordMono.cpp record_plugins/ToobRecordMono.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
@@ -326,9 +328,50 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 ####################################################
 
 
+configure_file(ToobAmp.lv2/ttl.in/ToobLooperFour.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobLooperFour.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobLooperOne.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobLooperOne.ttl)
+
+add_custom_command(
+    OUTPUT  ToobLooperFourInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-looper-four
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp 
+              --class ToobLooperFourInfo
+              --namespace record_plugin
+              --ui-base-class ToobLooperFourUiBase
+              --plugin-base-class ToobLooperFourBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobLooperFour.ttl    
+        generate_lv2c_plugin_info
+)
+
+
+add_custom_command(
+    OUTPUT  ToobLooperOneInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-looper-one
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp 
+              --class LooperOneInfo
+              --namespace record_plugin
+              --ui-base-class ToobLooperOneUiBase
+              --plugin-base-class ToobLooperOneBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobLooperOne.ttl    
+        generate_lv2c_plugin_info
+)
+
 
 configure_file(ToobAmp.lv2/ttl.in/ToobRecordMono.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordMono.ttl)
 configure_file(ToobAmp.lv2/ttl.in/ToobRecordStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobRecordStereo.ttl)
+
+
+
+
+
 
 add_custom_command(
     OUTPUT  ToobRecordMonoInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
@@ -594,8 +637,12 @@ configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl
 add_library(ToobAmpUI  SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp
     record_plugins/ToobRecordMonoUi.cpp
-
+    record_plugins/ToobRecordStereoUi.cpp
+    record_plugins/ToobLooperFourUi.cpp
+    record_plugins/ToobLooperOneUi.cpp
 
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp 
@@ -679,6 +726,7 @@ add_executable(NamTTest
 )
 
 target_link_libraries(NamTTest PRIVATE namSources)
+
 add_test(NamTTest Nam_T_Test)
 
 
@@ -933,6 +981,15 @@ include(GNUInstallDirs)
 install(TARGETS ToobAmp ToobAmpUI
     LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
     )
+
+
+add_executable(BufferPoolTest 
+    BufferPoolTest.cpp
+    record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
+)
+
+add_test(BufferPoolTest BufferPoolTest)
+
 
 
 # add_executable(UiLinkageTest 

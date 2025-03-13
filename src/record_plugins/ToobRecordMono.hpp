@@ -66,13 +66,21 @@ public:
 	}
 	ToobRecordMono(double rate,
 				   const char *bundle_path,
-				   const LV2_Feature *const *features);
+				   const LV2_Feature *const *features,
+				   int channels = 1);
 
-	virtual ~ToobRecordMono() {}
+	virtual ~ToobRecordMono();
 
 	static constexpr const char *URI = "http://two-play.com/plugins/toob-record-mono";
 
 protected:
+	struct Urids
+	{
+		uint32_t atom__Path;
+		uint32_t atom__String;
+	};
+
+	Urids urids;
 
 	virtual void Mix(uint32_t n_samples);
 
@@ -84,10 +92,34 @@ protected:
 	virtual bool OnPatchPathSet(LV2_URID propertyUrid, const char *value) override;
 	virtual const char *OnGetPatchPropertyValue(LV2_URID propertyUrid) override;
 
+	LV2_State_Status
+	OnRestoreLv2State(
+		LV2_State_Retrieve_Function retrieve,
+		LV2_State_Handle handle,
+		uint32_t flags,
+		const LV2_Feature *const *features);
+
+	LV2_State_Status
+	OnSaveLv2State(
+		LV2_State_Store_Function store,
+		LV2_State_Handle handle,
+		uint32_t flags,
+		const LV2_Feature *const *features);
+
+	std::string UnmapFilename(const LV2_Feature *const *features, const std::string &fileName);
+	std::string MapFilename(
+		const LV2_Feature *const *features,
+		const std::string &input,
+		const char *browserPath);
+
+	void RequestLoad(const char *filename);
+
 protected:
 	virtual OutputFormat GetOutputFormat();
 
 	bool isStereo = false;
+
+	bool loadRequested = false;
 
 protected:
 	size_t playPosition = 0;
@@ -178,7 +210,7 @@ public:
 
 	virtual ~ToobRecordStereo() {}
 	static constexpr const char *URI = "http://two-play.com/plugins/toob-record-stereo";
+
 protected:
 	virtual void Mix(uint32_t n_samples) override;
-
 };
