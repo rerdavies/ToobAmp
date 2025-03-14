@@ -24,6 +24,7 @@
 
 @prefix pg:      <http://lv2plug.in/ns/ext/port-groups#> .
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
+@prefix pipedal_patch: <http://github.com/rerdavies/pipedal/patch#> .
 @prefix toob: <http://two-play.com/plugins/toob#> .
 
 @prefix inputStage: <http://two-play.com/plugins/toob-input_stage#> .
@@ -74,7 +75,7 @@ inputStage:filterGroup
         
         patch:writable 
                 <http://two-play.com/plugins/toob#frequencyResponseVector>;
-        patch:readable 
+        pipedal_patch:readable 
                 <http://two-play.com/plugins/toob#frequencyResponseVector>;
 
 rdfs:comment """

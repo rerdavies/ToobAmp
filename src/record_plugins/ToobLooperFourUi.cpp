@@ -54,6 +54,6 @@ ToobLooperFourUiPlugin::ToobLooperFourUiPlugin()
 
 // Make the plugin visible to LV2 hosts.
 
-Lv2UIRegistration<ToobLooperFourUiPlugin> 
-toobLooperFourRegistration { ToobLooperFourUiBase::UI_URI  };
+REGISTRATION_DECLARATION Lv2UIRegistration<ToobLooperFourUiPlugin> 
+toobLooperFourUiRegistration { ToobLooperFourUiBase::UI_URI  };
 

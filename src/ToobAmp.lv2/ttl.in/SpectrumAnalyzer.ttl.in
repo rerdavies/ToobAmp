@@ -49,10 +49,10 @@
                 ;
 
         uiext:ui <http://two-play.com/plugins/toob-spectrum-ui>;
-        patch:writable 
+        pipedal_patch:writable 
                 <http://two-play.com/plugins/toob#spectrumResponseVector>;
 
-        patch:readable 
+        pipedal_patch:readable 
                 <http://two-play.com/plugins/toob#spectrumResponseVector>;
 
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;

@@ -25,6 +25,7 @@
 @prefix modgui: <http://moddevices.com/ns/modgui#> .
 @prefix pstage: <http://two-play.com/plugins/toob-power-stage-2#> .
 
+@prefix pipedal_patch: <http://github.com/rerdavies/pipedal/patch#> .
 
 pstage:stage1
     a param:ControlGroup ,
@@ -73,7 +74,7 @@ pstage:stage3
         mod:label "Power Stage";
         lv2:requiredFeature urid:map ;
         lv2:optionalFeature lv2:hardRTCapable;
-        patch:readable 
+        pipedal_patch:readable 
                 <http://two-play.com/plugins/toob-power-stage-2#uiState>;
 
 rdfs:comment """
