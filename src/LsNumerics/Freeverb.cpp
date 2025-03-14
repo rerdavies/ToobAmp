@@ -88,20 +88,17 @@ void Freeverb::Init(StkFloat sampleRate)
   g_ = 0.5;          // allpass coefficient, immutable in Freeverb
 
   // Scale delay line lengths according to the current sampling rate
-  double fsScale = sampleRate_ / 44100.0;
-  if (fsScale != 1.0)
+  double fsScale = sampleRate_ / 48000.0;
+  // scale comb filter delay lines
+  for (int i = 0; i < nCombs; i++)
   {
-    // scale comb filter delay lines
-    for (int i = 0; i < nCombs; i++)
-    {
-      m_cDelayLengths[i] = (int)floor(fsScale * kcDelayLengths[i]);
-    }
+    m_cDelayLengths[i] = (int)floor(fsScale * kcDelayLengths[i]);
+  }
 
-    // Scale allpass filter delay lines
-    for (int i = 0; i < nAllpasses; i++)
-    {
-      m_aDelayLengths[i] = (int)floor(fsScale * kaDelayLengths[i]);
-    }
+  // Scale allpass filter delay lines
+  for (int i = 0; i < nAllpasses; i++)
+  {
+    m_aDelayLengths[i] = (int)floor(fsScale * kaDelayLengths[i]);
   }
 
   // Initialize delay lines for the LBFC filters

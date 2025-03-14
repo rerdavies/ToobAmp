@@ -79,12 +79,8 @@ AudioFileBufferPool::~AudioFileBufferPool()
     }
     catch (const std::exception &e)
     {
-// do what we can to report an error.
-#ifdef DEBUG
-        throw;
-#else 
+// do what we can to report an error since we can't throw.
         std::cout << "Warning: " << e.what() << std::endl;
-#endif
     }
 }
 
