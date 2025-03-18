@@ -1,6 +1,7 @@
 #if __INTELLISENSE__
 #undef __ARM_NEON
 #undef __ARM_NEON__
+#undef __AVX__
 #endif
 
 #pragma GCC diagnostic push
@@ -22,6 +23,18 @@
 #include "wavenet_t.h"
 #include <stdexcept>
 #include <iostream>
+
+
+/*
+NOTE: 
+
+A lot of this mess is related to getting access to information that was hidden in previous versions of NAM Core. 
+
+At issue: prewarm using a buffer (fixed in current NAM Core); and prewarm using a a buffer size that's as large
+or larger than the worst case buffer size to avoid buffer mallocs (also fixed in current NAM Core API).
+
+
+*/
 
 namespace nam
 {
@@ -94,7 +107,7 @@ std::vector<float> GetWeights(nlohmann::json const& j, const std::filesystem::pa
 
 // forward declaration.
 std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize);
-std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename, dspData& returnedConfig, int minBlockSize, int maxBlockSize);
+std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename, dspData& returnedConfig, uint32_t sampleRate, int minBlockSize, int maxBlockSize);
 
 std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename)
 {
@@ -102,20 +115,28 @@ std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename)
   return get_dsp(config_filename, temp);
 }
 
-std::unique_ptr<DSP> get_dsp_ex(const std::filesystem::path config_filename, int minBlockSize, int maxBlockSize)
+std::unique_ptr<DSP> get_dsp_ex(
+  const std::filesystem::path config_filename, 
+  uint32_t sampleRate,
+  int minBlockSize, 
+  int maxBlockSize)
 {
   dspData temp;
-  return get_dsp(config_filename, temp,minBlockSize, maxBlockSize);
+  return get_dsp(config_filename, temp,sampleRate, minBlockSize, maxBlockSize);
 }
 
 
 std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename, dspData& returnedConfig)
 {
-  return get_dsp(config_filename, returnedConfig,-1,-1);
+  return get_dsp(config_filename, returnedConfig,(uint32_t)48000, -1,-1);
 }
 
 
-std::unique_ptr<DSP> get_dsp(const std::filesystem::path config_filename, dspData& returnedConfig, int minBlockSize, int maxBlockSize)
+std::unique_ptr<DSP> get_dsp(
+    const std::filesystem::path config_filename, 
+    dspData& returnedConfig,
+    uint32_t sampleRate,
+    int minBlockSize, int maxBlockSize)
 {
   if (!std::filesystem::exists(config_filename))
     throw std::runtime_error("Config JSON doesn't exist!\n");
@@ -230,9 +251,9 @@ std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize)
           {
             result->SetLoudness(loudness);
           }
-
           // "pre-warm" the model to settle initial conditions
-          result->prewarm();
+          // YYY: Get actual sample rate.
+          result->ResetAndPrewarm(48000,maxBlockSize);
           return result;
 
         } catch (const std::exception&) {
@@ -254,7 +275,8 @@ std::unique_ptr<DSP> get_dsp(dspData& conf, int minBlockSize, int maxBlockSize)
   }
 
   // "pre-warm" the model to settle initial conditions
-  out->prewarm();
+  // yyy: get actual sample rate.
+  out->ResetAndPrewarm(48000,maxBlockSize);
 
   return out;
 }

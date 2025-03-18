@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -36,7 +36,7 @@
 #include "FilterResponse.h"
 #include <string>
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include "MidiProcessor.h"
 #include "InputPort.h"
@@ -44,31 +44,32 @@
 #include "ControlDezipper.h"
 #include "Tf2Flanger.hpp"
 
+namespace toob
+{
 
-
-namespace toob {
-
-	class ToobFlanger : public Lv2Plugin {
+	class ToobFlangerBase : public Lv2Plugin
+	{
 	private:
-		enum class PortId {
+		enum class PortId
+		{
 			MANUAL = 0,
 			DEPTH,
 			RATE,
 			LFO,
 			RES,
 			AUDIO_INL,
-			AUDIO_OUTL, 
-			AUDIO_OUTR, 
+			AUDIO_OUTL,
+			AUDIO_OUTR,
 		};
 
-		const float*pManual = nullptr;
-		const float*pRate = nullptr;
+		const float *pManual = nullptr;
+		const float *pRate = nullptr;
 		const float *pDepth = nullptr;
 		const float *pRes = nullptr;
 		float *pLfo = nullptr;
-		const float*inL = nullptr;
-		float*outL = nullptr;
-		float*outR = nullptr;
+		const float *inL = nullptr;
+		float *outL = nullptr;
+		float *outR = nullptr;
 
 		float lastRes = -2;
 		float lastManual = -2;
@@ -84,27 +85,57 @@ namespace toob {
 
 		void clear();
 		void updateControls();
+
 	public:
-		static Lv2Plugin* Create(double rate,
-			const char* bundle_path,
-			const LV2_Feature* const* features)
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
+		{
+			return new ToobFlangerBase(rate, bundle_path, features);
+		}
+		ToobFlangerBase(double rate,
+						const char *bundle_path,
+						const LV2_Feature *const *features);
+
+
+	protected:
+		virtual void ConnectPort(uint32_t port, void *data);
+		virtual void Activate();
+		virtual void Run(uint32_t n_samples);
+		virtual void Deactivate();
+	};
+
+	class ToobFlanger : public ToobFlangerBase
+	{
+	public:
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
 		{
 			return new ToobFlanger(rate, bundle_path, features);
 		}
 		ToobFlanger(double rate,
-			const char* bundle_path,
-			const LV2_Feature* const* features
-		);
-
+					const char *bundle_path,
+					const LV2_Feature *const *features) : ToobFlangerBase(rate, bundle_path, features)
+		{
+		}
+		static const char *URI;
+	};
+	class ToobFlangerStereo : public ToobFlangerBase
+	{
 	public:
-		static const char* URI;
-		static const char * STEREO_URI;
-	protected:
-		virtual void ConnectPort(uint32_t port, void* data);
-		virtual void Activate();
-		virtual void Run(uint32_t n_samples);
-		virtual void Deactivate();
+		static Lv2Plugin *Create(double rate,
+								 const char *bundle_path,
+								 const LV2_Feature *const *features)
+		{
+			return new ToobFlangerStereo(rate, bundle_path, features);
+		}
+		ToobFlangerStereo(double rate,
+						  const char *bundle_path,
+						  const LV2_Feature *const *features) : ToobFlangerBase(rate, bundle_path, features)
+		{
+		}
+		static const char *URI;
+	};
 
-    };
-
-}// namespace toob
+} // namespace toob

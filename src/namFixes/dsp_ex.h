@@ -8,8 +8,14 @@
 
 #include "NAM/dsp.h"
 
+#include <memory>
+
 namespace nam {
-    std::unique_ptr<nam::DSP> get_dsp_ex(const std::filesystem::path config_filename, int minBlockSize, int maxBlockSize);
+    std::unique_ptr<nam::DSP> get_dsp_ex(
+        const std::filesystem::path config_filename, 
+        uint32_t sampleRate,
+        int minBlockSize, 
+        int maxBlockSize);
 };
 
 #pragma GCC diagnostic pop

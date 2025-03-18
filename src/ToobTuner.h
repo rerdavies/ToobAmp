@@ -42,7 +42,7 @@
 #include "ControlDezipper.h"
 #include "CircularBuffer.h"
 
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 
 #include "MidiProcessor.h"
 #include "InputPort.h"

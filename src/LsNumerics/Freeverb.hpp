@@ -80,7 +80,7 @@ namespace LsNumerics
             {
                 for (size_t i = 0; i < inputs_.size(); ++i)
                 {
-                    inputs_[i] = 0;
+                    inputs_.at(i) = 0;
                 }
             }
             StkFloat nextOut( void ) { return inputs_[outPoint_]; };
@@ -129,7 +129,7 @@ namespace LsNumerics
                 while (tap < 0) // Check for wraparound.
                     tap += inputs_.size();
 
-                return inputs_[tap];
+                return inputs_.at(tap);
             }
 
             //! Set the \e value at \e tapDelay samples from the delay-line input.
@@ -139,7 +139,7 @@ namespace LsNumerics
                 while (tap < 0) // Check for wraparound.
                     tap += inputs_.size();
 
-                inputs_[tap] = value;
+                inputs_.at(tap) = value;
             }
 
             //! Sum the provided \e value into the delay line at \e tapDelay samples from the input.
@@ -154,7 +154,7 @@ namespace LsNumerics
                 while (tap < 0) // Check for wraparound.
                     tap += inputs_.size();
 
-                return inputs_[tap] += value;
+                return inputs_.at(tap) += value;
             }
 
             //! Input one sample to the filter and return one output.
@@ -169,14 +169,14 @@ namespace LsNumerics
 
         inline StkFloat Delay ::tick(StkFloat input)
         {
-            inputs_[inPoint_++] = input;
+            inputs_.at(inPoint_++) = input;
 
             // Check for end condition
             if (inPoint_ == inputs_.size())
                 inPoint_ = 0;
 
             // Read out next value
-            StkFloat t = inputs_[outPoint_++];
+            StkFloat t = inputs_.at(outPoint_++);
 
             if (outPoint_ == inputs_.size())
                 outPoint_ = 0;

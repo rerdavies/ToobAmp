@@ -1,41 +1,45 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.43
+v1.1.58
 
-ToobAmp LV2 plugins are a set of high-quality guitar effect plugins for Raspberry Pi. They are specifically designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project, but work perfectly well with any LV2 Plugin host.
+The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects processors. The set of plugins provides a no nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
+
+- Neural Network Amp Models (TooB NAM, and TooML plugins).
+- Reverb (Toob Convolutin Reverb, and Toob Freeverb).
+- Loopers (Toob 4Looper, and One-Button Looper).
+- Cab simulators (Toob Cab IR, and Toob CabSim).
+- Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
+- Utility plugins (Toob Input Stage, Toob Tuner, Toob Spectrum Analyzer, and TooB Input Recorder).
+
 
 # Releases Notes
+v1.1.58 NEW Toob Loooper and Toob Record plugins.  Fixes for Reaper UI compatibility. 
 
-v1.1.43 now provides native interfaces on hosts other than PiPedal.
+v1.1.58 now provides native interfaces on hosts other than PiPedal.
 
 ## Install ToobAmp
 
-Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the best versions of PiPedal plugins already.
+Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the latest and best versions of PiPedal plugins already.
 
-ToobAmp v1.1.43 has only been tested on Rasberry PI OS 64-bit bookworm. You can download a .deb install package here:
+ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64, but should be compatible 
+with other Debian-based Linux distributions.
 
-* [Rasberry PI OS 64-bit bookworm or later](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.43/toobamp_1.1.43_arm64.deb)
+Downloads:
 
-This release is currently being tested on Ubuntu. Expect install packages for Ubuntu shortly. If you want to try ToobAmp on Ubuntu in the 
-meantime, you can build the package from  source. If you encounter problems on Ubuntu, feel free to log bug reports.
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_amd64.deb)
 
-If you are using a different platform, you may want to consider using the following install packages, although the plugins in these packages do not
-have native UIs.
-
-* [Ubuntu 21.04 or later; Raspberry Pi OS 64-bit (bullseye) ](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_arm64.deb)
-
-* [Ubuntu 21.04 or later; amd64/x64](https://github.com/rerdavies/ToobAmp/releases/download/v1.0.17/toobamp_1.0.17_amd64.deb)
-
-Run the following shell commands:
+Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo dpkg -i ./toobamp_1.1.43_arm64.deb
+    sudo apt-get install  ./toobamp_1.1.58_arm64.deb   # adjust as appropropriate
     
 --------------------
 
 &nbsp;
-*   **TooB Neural Amp Modeler (NEW in 1.0.17!)**
+*   **TooB Neural Amp Modeler
 
     Guitar amp emulations based on Neural Net modeling. A port of Steven Atkinson's astounding [Neural Amp Modeler](https://github.com/sdatkinson/NeuralAmpModelerCore) to LV2.  
       
@@ -46,53 +50,10 @@ Run the following shell commands:
 
     &nbsp;
 
-
-*   **TooB BF-2 Flanger (NEW in 1.0.15!)**
-
-    Simulates a famous flanger.
-
-    &nbsp;
-    
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Flanger-ss.png)
-
-    &nbsp;
-
-
-*   **TooB Stereo Convolution Reverb (NEW in 1.0.15!)**
-
-    Simulates stereo reverb from pre-recorded stereo or Ambisonic b-format impulse response files.
-
-    &nbsp;
-    
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverbStereo-ss.png)
-
-    &nbsp;
-
-*   **TooB Convolution Reverb (NEW  in 1.0.14!)**
-
-    Simulates reverb from pre-recorded impulse response files.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ConvolutionReverb-ss.png)
-
-    &nbsp;
-
-
-*   **TooB Cab IR (NEW in 1.0.14!)**
-
-    Simulates guitar cabinet frequency responses from pre-recorded impulse files.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/CabIR-ss.png)
-
-    &nbsp;
-
 *   **Toob ML Amplifier**
 
     Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
-    pedals. 
+    pedals based on Jatin Chowdhury' ML Amplifier library.
 
     &nbsp;
 
@@ -100,9 +61,50 @@ Run the following shell commands:
 
     &nbsp;
 
+
+*   **TooB Convolution Reverb **
+
+    Simulates stereo reverb from pre-recorded stereo or Ambisonic b-format impulse response files. Mono and Stereo versions available.
+
+    &nbsp;
+    
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/crvb-sshot.png)
+
+    &nbsp;
+
+
+*   **TooB Freeverb**
+
+    A particularly well-balanced reverb, based on the legendary Freeverb reverb algorithm. Flexible controls, low coloration, low CPU usage.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/freeverb-sshot.png)
+
+    &nbsp;
+
+
+*   **TooB BF-2 Flanger **
+
+    Simulates a famous flanger. Available in mono and stereo versions.
+
+    &nbsp;
+    
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/bf-sshot.png)
+
+    &nbsp;
+
+
+*   **TooB Cab IR (NEW in 1.0.14!)**
+
+    Convolution-based Cab IR simulator, generating cabinetfrequency responses from pre-recorded impulse files.
+
 *   **TooB CE-2 Chorus**
 
     A faithful digital replica of the Boss CE-2 Chorus.
+
+    &nbsp;
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ce-sshot.png)
 
     &nbsp;
 
@@ -117,6 +119,37 @@ Run the following shell commands:
 
     &nbsp;
 
+*   **TooB Tone Stack**
+
+    Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-sshot.png)
+
+    &nbsp;    
+
+*   **TooB Tuner**
+
+    An stable, accurate guitar tuner. 
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/tuner-sshot.png)
+
+    &nbsp;
+
+*   **TooB Spectrum Analyzer**
+
+    Live-signal spectrum analyzer.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/spectrum-sshot.png)
+
+    &nbsp;
+
+
 *   **TooB Input Stage**
 
     For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that 
@@ -124,34 +157,6 @@ Run the following shell commands:
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/InputStage-ss.png)
-
-    &nbsp;
-
-
-*   **TooB Tone Stack**
-
-    Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-ss.png)
-
-    &nbsp;    
-
-
-*   **TooB Power Stage**
-
-    Guitar amplifier power stage emulation. Three super-sampled gain stages with flexible control over
-    distortion/overdrive characteristics allow you to generate anything from warm sparkling clean tones
-    to blistering full-on overdrive. Generally used in conjunction with the TooB Tone Stack and Toob CamSim 
-    plugins.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Power-ss.png)
-
-    &nbsp;
 
 *   **TooB Cab Simulator**
 
@@ -159,32 +164,6 @@ Run the following shell commands:
     allow easy emulation of guitar cabinet/microphone combinations. 
 
     &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/CabSim-ss.png)
-
-    &nbsp;
-
-*   **TooB Tuner**
-
-    An stable, accurate guitar tuner. (Currently only useful with PiPedal).
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Tuner-ss.png)
-
-    &nbsp;
-
-*   **TooB Spectrum Analyzer**
-
-    Live-signal spectrum analyzer. (Currently only useful with PiPedal).
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/SpectrumAnalyzer.png)
-
-    &nbsp;
-
-
 
 ## Building ToobAmp
 

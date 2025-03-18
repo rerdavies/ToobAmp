@@ -253,7 +253,7 @@ namespace LsNumerics
             while (true)
             {
                 std::unique_lock lock{mutex};
-                if (closed)
+                if (closed) 
                 {
                     throw DelayLineClosedException();
                 }

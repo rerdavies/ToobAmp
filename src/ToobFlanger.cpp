@@ -37,11 +37,11 @@
 using namespace toob;
 
 
-ToobFlanger::ToobFlanger(
+ToobFlangerBase::ToobFlangerBase(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2Plugin(bundle_path,features),
+    : Lv2Plugin(rate,bundle_path,features),
       rate(rate),
       bundle_path(bundle_path),
       flanger(rate)
@@ -50,9 +50,9 @@ ToobFlanger::ToobFlanger(
 }
 
 const char *ToobFlanger::URI = TOOB_FLANGER_URI;
-const char *ToobFlanger::STEREO_URI = TOOB_FLANGER_STEREO_URI;
+const char *ToobFlangerStereo::URI = TOOB_FLANGER_STEREO_URI;
 
-void ToobFlanger::ConnectPort(uint32_t port, void *data)
+void ToobFlangerBase::ConnectPort(uint32_t port, void *data)
 {
     switch ((PortId)port)
     {
@@ -83,11 +83,11 @@ void ToobFlanger::ConnectPort(uint32_t port, void *data)
         break;
     }
 }
-void ToobFlanger::clear()
+void ToobFlangerBase::clear()
 {
     flanger.Clear();
 }
-inline void ToobFlanger::updateControls()
+inline void ToobFlangerBase::updateControls()
 {
     if (lastManual != *pManual)
     {
@@ -126,14 +126,14 @@ inline void ToobFlanger::updateControls()
 
     }
 }
-void ToobFlanger::Activate()
+void ToobFlangerBase::Activate()
 {
     lastRate = lastDepth = -1E30; // force updates
     updateControls();
     clear();
 }
 
-void ToobFlanger::Run(uint32_t n_samples)
+void ToobFlangerBase::Run(uint32_t n_samples)
 {
     updateControls();
     if (outR != nullptr)
@@ -155,6 +155,6 @@ void ToobFlanger::Run(uint32_t n_samples)
     }
     *pLfo = flanger.GetLfoValue();
 }
-void ToobFlanger::Deactivate()
+void ToobFlangerBase::Deactivate()
 {
 }

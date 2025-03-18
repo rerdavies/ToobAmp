@@ -60,7 +60,7 @@ private:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(691,382), // default window size.
+    Lv2cSize(645,536), // default window size.
     Lv2cSize(470,320), // default help window size.
     LOGO_FILE
     

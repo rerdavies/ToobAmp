@@ -30,7 +30,7 @@
 #include "PowerStage2.h"
 #include "CabSim.h"
 #include "ToneStack.h"
-#include "Lv2Plugin.h"
+#include <lv2_plugin/Lv2Plugin.hpp>
 #include <string.h>
 #include "lv2/state/state.h"
 #include <vector>
@@ -47,52 +47,42 @@
 using namespace toob;
 
 
-std::vector<Lv2PluginFactory> factories = {
-    Lv2PluginFactory::Create<InputStage>(),
-    Lv2PluginFactory::Create<PowerStage2>(),
-    Lv2PluginFactory::Create<CabSim>(),
-    Lv2PluginFactory::Create<ToneStack>(),
-    Lv2PluginFactory::Create<SpectrumAnalyzer>(),
-    Lv2PluginFactory::Create<ToobML>(),
-    Lv2PluginFactory::Create<ToobTuner>(),
-    Lv2PluginFactory::Create<ToobFreeverb>(),
-    Lv2PluginFactory::Create<ToobDelay>(),
-    Lv2PluginFactory::Create<ToobChorus>(),
-    Lv2PluginFactory::Create<ToobFlanger>(),
-    Lv2PluginFactory(ToobFlanger::URI, &ToobFlanger::Create, false),
-    Lv2PluginFactory(ToobFlanger::STEREO_URI, &ToobFlanger::Create, false),
-    Lv2PluginFactory(NeuralAmpModeler::URI, &NeuralAmpModeler::Create, true),
 
-    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_URI,&ToobConvolutionReverb::CreateMonoConvolutionReverb,true),
-    Lv2PluginFactory(ToobConvolutionReverb::CONVOLUTION_REVERB_STEREO_URI,&ToobConvolutionReverb::CreateStereoConvolutionReverb,true),
-    Lv2PluginFactory(ToobConvolutionReverb::CAB_IR_URI,&ToobConvolutionReverb::CreateCabIR,true),
-};
-
-static const LV2_Descriptor*const* descriptors;
-
-static bool initialized;
-
-extern "C" {
-    LV2_SYMBOL_EXPORT
-        const LV2_Descriptor*
-        lv2_descriptor(uint32_t index)
-    {
-        if (!initialized)
-        {
-            initialized = true;
-            descriptors = Lv2Plugin::CreateDescriptors(factories);
-
-        }
-        if (index < factories.size())
-        {
-            return descriptors[index];
-        }
-        return NULL;
+#define PLUGIN_REGISTER(PLUGIN)  \
+    namespace decl_##PLUGIN { \
+        REGISTRATION_DECLARATION PluginRegistration<PLUGIN> registration(PLUGIN::URI); \
     }
-}
 
-int main(void)
-{
-    return 0;
-}
+
+#define    PLUGIN_REGISTER2(URI,PLUGIN, HAS_STATE)  \
+    namespace decl_##PLUGIN { \
+        REGISTRATION_DECLARATION PluginRegistration<PLUGIN> registration(URI); \
+    }
+
+
+    PLUGIN_REGISTER(InputStage);
+    PLUGIN_REGISTER(PowerStage2);
+    PLUGIN_REGISTER(CabSim);
+    PLUGIN_REGISTER(ToneStack);
+    PLUGIN_REGISTER(SpectrumAnalyzer);
+    PLUGIN_REGISTER(ToobML);
+    PLUGIN_REGISTER(ToobTuner);
+    PLUGIN_REGISTER(ToobFreeverb);
+    PLUGIN_REGISTER(ToobDelay);
+    PLUGIN_REGISTER(ToobChorus);
+    PLUGIN_REGISTER(ToobConvolutionReverbMono); 
+    PLUGIN_REGISTER(ToobConvolutionReverbStereo); 
+    PLUGIN_REGISTER(ToobConvolutionCabIr); 
+    PLUGIN_REGISTER(NeuralAmpModeler);
+    PLUGIN_REGISTER(ToobFlanger);
+    PLUGIN_REGISTER(ToobFlangerStereo);
+    // see also PLUGIN_REGISTER(ToobRecordMono); in ToobRecordMono.cpp
+    // see also PLUGIN_REGISTER(ToobRecorStereo); in ToobRecordMono.cpp
+    // see also PLUGIN_REGISTER(ToobLooperFour); in ToobLooperFour.cpp
+
+
+// int main(void)
+// {
+//     return 0;
+// }
 

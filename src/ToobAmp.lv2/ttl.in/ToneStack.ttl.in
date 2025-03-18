@@ -23,6 +23,8 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 @prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
+@prefix pipedal_patch: <http://github.com/rerdavies/pipedal/patch#> .
+
 @prefix toob: <http://two-play.com/plugins/toob#> .
 
 @prefix tonestack: <two-play.com/plugins/toob-tone-stack#> .
@@ -68,7 +70,7 @@ tone stack used in Polytone and HiWatt amps.
         mod:label "Tone Stack";
         lv2:requiredFeature urid:map ;
         lv2:optionalFeature lv2:hardRTCapable;
-        patch:readable 
+        pipedal_patch:readable 
             toob:frequencyResponseVector;
 
         
