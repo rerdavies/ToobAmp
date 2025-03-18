@@ -26,9 +26,9 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
