@@ -2,18 +2,19 @@
 
 v1.1.58
 
-The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects processors. The set of plugins provides a no nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
+The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
+no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
 
 - Neural Network Amp Models (TooB NAM, and TooML plugins).
-- Reverb (Toob Convolutin Reverb, and Toob Freeverb).
-- Loopers (Toob 4Looper, and One-Button Looper).
-- Cab simulators (Toob Cab IR, and Toob CabSim).
+- Reverb (TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
+- Loopers (TooB 4Looper, and One-Button Looper).
+- Cab simulators (TooB Cab IR, and TooB CabSim).
 - Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
-- Utility plugins (Toob Input Stage, Toob Tuner, Toob Spectrum Analyzer, and TooB Input Recorder).
+- Utility plugins (TooB Input Stage, TooB Tuner, TooB Spectrum Analyzer, and TooB Input Recorder).
 
 
 # Releases Notes
-v1.1.58 NEW Toob Loooper and Toob Record plugins.  Fixes for Reaper UI compatibility. 
+v1.1.58 NEW TooB Loooper and TooB Record plugins.  Fixes for Reaper UI compatibility. 
 
 v1.1.58 now provides native interfaces on hosts other than PiPedal.
 
@@ -50,7 +51,7 @@ Download the appropriate package for your sytems. Run the following shell comman
 
     &nbsp;
 
-*   **Toob ML Amplifier**
+*   **TooB ML Amplifier**
 
     Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
     pedals based on Jatin Chowdhury' ML Amplifier library.
@@ -111,11 +112,11 @@ Download the appropriate package for your sytems. Run the following shell comman
 
 *   **TooB Freeverb**
 
-    A particularly well-balanced reverb, based on the famous Freeverb algorithm.
+    A particularly well-balanced reverb, based on the famous Freeverb algorithm. Flexible controls, low coloration, low CPU usage.
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/Freeverb-ss.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/freeverb-sshot.png)
 
     &nbsp;
 
@@ -160,7 +161,7 @@ Download the appropriate package for your sytems. Run the following shell comman
 
 *   **TooB Cab Simulator**
 
-    Rather than relying on expensive convolution effects, Toob CabSim provides an EQ section designed to 
+    Rather than relying on expensive convolution effects, TooB CabSim provides an EQ section designed to 
     allow easy emulation of guitar cabinet/microphone combinations. 
 
     &nbsp;
