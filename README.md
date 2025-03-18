@@ -21,19 +21,20 @@ v1.1.58 now provides native interfaces on hosts other than PiPedal.
 
 Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the latest and best versions of PiPedal plugins already.
 
-ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64.
+ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64, but should be compatible 
+with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit bookworm or later (arm 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
-* [Ubuntu 22.04 or later (Arm 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_arm64.deb)
 * [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.43_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo dpkg -i ./toobamp_1.1.43_arm64.deb
+    sudo apt-get install  ./toobamp_1.1.58_arm64.deb   # adjust as appropropriate
     
 --------------------
 
