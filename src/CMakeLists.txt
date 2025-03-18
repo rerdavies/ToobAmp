@@ -154,6 +154,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 add_library(ToobAmp  SHARED
         record_plugins/ToobLoopers.cpp record_plugins/ToobLoopers.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp
 
         record_plugins/ToobRecordMono.cpp record_plugins/ToobRecordMono.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
@@ -349,7 +350,7 @@ add_custom_command(
 
 
 add_custom_command(
-    OUTPUT  ToobLooperOneInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    OUTPUT  ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info 
              http://two-play.com/plugins/toob-looper-one
               --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
