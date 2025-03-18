@@ -42,6 +42,10 @@ ToobUi::ToobUi(
 {
     // TO-DO: remove the argument.
     defaultHelpWindowSize = Lv2cSize(600,600);
+    Lv2cTheme::ptr theme = Lv2cTheme::Create(true); // start with dark theme.
+    //theme->paper = Lv2cColor("#081808"); // something dark.
+    this->Theme(theme);
+
 }
 ToobUi::ToobUi(std::shared_ptr<Lv2PluginInfo> pluginInfo, 
     const Lv2cCreateWindowParameters &createWindowParams,

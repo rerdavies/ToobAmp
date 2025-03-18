@@ -19,14 +19,17 @@
 
 #include "ToobRecordStereoInfo.hpp"
 #include "lv2c_ui/Lv2UI.hpp"
+#include "../ToobUi.hpp"
  
 using namespace lv2c::ui;
 using namespace lv2c;
 using namespace record_plugin;
+using namespace toob;
 
-class RecordPluginStereoUi: public Lv2UI {
+
+class RecordPluginStereoUi: public ToobUi {
 public:
-    using super=Lv2UI;
+    using super=ToobUi;
     RecordPluginStereoUi();
 };
 
@@ -34,12 +37,11 @@ public:
 
 RecordPluginStereoUi::RecordPluginStereoUi() : super(
     StereoRecordPluginUiInfo::Create(),
-    Lv2cSize(490,360) // default window size.
+    Lv2cSize(887,223), // default window size.
+    Lv2cSize(887,223), // default window size.)
+    "ToobRecordStereo.svg"
     )
 {
-    Lv2cTheme::ptr theme = Lv2cTheme::Create(true); // start with dark theme.
-    theme->paper = Lv2cColor("#081808"); // something dark.
-    this->Theme(theme);
 }
 
 REGISTRATION_DECLARATION Lv2UIRegistration<RecordPluginStereoUi> stereoRecordRegistration { StereoRecordPluginUiInfo::UI_URI};

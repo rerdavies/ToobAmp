@@ -13,6 +13,7 @@
 @prefix mod:   <http://moddevices.com/ns/mod#> .
 @prefix param:   <http://lv2plug.in/ns/ext/parameters#> .
 @prefix work:  <http://lv2plug.in/ns/ext/worker#> .
+@prefix pipedal_patch: <http://github.com/rerdavies/pipedal/patch#> .
 
 @prefix atom: <http://lv2plug.in/ns/ext/atom#> .
 @prefix patch: <http://lv2plug.in/ns/ext/patch#> .
@@ -49,8 +50,6 @@
                 ;
 
         uiext:ui <http://two-play.com/plugins/toob-spectrum-ui>;
-        pipedal_patch:writable 
-                <http://two-play.com/plugins/toob#spectrumResponseVector>;
 
         pipedal_patch:readable 
                 <http://two-play.com/plugins/toob#spectrumResponseVector>;

@@ -87,6 +87,7 @@ protected:
 	};
 
 	ToobLooperEngine(int channels, double sampleRate);
+	~ToobLooperEngine();
 
 
 	void SetBeatLeds(RateLimitedOutputPort &bar_led, RateLimitedOutputPort&beat_led);

@@ -73,8 +73,6 @@ inputStage:filterGroup
         lv2:requiredFeature urid:map ;
         lv2:optionalFeature lv2:hardRTCapable;
         
-        patch:writable 
-                <http://two-play.com/plugins/toob#frequencyResponseVector>;
         pipedal_patch:readable 
                 <http://two-play.com/plugins/toob#frequencyResponseVector>;
 
@@ -283,8 +281,6 @@ The GateT control provides a noise gate. Set to minimum value to disable.
     lv2:extensionData uiext:resize ;
     lv2:extensionData uiext:idleInterface;
     lv2:requiredFeature uiext:idleInterface ;
-    patch:writable 
-        <http://two-play.com/plugins/toob#frequencyResponseVector>;
     .
 
 <http://two-play.com/plugins/toob-input_stage> 

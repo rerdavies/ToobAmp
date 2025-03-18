@@ -739,7 +739,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     if (responseDelaySamples != 0)
     {
         responseDelaySamples -= nFrames;
-        if (responseDelaySamples < 0 || nFrames == 0)
+        if (responseDelaySamples <= 0 || nFrames == 0)
         {
             responseGet = true;
             responseDelaySamples = 0;

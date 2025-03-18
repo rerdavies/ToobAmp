@@ -19,14 +19,16 @@
 
 #include "ToobRecordMonoInfo.hpp"
 #include "lv2c_ui/Lv2UI.hpp"
+#include "../ToobUi.hpp"
 
 using namespace lv2c::ui;
 using namespace lv2c;
 using namespace record_plugin;
+using namespace toob;
 
-class RecordPluginMonoUi: public Lv2UI {
+class RecordPluginMonoUi: public ToobUi {
 public:
-    using super=Lv2UI;
+    using super=ToobUi;
     RecordPluginMonoUi();
 };
 
@@ -34,12 +36,11 @@ public:
 
 RecordPluginMonoUi::RecordPluginMonoUi() : super(
     MonoRecordPluginUiInfo::Create(),
-    Lv2cSize(490,360) // default window size.
+    Lv2cSize(887,223), // default window size.
+    Lv2cSize(887,223), // default window size.)
+    "ToobRecordMono.svg"
     )
 {
-    Lv2cTheme::ptr theme = Lv2cTheme::Create(true); // start with dark theme.
-    theme->paper = Lv2cColor("#081808"); // something dark.
-    this->Theme(theme);
 }
 
 // Refereence this variable to get the linker to demand-link the entire .obj.

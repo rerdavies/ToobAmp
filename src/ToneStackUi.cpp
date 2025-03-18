@@ -46,7 +46,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(731,203), // default window size.
+    Lv2cSize(731,238), // default window size.
     Lv2cSize(470,200),
     "ToobToneStackLogo.svg"
     )

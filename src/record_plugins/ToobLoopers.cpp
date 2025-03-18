@@ -114,6 +114,19 @@ ToobLooperEngine::ToobLooperEngine(int channels, double rate)
     this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(channels, (size_t)rate / 10);
     bufferPool->Reserve(20);
 }
+
+
+ToobLooperEngine::~ToobLooperEngine()
+{
+    for (auto &loop : loops)
+    {
+        loop.Reset();
+    }
+    bufferPool->Trim(0);   
+}
+
+
+
 ToobLooperFour::ToobLooperFour(
     double rate,
     const char *bundle_path,
@@ -148,6 +161,7 @@ ToobLooperOne::ToobLooperOne(
       ToobLooperEngine(2, rate)
 {
 
+    ///this->GetTheme() "#8750C4"
     loops.reserve(16);
     loops.resize(16);
     for (auto &loop : loops)
@@ -235,6 +249,7 @@ void ToobLooperFour::Activate()
                     }
                     bufferPool->PutBuffer(freeBuffer->buffer);
                 }
+                break;
 
                 case MessageType::Quit:
                 {
@@ -825,6 +840,7 @@ void ToobLooperFour::fgError(const char *message)
 
 ToobLooperFour::~ToobLooperFour()
 {
+
 }
 
 // static size_t CalculateLoopLength(double sampleRate,size_t length, size_t master_loop_length)

@@ -3,4 +3,7 @@
 - BF-2 LFO output.
 - Version bump.
 - replace LED ctls with images?
-O
+
+
+
+sudo apt install libxcursor-dev (ToobAmp AND lv2c!)

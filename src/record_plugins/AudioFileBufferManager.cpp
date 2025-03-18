@@ -24,6 +24,7 @@
 #include "AudioFileBufferManager.hpp"
 #include <stdexcept>
 #include <iostream>
+#include <sstream>
 
 using namespace toob;
 
@@ -74,7 +75,9 @@ AudioFileBufferPool::~AudioFileBufferPool()
         }
         if (this->allocatedCount != 0)
         {
-            DBG_ASSERT("AudioFileBufferPool::~AudioFileBufferPool: Elements leaked.");
+            std::stringstream msg;
+            msg << "AudioFileBufferPool::~AudioFileBufferPool: " << this->allocatedCount << " elements leaked.";
+            DBG_ASSERT(msg.str());
         }
     }
     catch (const std::exception &e)
