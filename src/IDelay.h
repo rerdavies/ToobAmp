@@ -55,6 +55,17 @@ namespace toob {
                 Reset();
             }
         }
+        size_t GetMaxDelay() const { return ixMask+1; }
+
+        float Tap(int32_t delay) const
+        {
+            return buffer[(head + delay ) & ixMask];
+        }
+        // float operator[](int32_t delay) const
+        // {
+        //     return buffer[(head -1- delay) & ixMask];
+        // }
+
         void Reset()
         {
             if (buffer != NULL)

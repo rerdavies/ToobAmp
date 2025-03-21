@@ -162,6 +162,9 @@ add_library(ToobAmp  SHARED
         record_plugins/ToobRingBuffer.hpp
         record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
         record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp 
+
+        record_plugins/InputTrigger.hpp record_plugins/InputTrigger.cpp
+
         TemporaryFile.cpp TemporaryFile.hpp
 
         DebugPlot.cpp

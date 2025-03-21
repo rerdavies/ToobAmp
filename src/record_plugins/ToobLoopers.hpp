@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Robin E. R. Davies
+// Copyright (c) 2025 Robin E. R. Davies
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the "Software"), to deal in
@@ -33,6 +33,8 @@
 #include <queue>
 #include "../Fifo.hpp"
 #include "../ControlDezipper.h"
+#include "InputTrigger.hpp"
+#include "../IDelay.h"
 
 
 #include "ToobLooperFourInfo.hpp"
@@ -77,6 +79,7 @@ protected:
 	enum class LoopState
 	{
 		Idle,
+		TriggerRecording,
 		CueRecording,
 		Recording,
 		CueOverdub,
@@ -90,9 +93,18 @@ protected:
 	~ToobLooperEngine();
 
 
+	void SetSlowBlinkLed(RateLimitedOutputPort &bar_led);
+
 	void SetBeatLeds(RateLimitedOutputPort &bar_led, RateLimitedOutputPort&beat_led);
 protected:
+	toob::InputTrigger inputTrigger;
 	bool isStereo = true;
+
+	toob::IDelay leftInputDelay;
+	toob::IDelay rightInputDelay;
+	size_t trigger_lead_samples;
+
+	void ProcessInputTrigger(const float*in, const float*inR, size_t n_samples);
 
 protected:
 
@@ -110,7 +122,7 @@ protected:
 		uint64_t errorTime = 0;
 	};
 
-	class Loop
+	class Loop 
 	{
 	public:
 		void Init(ToobLooperEngine *plugin);
@@ -215,6 +227,11 @@ protected:
 		bool lastControlValue = false;
 		using clock_t = std::chrono::steady_clock;
 		
+		size_t pre_trigger_samples = 0;
+		size_t pre_trigger_blend_samples = 0;
+		void CopyInPreTriggerSamples(size_t play_cursor,int64_t inputDelayOffset);
+		void BlendInPreTriggerSamples(size_t play_cursor,size_t length,int64_t inputDelayOffset);
+
 
 		clock_t::time_point lastControlTime = clock_t::now() - std::chrono::milliseconds(10000);
 
@@ -240,6 +257,7 @@ protected:
 	virtual float getTempo() = 0; 
 	virtual TimeSig getTimesig() = 0;
 	virtual double getOutputLevel() = 0;
+	virtual bool getTriggerRecord() = 0;
 	virtual bool getEnableRecordCountin() = 0;
 	virtual size_t getNumberOfBars() = 0;
 	virtual bool getRecordSyncOption() = 0;
@@ -341,7 +359,8 @@ protected:
 	}
 	virtual TimeSig getTimesig() override { return (TimeSig)this->timesig.GetValue(); }
 	virtual double getOutputLevel() override { return this->level.GetAf(); }
-	virtual bool getEnableRecordCountin() override { return this->rec_count_in.GetValue() != 0; }	
+	virtual bool getTriggerRecord() override { return this->rec_count_in.GetValue() == 2; }	
+	virtual bool getEnableRecordCountin() override { return this->rec_count_in.GetValue() == 1; }	
 
 	virtual size_t getNumberOfBars() override { return this->bars.GetValue(); }	
 	virtual bool getRecordSyncOption() override { return this->rec_sync_option.GetValue(); }
@@ -365,6 +384,7 @@ private:
 		CueOverdubbing,
 		Overdubbing,
 	};
+	toob::ControlDezipper triggerDezipper;
 
 
 	PluginState pluginState = PluginState::Empty;
@@ -409,7 +429,8 @@ public:
 	}
 	virtual TimeSig getTimesig() override { return (TimeSig)this->timesig.GetValue(); }
 	virtual double getOutputLevel() override { return this->level.GetAf(); }
-	virtual bool getEnableRecordCountin() override { return this->rec_count_in.GetValue() != 0; }	
+	virtual bool getTriggerRecord() override { return this->rec_count_in.GetValue() == 2; }
+	virtual bool getEnableRecordCountin() override { return this->rec_count_in.GetValue() == 1; }	
 
 	virtual size_t getNumberOfBars() override { return this->bars.GetValue(); }	
 	virtual bool getRecordSyncOption() override { return this->rec_sync_option.GetValue(); }
