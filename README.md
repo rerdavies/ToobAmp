@@ -14,9 +14,11 @@ no-nonsense, foundation set of effects pedals to get you started. The plugins ar
 
 
 # Releases Notes
-v1.1.59 NEW TooB Loooper and TooB Record plugins.  Fixes for Reaper UI compatibility. 
 
-v1.1.59 now provides native interfaces on hosts other than PiPedal.
+###v1.1.59 
+- NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
+- Fixes for Reaper UI compatibility. 
+
 
 ## Install ToobAmp
 
