@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.58
+v1.1.59
 
 The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
@@ -14,9 +14,11 @@ no-nonsense, foundation set of effects pedals to get you started. The plugins ar
 
 
 # Releases Notes
-v1.1.58 NEW TooB Loooper and TooB Record plugins.  Fixes for Reaper UI compatibility. 
 
-v1.1.58 now provides native interfaces on hosts other than PiPedal.
+###v1.1.59 
+- NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
+- Fixes for Reaper UI compatibility. 
+
 
 ## Install ToobAmp
 
@@ -27,15 +29,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.58/toobamp_1.1.58_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.59/toobamp_1.1.59_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.59/toobamp_1.1.59_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.59/toobamp_1.1.59_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.1.58_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.1.59_arm64.deb   # adjust as appropropriate
     
 --------------------
 

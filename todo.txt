@@ -1,4 +1,1 @@
-- Strip x64 symbols?
-
-
-sudo apt install libxcursor-dev (ToobAmp AND lv2c!)
+File types not being respected in native plugins.

@@ -34,6 +34,9 @@
 using namespace toob;
 
 static constexpr float TRANSITION_TIME_SEC = 0.003f;
+static constexpr float TRIGGER_LEAD_TIME = 0.001f;
+static constexpr float TRIGGER_FADE_IN_TIME = 0.001f;
+
 
 static REGISTRATION_DECLARATION PluginRegistration<ToobLooperFour> registration(ToobLooperFour::URI);
 
@@ -113,6 +116,10 @@ ToobLooperEngine::ToobLooperEngine(int channels, double rate)
     this->sampleRate = rate;
     this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(channels, (size_t)rate / 10);
     bufferPool->Reserve(20);
+    inputTrigger.Init(rate);
+    this->trigger_lead_samples = (size_t)(rate * TRIGGER_LEAD_TIME);
+    leftInputDelay.SetMaxDelay(trigger_lead_samples+2048);
+    rightInputDelay.SetMaxDelay(trigger_lead_samples+2048);
 }
 
 
@@ -401,7 +408,11 @@ void ToobLooperEngine::UpdateLoopPosition(Loop & loop,RateLimitedOutputPort &pro
     float pos = 0.0f;
     if (loop.isMasterLoop)
     {
-        if (loop.state == LoopState::CueRecording)
+        if (loop.state == LoopState::TriggerRecording)
+        {
+            pos = 0.0f;
+        }
+        else if (loop.state == LoopState::CueRecording)
         {
             size_t p = this->current_plugin_sample - loop.cue_start;
             size_t length = GetSamplesPerQuarterNote() * GetCountInQuarterNotes();
@@ -432,7 +443,9 @@ void ToobLooperEngine::UpdateLoopPosition(Loop & loop,RateLimitedOutputPort &pro
     }
     else
     {
-        if (loop.state == LoopState::CueRecording)
+        if (loop.state == LoopState::CueRecording
+            || loop.state == LoopState::TriggerRecording
+        )
         {
             pos = (loops[0].length == 0 ? 0.0f : (float)loops[0].play_cursor * 1.0f / loops[0].length);
         }
@@ -488,6 +501,10 @@ void ToobLooperEngine::UpdateLoopLeds(
         play_led.SetValue(true);
         break;
 
+    case LoopState::TriggerRecording:
+        record_led.SetValue(slowBlink);
+        play_led.SetValue(false);
+        break;
     case LoopState::CueRecording:
         if (loop.isMasterLoop)
         {
@@ -539,26 +556,40 @@ void ToobLooperOne::UpdateLoopLeds(
         record_led,
         play_led);
 
-    if (loop.isMasterLoop)
     if (loop.state == LoopState::CueOverdub)
     {
         SetBeatLeds(record_led, play_led);
+    } 
+    else if (loop.state == LoopState::TriggerRecording) {
+        SetSlowBlinkLed(record_led);
+        play_led.SetValue(false);
     }
-    if (loop.state == LoopState::CueRecording && !loop.isMasterLoop)
+    else if (loop.state == LoopState::CueRecording && !loop.isMasterLoop)
     {
         SetBeatLeds(record_led, play_led);
     }
-    if (loop.state == LoopState::Recording && !loop.isMasterLoop)
+    else if (loop.state == LoopState::Recording && !loop.isMasterLoop)
     {
         record_led.SetValue(true);
         play_led.SetValue(true);
     }
-    if (loop.state == LoopState::Playing && !loop.isMasterLoop)
+    else if (loop.state == LoopState::Playing && !loop.isMasterLoop)
     {
         record_led.SetValue(false);
         play_led.SetValue(true);
     }
 }
+
+
+void ToobLooperEngine::SetSlowBlinkLed(RateLimitedOutputPort &bar_led)
+{
+    int64_t currentSample;
+    currentSample = this->current_plugin_sample - this->time_zero;
+    size_t slowBlinkRate = GetSamplesPerBeat();
+    bool slowBlink = currentSample % slowBlinkRate < (slowBlinkRate / 2);
+    bar_led.SetValue(slowBlink);
+}
+
 
 void ToobLooperEngine::SetBeatLeds(RateLimitedOutputPort &bar_led, RateLimitedOutputPort &beat_led)
 {
@@ -704,6 +735,14 @@ void ToobLooperFour::HandleTriggers()
 
 void ToobLooperFour::Run(uint32_t n_samples)
 {
+    const float *in = this->in.Get();
+    const float *inR = this->inR.Get();
+
+
+    inputTrigger.ThresholdDb(trigger_level.GetDb());
+    ProcessInputTrigger(in, inR, n_samples);
+    inputTrigger.Run(in, inR, n_samples);
+    trigger_led.SetValue(inputTrigger.TriggerLed(), n_samples);
 
     fgHandleMessages();
 
@@ -711,8 +750,8 @@ void ToobLooperFour::Run(uint32_t n_samples)
 
     Mix(
         n_samples,
-        in.Get(),
-        inR.Get(),
+        in,
+        inR,
         out.Get(),
         outR.Get());
 
@@ -723,6 +762,11 @@ void ToobLooperFour::Run(uint32_t n_samples)
 
 void ToobLooperOne::Run(uint32_t n_samples)
 {
+
+    inputTrigger.ThresholdDb(trigger_level.GetDb());
+    inputTrigger.Run(in.Get(), inR.Get(), n_samples);
+    trigger_led.SetValue(inputTrigger.TriggerLed(), n_samples);
+
 
     fgHandleMessages();
 
@@ -862,7 +906,9 @@ size_t ToobLooperEngine::Loop::CalculateCueSamples(size_t masterLoopOffset)
 
 void ToobLooperEngine::Loop::CancelCue()
 {
-    if (state == LoopState::CueRecording)
+    if (state == LoopState::CueRecording
+        || state == LoopState::TriggerRecording
+    )
     {
         state = LoopState::Idle;
         cue_samples = 0;
@@ -876,7 +922,8 @@ void ToobLooperEngine::Loop::CancelCue()
 void ToobLooperEngine::Loop::Init(ToobLooperEngine *plugin)
 {
     this->declickSamples = (size_t)(plugin->sampleRate * 0.001); // 1ms of samples.
-
+    this->pre_trigger_samples = (size_t)(plugin->sampleRate * TRIGGER_LEAD_TIME);
+    this->pre_trigger_blend_samples = (size_t)(plugin->sampleRate * TRIGGER_FADE_IN_TIME);
     this->bufferSize = plugin->bufferPool->GetBufferSize();
     this->plugin = plugin;
     this->recordLevel.SetSampleRate(plugin->sampleRate);
@@ -893,7 +940,12 @@ void ToobLooperEngine::Loop::Record(ToobLooperEngine *plugin, size_t loopOffset)
     {
         return;
     }
-    CancelCue();
+    if (state == LoopState::CueRecording
+        || state == LoopState::TriggerRecording)
+    {
+        Reset();
+        return;
+    }
     if (state == LoopState::Playing)
     {
         state = LoopState::Overdubbing;
@@ -952,7 +1004,15 @@ void ToobLooperEngine::Loop::Record(ToobLooperEngine *plugin, size_t loopOffset)
                 recordError.SetError();
                 return;
             }
-            if (plugin->getEnableRecordCountin())
+            if (plugin->getTriggerRecord()) {
+                state = LoopState::TriggerRecording;
+                if (!isMasterLoop) 
+                {
+                    this->play_cursor = plugin->loops[0].play_cursor;
+                }
+                return;
+            }
+            else if (plugin->getEnableRecordCountin())
             {
                 plugin->time_zero = plugin->current_plugin_sample;
                 plugin->has_time_zero = true;
@@ -986,7 +1046,11 @@ void ToobLooperEngine::Loop::Record(ToobLooperEngine *plugin, size_t loopOffset)
         }
         else
         {
-            if (plugin->getRecordSyncOption())
+            if (plugin->getTriggerRecord())
+            {
+                state = LoopState::TriggerRecording;
+            }
+            else if (plugin->getRecordSyncOption())
             {
                 recordLevel.To(0.0, 0.0);
                 playbackLevel.To(0.0, 0.0);
@@ -1132,8 +1196,6 @@ void ToobLooperEngine::Loop::Reset()
         plugin->SetMasterLoopLength(0);
         plugin->has_time_zero = false;
     }
-
-    play_cursor = 0;
 }
 
 void ToobLooperEngine::SetMasterLoopLength(size_t size)
@@ -1254,6 +1316,49 @@ void ToobLooperEngine::Loop::process(
             }
             break;
         }
+        case LoopState::TriggerRecording:
+            {
+                if (plugin->inputTrigger.Triggered())
+                {
+                    size_t triggerPos = plugin->inputTrigger.TriggerFrame();
+                    if (index < triggerPos) {
+                        index = triggerPos;
+
+                    } 
+                    this->state = LoopState::Recording;
+                    recordLevel.To(1.0f, 0.0f);
+                    if (isMasterLoop)
+                    {
+                        state = LoopState::Recording;
+                        playbackLevel.To(0.0f, 0.0f);
+                        CopyInPreTriggerSamples(0,(int64_t)index-(int64_t)n_samples);
+                        play_cursor = pre_trigger_samples;
+
+                        if (plugin->IsFixedLengthLoop())
+                        {
+                            this->length = 60.0f * plugin->sampleRate / plugin->getTempo() * quarterNotesPerBar(plugin->getTimesig()) * plugin->getNumberOfBars();
+                            plugin->SetMasterLoopLength(this->length);
+                        }
+                        if (!plugin->has_time_zero)
+                        {
+                            plugin->time_zero = plugin->current_plugin_sample + index- pre_trigger_samples;
+                            plugin->has_time_zero = true;
+                        }
+                    } else {
+                        play_cursor = plugin->loops[0].play_cursor - n_samples + index;
+                        state = LoopState::Overdubbing;
+                        playbackLevel.To(1.0f, 0.0f);
+                        this->length = plugin->loops[0].length;
+                        BlendInPreTriggerSamples(play_cursor,this->length,(int64_t)index-(int64_t)n_samples);
+                    }
+                    plugin->OnLoopEnd(*this);
+                }
+                else
+                {
+                    index = n_samples;
+                }
+            }
+            break;
         case LoopState::CueRecording:
         {
             size_t cueSamples = cue_samples;
@@ -1374,7 +1479,7 @@ void ToobLooperOne::HandleTriggers()
                 OnLongLongPress();
             } else if (longPressMs.count() > 500)
             {
-                OnLongPress();
+                 OnLongPress();
             }
         }
     }
@@ -1396,6 +1501,7 @@ void ToobLooperOne::OnSingleTap()
         }
         else
         {
+            // yyy: What if we're triggering?
             pluginState = PluginState::CueRecording;
         }
         break;
@@ -1419,6 +1525,7 @@ void ToobLooperOne::OnSingleTap()
         case LoopState::Recording:
             pluginState = activeLoops == 1 ? PluginState::Recording : PluginState::Overdubbing;
             break;
+        case LoopState::TriggerRecording:
         case LoopState::CueRecording:
             pluginState = activeLoops == 1 ? PluginState::CueRecording : PluginState::CueOverdubbing;
             break;
@@ -1530,6 +1637,7 @@ void ToobLooperEngine::Loop::ControlTap()
         Record(plugin, play_cursor);
         break;
     case LoopState::CueRecording:
+    case LoopState::TriggerRecording:
         CancelCue();
         break;
     case LoopState::Recording:
@@ -1582,6 +1690,73 @@ void ToobLooperEngine::Loop::ControlValue(bool value) {
         }   
     }
 }
+
+void ToobLooperEngine::ProcessInputTrigger(const float*in, const float*inR, size_t n_samples)
+{
+    size_t maxDelay = trigger_lead_samples + n_samples;
+    if (maxDelay > leftInputDelay.GetMaxDelay())
+    {
+        leftInputDelay.SetMaxDelay(maxDelay);
+        rightInputDelay.SetMaxDelay(maxDelay);
+    }
+    if (inR != nullptr) {
+        for (size_t i = 0; i < n_samples; ++i)
+        {
+            leftInputDelay.Tick(in[i]);
+            rightInputDelay.Tick(inR[i]);
+
+        }
+    } else {
+        for (size_t i = 0; i < n_samples; ++i)
+        {
+            leftInputDelay.Tick(in[i]);
+        }
+    }
+    inputTrigger.Run(in, inR, n_samples);
+}
+
+void ToobLooperEngine::Loop::CopyInPreTriggerSamples(
+    size_t play_cursor,int64_t inputDelayOffset
+) {
+
+    int32_t inputDelay = (int32_t)this->pre_trigger_samples - (int32_t)inputDelayOffset-1;
+    for (size_t i = 0; i < pre_trigger_samples; ++i)
+    {
+        this->atL(play_cursor+i) = plugin->leftInputDelay.Tap(inputDelay-i);
+        this->atR(play_cursor+i) = plugin->rightInputDelay.Tap(inputDelay-i);
+    }
+}
+
+void ToobLooperEngine::Loop::BlendInPreTriggerSamples(
+    size_t play_cursor,size_t length, int64_t inputDelayOffset
+) {
+
+    int32_t inputDelay = (int32_t)this->pre_trigger_samples + (int32_t)pre_trigger_blend_samples - (int32_t)inputDelayOffset - 1;
+    float blend = 0;
+    float dBlend = 1.0f/pre_trigger_blend_samples;
+    int64_t outX = (int64_t)play_cursor-this->pre_trigger_blend_samples - this->pre_trigger_samples;
+    while (outX < 0) {
+        outX += length;
+    }
+    for (size_t i = 0; i < pre_trigger_blend_samples; ++i) 
+    {
+        this->atL(outX) += blend*plugin->leftInputDelay.Tap(inputDelay);
+        this->atR(outX) += blend*plugin->rightInputDelay.Tap(inputDelay);
+        ++outX;
+        if (outX > (int64_t)length) outX -= length;
+        --inputDelay;
+        blend += dBlend;
+    }
+    for (size_t i = 0; i < pre_trigger_samples; ++i)
+    {
+        this->atL(outX) += plugin->leftInputDelay.Tap(inputDelay);
+        this->atR(outX) += plugin->rightInputDelay.Tap(inputDelay);
+        ++outX;
+        if (outX > (int64_t)length) outX -= length;
+        --inputDelay;
+    }
+}
+
 
 REGISTRATION_DECLARATION PluginRegistration<ToobLooperFour> toobLooperFourRegistration(ToobLooperFour::URI);
 REGISTRATION_DECLARATION PluginRegistration<ToobLooperOne> toobLooperOneRegistration(ToobLooperOne::URI);
