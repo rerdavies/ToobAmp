@@ -1125,15 +1125,17 @@ inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
             if (this->findQuadraticMaximum((int)ix,this->cepstrum,quadResult))
             {
                 double frequency = debias(this->sampleRate/quadResult.x,this->biasTable);
-                if (binPeaks.size() != MAX_BIN_PEAK)
-                {
-                    binPeaks.push_back({ix,frequency,quadResult.y});
-                }
-                if (quadResult.y > bestValue)
-                {
-                    bestValue = quadResult.y;
-                    bestBin = ix;
-                    bestFrequency = frequency;
+                if (frequency < BIAS_TABLE_MAX) {
+                    if (binPeaks.size() != MAX_BIN_PEAK)
+                    {
+                        binPeaks.push_back({ix,frequency,quadResult.y});
+                    }
+                    if (quadResult.y > bestValue)
+                    {
+                        bestValue = quadResult.y;
+                        bestBin = ix;
+                        bestFrequency = frequency;
+                    }
                 }
             }
         }

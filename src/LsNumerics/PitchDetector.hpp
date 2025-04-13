@@ -130,7 +130,7 @@ namespace LsNumerics
             double value;
         };
 
-        static constexpr size_t MAX_BIN_PEAK = 10;
+        static constexpr size_t MAX_BIN_PEAK = 150;
         std::vector<BinPeak> binPeaks;
 
     public:
