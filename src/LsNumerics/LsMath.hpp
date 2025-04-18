@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <string>
 
 namespace LsNumerics {
 
@@ -80,6 +81,14 @@ namespace LsNumerics {
 	{
 		return 12*std::log2(frequency/aReference) + MIDI_A440_NOTE;
 	}
+	inline double MidiNoteToFrequency(double midiNote)
+	{
+		return pow(2, (midiNote - MIDI_A440_NOTE) / 12.0) * 440.0;
+	}
+
+	std::string MidiNoteToName(int midiNote);
+
+	std::string FrequencyToNoteName(double freq);
 
 
 

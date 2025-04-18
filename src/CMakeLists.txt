@@ -936,7 +936,7 @@ target_link_libraries(soLinkageTest dl)
 
 add_executable(PitchDetectorTest 
     TestAssert.hpp
-
+    CommandLineParser.hpp 
     LsNumerics/Fft.hpp 
     LsNumerics/Fft.cpp
     LsNumerics/Window.hpp 
@@ -944,8 +944,12 @@ add_executable(PitchDetectorTest
     LsNumerics/IfPitchDetector.cpp LsNumerics/IfPitchDetector.hpp 
     LsNumerics/PitchDetectorTest.cpp 
     LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
+    FlacReader.cpp FlacReader.hpp
+    WavGuid.cpp 
 )
+target_link_libraries(PitchDetectorTest ${FLAC_LIBS})
 add_test(PitchDetectorTest PitchDetectorTest)
+
 
 
 add_test(LinkageTest linkageTest)

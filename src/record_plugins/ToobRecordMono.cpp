@@ -1062,7 +1062,8 @@ void ToobRecordMono::fgHandleMessages()
             if (this->state == PluginState::CuePlaying || this->state == PluginState::Playing)
             {
                 fgPlaybackIndex = 0;
-
+                fgResetPlaybackQueue();
+                
                 for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
                 {
                     if (responseCommand->buffers[i])
@@ -1073,7 +1074,7 @@ void ToobRecordMono::fgHandleMessages()
             }
             else
             {
-                // return them to the buffer pull.
+                // return them to the buffer pool.
                 fgPlaybackIndex = 0;
                 for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
                 {

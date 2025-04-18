@@ -101,7 +101,6 @@ namespace LsNumerics
         size_t maximumCepstrumBin;
         double frequencyAdustmentFactor = 0;
 
-        double calculateFrequencyAdjustmentFactor();
 
         float referencePitch = 440.0f;
 
@@ -145,6 +144,10 @@ namespace LsNumerics
         void allocateBuffers();
         double findCepstrumValue(std::vector<double> &cepstrum);
     public:
+        static constexpr double MAXIMUM_DETECTABLE_FREQUENCY = 923.33; // gutar, high E, 19th fret.
+        static constexpr double MINIMUM_DETECTABLE_FREQUENCY = 40;     // octave++ below guitar low E - 
+    
+
         /**
          * @brief Construct a new Pitch Detector object
          * 
@@ -230,14 +233,14 @@ namespace LsNumerics
                 inputBuffer[i] = window[i] * signal[i] * (1.0 / 32768); 
             }
 
-            return detectPitch();
+            return debias(detectPitch());
         }
 
 
         /**
          * @brief Detect the pitch of the supplied audio data.
          * 
-         * The ITERATOR must point to a collection of auido samples of either type float, or type double. Call getFftSize() to determine 
+         * The ITERATOR must point to a collection of audo samples of either type float, or type double. Call getFftSize() to determine 
          * how many samples must be supplied.
          * 
          * @tparam ITERATOR A collection iterator.
@@ -253,7 +256,7 @@ namespace LsNumerics
             {
                 inputBuffer[i] = window[i]*(*iter++);
             }
-            return detectPitch();
+            return debias(detectPitch());
         }
 
         /**
@@ -270,7 +273,7 @@ namespace LsNumerics
             {
                 inputBuffer[i] = window[i]* signal[i];
             }
-            return detectPitch();
+            return debias(detectPitch());
         }
         double detectPitch(const float *signal, size_t sampleStride)
         {
@@ -278,13 +281,22 @@ namespace LsNumerics
             {
                 inputBuffer[i] = window[i]* signal[i*sampleStride];
             }
+            return debias(detectPitch());
+        }
+
+        double detectPitchNoDebias(const float *signal)
+        {
+            for (size_t i = 0; i < bufferSize; ++i)
+            {
+                inputBuffer[i] = window[i]* signal[i];
+            }
             return detectPitch();
         }
 
     private:
         double ifPhase(size_t bin);
         double detectPitch();
-
+        double debias(double frequency);
     public:
         /**
          * @brief Get the freqency of concert A.
@@ -322,7 +334,6 @@ namespace LsNumerics
         double binToFrequency(double bin);
 
 
-        double detectPeaks(std::vector<double> &x, double suggestedFrequency);
 
         bool findQuadraticMaximum(int binNumber, std::vector<double> &x, QuadResult &result);
         bool findQuadraticMaximumNoLog(int binNumber, std::vector<double> &x, QuadResult &result);

@@ -37,10 +37,12 @@
 #include "lv2/units/units.h"
 #include "FilterResponse.h"
 #include "LsNumerics/PitchDetector.hpp"
+#include "LsNumerics/LsMath.hpp"
 #include <string>
 #include "Filters/ChebyshevDownsamplingFilter.h"
 #include "ControlDezipper.h"
 #include "CircularBuffer.h"
+#include <iostream>
 
 #include <lv2_plugin/Lv2Plugin.hpp>
 
@@ -174,15 +176,12 @@ namespace toob
 
 				bool PitchMatches(float currentValue, float historicalValue) 
 				{
-					if (historicalValue == 0) return false;
+					if (historicalValue == 0 || currentValue == 0) return false;
 
-					double ratio = currentValue/(double)historicalValue;
+					double midi0 = std::fmod(LsNumerics::FrequencyToMidiNote(currentValue,440), 12.0);
+					double midi1 = std::fmod(LsNumerics::FrequencyToMidiNote(currentValue,440) ,12.0);
 
-					// off by an octave still counts as a miss.
-					if (ratio < 0.75) ratio *= 2;
-					if (ratio > 1.5) ratio *= 0.5;
-
-					return ratio >= MIN_RATIO && ratio <= MAX_RATIO;
+					return std::abs(midi0-midi1) < 0.5;
 
 
 				}
@@ -244,7 +243,7 @@ namespace toob
 			void Initialize(double sampleRate, double subSampleRate)
 			{
 				pitchFilter.Initialize(sampleRate);
-				constexpr size_t FFT_SIZE = 2048;
+				constexpr size_t FFT_SIZE = 4096;
 				pitchDetector.Initialize((int)subSampleRate,FFT_SIZE);
 				capturedData.resize(pitchDetector.getFftSize());
 			}
@@ -262,7 +261,7 @@ namespace toob
 				bool aboveThreshold = false;
 				for (auto i = this->capturedData.begin() ; i != capturedData.end(); ++i)
 				{
-					if (*i > this->thresholdValue)
+					if (std::abs(*i) > this->thresholdValue)
 					{
 						aboveThreshold = true;
 						break;
@@ -271,6 +270,7 @@ namespace toob
 				if (aboveThreshold)
 				{
 					pitchResult = pitchDetector.detectPitch(this->capturedData.data());
+					// std::cout << "pitch: " << pitchResult << " " << FrequencyToNoteName(pitchResult) << std::endl;
 				}
 				else
 				{

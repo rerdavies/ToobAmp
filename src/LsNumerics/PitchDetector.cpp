@@ -30,9 +30,6 @@
 
 using namespace LsNumerics;
 
-//static constexpr double GUITAR_LOW_E_FREQUENCY = 82.41;        // hz.
-static constexpr double MAXIMUM_DETECTABLE_FREQUENCY = 923.33; // gutar, high E, 19th fret.
-static constexpr double MINIMUM_DETECTABLE_FREQUENCY = 40;     // octave++ below guitar low E - 
 //static constexpr double OCTAVE_THRESHOLD = 0.5;
 
 static constexpr int WINDOW_PERIODS_REQUIRED = 4;
@@ -965,8 +962,8 @@ static constexpr double BIAS_TABLE_MAX = 922;
 static inline double debias(double frequency,float*biasTable)
 {
 
-    if (frequency <= BIAS_TABLE_MIN) frequency  = BIAS_TABLE_MIN;
-    if (frequency >= BIAS_TABLE_MAX-0.01) frequency =  BIAS_TABLE_MAX-0.01;
+    if (frequency <= BIAS_TABLE_MIN) return 0;
+    if (frequency >= BIAS_TABLE_MAX-0.01) return 0;
     double x = (frequency-BIAS_TABLE_MIN)*0.5;
     size_t ix = (size_t)std::floor(x);
     double blend = x-ix;
@@ -975,6 +972,12 @@ static inline double debias(double frequency,float*biasTable)
 
     double scale = blend*v1+ (1-blend)*v0;
     return frequency*scale;
+}
+
+
+double PitchDetector::debias(double frequency)
+{
+    return frequency;
 }
 
 
@@ -1005,10 +1008,9 @@ void PitchDetector::Initialize(int sampleRate, int bufferSize)
 
     allocateBuffers();
     // f = this->sampleRate/(cepstrumIndex)
-    this->minimumCepstrumBin = (int)(sampleRate / MAXIMUM_DETECTABLE_FREQUENCY/2);
-    this->maximumCepstrumBin = (int)(sampleRate / MINIMUM_DETECTABLE_FREQUENCY);
+    this->minimumCepstrumBin = (int)(sampleRate / PitchDetector::MAXIMUM_DETECTABLE_FREQUENCY/2);
+    this->maximumCepstrumBin = (int)(sampleRate / PitchDetector::MINIMUM_DETECTABLE_FREQUENCY);
 
-    // frequencyAdustmentFactor = calculateFrequencyAdjustmentFactor();
 }
 
 PitchDetector::PitchDetector(int sampleRate)
@@ -1021,14 +1023,6 @@ PitchDetector::PitchDetector(int sampleRate)
 void PitchDetector::Initialize(int sampleRate)
 {
     Initialize(sampleRate,4096);
-    // // based on analytical results by Julius O. Smith. 
-    // // Adjusted empirically using test data including signal noise.
-    // Initialize(sampleRate, LsNumerics::NextPowerOfTwo(
-    //                            2*std::max(
-    //                                (double)sampleRate / MINIMUM_DETECTABLE_FREQUENCY * WINDOW_PERIODS_REQUIRED,
-    //                                MAXIMUM_DETECTABLE_FREQUENCY * 2)
-
-    //                                ));
 }
 
 void PitchDetector::allocateBuffers()
@@ -1092,8 +1086,9 @@ bool PitchDetector::findQuadraticMaximumNoLog(int binNumber, std::vector<double>
 }
 
 // one octave lowers, +/- 5 cents.
-static double SUB_OCTAVE_MIN_RATIO = std::pow(2,-1-(0.05)/12);
-static double SUB_OCTAVE_MAX_RATIO = std::pow(2,-1+(0.05)/12);
+// static double SUB_OCTAVE_MIN_RATIO = std::pow(2,-1-(0.05)/12);
+// static double SUB_OCTAVE_MAX_RATIO = std::pow(2,-1+(0.05)/12);
+
 
 inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
 {
@@ -1115,7 +1110,7 @@ inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
         {
             --ix;
         }
-        while (ix > minimumCepstrumBin && cepstrum[ix-1] > cepstrum[ix])
+        while (ix > minimumCepstrumBin && cepstrum[ix-1] >= cepstrum[ix])
         {
             --ix;
         }
@@ -1124,8 +1119,9 @@ inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
             QuadResult quadResult;
             if (this->findQuadraticMaximum((int)ix,this->cepstrum,quadResult))
             {
-                double frequency = debias(this->sampleRate/quadResult.x,this->biasTable);
-                if (frequency < BIAS_TABLE_MAX) {
+                //double frequency = debias(this->sampleRate/(quadResult.x*2),this->biasTable);
+                double frequency = this->sampleRate/(quadResult.x*2);
+                if (frequency != 0) {
                     if (binPeaks.size() != MAX_BIN_PEAK)
                     {
                         binPeaks.push_back({ix,frequency,quadResult.y});
@@ -1143,15 +1139,18 @@ inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
 
     if (bestValue > -1E8)
     {
+    #ifdef JUNK
         // look for a sub-octave root harmonic.
         for (const auto&peak: binPeaks)
         {
             double ratio = peak.frequency/bestFrequency;
-            if (ratio >= SUB_OCTAVE_MAX_RATIO) // 0.5 + N cents.
+
+            if (ratio >= std::max(SUB_OCTAVE_MAX_RATIO,SUB_FIFTH_MAX_RATIO))
             {
                 break;
             }
-            if (ratio >= SUB_OCTAVE_MIN_RATIO) // // 0.5 - N cents.
+            // aliased octave
+            if (ratio <= SUB_OCTAVE_MAX_RATIO && ratio >= SUB_OCTAVE_MIN_RATIO) // // 0.5 +/- N cents.
             {
                 if (peak.value >= bestValue*0.98)
                 {
@@ -1159,7 +1158,18 @@ inline double PitchDetector::findCepstrumValue(std::vector<double> &cepstrum)
                     break;
                 }
             }
+            (void)(SUB_FIFTH_MIN_RATIO);
+            // aliased perfect fifth.
+            // if (ratio <= SUB_FIFTH_MAX_RATIO && ratio >= SUB_FIFTH_MIN_RATIO) // // 2/3 -/- N cents.
+            // {
+            //     if (peak.value >= bestValue*0.98)
+            //     {
+            //         bestFrequency = peak.frequency;
+            //         break;
+            //     }
+            // }
         }
+    #endif
 
         (void)bestBin;
         return bestFrequency;
@@ -1214,13 +1224,14 @@ double PitchDetector::detectPitch()
 {
 
     size_t start = 0;
-    size_t end = this->bufferSize;
+    size_t end = this->bufferSize-1;
     // trim start and end to +zero crossings.
     {
         while (start < bufferSize)
         {
             if (inputBuffer[start].real() <= 0 && inputBuffer[start+1].real() > 0)
             {
+                ++start;
                 break;
             }
             ++start;
@@ -1248,6 +1259,14 @@ double PitchDetector::detectPitch()
                 inputBuffer[i] = 0;
             }
         }
+
+        // generate harmonic overtones, which stabilizes pitch detection.
+        for (size_t i = 0; i < bufferSize; ++i)
+        {
+            auto t = inputBuffer[i];
+            //t = t*t*t;
+            inputBuffer[i] = t;
+        }
     }
     fftPlan.Forward(inputBuffer, fftBuffer);
 
@@ -1259,13 +1278,12 @@ double PitchDetector::detectPitch()
     }
     fftPlan.Backward(fftBuffer, cepstrumBuffer);
 
-    double frameSize = end-start;
+    //double frameSize = end-start;
     for (size_t i = 0; i < cepstrum.size(); ++i)
     {
         complex t = cepstrumBuffer[i];
         double v = sq(t).real();
-        double weight = frameSize/(double)(frameSize-i);
-        cepstrum[i] = v*weight;
+        cepstrum[i] = v;
     }
 
     // find the fundamental frequency, approximately, inferring fundamentals if neccessary.

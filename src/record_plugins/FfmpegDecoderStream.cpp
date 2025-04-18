@@ -125,7 +125,6 @@
             {
                 throw std::runtime_error("Failed to dup2 /dev/null to stderr.");
             }
-            write(errorOutput,"Test\n",5);
             ::close(errorOutput);
 
             // if (dup2(devnullw, 2) == -1)

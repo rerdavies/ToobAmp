@@ -22,6 +22,8 @@
  */
 
 #include "LsMath.hpp"
+#include <sstream>
+#include <iomanip>
 
 
 using namespace LsNumerics;
@@ -39,3 +41,38 @@ uint32_t LsNumerics::NextPowerOfTwo(uint32_t value)
     value |= value >> 16;
     return value+1;
 }
+
+
+// Function to convert MIDI note number to note name
+std::string LsNumerics::MidiNoteToName(int midiNote)
+{
+    if (midiNote < 0 || midiNote > 127)
+        return "Invalid";
+
+    const std::string noteNames[] = {
+        "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+    int octave = midiNote / 12 - 1;
+    int noteIndex = midiNote % 12;
+    return noteNames[noteIndex] + std::to_string(octave);
+}
+
+// Function to convert frequency to note name with cents
+std::string LsNumerics::FrequencyToNoteName(double freq)
+{
+    double midiNoteExact = FrequencyToMidiNote(freq);
+    if (midiNoteExact < 0)
+        return "Invalid";
+
+    int midiNote = std::round(midiNoteExact);
+    double cents = 100 * (midiNoteExact - midiNote); // Cents deviation
+
+    std::ostringstream oss;
+    oss << LsNumerics::MidiNoteToName(midiNote);
+    // Only append cents if non-zero (avoid unnecessary +0.00)
+    if (std::abs(cents) > 0.01)
+    { // Threshold for floating-point noise
+        oss << (cents >= 0 ? "+" : "") << std::fixed << std::setprecision(2) << cents;
+    }
+    return oss.str();
+}
+
