@@ -35,6 +35,7 @@
  #include <stdexcept>
  #include <vector>
  #include <string>
+ #include <string.h>
 
  using namespace toob;
 
@@ -78,6 +79,7 @@
     {
         cArgv.push_back(arg.c_str());
     }
+    cArgv.push_back(nullptr);
 
     int pid = fork();
 
@@ -88,38 +90,73 @@
     if (pid == 0)
     {
         // child process.
-
-        // close all file handles except the pipe.
-        int fdlimit = (int)sysconf(_SC_OPEN_MAX);
-        for (int i = STDERR_FILENO + 1; i < fdlimit; i++) 
-        {
-            if (i != pipeFd[1]) {
-                ::close(i);
+        try {
+            // close all file handles except the pipe.
+            int fdlimit = (int)sysconf(_SC_OPEN_MAX);
+            for (int i = STDERR_FILENO + 1; i < fdlimit; i++) 
+            {
+                if (i != pipeFd[1]) {
+                    ::close(i);
+                }
             }
-        }
-        // Put /dev/null into stdin, stdout, stderr.
-        int devnull = ::open("/dev/null", O_RDWR);
-        if (devnull == -1)
-        {
-            throw std::runtime_error("Failed to open /dev/null.");
-        }
-        if (dup2(devnull, 0) == -1)
-        {
-            throw std::runtime_error("Failed to dup2 /dev/null to stdin.");
-        }
-        if (dup2(devnull, 1) == -1)
-        {
-            throw std::runtime_error("Failed to dup2 /dev/null to stdout.");
-        }
-        if (dup2(devnull, 2) == -1)
-        {
-            throw std::runtime_error("Failed to dup2 /dev/null to stderr.");
-        }
-        ::close(devnull);
+            // int errorOutput = ::open("/tmp/ffmpeg.txt", O_CREAT | O_WRONLY,0664 );
+            int errorOutput = ::open("/dev/null", O_WRONLY);
 
-        execv(cArgv[0], (char *const *)&cArgv[0]);
-        // if we get here, execv failed.
-        exit(2);
+            // Put /dev/null into stdin, stdout, stderr.
+            int devnullr = ::open("/dev/null", O_RDONLY);
+            if (devnullr == -1)
+            {
+                throw std::runtime_error("Failed to open /dev/null.");
+            }
+            int devnullw = ::open("/dev/null", O_WRONLY);
+            if (devnullw == -1)
+            {
+                throw std::runtime_error("Failed to open /dev/null.");
+            }
+            if (dup2(devnullr, 0) == -1)
+            {
+                throw std::runtime_error("Failed to dup2 /dev/null to stdin.");
+            }
+            if (dup2(devnullw, 1) == -1)
+            {
+                throw std::runtime_error("Failed to dup2 /dev/null to stdout.");
+            }
+            if (dup2(errorOutput,2) == -1) 
+            {
+                throw std::runtime_error("Failed to dup2 /dev/null to stderr.");
+            }
+            write(errorOutput,"Test\n",5);
+            ::close(errorOutput);
+
+            // if (dup2(devnullw, 2) == -1)
+            // {
+            //     throw std::runtime_error("Failed to dup2 /dev/null to stderr.");
+            // }
+            ::close(devnullw);
+            ::close(devnullr);
+
+            int rc = execv(cArgv[0], (char *const *)&cArgv[0]);
+            if (rc == -1)
+            {
+                const char *err = strerror(errno);
+                write(2,err,strlen(err));
+                write(2,"\n",1);
+            }
+
+            // if we get here, execv failed.
+            std::string msg = "execv failed.\n";
+            write(2,msg.c_str(),msg.length());
+            write(2,cArgv[0],strlen(cArgv[0]));
+
+        }
+        catch (const std::exception&e)
+        {
+            std::string msg = e.what();
+            write(2,msg.c_str(),msg.length());
+            write(2, "\n",1);
+
+        }
+        exit(EXIT_FAILURE);
     } else {
         // original process.
 
