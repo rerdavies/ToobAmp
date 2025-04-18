@@ -39,6 +39,8 @@
 
  using namespace toob;
 
+ #pragma GCC diagnostic ignored "-Wunused-result" // GCC 12 bug.
+
  void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channels, uint32_t sampleRate)
  {
     this->channels = channels;
