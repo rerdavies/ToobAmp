@@ -34,7 +34,7 @@ ToobMix::~ToobMix()
 {
 }
 
-void applyPan(float pan, float vol, float&left,float&right)
+static void applyPan(float pan, float vol, float&left,float&right)
 {
     // hard pan law.
     if (pan < 0) {

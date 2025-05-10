@@ -17,39 +17,49 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#pragma once
 
+#define DEFINE_LV2_PLUGIN_BASE
 
-#include "ToobMixInfo.hpp"
-#include "lv2c_ui/Lv2UI.hpp"
-#include "ToobUi.hpp"
+#include <chrono>
+#include <filesystem>
+#include <memory>
+#include "ToobVolumeInfo.hpp"
+#include "ControlDezipper.h"
 
-using namespace lv2c::ui;
-using namespace lv2c;
-using namespace mix_plugin;
+using namespace lv2c::lv2_plugin;
+using namespace volume_plugin;
 using namespace toob;
 
-class ToobMixUi: public ToobUi {
-public:
-    using super=ToobUi;
-    ToobMixUi();
-};
 
-
-
-ToobMixUi::ToobMixUi() : super(
-    ToobMixUiBase::Create(),
-    Lv2cSize(887,223), // default window size.
-    Lv2cSize(887,223), // default window size.)
-    "ToobMixLogo.svg"
-    )
+class ToobVolume : public volume_plugin::ToobVolumeBase
 {
-}
+public:
+	using super = volume_plugin::ToobVolumeBase;
 
-// Refereence this variable to get the linker to demand-link the entire .obj.
+	static Lv2Plugin *Create(double rate,
+							 const char *bundle_path,
+							 const LV2_Feature *const *features)
+	{
+		return new ToobVolume(rate, bundle_path, features);
+	}
+	ToobVolume(double rate,
+				   const char *bundle_path,
+				   const LV2_Feature *const *features);
 
-REGISTRATION_DECLARATION Lv2UIRegistration<ToobMixUi> toobMixUiRegistration { ToobMixUiBase::UI_URI};
+	virtual ~ToobVolume();
 
+	static constexpr const char *URI = "http://two-play.com/plugins/toob-volume";
 
+protected:
 
+	virtual void Mix(uint32_t n_samples);
 
+	virtual void Run(uint32_t n_samples) override;
+
+	virtual void Activate() override;
+	virtual void Deactivate() override;
+private:
+	ControlDezipper dezipVol;
+};
 

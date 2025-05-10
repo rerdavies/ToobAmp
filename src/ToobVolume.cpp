@@ -17,39 +17,52 @@
 // IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#include "ToobVolume.hpp"
 
+ToobVolume::ToobVolume(double rate,
+                 const char *bundle_path,
+                 const LV2_Feature *const *features)
+    : ToobVolumeBase(rate,bundle_path,features)
+{
+    dezipVol.SetSampleRate(rate);
+}
 
-#include "ToobMixInfo.hpp"
-#include "lv2c_ui/Lv2UI.hpp"
-#include "ToobUi.hpp"
-
-using namespace lv2c::ui;
-using namespace lv2c;
-using namespace mix_plugin;
-using namespace toob;
-
-class ToobMixUi: public ToobUi {
-public:
-    using super=ToobUi;
-    ToobMixUi();
-};
-
-
-
-ToobMixUi::ToobMixUi() : super(
-    ToobMixUiBase::Create(),
-    Lv2cSize(887,223), // default window size.
-    Lv2cSize(887,223), // default window size.)
-    "ToobMixLogo.svg"
-    )
+ToobVolume::~ToobVolume()
 {
 }
 
-// Refereence this variable to get the linker to demand-link the entire .obj.
 
-REGISTRATION_DECLARATION Lv2UIRegistration<ToobMixUi> toobMixUiRegistration { ToobMixUiBase::UI_URI};
+void ToobVolume::Mix(uint32_t n_samples)
+{
+    const float* in = this->in.Get();
+    float *out = this->out.Get();
+    float vol = this->vol.GetAf();
+    constexpr float DEZIP_DELAY_S = 0.1f;
+    dezipVol.To(vol,DEZIP_DELAY_S);
+
+    for (size_t i = 0; i < n_samples; ++i)
+    {
+        out[i] = dezipVol.Tick() *in[i];
+    }
+}
+
+void ToobVolume::Run(uint32_t n_samples) {
+    Mix(n_samples);
+}
+
+void ToobVolume::Activate() 
+{
+    super::Activate();
+    float vol = this->vol.GetAf();
+    constexpr float DEZIP_DELAY_S = 0.1f;
+    dezipVol.To(vol,DEZIP_DELAY_S);
+
+}
+void ToobVolume::Deactivate() 
+{
+    super::Deactivate();
+}
 
 
 
-
-
+REGISTRATION_DECLARATION PluginRegistration<ToobVolume> toobVolumeRegistration(ToobVolume::URI);

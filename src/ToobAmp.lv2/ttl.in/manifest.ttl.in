@@ -92,6 +92,10 @@
      lv2:binary <ToobAmp.so> ;
      rdfs:seeAlso <ToobMix.ttl> .
 
+<http://two-play.com/plugins/toob-volume> a lv2:Plugin ;
+     lv2:binary <ToobAmp.so> ;
+     rdfs:seeAlso <ToobVolume.ttl> .
+
 
 
 

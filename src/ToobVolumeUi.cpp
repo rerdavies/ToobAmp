@@ -19,35 +19,34 @@
 
 
 
-#include "ToobMixInfo.hpp"
+#include "ToobVolumeInfo.hpp"
 #include "lv2c_ui/Lv2UI.hpp"
 #include "ToobUi.hpp"
 
 using namespace lv2c::ui;
 using namespace lv2c;
-using namespace mix_plugin;
+using namespace volume_plugin;
 using namespace toob;
 
-class ToobMixUi: public ToobUi {
+class ToobVolumeUi: public ToobUi {
 public:
     using super=ToobUi;
-    ToobMixUi();
+    ToobVolumeUi();
 };
 
 
 
-ToobMixUi::ToobMixUi() : super(
-    ToobMixUiBase::Create(),
-    Lv2cSize(887,223), // default window size.
-    Lv2cSize(887,223), // default window size.)
-    "ToobMixLogo.svg"
+ToobVolumeUi::ToobVolumeUi() : super(
+    ToobVolumeUiBase::Create(),
+    Lv2cSize(500,223), // default window size.
+    Lv2cSize(500,223), // default window size.)
+    "ToobVolumeLogo.svg"
     )
 {
 }
 
-// Refereence this variable to get the linker to demand-link the entire .obj.
 
-REGISTRATION_DECLARATION Lv2UIRegistration<ToobMixUi> toobMixUiRegistration { ToobMixUiBase::UI_URI};
+REGISTRATION_DECLARATION Lv2UIRegistration<ToobVolumeUi> toobVolumeUiRegistration { ToobVolumeUiBase::UI_URI};
 
 
 

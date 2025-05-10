@@ -153,7 +153,12 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 add_library(ToobAmp  SHARED
 
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMix.cpp ToobMix.hpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
+        ToobVolume.cpp ToobVolume.hpp
 
         record_plugins/ToobLoopers.cpp record_plugins/ToobLoopers.hpp
         ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
@@ -333,6 +338,24 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
 
 ####################################################
+configure_file(ToobAmp.lv2/ttl.in/ToobVolume.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobVolume.ttl)
+
+add_custom_command(
+    OUTPUT  ToobVolumeInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-volume
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp 
+              --class ToobVolumeInfo
+              --namespace volume_plugin
+              --ui-base-class ToobVolumeUiBase
+              --plugin-base-class ToobVolumeBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobVolume.ttl    
+        generate_lv2c_plugin_info
+)
+
 
 configure_file(ToobAmp.lv2/ttl.in/ToobMix.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMix.ttl)
 
@@ -661,6 +684,8 @@ configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl
 
 
 add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
+    ToobVolumeUi.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMixUi.cpp
 
