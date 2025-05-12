@@ -2,7 +2,7 @@
 
 v1.1.61
 
-The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
+The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
 
 - Neural Network Amp Models (TooB NAM, and TooML plugins).
@@ -12,6 +12,7 @@ no-nonsense, foundation set of effects pedals to get you started. The plugins ar
 - Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
 - Utility plugins (TooB Input Stage, TooB Tuner, TooB Spectrum Analyzer, and TooB Input Recorder).
 
+Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
 # Releases Notes
 ###v1.1.61
@@ -119,6 +120,19 @@ Download the appropriate package for your sytems. Run the following shell comman
 
     &nbsp;
 
+*  **TooB Noise Gate**
+
+    A flexible Noise Gate, than provide both Noise Gate and 
+    Slow Gear effects.
+
+*  ** TooB Mix**
+
+    Remix stereo channels. Independent level and pan position for 
+    left and right input channels. 
+
+*  ** TooB Volume**
+
+    A utility plugin to change volume levels of a signal.
 
 *   **TooB Freeverb**
 
