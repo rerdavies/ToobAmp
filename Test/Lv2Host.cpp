@@ -26,6 +26,7 @@
 #include "HostedLv2Plugin.h"
 #include "Lv2Api.h"
 #include <filesystem>
+#include <stdexcept>
 
 using namespace toob;
 using namespace std;
@@ -78,6 +79,31 @@ void Lv2Host::Run(int samples)
 	}
 }
 
+
+HostedLv2Plugin* Lv2Host::CreatePlugin(const char* libName, const char*pluginUri)
+{
+	std::filesystem::path libPath = LocateLv2Plugin(libName);
+
+	FN_LV2_ENTRY* pfn = LoadLv2Plugin(libName);
+	if (pfn == NULL) return NULL;
+
+	int ix = 0;
+	while(true) {
+		const LV2_Descriptor *descriptor = pfn(ix);
+		if (descriptor == NULL) 
+		{
+			throw std::runtime_error("Plugin URI not found.");
+		}
+		if (strcmp(descriptor->URI,pluginUri) == 0)
+		{
+			return CreatePlugin(libName,ix);
+		}
+		++ix;
+	}
+
+
+
+}
 
 
 HostedLv2Plugin* Lv2Host::CreatePlugin(const char *libName,int instance)

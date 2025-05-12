@@ -153,6 +153,8 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 add_library(ToobAmp  SHARED
 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
+        ToobNoiseGate.cpp ToobNoiseGate.hpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMix.cpp ToobMix.hpp
@@ -338,6 +340,25 @@ set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
 
 
 ####################################################
+configure_file(ToobAmp.lv2/ttl.in/ToobNoiseGate.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNoiseGate.ttl)
+
+add_custom_command(
+    OUTPUT  ToobNoiseGateInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-noise-gate
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp 
+              --class ToobNoiseGateInfo
+              --namespace noise_gate_plugin
+              --ui-base-class ToobNoiseGateUiBase
+              --plugin-base-class ToobNoiseGateBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobNoiseGate.ttl    
+        generate_lv2c_plugin_info
+)
+
+
 configure_file(ToobAmp.lv2/ttl.in/ToobVolume.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobVolume.ttl)
 
 add_custom_command(
@@ -684,6 +705,10 @@ configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl
 
 
 add_library(ToobAmpUI  SHARED
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
+    ToobNoiseGateUi.cpp
+
+
     ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
     ToobVolumeUi.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
@@ -755,11 +780,6 @@ set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 target_link_options(ToobAmpUI PRIVATE
     -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmpUi.version
     -Wl,-z,nodelete 
-    # -Wl,-utoobChorusLinkage    # demand-link plugin.
-    # -Wl,-ulinkInputStage    # demand-link plugin.
-    # -Wl,-ulinkCabSimUi   # demand-link plugin.
-    # -Wl,-ulinkToobDelayUi   # demand-link plugin.
-    
     )
 
 
@@ -1049,6 +1069,48 @@ add_executable(BufferPoolTest
 add_test(BufferPoolTest BufferPoolTest)
 
 
+set(TEST_SRC_DIR ${PROJECT_SOURCE_DIR}/Test)
+
+add_library(TestHost
+    ${TEST_SRC_DIR}/Lv2Api.cpp
+    ${TEST_SRC_DIR}/MapFeature.h
+    ${TEST_SRC_DIR}/MapFeature.cpp 
+    ${TEST_SRC_DIR}/InputControl.h
+    ${TEST_SRC_DIR}/HostedLv2Plugin.h 
+    ${TEST_SRC_DIR}/HostedLv2Plugin.cpp 
+    ${TEST_SRC_DIR}/OutputControl.h
+    ${TEST_SRC_DIR}/Lv2Exception.h 
+    ${TEST_SRC_DIR}/Lv2Host.h 
+    ${TEST_SRC_DIR}/Lv2Host.cpp 
+    ${TEST_SRC_DIR}/ScheduleFeature.h 
+    ${TEST_SRC_DIR}/ScheduleFeature.cpp 
+    ${TEST_SRC_DIR}/LogFeature.h
+    ${TEST_SRC_DIR}/LogFeature.cpp
+)
+
+target_include_directories(TestHost PUBLIC
+    ${TEST_SRC_DIR}
+)
+
+
+add_executable(NoiseGateTest
+    NoiseGateTest.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
+    ${PROJECT_SOURCE_DIR}/Test/Lv2Host.h ${PROJECT_SOURCE_DIR}/Test/Lv2Host.cpp
+)
+
+target_link_libraries(
+    NoiseGateTest PRIVATE
+    lv2_plugin
+    lv2c lv2c_ui
+
+    TestHost
+)
+
+target_include_directories(
+    NoiseGateTest PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 # add_executable(UiLinkageTest 
 

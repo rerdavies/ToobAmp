@@ -115,6 +115,9 @@ static std::filesystem::path GetExecutablePath()
 
 std::string LocateLv2Plugin(const char* pluginName)
 {
+	if (std::filesystem::exists(pluginName)) {
+		return pluginName;
+	}
 	std::string libName = "lib" + std::string(pluginName) + ".so";
 
 	std::filesystem::path resourcePath = GetExecutablePath().parent_path();

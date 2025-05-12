@@ -33,7 +33,7 @@
 <http://two-play.com/plugins/toob-mix>
         a lv2:Plugin ,
                 lv2:UtilityPlugin ;
-                doap:name "TooB Mix" ,
+        doap:name "TooB Mix" ,
                 "TooB Mix"@en-gb 
                 ;
         uiext:ui <http://two-play.com/plugins/toob-mix-ui> ;

@@ -50,6 +50,7 @@ namespace toob {
 			LV2_Atom* buffer;
 			uint32_t size;
 		public:
+
 			AtomStreamEntry()
 			{
 				this->port = - 1;
@@ -96,7 +97,8 @@ namespace toob {
 		std::vector<PortType> portTypes;
 		Lv2Host* host;
 
-		void ConnectPort(int port, void* data);
+
+
 
 	private:
 		friend class Lv2Host;
@@ -106,10 +108,11 @@ namespace toob {
 			this->host = host;
 			uris.Map(host);
 		}
-		virtual ~HostedLv2Plugin();
 
 		void Instantiate(const LV2_Descriptor* descriptor, const char* resourcePath) noexcept(false); // throws(Lv2Exception)
 	public:
+		virtual ~HostedLv2Plugin();
+
 		void Activate();
 
 		void PrepareAtomPorts();
@@ -117,6 +120,8 @@ namespace toob {
 		void Deactivate();
 
 	public:
+		void ConnectPort(int port, void* data);
+
 		int GetAudioBufferSize() {
 			return host->GetAudioBufferSize();
 		}

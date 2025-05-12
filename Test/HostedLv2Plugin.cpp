@@ -80,7 +80,7 @@ void HostedLv2Plugin::Instantiate(const LV2_Descriptor* descriptor, const char* 
 
 void HostedLv2Plugin::SetPortType(int port, PortType portType)
 {
-	if (portTypes.size() <= port)
+	if (portTypes.size() <= (size_t)port)
 	{
 		portTypes.resize(port + 1);
 	}
@@ -91,7 +91,7 @@ void HostedLv2Plugin::SetPortType(int port, PortType portType)
 	case PortType::InputControl:
 	{
 		InputControl* inputControl = new InputControl();
-		if (this->inputControls.size() <= port)
+		if (this->inputControls.size() <= (size_t)port)
 		{
 			this->inputControls.resize(port + 1);
 		}
@@ -101,7 +101,7 @@ void HostedLv2Plugin::SetPortType(int port, PortType portType)
 	break;
 	case PortType::InputAudio:
 	{
-		if (this->ioBuffers.size() <= port)
+		if (this->ioBuffers.size() <= (size_t)port)
 		{
 			this->ioBuffers.resize(port + 1);
 		}
@@ -112,7 +112,7 @@ void HostedLv2Plugin::SetPortType(int port, PortType portType)
 	break;
 	case PortType::OutputControl:
 	{
-		if (this->outputControls.size() <= port)
+		if (this->outputControls.size() <= (size_t)port)
 		{
 			this->outputControls.resize(port + 1);
 		}
@@ -123,7 +123,7 @@ void HostedLv2Plugin::SetPortType(int port, PortType portType)
 	break;
 	case PortType::OutputAudio:
 	{
-		if (this->ioBuffers.size() <= port) this->ioBuffers.resize(port + 1);
+		if (this->ioBuffers.size() <= (size_t)port) this->ioBuffers.resize((size_t)(port + 1));
 		float* buffer = new float[host->GetAudioBufferSize()];
 		this->ioBuffers[port] = buffer;
 		ConnectPort(port, buffer);
@@ -178,7 +178,7 @@ void HostedLv2Plugin::ConnectPort(int port, void* dataLocation)
 
 void HostedLv2Plugin::SetPortType(int port, PortType portType, float defaultValue,float minValue, float maxValue)
 {
-	if (portTypes.size() <= port)
+	if (portTypes.size() <= (size_t)port)
 	{
 		portTypes.resize(port + 1);
 	}
@@ -187,7 +187,7 @@ void HostedLv2Plugin::SetPortType(int port, PortType portType, float defaultValu
 	{
 	case PortType::InputControl:
 	{
-		if (this->inputControls.size() <= port)
+		if (this->inputControls.size() <= (size_t)port)
 		{
 			this->inputControls.resize(port + 1);
 		}
