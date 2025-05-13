@@ -1,19 +1,25 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.60
+v1.1.61
 
-The ToobAmp Project provides 19 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
+The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
 
 - Neural Network Amp Models (TooB NAM, and TooML plugins).
-- Reverb (TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
+- Reverb. TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
 - Loopers (TooB 4Looper, and One-Button Looper).
 - Cab simulators (TooB Cab IR, and TooB CabSim).
 - Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
 - Utility plugins (TooB Input Stage, TooB Tuner, TooB Spectrum Analyzer, and TooB Input Recorder).
 
+Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
 # Releases Notes
+###v1.1.61
+- Added TooB Noise Gate plugin.
+- Added TooB Mix plugin.
+- Added TooB Volume plugin.
+
 
 ###v1.1.60
 - TooB Tuner: Correct pitch detection of notes above Bb4 
@@ -32,15 +38,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.60/toobamp_1.1.60_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.60/toobamp_1.1.60_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.60/toobamp_1.1.60_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.61/toobamp_1.1.61_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.61/toobamp_1.1.61_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.61/toobamp_1.1.61_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.1.60_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.1.61_arm64.deb   # adjust as appropropriate
     
 --------------------
 
@@ -114,6 +120,19 @@ Download the appropriate package for your sytems. Run the following shell comman
 
     &nbsp;
 
+*  **TooB Noise Gate**
+
+    A flexible Noise Gate, than provide both Noise Gate and 
+    Slow Gear effects.
+
+*  ** TooB Mix**
+
+    Remix stereo channels. Independent level and pan position for 
+    left and right input channels. 
+
+*  ** TooB Volume**
+
+    A utility plugin to change volume levels of a signal.
 
 *   **TooB Freeverb**
 

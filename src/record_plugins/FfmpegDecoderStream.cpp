@@ -140,21 +140,21 @@
             if (rc == -1)
             {
                 const char *err = strerror(errno);
-                write(2,err,strlen(err));
-                write(2,"\n",1);
+                (void)write(2,err,strlen(err));
+                (void)write(2,"\n",1);
             }
 
             // if we get here, execv failed.
             std::string msg = "execv failed.\n";
-            write(2,msg.c_str(),msg.length());
-            write(2,cArgv[0],strlen(cArgv[0]));
+            (void)write(2,msg.c_str(),msg.length());
+            (void)write(2,cArgv[0],strlen(cArgv[0]));
 
         }
         catch (const std::exception&e)
         {
             std::string msg = e.what();
-            write(2,msg.c_str(),msg.length());
-            write(2, "\n",1);
+            (void)write(2,msg.c_str(),msg.length());
+            (void)write(2, "\n",1);
 
         }
         exit(EXIT_FAILURE);

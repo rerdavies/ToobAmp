@@ -34,6 +34,7 @@ namespace toob
 		{
 			this->value = initialValue;
 		}
+		virtual ~InputControl() { }
 
 		virtual void SetValue(float value)
 		{

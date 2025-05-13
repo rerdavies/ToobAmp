@@ -97,6 +97,8 @@ namespace toob {
 		}
 
 		HostedLv2Plugin* CreatePlugin(const char* libName, int instance);
+		HostedLv2Plugin* CreatePlugin(const char* libName, const char*pluginUri);
+		
 		void DeletePlugin(HostedLv2Plugin* plugin);
 
 	};
