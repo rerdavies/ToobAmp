@@ -58,8 +58,7 @@ given by `apt-get`.
 
 The ToobAmp package includes the following plugins.
 
-&nbsp;
-*   **TooB Neural Amp Modeler
+*   **TooB Neural Amp Modeler**
 
     Guitar amp emulations based on Neural Net modeling. A port of Steven Atkinson's astounding [Neural Amp Modeler](https://github.com/sdatkinson/NeuralAmpModelerCore) to LV2.  
       
