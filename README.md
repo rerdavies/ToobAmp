@@ -51,6 +51,8 @@ Download the appropriate package for your sytems. Run the following shell comman
     cd ~/Downloads
     sudo apt-get install  ./toobamp_1.1.61_arm64.deb   # adjust as appropropriate
     
+Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
+given by `apt-get`. 
 --------------------
 
 &nbsp;
