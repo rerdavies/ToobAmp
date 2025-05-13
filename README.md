@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-v1.1.61
+### v1.1.61
 
 The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
@@ -53,7 +53,10 @@ Download the appropriate package for your sytems. Run the following shell comman
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`. 
---------------------
+
+## Plugins
+
+The ToobAmp package includes the following plugins.
 
 &nbsp;
 *   **TooB Neural Amp Modeler
