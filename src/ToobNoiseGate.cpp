@@ -46,8 +46,8 @@ void ToobNoiseGate::Mix(uint32_t n_samples)
         {
         case GateState::Idle:
         {
-            float af = reduction.GetAfNoLimit();
             this->currentDb = this->reduction.GetDbNoLimit();
+            float af = Db2AF(this->currentDb,-60); // clip to zero during idle
             while (ix < n_samples)
             {
                 float v = in[ix];
@@ -91,7 +91,7 @@ void ToobNoiseGate::Mix(uint32_t n_samples)
                 dxCurrentDb = 0;
                 break;
             }
-    }
+        }
         break;
         case GateState::Hold:
         {

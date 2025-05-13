@@ -38,8 +38,8 @@ public:
 
 ToobNoiseGateUi::ToobNoiseGateUi() : super(
     ToobNoiseGateUiBase::Create(),
-    Lv2cSize(500,223), // default window size.
-    Lv2cSize(500,223), // default window size.)
+    Lv2cSize(887,233), // default window size.
+    Lv2cSize(887,233), // default window size.)
     "ToobNoiseGateLogo.svg"
     )
 {
