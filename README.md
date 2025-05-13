@@ -3,7 +3,9 @@
 ### v1.1.61
 
 The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
-no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
+no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use 
+with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo 
+user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
 
 - Neural Network Amp Models (TooB NAM, and TooML plugins).
 - Reverb. TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
@@ -132,15 +134,6 @@ The ToobAmp package includes the following plugins.
     A flexible Noise Gate, than provide both Noise Gate and 
     Slow Gear effects.
 
-*  ** TooB Mix**
-
-    Remix stereo channels. Independent level and pan position for 
-    left and right input channels. 
-
-*  ** TooB Volume**
-
-    A utility plugin to change volume levels of a signal.
-
 *   **TooB Freeverb**
 
     A particularly well-balanced reverb, based on the famous Freeverb algorithm. Flexible controls, low coloration, low CPU usage.
@@ -196,6 +189,17 @@ The ToobAmp package includes the following plugins.
     allow easy emulation of guitar cabinet/microphone combinations. 
 
     &nbsp;
+
+*  **TooB Mix**
+
+    Remix stereo channels. Independent level and pan position for 
+    left and right input channels. 
+
+*  **TooB Volume**
+
+    A utility plugin to change volume levels of a signal.
+
+
 
 ## Building ToobAmp
 
