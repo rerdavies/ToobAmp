@@ -81,7 +81,7 @@ The ToobAmp package includes the following plugins.
     &nbsp;
 
 
-*   **TooB Convolution Reverb **
+*   **TooB Convolution Reverb**
 
     Simulates stereo reverb from pre-recorded stereo or Ambisonic b-format impulse response files. Mono and Stereo versions available.
 
@@ -103,7 +103,7 @@ The ToobAmp package includes the following plugins.
     &nbsp;
 
 
-*   **TooB BF-2 Flanger **
+*   **TooB BF-2 Flanger**
 
     Simulates a famous flanger. Available in mono and stereo versions.
 
@@ -114,7 +114,7 @@ The ToobAmp package includes the following plugins.
     &nbsp;
 
 
-*   **TooB Cab IR (NEW in 1.0.14!)**
+*   **TooB Cab IR**
 
     Convolution-based Cab IR simulator, generating cabinetfrequency responses from pre-recorded impulse files.
 
@@ -198,6 +198,8 @@ The ToobAmp package includes the following plugins.
     &nbsp;
 
 ## Building ToobAmp
+
+ToobAmp currently builds for Raspberry Pi OS, and Ubuntu 21.x; but it should be easy to build on any Debian derived distro. Pull requests for builds on other platforms are welcome.
 
 ##### Prerequisites
 
