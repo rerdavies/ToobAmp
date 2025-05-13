@@ -6,7 +6,7 @@ The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use with the [PiPedal](https://github.com/rerdavies/pipedal) project; but the also provide native X11/Cairo user-interfaces that allow them to be used other other LV2 plugin hosts and DAWs too.
 
 - Neural Network Amp Models (TooB NAM, and TooML plugins).
-- Reverb (TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
+- Reverb. TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
 - Loopers (TooB 4Looper, and One-Button Looper).
 - Cab simulators (TooB Cab IR, and TooB CabSim).
 - Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
