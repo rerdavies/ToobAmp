@@ -15,15 +15,19 @@ no-nonsense, foundation set of effects pedals to get you started. The plugins ar
 Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
 # Releases Notes
-###v1.1.61
+### v1.1.61
+New in this release:
+
 - Added TooB Noise Gate plugin.
 - Added TooB Mix plugin.
 - Added TooB Volume plugin.
 
-###v1.1.60
+### v1.1.60
+Bug fixes:
+- Improvements to TooB Tuner stability and accuracy.
 - TooB Tuner: Correct pitch detection of notes above Bb4 
 
-###v1.1.59 
+### v1.1.59 
 - NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
 - Fixes for Reaper UI compatibility. 
 
