@@ -16,6 +16,8 @@ user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs 
 
 Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
+https://github.com/user-attachments/assets/1d77a26c-3626-4e87-861c-3023bd045ea8
+
 # Releases Notes
 ### v1.1.61
 New in this release:
