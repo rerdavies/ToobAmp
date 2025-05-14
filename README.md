@@ -14,7 +14,7 @@ user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs 
 - TooB 4Looper (4 channel looper)
 - TooB One-Button Looper (for use with MIDI footswitches)
 - TooB Cab IR (convolution-based cab impulse responses)
-- TooB CabSim (lightweight cap modeler)
+- TooB CabSim (lightweight cab modeler)
 - TooB Delay,
 - TooB CE-2 Chorus
 - TooB BF-2 Flanger (mono and stereo)
@@ -22,7 +22,7 @@ user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs 
 - TooB Noise Gate
 - TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
 - TooB Input Stage (all-in-one noise gate, volume control, and EQ)
-- Utility plugins (TooB Input Stage, TooB Spectrum Analyzer, and TooB Input Recorder).
+- Utility plugins (TooB Spectrum Analyzer, TooB Input Recorder, TooB Volume, TooB Mix).
 
 Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
