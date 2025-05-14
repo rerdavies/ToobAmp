@@ -7,34 +7,26 @@ no-nonsense, foundation set of effects pedals to get you started. The plugins ar
 with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo 
 user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
 
-- Neural Network Amp Models (TooB NAM, and TooML plugins).
-- Reverb. TooB Convolutin Reverb (mono and stereo), and TooB Freeverb
-- Loopers (TooB 4Looper, and One-Button Looper).
-- Cab simulators (TooB Cab IR, and TooB CabSim).
-- Modulation/delay effects (TooB Delay, CE-2 Chorus, and BF-2 Flanger).
-- Utility plugins (TooB Input Stage, TooB Tuner, TooB Spectrum Analyzer, and TooB Input Recorder).
+- TooB Neural Amp Modeler (NAM models)
+- TooB ML neural network amp modeler (ML models).
+- TooB Convolution Reverb (mono and stereo)
+- TooB Freeverb
+- TooB 4Looper (4 channel looper)
+- TooB One-Button Looper (for use with MIDI footswitches)
+- TooB Cab IR (convolution-based cab impulse responses)
+- TooB CabSim (lightweight cap modeler)
+- TooB Delay,
+- TooB CE-2 Chorus
+- TooB BF-2 Flanger (mono and stereo)
+- TooB Tuner
+- TooB Noise Gate
+- TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
+- TooB Input Stage (all-in-one noise gate, volume control, and EQ)
+- Utility plugins (TooB Input Stage, TooB Spectrum Analyzer, and TooB Input Recorder).
 
 Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
 
 https://github.com/user-attachments/assets/1d77a26c-3626-4e87-861c-3023bd045ea8
-
-# Releases Notes
-### v1.1.61
-New in this release:
-
-- Added TooB Noise Gate plugin.
-- Added TooB Mix plugin.
-- Added TooB Volume plugin.
-
-### v1.1.60
-Bug fixes:
-- Improvements to TooB Tuner stability and accuracy.
-- TooB Tuner: Correct pitch detection of notes above Bb4 
-
-### v1.1.59 
-- NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
-- Fixes for Reaper UI compatibility. 
-
 
 ## Install ToobAmp
 
@@ -76,7 +68,7 @@ The ToobAmp package includes the following plugins.
 *   **TooB ML Amplifier**
 
     Artificial-Intelligence/Machine-Learning-based emulation of a number of different guitar amps and overdrive/distortion
-    pedals based on Jatin Chowdhury' ML Amplifier library.
+    pedals based on Jatin Chowdhury's ML Amplifier library.
 
     &nbsp;
 
@@ -98,7 +90,7 @@ The ToobAmp package includes the following plugins.
 
 *   **TooB Freeverb**
 
-    A particularly well-balanced reverb, based on the legendary Freeverb reverb algorithm. Flexible controls, low coloration, low CPU usage.
+    A particularly well-balanced reverb, based on the legendary Freeverb reverb algorithm. Flexible controls, low coloration, low CPU usage, great sound!
 
     &nbsp;
 
@@ -109,7 +101,7 @@ The ToobAmp package includes the following plugins.
 
 *   **TooB BF-2 Flanger**
 
-    Simulates a famous flanger. Available in mono and stereo versions.
+    Simulates a Boss BF-2 flanger. Available in mono and stereo versions.
 
     &nbsp;
     
@@ -117,19 +109,19 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
 
-
-*   **TooB Cab IR**
-
-    Convolution-based Cab IR simulator, generating cabinetfrequency responses from pre-recorded impulse files.
-
 *   **TooB CE-2 Chorus**
 
-    A faithful digital replica of the Boss CE-2 Chorus.
+    A faithful digital replica of the Boss CE-2 chorus pedal.
 
     &nbsp;
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ce-sshot.png)
 
     &nbsp;
+
+*   **TooB Cab IR**
+
+    Convolution-based Cab IR simulator, generating cabinetfrequency responses from pre-recorded impulse files.
+
 
 *  **TooB Noise Gate**
 
@@ -260,6 +252,24 @@ Debian packages don't conflict with each other.
 If you are building the plugins for use with a host other than PiPedal, you should read this:
 
     https://rerdavies.github.io/pipedal/RTThreadPriority.htm
+
+# Releases Notes
+### v1.1.61
+New in this release:
+
+- Added TooB Noise Gate plugin.
+- Added TooB Mix plugin.
+- Added TooB Volume plugin.
+
+### v1.1.60
+Bug fixes:
+- Improvements to TooB Tuner stability and accuracy.
+- TooB Tuner: Correct pitch detection of notes above Bb4 
+
+### v1.1.59 
+- NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
+- Fixes for Reaper UI compatibility. 
+
 
 
 
