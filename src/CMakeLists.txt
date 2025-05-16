@@ -215,6 +215,7 @@ add_library(ToobAmp  SHARED
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
         ToobDelay.cpp ToobDelay.h
+        ToobPhaser.cpp ToobPhaser.hpp
         ToobChorus.cpp ToobChorus.h
         ToobFlanger.cpp ToobFlanger.h
         ToobTuner.cpp ToobTuner.h
@@ -659,6 +660,25 @@ add_custom_command(
         generate_lv2c_plugin_info
 )
 
+configure_file(ToobAmp.lv2/ttl.in/ToobPhaser.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobPhaser.ttl)
+
+add_custom_command(
+    OUTPUT  ToobPhaserInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-phaser
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp 
+              --class ToobPhaserInfo
+              --namespace phaser_plugin
+              --ui-base-class ToobPhaserUiBase
+              --plugin-base-class ToobPhaserBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobPhaser.ttl    
+        generate_lv2c_plugin_info
+)
+
+
 configure_file(ToobAmp.lv2/ttl.in/ToobDelay.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobDelay.ttl)
 add_custom_command(
     OUTPUT  ToobDelayInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
@@ -766,6 +786,10 @@ add_library(ToobAmpUI  SHARED
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp 
     ToobDelayUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp 
+    ToobPhaserUi.cpp
+
 
     ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp 
     InputStageUi.cpp
@@ -1110,6 +1134,12 @@ target_link_libraries(
 target_include_directories(
     NoiseGateTest PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_executable(PhaserTest
+    PhaserTest.cpp
+    LsNumerics/Fft.cpp
+    LsNumerics/StagedFft.cpp
 )
 
 # add_executable(UiLinkageTest 
