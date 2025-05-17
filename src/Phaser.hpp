@@ -33,6 +33,7 @@
 
 #include <vector>
 #include <cmath>
+#include "LsNumerics/LsMath.hpp"
 
 namespace toob
 {
@@ -45,6 +46,11 @@ namespace toob
     public:
         AllPassFilter() {}
 
+        static float frequencyToCoefficient(float sampleRate,float frequency) 
+        {
+            float tanValue = tanf(M_PI * frequency / sampleRate);
+            return  (tanValue-1.0) / (tanValue + 1.0f); // coefficient = (tanValue-1.0) / (tanValue + 1.0f);
+        }
         void setCoefficient(float coefficient)
         {
             a1 = coefficient;
@@ -109,7 +115,7 @@ namespace toob
             float output2 = a1 * output1 + zm1_b;
             zm1_b = output1 - a1 * output2;
 
-            return 0.5f*(input + output2);
+            return (input + output2);
         }
 
         void reset()
@@ -131,9 +137,10 @@ namespace toob
 
     class Phase90Lfo {
     public:
-        // characterize the curve and x = 0, x = 0.5, and x = 1, respectively.
-        static constexpr float VLO = 180; // y(0) value
-        static constexpr float VMID = 260; // y(0.5) value
+        // Curve is non-linear. The following constants characterize the curve.
+        // characterize the curve and x = 0, x = 0.5, and x = 1 values respectively.
+        static constexpr float VLO = 200; //180; // y(0) value
+        static constexpr float VMID = 270; //260; // y(0.5) value
         static constexpr float VHI = 514; // y(1.0) value.
 
         // parameters for y(x) = a + 1/(m*x+c) for constraints given above (solved by Grok).
@@ -181,43 +188,46 @@ namespace toob
     class Phaser
     {
     private:
-        std::vector<NotchFilter> notchFilters;
+        std::vector<AllPassFilter> allPassFilters;
         Phase90Lfo lfo;
         float sampleRate;
         float feedback = 0;
-        float minFreq, maxFreq;
         float wetDry; // 0 = dry, 1 = wet
+        float trim = 1;
+        float zm1 = 0;
+        float frequencyScale;
+
     public:
         Phaser(float sampleRate = 4800.0f)
             : sampleRate(sampleRate),
-              lfo(sampleRate)
+              lfo(sampleRate),
+              trim(LsNumerics::Db2Af(0))
         {
             // Initialize filters
-            notchFilters.resize(2);
+            allPassFilters.resize(4);
 
             // Default settings
             setLfoRate(0.5f);     
 
             // set relative frequencies of notch filters.
-            float fMultiplierLow = tan(M_PI/8.0);
-            float fMultiplierHigh = tan(M_PI*3.0/8.0);
-            notchFilters[0].setFrequencyMultiplier(sampleRate,1);
-            notchFilters[1].setFrequencyMultiplier(sampleRate,fMultiplierHigh/fMultiplierLow);
+            // float fMultiplierLow = tan(M_PI/8.0);
+            // float fMultiplierHigh = tan(M_PI*3.0/8.0);
+            // allPassFilters[0].setFrequencyMultiplier(sampleRate,1);
+            // allPassFilters[1].setFrequencyMultiplier(sampleRate,fMultiplierHigh/fMultiplierLow);
 
+            float fMultiplierLow = tan(M_PI/8.0);
+            frequencyScale = 1/fMultiplierLow;
+            setFeedback(-LsNumerics::Db2Af(-7));
             reset();
         }
         float getSampleRate() const { return this->sampleRate; }
 
-        void setLfoRate(float rate)
+        void setLfoRate(float hz)
         {
-            constexpr double MIN_F = 0.1;
-            constexpr double MAX_F = 3.7;
-
-            float hz = MIN_F*pow(MAX_F/MIN_F,rate);
             lfo.setRate(hz);
         }
         void setFeedback(float feedback) {
-            this->feedback = feedback*0.3;
+            this->feedback = feedback;
         }
         // test ony, set fixed LFO position.
         void testSetLfoPosition(float value) {
@@ -228,30 +238,35 @@ namespace toob
         {
             float freq = lfo.tick();
 
-            for (size_t i = 0; i < this->notchFilters.size(); ++i)
+            
+            freq *= frequencyScale;
+            float a1 = AllPassFilter::frequencyToCoefficient(sampleRate,freq);
+            
+            for (size_t i = 0; i < this->allPassFilters.size(); ++i)
             {
-                notchFilters[i].setNotchFrequency(freq);
+                allPassFilters[i].setCoefficient(a1);
             }
 
             // Apply feedback and process through all stages
-            float input = inputSample;
+            float input = (1.0-feedback)*inputSample - feedback*zm1;
             float output = input;
 
-            for (size_t i = 0; i < notchFilters.size(); ++i)
+            for (size_t i = 0; i < allPassFilters.size(); ++i)
             {
-                output = notchFilters[i].process(output);
+                output = allPassFilters[i].process(output);
             }
-
-            return output;
+            output = 0.5*(input + output);
+            zm1 = output;
+            return trim*output;
         }
 
         // Reset all internal states
         void reset()
         {
             lfo.reset();
-            for (size_t i = 0; i < notchFilters.size(); ++i)
+            for (size_t i = 0; i < allPassFilters.size(); ++i)
             {
-                notchFilters[i].reset();
+                allPassFilters[i].reset();
             }
         }
     };

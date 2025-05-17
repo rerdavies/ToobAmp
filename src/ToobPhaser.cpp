@@ -40,7 +40,6 @@ void ToobPhaser::Run(uint32_t n_samples) {
 
     float rate = this->rate.GetValue();
     phaser.setLfoRate(rate);
-    phaser.setFeedback(this->feedback.GetValue());
 
     for (size_t i = 0; i < n_samples; ++i)
     {

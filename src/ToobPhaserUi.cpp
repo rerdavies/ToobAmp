@@ -38,8 +38,8 @@ public:
 
 ToobPhaserUi::ToobPhaserUi() : super(
     ToobPhaserUiBase::Create(),
-    Lv2cSize(500,223), // default window size.
-    Lv2cSize(500,223), // default window size.)
+    Lv2cSize(450,223), // default window size.
+    Lv2cSize(450,223), // default window size.)
     "ToobPhaserLogo.svg"
     )
 {
