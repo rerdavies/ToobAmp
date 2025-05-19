@@ -47,7 +47,7 @@ Remix a stereo input signal.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Mix";
+        mod:label "Mix";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port

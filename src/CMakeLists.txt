@@ -159,6 +159,11 @@ add_library(ToobAmp  SHARED
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMix.cpp ToobMix.hpp
 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
+        ToobGraphicEq.cpp ToobGraphicEq.hpp
+        HoltersGraphicEq.cpp HoltersGraphicEq.hpp
+
+
         ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
         ToobVolume.cpp ToobVolume.hpp
 
@@ -375,6 +380,24 @@ add_custom_command(
     DEPENDS
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobVolume.ttl    
+        generate_lv2c_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobGraphicEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobGraphicEq.ttl)
+
+add_custom_command(
+    OUTPUT  ToobGraphicEqInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-graphiceq
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp 
+              --class ToobGraphicEqInfo
+              --namespace graphiceq_plugin
+              --ui-base-class ToobGraphicEqUiBase
+              --plugin-base-class ToobGraphicEqBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobGraphicEq.ttl    
         generate_lv2c_plugin_info
 )
 
@@ -728,11 +751,19 @@ add_library(ToobAmpUI  SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
     ToobNoiseGateUi.cpp
 
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
+    ToobMixUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
+    ToobGraphicEqUi.cpp
+
+
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
     ToobVolumeUi.cpp
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
-    ToobMixUi.cpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
+    ToobGraphicEqUi.cpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
@@ -1140,6 +1171,10 @@ add_executable(PhaserTest
     PhaserTest.cpp
     LsNumerics/Fft.cpp
     LsNumerics/StagedFft.cpp
+)
+
+add_executable(GraphicEqTest
+    HoltersGraphicEqTest.cpp
 )
 
 # add_executable(UiLinkageTest 
