@@ -23,9 +23,10 @@
 
 #include <chrono>
 #include <filesystem>
+#include <vector>
 #include <memory>
 #include "ToobGraphicEqInfo.hpp"
-#include "ControlDezipper.h"
+#include "DbDezipper.h"
 #include "HoltersGraphicEq.hpp"
 
 using namespace lv2c::lv2_plugin;
@@ -33,32 +34,32 @@ using namespace graphiceq_plugin;
 using namespace toob;
 using namespace toob::holters_graphic_eq;
 
-
 class ToobGraphicEq : public graphiceq_plugin::ToobGraphicEqBase
 {
 public:
-	using super = graphiceq_plugin::ToobGraphicEqBase;
+    using super = graphiceq_plugin::ToobGraphicEqBase;
 
-	static Lv2Plugin *Create(double rate,
-							 const char *bundle_path,
-							 const LV2_Feature *const *features)
-	{
-		return new ToobGraphicEq(rate, bundle_path, features);
-	}
-	ToobGraphicEq(double rate,
-				   const char *bundle_path,
-				   const LV2_Feature *const *features);
+    static Lv2Plugin *Create(double rate,
+                             const char *bundle_path,
+                             const LV2_Feature *const *features)
+    {
+        return new ToobGraphicEq(rate, bundle_path, features);
+    }
+    ToobGraphicEq(double rate,
+                  const char *bundle_path,
+                  const LV2_Feature *const *features);
 
-	virtual ~ToobGraphicEq();
+    virtual ~ToobGraphicEq();
 
 protected:
+    virtual void Run(uint32_t n_samples) override;
 
-	virtual void Run(uint32_t n_samples) override;
+    virtual void Activate() override;
+    virtual void Deactivate() override;
 
-	virtual void Activate() override;
-	virtual void Deactivate() override;
 private:
-	toob::holters_graphic_eq::GraphicEq graphicEq;
-	
+    toob::holters_graphic_eq::GraphicEq graphicEq;
+    std::vector<RangedDbInputPort*> bandInputPorts;
+    std::vector<DbDezipper> bandDezippers;
+    DbDezipper levelDezipper;
 };
-

@@ -63,3 +63,22 @@ namespace LsNumerics
 #else
 #error Platform not supported (buf if you add a platform, please let me know)
 #endif
+
+namespace LsNumerics
+{
+    class AutoDenorm
+    {
+    public:
+        AutoDenorm()
+        {
+            state = disable_denorms();
+        }
+        ~AutoDenorm()
+        {
+            restore_denorms(state);
+        }
+
+    private:
+        fp_state_t state;
+    };
+}

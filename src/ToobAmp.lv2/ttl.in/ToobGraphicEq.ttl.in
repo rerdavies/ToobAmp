@@ -22,6 +22,7 @@
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix toobGraphicEq: <http://two-play.com/plugins/toob-graphiceq#> .
+@prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
 
 
 <http://two-play.com/rerdavies#me>
@@ -32,7 +33,7 @@
 
 <http://two-play.com/plugins/toob-graphiceq>
         a lv2:Plugin ,
-                lv2:UtilityPlugin ;
+                lv2:EQPlugin ;
         doap:name "TooB Graphic Eq" ,
                 "TooB GraphicEq"@en-gb 
                 ;
@@ -42,8 +43,7 @@
         lv2:minorVersion 0 ;
         lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-7-band graphic eq. 
-
+A 7 octave graphic EQ, with frequencies chosen to be useful for EQ-ing guitar signals. 
 """ ;
 
         mod:brand "TooB";
@@ -58,96 +58,91 @@
         lv2:name "In L"
     ] , [
         a lv2:AudioPort ,
-          lv2:InputPort ;
-        lv2:index 1 ;
-        lv2:symbol "in_right" ;
-        lv2:name "In R"
-    ] , [
-        a lv2:AudioPort ,
           lv2:OutputPort ;
-        lv2:index 2 ;
+        lv2:index 1 ;
         lv2:symbol "out_left" ;
         lv2:name "Out L"
-    ] , [
-        a lv2:AudioPort ,
-          lv2:OutputPort ;
-        lv2:index 3 ;
-        lv2:symbol "out_right" ;
-        lv2:name "Out R"
     ] , [ 
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 4 ;
+        lv2:index 2 ;
         lv2:symbol "gain_100hz" ;
         lv2:name "100" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 5 ;
+        lv2:index 3 ;
         lv2:symbol "gain_200hz" ;
         lv2:name "200" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 6 ;
+        lv2:index 4 ;
         lv2:symbol "gain_400hz" ;
         lv2:name "400" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 7 ;
+        lv2:index 5 ;
         lv2:symbol "gain_800hz" ;
         lv2:name "800" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 8 ;
+        lv2:index 6 ;
         lv2:symbol "gain_1600hz" ;
         lv2:name "1.6k" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 9 ;
+        lv2:index 7 ;
         lv2:symbol "gain_3200hz" ;
         lv2:name "3.2k" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
         units:unit units:db ;
+        lv2:portProperty pipedal_ui:graphicEq;
     ] , [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 10 ;
+        lv2:index 8 ;
         lv2:symbol "gain_6400hz" ;
         lv2:name "6.4k" ;
         lv2:default 0.0 ;
         lv2:minimum -15.0 ;
         lv2:maximum 15.0 ;
+        lv2:portProperty pipedal_ui:graphicEq;
         units:unit units:db ;
     ], [
         a lv2:ControlPort ,
           lv2:InputPort ;
-        lv2:index 11 ;
+        lv2:index 9 ;
         lv2:symbol "level" ;
         lv2:name "Level" ;
         lv2:default 0.0 ;

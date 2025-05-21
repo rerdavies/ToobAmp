@@ -18,6 +18,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #include "ToobGraphicEq.hpp"
+#include "ControlDezipper.h"
 
 using namespace graphiceq_plugin;
 
@@ -25,8 +26,16 @@ ToobGraphicEq::ToobGraphicEq(double rate,
                              const char *bundle_path,
                              const LV2_Feature *const *features)
     : ToobGraphicEqBase(rate, bundle_path, features),
-      graphicEq(rate)
+      graphicEq(rate,7,100,2)
 {
+    bandInputPorts = std::vector<RangedDbInputPort *>{
+        &gain_100hz,
+        &gain_200hz,
+        &gain_400hz,
+        &gain_800hz,
+        &gain_1600hz,
+        &gain_3200hz,
+        &gain_6400hz};
 }
 
 ToobGraphicEq::~ToobGraphicEq()
@@ -35,39 +44,52 @@ ToobGraphicEq::~ToobGraphicEq()
 
 void ToobGraphicEq::Run(uint32_t n_samples)
 {
-    graphicEq.setGain(0,this->gain_100hz.GetAfNoLimit());
-    graphicEq.setGain(1,this->gain_200hz.GetAfNoLimit());
-    graphicEq.setGain(2,this->gain_400hz.GetAfNoLimit());
-    graphicEq.setGain(3,this->gain_800hz.GetAfNoLimit());
-    graphicEq.setGain(4,this->gain_1600hz.GetAfNoLimit());
-    graphicEq.setGain(5,this->gain_3200hz.GetAfNoLimit());
-    graphicEq.setGain(6,this->gain_6400hz.GetAfNoLimit());
+    for (size_t i = 0; i < bandDezippers.size(); ++i)
+    {
+        auto & dezipper = bandDezippers[i];
+        if (bandInputPorts[i]->HasChanged())
+        {
+            dezipper.SetTarget(bandInputPorts[i]->GetDbNoLimit());
+        }
+    }
+    if (level.HasChanged()) {
+        levelDezipper.SetTarget(level.GetDbNoLimit());
+    }
+
     graphicEq.setLevel(this->level.GetAfNoLimit());
 
-    graphicEq.process(in_left.Get(),out_left.Get(),n_samples);
-    
-    float *outR = out_right.Get();
+    const float *inL = in_left.Get();
     float *outL = out_left.Get();
-    for (uint32_t i = 0; i < n_samples; ++i)
+    for (size_t i = 0; i < n_samples; ++i)
     {
-        outR[i] = outL[i];
+        for (size_t z = 0; z < bandDezippers.size(); ++z)
+        {
+            auto & dezipper = bandDezippers[z];
+            if (!dezipper.IsIdle()) {
+                graphicEq.setGain(z,dezipper.Tick());
+            }
+        }
+        double y = graphicEq.process(inL[i]); 
+        outL[i] = y * levelDezipper.Tick();
     }
 }
 
-
 void ToobGraphicEq::Activate()
 {
-    graphicEq.setGain(0,this->gain_100hz.GetAfNoLimit());
-    graphicEq.setGain(1,this->gain_200hz.GetAfNoLimit());
-    graphicEq.setGain(2,this->gain_400hz.GetAfNoLimit());
-    graphicEq.setGain(3,this->gain_800hz.GetAfNoLimit());
-    graphicEq.setGain(4,this->gain_1600hz.GetAfNoLimit());
-    graphicEq.setGain(5,this->gain_3200hz.GetAfNoLimit());
-    graphicEq.setGain(6,this->gain_6400hz.GetAfNoLimit());
+    levelDezipper.SetSampleRate(this->getRate());
+    levelDezipper.SetRate(0.1);
+    levelDezipper.Reset(level.GetDbNoLimit());
 
-
+    bandDezippers.resize(bandInputPorts.size());
+    for (size_t i = 0; i < bandDezippers.size(); ++i)
+    {
+        auto & dezipper = bandDezippers[i];
+        dezipper.SetSampleRate(this->getRate());
+        dezipper.SetRate(0.1);
+        dezipper.Reset(bandInputPorts[i]->GetDbNoLimit());
+        graphicEq.setGain(i, dezipper.Tick());
+    }
     graphicEq.reset();
-
 }
 void ToobGraphicEq::Deactivate()
 {

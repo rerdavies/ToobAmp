@@ -23,12 +23,19 @@
 
 #pragma once
 
-/*
-6-band octave graphic EQ based on
+#define SLOW_FILTER 1
 
-GRAPHIC EQUALIZER DESIGN USING HIGHER-ORDER RECURSIVE FILTERS,
-Martin Holters, Udo Zölzer, Proc. of the 9th Int. Conference on
-Digital Audio Effects (DAFx-06), Montreal, Canada, September 18-20, 2006.alignas
+/*
+6-band octave graphic EQ based on [1] and [2].
+
+[1] Holters and Zölzer GRAPHIC EQUALIZER DESIGN USING HIGHER-ORDER RECURSIVE FILTERS,
+ Proc. of the 9th Int. Conference on Digital Audio Effects (DAFx-06), Montreal, Canada,
+  September 18-20, 2006.
+
+[2] Rämö and V. Välimäki. Optimizing a High-Order Graphic Equalizer for Audio
+Processing. IEEE Signal Processing Letters, Vol. 21, No. 3, pp. 301-305, March 2014.
+DOI: 10.1109/LSP.2014.2301557 (Available as a post-print)
+
 */
 #pragma once
 #include <vector>
@@ -93,6 +100,14 @@ namespace toob::holters_graphic_eq
             z1 = z0;
             return y;
         }
+
+        double getFrequencyResponse(double omega)
+        {
+            std::complex<double> ejw = std::exp(std::complex<double>(0, omega));
+            auto ejw2 = ejw * ejw;
+            auto t = (b0 + b1 * ejw + b2 * (ejw2)) / (a0 + a1 * ejw + a2 * ejw2);
+            return std::abs(t);
+        }
     };
 
     /**
@@ -105,18 +120,19 @@ namespace toob::holters_graphic_eq
     class SectionAllpass
     {
     public:
-        void setCosOmegaM(double cosOmegaM)
+        void setA(double a)
         {
-            this->cosOmegaM = cosOmegaM;
+            this->a = a;
         }
 
         void reset()
         {
-            z = 0;
-            z1 = 0;
+            w1 = 0;
+            w2 = 0;
         }
         double tick(double value)
         {
+
             // first z^-1
             // double x = z;
             // z = value;
@@ -126,18 +142,18 @@ namespace toob::holters_graphic_eq
 
             // df II.
             // double z0 = x - a1 * z1 - a2 * z2;
-            double z0 = x + cosOmegaM * z1;
+            double z0 = x + a * w1;
             // double y = b0 * z0 + b1 * z1 + b2 * z2;
-            double y = cosOmegaM * z0 - z1;
-            z1 = z0;
+            double y = a * z0 - w1;
+            w1 = z0;
             return y;
         }
 
-    private:
-        double z;
-        double z1;
+    public:
+        double w1;
+        double w2;
 
-        double cosOmegaM;
+        double a;
     };
     class Section
     {
@@ -153,11 +169,13 @@ namespace toob::holters_graphic_eq
         void updateGainParams(double gain);
         double tick(double input);
 
-    private:
+    public:
+        size_t m;
+        size_t M;
         SectionAllpass allpass0;
         SectionAllpass allpass1;
-        double zm1;
-        double zm2;
+        double a1out;
+        double a2out;
         double apz1, apz2;
 
         double alpha_m;
@@ -189,8 +207,6 @@ namespace toob::holters_graphic_eq
             double t = std::sqrt(std::tan(Omega_U / 2) * std::tan(Omega_L / 2));
             Omega_M = atan(t) * 2; // (19)
 
-            assert(f_compare(pow(tan(Omega_M / 2), 2), tan(Omega_U / 2) + tan(Omega_L / 2), 1E5));
-
             tan_Omega_B_by_2 = tan(Omega_B / 2);
 
             sections.resize(M / 2);
@@ -205,7 +221,7 @@ namespace toob::holters_graphic_eq
             if (gain != gain_)
             {
                 gain_ = gain;
-                this->K = pow(gain, -1.0 / (2.0 * M)) * tan_Omega_B_by_2; // (14)
+                this->K = pow(1/gain, 1.0 / (2.0 * M)) * tan_Omega_B_by_2; // (14)
                 this->V = pow(gain, 1.0 / M) - 1;                         // after (11)
 
                 for (auto &section : sections)
@@ -271,10 +287,10 @@ namespace toob::holters_graphic_eq
             double sample_rate,
             size_t num_bands = 10,
             double fc0 = 30,
-            double r = 2.0) : fs_(sample_rate),
+            double ratio = 2.0) : fs_(sample_rate),
                               NUM_BANDS(num_bands),
                               BANK_F0(fc0),
-                              R(r)
+                              R(ratio)
         {
             // Octave-spaced center frequencies starting at 100 Hz
             std::vector<double> frequencies;
@@ -336,6 +352,15 @@ namespace toob::holters_graphic_eq
                 output[i] = static_cast<float>(y);
             }
         }
+        float process(const float input) 
+        {
+            double y = input;
+            for (auto &filter : filters_)
+            {
+                y = filter->process(y);
+            }
+            return y;
+        }
 
         // Reset filter states (e.g., for initialization or after discontinuity)
         void reset()
@@ -381,49 +406,41 @@ namespace toob::holters_graphic_eq
 
     inline double Section::tick(double input)
     {
-
-        // Translate figure 1 from [1] into code.
-        // why is this so crazily difficult? :-/
-
+        // based on matlab code provided by [2].
+        double a = allpass0.a;
         double K = filter->K;
         double V = filter->V;
-        double zm1X2 = zm1 * 2;
-        double t42 = zm2 + zm1X2;
 
-        double t12 =
-            zm2 - zm1X2 + K * (-2 * c_m * zm2 + zm1X2 * K);
-        ;
-        double t21 = (input * K - t12) * a0_m_inv;
+        double &w12 = allpass0.w2; // hard to disentangle into sensible form.
+        double &w11 = allpass0.w1; // shamelessly use the allpass state variables
+        double &w22 = allpass1.w2; // instead of calling tick() :-/
+        double &w21 = allpass1.w1;
 
-        double t21Check = (input * K - (zm2 - 2 * zm1 + K * (-2 * c_m * zm2 + 2 * K * zm1))) * a0_m_inv;
 
-        assert(f_compare(t21, t21Check, 1E-3));
-        (void)t21Check;
+        // Intermediate variables of the 4th-order section
+        double v1 = (a2out - 2*a1out) + K*(2*(-c_m)*a2out + K*(2*a1out + a2out));
+        double v2 = a2out + 2*a1out;
 
-        double t51 =
-            (t21 + t42) * K;
+        double yN  = input + V*2*(-c_m)*(-a0_m_inv*(K*input - v1) + a2out) + 
+            V*(2+V)*K*(a0_m_inv*(K*input - v1) + v2);
 
-        double tOut =
-            ((t51 * V) + (t51 +
-                          (zm2 - t21) * (-c_m)) *
-                             2) *
-                V +
-            input;
 
-        double tOutCheck =
-            t51 * V * V + ((-c_m) * (zm2 - t21) + t51) * 2 * V + input;
+        // update state variables.
+        w12 = w11 + a*w12;                          // Move data inside allpass filter A1
+        w11 = a0_m_inv*(K*input - v1);                    // Move data through the unit delay into A1
+        w22 = w21 + a*w22;                          // Move data inside allpass filter A2
+        w21 = a1out;                                // Move data through the unit delay into A2
 
-        assert(f_compare(tOut, tOutCheck, 1E-3));
-        (void)tOutCheck;
-        zm2 = allpass1.tick(zm1);
-        zm1 = allpass0.tick(t21);
+        a1out = a*(w11 + a*w12) - w12;  // Output sample of allpass filter A1
+        a2out = a*(w21 + a*w22) - w22;  // Output sample of allpass filter A2
 
-        return tOut;
+        return yN;
+
     }
     inline void Section::reset()
     {
-        zm1 = 0;
-        zm2 = 0;
+        a1out = 0;
+        a2out = 0;
         apz1 = 0;
         apz2 = 0;
 
@@ -435,12 +452,14 @@ namespace toob::holters_graphic_eq
         ShelvingBandFilter *filter,
         size_t m, size_t M)
     {
+        this->m = m; 
+        this->M = M;
         this->filter = filter;
         alpha_m = (0.5 - (2.0 * m - 1) / (2.0 * M)) * M_PI; // (9)
         c_m = std::cos(alpha_m);                            // after (11)
         double cos_Omega_M = std::cos(filter->Omega_M);
-        allpass0.setCosOmegaM(cos_Omega_M);
-        allpass1.setCosOmegaM(cos_Omega_M);
+        allpass0.setA(cos_Omega_M);
+        allpass1.setA(cos_Omega_M);
 
         reset();
         // (void)cos_Omega_M;
