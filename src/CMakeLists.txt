@@ -73,9 +73,13 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif()
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder ")   # --param=max-vartrack-size=400000
-    else() # if Clang
-        set (GCC_EXTRA_FLAGS "-Wno-psabi -Werror -Wall -pedantic -Wno-reorder -Wno-restrict ")   # --param=max-vartrack-size=400000
+        set (GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder ")   # --param=max-vartrack-size=400000
+    else() # if GCC
+        set (GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder -Wno-restrict ")   # --param=max-vartrack-size=400000
+    endif()
+
+    if (WARNINGS_ARE_ERRORS)
+        set (GCC_EXTRA_FLAGS "-Werror ${GCC_EXTRA_FLAGS}")
     endif()
 
     set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
