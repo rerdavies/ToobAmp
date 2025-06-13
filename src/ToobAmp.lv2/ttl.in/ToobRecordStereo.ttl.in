@@ -97,7 +97,7 @@ myprefix:loop3_group
         patch:writable 
                 recordPrefix:audioFile;
 
-        lv2:extensionData state:interface ;
+        lv2:extensionData state:interface, work:interface ;
 
 
         rdfs:comment """

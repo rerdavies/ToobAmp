@@ -25,6 +25,7 @@
 
 
 #include <cstdint>
+#include <cmath>
 
 namespace toob {
 
@@ -49,21 +50,24 @@ public:
     bool IsComplete() { return samplesRemaining == 0; }
     void To(float value, float timeInSeconds)
     {
-        if (value == x)
+        if (timeInSeconds == 0)
         {
             samplesRemaining = 0;
             dx = 0;
             x = targetX = value;
 
         } else {
-            samplesRemaining = (size_t)(timeInSeconds*sampleRate);
-            if (samplesRemaining == 0)
+            if (value != targetX)
             {
-                x = targetX = value;
-                dx = 0;
-            } else {
-                targetX = value;
-                dx = (targetX-x)/samplesRemaining;
+                samplesRemaining = sampleRate*timeInSeconds;
+                if (samplesRemaining == 0)
+                {
+                    dx = 0;
+                    x = targetX = value;
+                } else {
+                    targetX = value;
+                    dx = (targetX-x)/samplesRemaining;
+                }
             }
         }
     }

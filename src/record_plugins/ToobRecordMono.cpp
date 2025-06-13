@@ -28,6 +28,8 @@
 #include <thread>
 #include <iostream>
 #include "FfmpegDecoderStream.hpp"
+#include <algorithm>
+#include <cstdio>
 
 // using namespace lv2c::lv2_plugin;
 
@@ -37,181 +39,14 @@ static REGISTRATION_DECLARATION PluginRegistration<ToobRecordMono> registration(
 
 constexpr char PREFERRED_PATH_SEPARATOR = std::filesystem::path::preferred_separator;
 
-namespace
-{
-    enum class MessageType
-    {
-        StartRecording,
-        RecordBuffer,
-        Stoprecording,
-
-        CuePlayback,
-        CuePlaybackResponse,
-        RequestNextPlayBuffer,
-        NextPlayBufferResponse,
-        StartPlayback,
-        StopPlayback,
-
-        RecordingStopped,
-        BackgroundError,
-        Quit,
-        Finished
-    };
-
-    struct BufferCommand
-    {
-        BufferCommand(MessageType command, size_t size) : size(size), command(command)
-        {
-        }
-        size_t size;
-        MessageType command;
-    };
-
-    struct StopPlaybackCommand : public BufferCommand
-    {
-        StopPlaybackCommand() : BufferCommand(MessageType::StopPlayback, sizeof(StopPlaybackCommand))
-        {
-        }
-    };
-    struct StopRecordingCommand : public BufferCommand
-    {
-        StopRecordingCommand() : BufferCommand(MessageType::Stoprecording, sizeof(StopRecordingCommand))
-        {
-        }
-    };
-    struct RecordingStoppedCommand : public BufferCommand
-    {
-        RecordingStoppedCommand(const char *filename) : BufferCommand(MessageType::RecordingStopped, sizeof(StopRecordingCommand))
-        {
-            strncpy(this->filename, filename, sizeof(this->filename));
-            this->size = sizeof(RecordingStoppedCommand) + strlen(filename) - sizeof(filename) + 1;
-            this->size = (this->size + 3) & (~3);
-        }
-
-        char filename[1024];
-    };
-
-    struct QuitCommand : public BufferCommand
-    {
-        QuitCommand() : BufferCommand(MessageType::Quit, sizeof(QuitCommand))
-        {
-        }
-    };
-    struct FinishedCommand : public BufferCommand
-    {
-        FinishedCommand() : BufferCommand(MessageType::Finished, sizeof(QuitCommand))
-        {
-        }
-    };
-
-    struct BackgroundErrorCommmand : public BufferCommand
-    {
-        BackgroundErrorCommmand(const std::string &message) : BufferCommand(MessageType::BackgroundError, sizeof(BackgroundErrorCommmand))
-        {
-            if (message.length() > 1023)
-            {
-                throw std::runtime_error("Message too long.");
-            }
-            std::strncpy(this->message, message.c_str(), sizeof(message));
-            this->size = sizeof(BackgroundErrorCommmand) + message.length() - sizeof(message) + 1;
-            this->size = (this->size + 3) & (~3);
-        }
-
-        char message[1024];
-    };
-
-    struct ToobStartRecordingCommand : public BufferCommand
-    {
-        ToobStartRecordingCommand(const std::string &fileName, OutputFormat outputFormat)
-            : BufferCommand(MessageType::StartRecording,
-                            sizeof(ToobStartRecordingCommand)),
-              outputFormat(outputFormat)
-        {
-            if (fileName.length() > 1023)
-            {
-                throw std::runtime_error("Filename too long.");
-            }
-            std::strncpy(this->filename, fileName.c_str(), sizeof(filename));
-            this->size = sizeof(ToobStartRecordingCommand) + fileName.length() - sizeof(filename) + 1;
-            this->size = (size + 3) & (~3);
-        }
-
-        OutputFormat outputFormat;
-        char filename[1024];
-    };
-
-    constexpr double PREROLL_TIME_SECONDS = 0.5;
-    constexpr size_t PREROLL_BUFFERS = (size_t)(PREROLL_TIME_SECONDS / 0.1);
-
-    struct ToobCuePlaybackCommand : public BufferCommand
-    {
-        ToobCuePlaybackCommand(const std::string &fileName)
-            : BufferCommand(MessageType::CuePlayback,
-                            sizeof(ToobCuePlaybackCommand))
-        {
-            if (fileName.length() > 1023)
-            {
-                throw std::runtime_error("Filename too long.");
-            }
-            std::strncpy(this->filename, fileName.c_str(), sizeof(filename));
-            this->size = sizeof(ToobCuePlaybackCommand) + fileName.length() - sizeof(filename) + 1;
-            this->size = (size + 3) & (~3);
-        }
-
-        char filename[1024];
-    };
-
-    struct ToobNextPlayBufferCommand : public BufferCommand
-    {
-        ToobNextPlayBufferCommand() : BufferCommand(MessageType::RequestNextPlayBuffer, sizeof(ToobNextPlayBufferCommand))
-        {
-        }
-    };
-
-    struct ToobNextPlayBufferResponseCommand : public BufferCommand
-    {
-        ToobNextPlayBufferResponseCommand(AudioFileBuffer *buffer)
-            : BufferCommand(MessageType::NextPlayBufferResponse, sizeof(ToobNextPlayBufferCommand)), buffer(buffer)
-        {
-        }
-        AudioFileBuffer *buffer = nullptr;
-    };
-
-    struct ToobCuePlaybackResponseCommand : public BufferCommand
-    {
-        ToobCuePlaybackResponseCommand()
-            : BufferCommand(MessageType::CuePlaybackResponse,
-                            sizeof(ToobCuePlaybackResponseCommand))
-        {
-            for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
-            {
-                buffers[i] = nullptr;
-            }
-        }
-        AudioFileBuffer *buffers[PREROLL_BUFFERS];
-    };
-
-    struct ToobRecordBufferCommand : BufferCommand
-    {
-        ToobRecordBufferCommand(AudioFileBuffer *buffer, size_t bufferSize)
-            : BufferCommand(MessageType::RecordBuffer, sizeof(ToobRecordBufferCommand)),
-              buffer(buffer), bufferSize(bufferSize)
-        {
-        }
-
-        AudioFileBuffer *buffer;
-        size_t bufferSize;
-    };
-}
-
 ToobRecordMono::ToobRecordMono(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features,
     int channels)
-    : super(rate, bundle_path, features)
+    : super(rate, bundle_path, features),
+      lv2AudioFileProcessor(this, rate, channels)
 {
-
 
     urids.atom__Path = MapURI(LV2_ATOM__Path);
     urids.atom__String = MapURI(LV2_ATOM__String);
@@ -224,7 +59,6 @@ ToobRecordMono::ToobRecordMono(
     this->isStereo = channels > 1;
 
     this->recordingDirectory = "/tmp";
-    this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(channels, (size_t)rate / 10);
 
     this->fileBrowserFilesFeature = this->GetFeature<LV2_FileBrowser_Files>(features, LV2_FILEBROWSER__files);
 
@@ -244,7 +78,8 @@ ToobRecordMono::ToobRecordMono(
         }
     }
     if (recordingDirectory.empty())
-    {   std::filesystem::path path = getenv("HOME");
+    {
+        std::filesystem::path path = getenv("HOME");
         if (!path.empty())
         {
             this->recordingDirectory = "/tmp";
@@ -295,145 +130,73 @@ void generate_datetime_filename(char *buffer, size_t buffer_size, const char *ex
     }
 }
 
-void ToobRecordMono::MakeNewRecordingFilename()
+const std::string &ToobRecordMono::MakeNewRecordingFilename()
 {
-    this->recordingFilePath = this->recordingDirectory;
 
     char cFilename[256];
     generate_datetime_filename(cFilename, sizeof(cFilename), RecordingFileExtension().c_str(), "rec-");
 
     // GCC: confirmed as zero-allocation by virtue of having reserved memory.
     // You may want to double check this on other compilers. There's always aaloc.
-    this->recordingFilePath += cFilename;
+    return this->recordingFilePath = this->recordingDirectory + cFilename;
 }
-
 void ToobRecordMono::Activate()
 {
     super::Activate();
+    lv2AudioFileProcessor.Activate();
 
     this->activated = true;
-    this->finished = false;
-    this->state = PluginState::Idle;
-
-    this->backgroundThread = std::make_unique<std::jthread>(
-        [this]()
-        {
-        try {
-        bool quit = false;
-
-        std::vector<uint8_t> buffer (2048);
-        BufferCommand*cmd = (BufferCommand*)buffer.data();
-        while (!quit)
-        {
-            this->toBackgroundQueue.readWait();
-            size_t size = this->toBackgroundQueue.peekSize();
-            if (size == 0) continue;
-
-            if (size > buffer.size()) {
-                buffer.resize(size);
-                cmd = (BufferCommand*)buffer.data();
-            }
-            if (!this->toBackgroundQueue.read_packet(buffer.size()  ,(uint8_t*)cmd))
-            {
-                break;
-            }
-
-            try {
-                switch (cmd->command) {
-                case MessageType::StartRecording:
-                {
-                    ToobStartRecordingCommand* startCmd = (ToobStartRecordingCommand*)cmd;
-                    bgStartRecording(startCmd->filename, GetOutputFormat());
-                    break;
-                }
-                case MessageType::RecordBuffer:
-                {
-
-                    ToobRecordBufferCommand* recordCmd = (ToobRecordBufferCommand*)cmd;
-                    bgWriteBuffer(recordCmd->buffer, recordCmd->bufferSize);
-
-
-                    bufferPool->PutBuffer(recordCmd->buffer);
-
-                    break;
-                }   
-                case MessageType::Stoprecording:
-                {
-                    bgStopRecording();
-                    break;
-                }  
-
-                case MessageType::CuePlayback:
-                {
-                    ToobCuePlaybackCommand* cueCmd = (ToobCuePlaybackCommand*)cmd;
-                    bgCuePlayback(cueCmd->filename);
-                    break;
-                }
-                case MessageType::RequestNextPlayBuffer:
-                {
-                    AudioFileBuffer* buffer = bgReadDecoderBuffer();
-                    ToobNextPlayBufferResponseCommand responseCommand(buffer);
-                    this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t*)&responseCommand);
-                    break;
-                }
-                case MessageType::StopPlayback:
-                {
-                    bgStopPlaying();
-                    break;
-                }   
-                case MessageType::Quit:
-                {
-                    quit = true;
-                    break;
-                }   
-                default:
-                    throw std::runtime_error("Unknown Background command.");
-            }
-        } catch (const std::exception&e)
-        {
-            std::stringstream ss;
-            ss << "Background thread error: " << e.what();
-            LogError(ss.str());
-            BackgroundErrorCommmand errorCmd(ss.str());
-            this->fromBackgroundQueue.write_packet(sizeof(errorCmd), (uint8_t*)&errorCmd);
-    
-        }
-    }
-    } catch (std::exception &e) {
-        std::stringstream ss;
-        ss << "Background thread error: " << e.what();
-        LogError(ss.str());
-        BackgroundErrorCommmand errorCmd(ss.str());
-        this->fromBackgroundQueue.write_packet(sizeof(errorCmd), (uint8_t*)&errorCmd);
-    }
-    bgStopPlaying();
-    bgCloseTempFile();
-
-    FinishedCommand finishedCommand;
-    this->fromBackgroundQueue.write_packet(sizeof(FinishedCommand), (uint8_t*)&finishedCommand); });
 }
 
 void ToobRecordMono::ResetPlayTime()
 {
-    this->playPosition = 0;
-    UpdateOutputControls(0);
 }
+
+void ToobRecordMono::OnProcessorStateChanged(
+    ProcessorState newState)
+{
+    if (newState == ProcessorState::Error)
+    {
+        this->recordingFilePath.clear();
+        this->filePath.clear();
+        this->requestPutFilePath = true;
+        this->errorBlinkSamples = (int64_t)(1.5 * getRate()); // 1 second of error blink.
+    }
+}
+
 void ToobRecordMono::UpdateOutputControls(size_t samplesInFrame)
 {
-    uint64_t time_milliseconds = (uint64_t)(this->playPosition * 1000 / this->getRate());
+    uint64_t time_milliseconds = (uint64_t)(this->lv2AudioFileProcessor.GetPlayPosition() * 1000 / this->getRate());
     this->record_time.SetValue(time_milliseconds * 0.001f, samplesInFrame); // throttled.
-    if (state == PluginState::Recording)
+    if (GetState() == ProcessorState::Recording)
     {
 
         bool ledBlinkStatus = ((time_milliseconds / 300) & 1) == 0;
         this->record_led.SetValue(ledBlinkStatus ? 1.0f : 0.0f);
         this->play_led.SetValue(0);
     }
-    else if (state == PluginState::Playing)
+    else if (GetState() == ProcessorState::Playing)
     {
         bool ledBlinkStatus = ((time_milliseconds / 300) & 1) == 0;
         this->play_led.SetValue(ledBlinkStatus ? 1.0f : 0.0f);
         this->record_led.SetValue(0);
+    }
+    else if (GetState() == ProcessorState::Error)
+    {
+        errorBlinkSamples -= samplesInFrame;
+        if (this->errorBlinkSamples < 0)
+        {
+            SetState(ProcessorState::Idle);
+            this->play_led.SetValue(0);
+            this->record_led.SetValue(0);
+        }
+        else
+        {
+            int64_t t = (int64_t)(errorBlinkSamples * 1000) / (float)(getRate());
+            bool fastBlinkStatus = ((t / 250) & 1) == 0;
+            this->play_led.SetValue(fastBlinkStatus ? 1.0f : 0.0f);
+            this->record_led.SetValue(fastBlinkStatus ? 1.0f : 0.0f);
+        }
     }
     else
     {
@@ -444,46 +207,16 @@ void ToobRecordMono::UpdateOutputControls(size_t samplesInFrame)
 
 void ToobRecordMono::StartRecording()
 {
-
-    this->state = PluginState::Recording;
-    ResetPlayTime();
-    SetFilePath("");
-
-    UpdateOutputControls(0);
-
-    MakeNewRecordingFilename();
-
-    this->realtimeBuffer.Attach(this->bufferPool->TakeBuffer());
-    this->realtimeWriteIndex = 0;
-
-    ToobStartRecordingCommand cmd{this->recordingFilePath, GetOutputFormat()};
-    this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
-}
-
-void ToobRecordMono::SendBufferToBackground()
-{
-    if (this->state == PluginState::Recording)
-    {
-        auto buffer = this->realtimeBuffer.Detach();
-
-        ToobRecordBufferCommand cmd{buffer, this->realtimeWriteIndex};
-        this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-    }
+    this->filePath = "";
+    this->requestPutFilePath = true;
+    lv2AudioFileProcessor.StartRecording(MakeNewRecordingFilename(), (toob::OutputFormat)(fformat.GetValue()));
 }
 
 void ToobRecordMono::StopRecording()
 {
-
-    if (this->state == PluginState::Recording)
-    {
-        SendBufferToBackground();
-
-        StopRecordingCommand stopCmd;
-        this->toBackgroundQueue.write_packet(sizeof(stopCmd), (uint8_t *)&stopCmd);
-
-        this->state = PluginState::Idle;
-    }
+    lv2AudioFileProcessor.StopRecording();
 }
+
 void ToobRecordMono::Run(uint32_t n_samples)
 {
 
@@ -491,9 +224,11 @@ void ToobRecordMono::Run(uint32_t n_samples)
     {
         this->loadRequested = false;
         if (!this->filePath.empty())
-        { 
+        {
             CuePlayback();
-        } else {
+        }
+        else
+        {
             StopPlaying();
             StopRecording();
         }
@@ -501,15 +236,15 @@ void ToobRecordMono::Run(uint32_t n_samples)
 
     UpdateOutputControls(n_samples);
 
-    fgHandleMessages();
+    lv2AudioFileProcessor.HandleMessages();
 
     if (this->stop.IsTriggered())
     {
-        if (this->state == PluginState::Recording)
+        if (this->GetState() == ProcessorState::Recording)
         {
             StopRecording();
         }
-        else if (this->state == PluginState::Playing)
+        else
         {
             StopPlaying();
             ResetPlayTime();
@@ -520,45 +255,55 @@ void ToobRecordMono::Run(uint32_t n_samples)
     if (this->record.IsTriggered())
     {
 
-        if (this->state == PluginState::Recording)
+        if (this->GetState() == ProcessorState::Recording)
         {
             StopRecording();
-            this->state = PluginState::Idle;
             UpdateOutputControls(0);
         }
         else
         {
             StartRecording();
+            UpdateOutputControls(0);
         }
     }
     if (this->play.IsTriggered())
     {
-        if (this->state == PluginState::Recording)
+        switch (GetState())
         {
-            StopRecording();
+        case ProcessorState::Idle:
+            lv2AudioFileProcessor.CuePlayback(this->filePath.c_str(), 0, false);
+            break;
+        case ProcessorState::StoppingRecording:
+            lv2AudioFileProcessor.Play();
+            break;
+        case ProcessorState::CuePlayingThenPlay:
+            // nothing.
+            break;
+        case ProcessorState::CuePlayingThenPause:
+            SetState(ProcessorState::CuePlayingThenPlay);
+            break;
+        case ProcessorState::Playing:
+            lv2AudioFileProcessor.CuePlayback(this->filePath.c_str(), 0, false);
+            break;
+        case ProcessorState::Paused:
+            lv2AudioFileProcessor.Play();
+            break;
+        case ProcessorState::Recording:
+            lv2AudioFileProcessor.Play();
+            break;
+        case ProcessorState::Error:
+            // do nothing, wait for the error to be cleared.
+            return;
         }
-        if (this->state == PluginState::CuePlaying)
-        {
-            this->state = PluginState::Playing;
-            ResetPlayTime();
-            UpdateOutputControls(0);
-        }
-        else if (this->state == PluginState::Playing)
-        {
-            StopPlaying();
-        }
-        else if (this->state == PluginState::Idle)
-        {
-            CuePlayback();
-            if (this->state == PluginState::CuePlaying)
-            {
-                this->state = PluginState::Playing;
-                ResetPlayTime();
-            }
-            UpdateOutputControls(0);
-        }
+        UpdateOutputControls(0);
     }
     Mix(n_samples);
+
+    if (this->requestPutFilePath)
+    {
+        this->requestPutFilePath = false;
+        this->PutPatchPropertyPath(0, this->audioFile_urid, this->filePath.c_str());
+    }
 }
 void ToobRecordMono::Mix(uint32_t n_samples)
 {
@@ -574,62 +319,19 @@ void ToobRecordMono::Mix(uint32_t n_samples)
         this->level_vu.AddValue(value * level);
     }
 
-    if (this->state == PluginState::Recording)
+    auto state = lv2AudioFileProcessor.GetState();
+    if (state == ProcessorState::Recording)
     {
-        this->playPosition += n_samples;
-        float *buffer = this->realtimeBuffer->GetChannel(0);
-
-        for (uint32_t i = 0; i < n_samples; ++i)
-        {
-            auto value = src[i];
-            dst[i] = value;
-            value *= level;
-            this->level_vu.AddValue(value * level);
-
-            buffer[this->realtimeWriteIndex] = value;
-            this->realtimeWriteIndex++;
-            if (this->realtimeWriteIndex >= this->realtimeBuffer->GetBufferSize())
-            {
-                SendBufferToBackground();
-
-
-                this->realtimeBuffer.Attach(this->bufferPool->TakeBuffer());
-                buffer = this->realtimeBuffer->GetChannel(0);
-                this->realtimeWriteIndex = 0;
-            }
-        }
+        lv2AudioFileProcessor.Record(src, level, n_samples);
     }
-    if (this->state == PluginState::Playing)
+    if (state == ProcessorState::Playing || state == ProcessorState::CuePlayingThenPlay)
     {
-        if (!this->fgPlaybackQueue.empty())
+        /// mute thrue audio when playing back because we are "previewing"  the recording.
+        for (size_t i = 0; i < n_samples; ++i)
         {
-            this->playPosition += n_samples;
-
-            auto buffer = this->fgPlaybackQueue.front();
-            float *playData = buffer->GetChannel(0);
-
-            for (uint32_t i = 0; i < n_samples; ++i)
-            {
-                dst[i] = playData[this->fgPlaybackIndex++];
-                if (fgPlaybackIndex == buffer->GetBufferSize())
-                {
-                    fgPlaybackIndex = 0;
-                    fgPlaybackQueue.pop_front();
-                    bufferPool->PutBuffer(buffer);
-                    if (fgPlaybackQueue.empty())
-                    {
-                        this->state = PluginState::Idle;
-                        CuePlayback();
-                        break;
-                    }
-                    buffer = fgPlaybackQueue.front();
-                    playData = buffer->GetChannel(0);
-
-                    ToobNextPlayBufferCommand cmd;
-                    this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-                }
-            }
+            dst[i] = 0; // mute thru audio.
         }
+        lv2AudioFileProcessor.Play(dst, n_samples);
     }
 }
 
@@ -649,103 +351,29 @@ void ToobRecordStereo::Mix(uint32_t n_samples)
         dstL[i] = valueL;
         dstR[i] = valueR;
         this->level_vu.AddValue(
-            std::max(std::abs(valueL), std::abs(valueR)) 
-             * level);
+            std::max(std::abs(valueL), std::abs(valueR)) * level);
     }
-
-    if (this->state == PluginState::Recording)
+    auto state = lv2AudioFileProcessor.GetState();
+    if (state == ProcessorState::Recording)
     {
-        this->playPosition += n_samples;
-        float *bufferL = this->realtimeBuffer->GetChannel(0);
-        float *bufferR = this->realtimeBuffer->GetChannel(1);
-
+        lv2AudioFileProcessor.Record(srcL, srcR, level, n_samples);
+    }
+    if (state == ProcessorState::Playing || state == ProcessorState::CuePlayingThenPlay)
+    {
+        // We are "previewing" the recoding, so mute thru audio.
+        // this is to avoid clicks when the playback starts.
         for (uint32_t i = 0; i < n_samples; ++i)
         {
-            auto valueL = srcL[i]*level;
-            auto valueR = srcR[i]*level;
-
-            bufferL[this->realtimeWriteIndex] = valueL;
-            bufferR[this->realtimeWriteIndex] = valueR;
-            this->realtimeWriteIndex++;
-            if (this->realtimeWriteIndex >= this->realtimeBuffer->GetBufferSize())
-            {
-                SendBufferToBackground();
-
-
-                this->realtimeBuffer.Attach(this->bufferPool->TakeBuffer());
-                bufferL = this->realtimeBuffer->GetChannel(0);
-                bufferR = this->realtimeBuffer->GetChannel(0);
-                this->realtimeWriteIndex = 0;
-            }
+            dstL[i] = 0;
+            dstR[i] = 0;
         }
-    }
-    if (this->state == PluginState::Playing)
-    {
-        if (!this->fgPlaybackQueue.empty())
-        {
-            this->playPosition += n_samples;
-
-            auto buffer = this->fgPlaybackQueue.front();
-            float *playDataL = buffer->GetChannel(0);
-            float *playDataR = buffer->GetChannel(1);
-
-            for (uint32_t i = 0; i < n_samples; ++i)
-            {
-                dstL[i] = playDataL[this->fgPlaybackIndex];
-                dstR[i] = playDataR[this->fgPlaybackIndex];
-                this->fgPlaybackIndex++;
-
-                if (fgPlaybackIndex == buffer->GetBufferSize())
-                {
-                    fgPlaybackIndex = 0;
-                    fgPlaybackQueue.pop_front();
-                    bufferPool->PutBuffer(buffer);
-                    if (fgPlaybackQueue.empty())
-                    {
-                        this->state = PluginState::Idle;
-                        CuePlayback();
-
-                        break;
-                    }
-                    buffer = fgPlaybackQueue.front();
-                    playDataL = buffer->GetChannel(0);
-                    playDataR = buffer->GetChannel(1);
-
-                    ToobNextPlayBufferCommand cmd;
-                    this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-                }
-            }
-        }
+        lv2AudioFileProcessor.Play(dstL, dstR, n_samples);
     }
 }
 
 void ToobRecordMono::Deactivate()
 {
-    QuitCommand cmd;
-    this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-
-    while (true)
-    {
-        fgHandleMessages();
-        if (this->finished)
-        {
-            break;
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-    }
-    this->backgroundThread->join();
-    this->backgroundThread.reset();
-
-    bgCloseTempFile();
-    bgStopPlaying();
-
-    while (!fgPlaybackQueue.empty()) {
-        bufferPool->PutBuffer(fgPlaybackQueue.pop_front());
-    }
-    this->fgPlaybackIndex = 0;
-
-    this->state = PluginState::Idle;
-
+    lv2AudioFileProcessor.Deactivate();
     this->activated = false;
     super::Deactivate();
 }
@@ -755,7 +383,7 @@ bool ToobRecordMono::OnPatchPathSet(LV2_URID propertyUrid, const char *value)
     if (propertyUrid == this->audioFile_urid)
     {
         SetFilePath(value);
-        this->CuePlayback(value);
+        this->CuePlayback(value, 0);
         return true;
     }
     return false;
@@ -778,16 +406,15 @@ void ToobRecordMono::SetFilePath(const char *filename)
     {
         this->PutPatchPropertyPath(0, this->audioFile_urid, filename);
     }
+    else
+    {
+        // if not activated, we will load the file when activated.
+        this->requestPutFilePath = true;
+    }
 }
 
 void ToobRecordMono::StopPlaying()
 {
-    if (this->state == PluginState::Playing || this->state == PluginState::CuePlaying)
-    {
-        this->state = PluginState::Idle;
-        StopPlaybackCommand cmd;
-        this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-    }
     CuePlayback();
 }
 
@@ -799,212 +426,28 @@ void ToobRecordMono::CuePlayback()
         {
             return;
         }
-        CuePlayback(this->filePath.c_str());
+        CuePlayback(this->filePath.c_str(), 0);
     }
 }
 
-void ToobRecordMono::CuePlayback(const char *filename)
+void ToobRecordMono::CuePlayback(const char *filename, size_t seekPos)
 {
     if (activated)
     {
-        if (this->state == PluginState::Recording)
-        {
-            StopRecording();
-        }
-        SetFilePath(filename);
-
-        this->state = PluginState::CuePlaying;
-
-        ToobCuePlaybackCommand cmd{filename};
-        this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
+        lv2AudioFileProcessor.CuePlayback(
+            filename,
+            seekPos, true);
     }
 }
 
-void ToobRecordMono::bgCloseTempFile()
-{
-    if (bgFile)
-    {
-        fclose(bgFile);
-        bgFile = nullptr;
-    }
-    if (bgTemporaryFile)
-    {
-        bgTemporaryFile.reset();
-    }
-}
-
-void ToobRecordMono::bgStartRecording(const char *filename, OutputFormat outputFormat)
-{
-    bgStopPlaying();
-    bgCloseTempFile();
-    
-    bufferPool->Reserve(10); // nominally up to ~1 second of buffering (with 0.5s pre-roll)
-    this->bgRecordingFilePath = filename;
-    this->bgOutputFormat = outputFormat;
-
-    bgTemporaryFile = std::make_unique<pipedal::TemporaryFile>(bgRecordingFilePath.parent_path(), ".$$$");
-    FILE *file = fopen(bgTemporaryFile->Path().c_str(), "wb");
-    if (!file)
-    {
-        throw std::runtime_error("Failed to open temporary file for recording.");
-    }
-    this->bgFile = file;
-}
-void ToobRecordMono::bgWriteBuffer(toob::AudioFileBuffer *buffer, size_t count)
-{
-
-    if (!bgFile)
-    {
-        return;
-    }
-    size_t channels = buffer->GetChannelCount();
-    if (channels == 1)
-    {
-        float *data = buffer->GetChannel(0);
-        fwrite(data, sizeof(float), count, bgFile);
-    }
-    else if (channels == 2)
-    {
-        float rawBuffer[1024];
-
-        size_t offset = 0;
-
-        while (count != 0)
-        {
-            size_t thisTime = std::min(count, (size_t)(1024 / 2));
-            float *data0 = buffer->GetChannel(0) + offset;
-            float *data1 = buffer->GetChannel(1) + offset;
-            size_t ix = 0;
-            for (size_t i = 0; i < thisTime; i++)
-            {
-                rawBuffer[ix++] = data0[i];
-                rawBuffer[ix++] = data1[i];
-            }
-            size_t written = fwrite(rawBuffer, sizeof(float), thisTime * 2, bgFile);
-            if (written != thisTime * 2)
-            {
-                std::stringstream ss;
-                ss << "Failed to write to temporary file. " << strerror(errno);
-                bgCloseTempFile();
-                throw std::runtime_error(ss.str());
-            }
-            count -= thisTime;
-            offset += thisTime;
-        }
-    }
-}
-
-static std::string execForOutput(const char *cmd)
-{
-    std::array<char, 128> buffer;
-    std::string result;
-
-    FILE *pipe = popen(cmd, "r");
-
-    if (!pipe)
-    {
-        throw std::runtime_error("popen() failed!");
-    }
-
-    while (fgets(buffer.data(), buffer.size(), pipe) != nullptr)
-    {
-        result += buffer.data();
-    }
-    int rc = pclose(pipe);
-
-    bool success = WIFEXITED(rc) && WEXITSTATUS(rc) == EXIT_SUCCESS;
-
-    if (!success)
-    {
-        throw std::runtime_error("Command to execute ffmpeg conversion. " + std::string(cmd) + " " + result);
-    }
-
-    return result;
-}
-
-static std::string fileToCmdline(const std::filesystem::path &path)
-{
-    std::string t = path.string();
-
-    std::stringstream ss;
-    ss << '\'';
-    for (char c : t)
-    {
-        if (c == '\'')
-        {
-            ss << "'\\''";
-        }
-        else
-        {
-            ss << c;
-        }
-    }
-    ss << '\'';
-    return ss.str();
-}
-
-void ToobRecordMono::bgStopRecording()
-{
-    if (bgFile)
-    {
-        fclose(bgFile);
-        bgFile = nullptr;
-
-        std::stringstream s;
-        // ffmpeg -f f32le -ar 48000 -ac 2 -i rawfile.raw -c:a flac -compression_level 12 output.flac
-
-        std::string encodingArgs;
-        std::string extension;
-    switch (bgOutputFormat)
-        {
-        case OutputFormat::Wav:
-        {
-            // encodingArgs = "-acodec pcm_f32le";
-            encodingArgs = "-acodec pcm_s16le";
-            extension = ".wav";
-            break;
-        }
-        case OutputFormat::WavFloat:
-        {
-            encodingArgs = "-acodec pcm_f32le";
-            extension = ".wav";
-            break;
-        }
-        case OutputFormat::Flac:
-        {
-            encodingArgs = "-c:a flac  -sample_fmt s32 -compression_level 12";
-            extension = ".flac";
-            break;
-        }
-        case OutputFormat::Mp3:
-        {
-            encodingArgs = "-codec:a libmp3lame -qscale:a 0";
-            extension = ".mp3";
-            break;
-        }
-        }
-
-        s << "/usr/bin/ffmpeg -y -f f32le -ar " << ((size_t)getRate()) << " -ac " << (isStereo ? 2 : 1)
-          << " -i " << fileToCmdline(bgTemporaryFile->Path())
-          << " " << encodingArgs
-          << " " << fileToCmdline(bgRecordingFilePath) << " 2>&1";
-
-        execForOutput(s.str().c_str());
-    }
-    bgCloseTempFile();
-
-    RecordingStoppedCommand cmd(this->bgRecordingFilePath.c_str());
-    this->fromBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
-}
-
-OutputFormat ToobRecordMono::GetOutputFormat()
+OutputFormat ToobRecordMono::GetRecordFormat()
 {
     return (OutputFormat)fformat.GetValue();
 }
 
 std::string ToobRecordMono::RecordingFileExtension()
 {
-    switch (GetOutputFormat())
+    switch (GetRecordFormat())
     {
     case OutputFormat::Wav:
     case OutputFormat::WavFloat:
@@ -1017,210 +460,22 @@ std::string ToobRecordMono::RecordingFileExtension()
     return ".wav";
 }
 
-void ToobRecordMono::fgHandleMessages()
+void ToobRecordMono::OnProcessorRecordingComplete(const char *filename)
 {
-    size_t size = this->fromBackgroundQueue.peekSize();
-    if (size == 0)
-    {
-        return;
-    }
-    char buffer[2048];
-    if (size > sizeof(buffer))
-    {
-        fgError("Foreground buffer overflow");
-        return;
-    }
-    size_t packetSize = fromBackgroundQueue.read_packet(sizeof(buffer), buffer);
-    if (packetSize != 0)
-    {
-        BufferCommand *cmd = (BufferCommand *)buffer;
-        switch (cmd->command)
-        {
-        case MessageType::RecordingStopped:
-        {
-            RecordingStoppedCommand *recordingStoppedCommand = (RecordingStoppedCommand *)cmd;
-            this->state = PluginState::Idle;
-            SetFilePath(recordingStoppedCommand->filename);
-            CuePlayback(recordingStoppedCommand->filename);
-            break;
-        }
-        case MessageType::BackgroundError:
-        {
-            BackgroundErrorCommmand *errorCmd = (BackgroundErrorCommmand *)cmd;
-            fgError(errorCmd->message);
-            break;
-        }
-        case MessageType::Finished:
-        {
-            this->finished = true;
-            break;
-        }
-        case MessageType::CuePlaybackResponse:
-        {
-            fgResetPlaybackQueue();
-            ToobCuePlaybackResponseCommand *responseCommand = (ToobCuePlaybackResponseCommand *)cmd;
-            if (this->state == PluginState::CuePlaying || this->state == PluginState::Playing)
-            {
-                fgPlaybackIndex = 0;
-                fgResetPlaybackQueue();
-                
-                for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
-                {
-                    if (responseCommand->buffers[i])
-                    {
-                        fgPlaybackQueue.push_back(responseCommand->buffers[i]);
-                    }
-                }
-            }
-            else
-            {
-                // return them to the buffer pool.
-                fgPlaybackIndex = 0;
-                for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
-                {
-                    if (responseCommand->buffers[i])
-                    {
-                        bufferPool->PutBuffer(responseCommand->buffers[i]);
-                    }
-                }
-            }
-            break;
-        }
-        case MessageType::NextPlayBufferResponse:
-        {
-            ToobNextPlayBufferResponseCommand *responseCommand = (ToobNextPlayBufferResponseCommand *)cmd;
-            if (responseCommand->buffer)
-            {
-                if (this->state == PluginState::Playing)
-                {
-                    fgPlaybackQueue.push_back(responseCommand->buffer);
-                }
-                else
-                {
-                    bufferPool->PutBuffer(responseCommand->buffer);
-                }
-            }
-            break;
-        }
-        default:
-            fgError("Unknown background message.");
-        }
-    }
-}
-
-void ToobRecordMono::fgError(const char *message)
-{
-    if (this->state != PluginState::Error)
-    {
-        this->state = PluginState::Error;
-        LogError("%s", message);
-    }
-    SetFilePath("");
-}
-
-AudioFileBuffer *ToobRecordMono::bgReadDecoderBuffer()
-{
-    if (!this->decoderStream)
-    {
-        return nullptr;
-    }
-    AudioFileBuffer *buffer = bufferPool->TakeBuffer();
-    size_t channels = buffer->GetChannelCount();
-    size_t count = buffer->GetBufferSize();
-
-    if (channels == 1)
-    {
-        float *data = buffer->GetChannel(0);
-        float *buffers[1] = {data};
-        //
-        auto nRead = this->decoderStream->read(buffers, count);
-        if (nRead != count)
-        {
-            for (size_t i = nRead; i < count; ++i)
-            {
-                data[i] = 0;
-            }
-            decoderStream.reset();
-        }
-        return buffer;
-    }
-    else if (channels == 2)
-    {
-        float *data0 = buffer->GetChannel(0);
-        float *data1 = buffer->GetChannel(1);
-
-        float *buffers[2] = {data0, data1};
-        //
-        auto nRead = this->decoderStream->read(buffers, count);
-        if (nRead != count)
-        {
-            for (size_t i = nRead; i < count; ++i)
-            {
-                data0[i] = 0;
-                data1[i] = 0;
-            }
-            decoderStream.reset();
-        }
-        return buffer;
-    }
-    else
-    {
-        throw std::runtime_error("Unsupported number of channels.");
-    }
-}
-
-void ToobRecordMono::bgCuePlayback(const char *filename)
-{
-
-    try
-    {
-        this->decoderStream = std::make_unique<FfmpegDecoderStream>();
-        decoderStream->open(filename, isStereo ? 2 : 1, (uint32_t)getRate());
-    }
-    catch (const std::exception &e)
-    {
-        this->decoderStream.reset();
-        BackgroundErrorCommmand errorCmd(e.what());
-        this->fromBackgroundQueue.write_packet(sizeof(errorCmd), (uint8_t *)&errorCmd);
-        return;
-    }
-    ToobCuePlaybackResponseCommand responseCommand;
-
-    // buffers are about 1/10 second of data.
-    // Prepare 1/2 second of pre-roll data.
-    for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
-    {
-        responseCommand.buffers[i] = bgReadDecoderBuffer();
-    }
-    this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t *)&responseCommand);
-}
-
-void ToobRecordMono::bgStopPlaying()
-{
-    this->decoderStream.reset();
-}
-
-void ToobRecordMono::fgResetPlaybackQueue()
-{
-    while (!fgPlaybackQueue.empty())
-    {
-        bufferPool->PutBuffer(fgPlaybackQueue.pop_front());
-    }
-    fgPlaybackIndex = 0;
+    SetFilePath(filename);
 }
 
 ToobRecordStereo::ToobRecordStereo(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : super(rate, bundle_path, features,2)
+    : super(rate, bundle_path, features, 2)
 {
     this->isStereo = true;
-
 }
 
-ToobRecordMono::~ToobRecordMono() {
-
+ToobRecordMono::~ToobRecordMono()
+{
 }
 
 LV2_State_Status
@@ -1251,7 +506,6 @@ ToobRecordMono::OnRestoreLv2State(
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
-
 LV2_State_Status
 ToobRecordMono::OnSaveLv2State(
     LV2_State_Store_Function store,
@@ -1259,16 +513,15 @@ ToobRecordMono::OnSaveLv2State(
     uint32_t flags,
     const LV2_Feature *const *features)
 {
-    if (this->filePath.empty()) 
+    if (this->filePath.empty())
     {
         return LV2_State_Status::LV2_STATE_SUCCESS; // not-set => "". Avoids assuming that hosts can handle a "" path.
     }
     std::string abstractPath = this->UnmapFilename(features, this->filePath.c_str());
 
-    store(handle, audioFile_urid , abstractPath.c_str(), abstractPath.length() + 1, urids.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    store(handle, audioFile_urid, abstractPath.c_str(), abstractPath.length() + 1, urids.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
-
 
 std::string ToobRecordMono::UnmapFilename(const LV2_Feature *const *features, const std::string &fileName)
 {
@@ -1338,14 +591,11 @@ std::string ToobRecordMono::MapFilename(
     }
 }
 
-
 void ToobRecordMono::RequestLoad(const char *filename)
 {
     this->filePath = filename;
     this->loadRequested = true;
 }
-
-
 
 REGISTRATION_DECLARATION PluginRegistration<ToobRecordMono> toobMonoregistration(ToobRecordMono::URI);
 REGISTRATION_DECLARATION PluginRegistration<ToobRecordStereo> toobStereoRegistration(ToobRecordStereo::URI);
