@@ -1,14 +1,15 @@
+copy 
 
-BUG: Browsing into music directory fails.
-
-BUG: folder extensions.
+Filename for copy ?
 
 What to do about folder.jpg files?
 
-Migrate state handling in Lv2AudoFileProcessor. 
-Migrate mix method into Lv2AudioFileProcessor. 
-Delete unsed FgFilePlayer and associated classes. 
+correct tooltip placement
 
+
+Feature: Multi-select in file browser.
+
+Move in tracks folder.
 
 
 Check trigger button behaviour in native plugins.

@@ -185,7 +185,7 @@ Record the plugin's audio input signal to a monophonic file. See also: TooB Reco
 
                 lv2:index  7;
                 lv2:symbol "level" ;
-                lv2:name "Level";
+                lv2:name "Rec Lvl";
                 rdfs:comment "Input trim level for recording";
                 lv2:default 0.0 ;
                 lv2:minimum -60.0;
