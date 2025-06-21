@@ -240,7 +240,7 @@ void CheckSeekPrecision(const std::string &testFile)
         {
             FfmpegDecoderStream decoder;
 
-            decoder.open(testFile, 1, 48000, (double)seekOffset / 48000.0, true);
+            decoder.open(testFile, 1, 48000, (double)seekOffset / 48000.0);
 
             float buffer[1024];
             float *buffers[2] = {buffer, nullptr};

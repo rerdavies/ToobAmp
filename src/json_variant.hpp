@@ -312,6 +312,10 @@ namespace pipedal
         iterator find(const std::string &key);
         const_iterator find(const std::string &key) const;
 
+        iterator erase(iterator it)
+        {
+            return values.erase(it);
+        }
         // strictly for testing purposes. Not thread-safe.
         static int64_t allocation_count()
         {

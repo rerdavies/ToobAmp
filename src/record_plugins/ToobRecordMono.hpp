@@ -70,6 +70,10 @@ protected:
     virtual void LogProcessorError(const char*message) override {
         super::LogError("%s", message); 
     }
+
+    virtual std::string bgGetLoopJson(const std::string &filePath) override { return ""; }
+    virtual void bgSaveLoopJson(const std::string &filePath, const std::string &loopJson) override {}
+    virtual void OnFgLoopJsonChanged(const char*loopJson) override {}
   
     struct Urids
     {

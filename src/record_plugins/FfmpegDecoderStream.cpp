@@ -47,9 +47,10 @@ using namespace pipedal;
 
 #pragma GCC diagnostic ignored "-Wunused-result" // GCC 12 bug.
 
-void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds, bool sampleAccurate)
+void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds)
 {
     this->channels = channels;
+
     // Requirements: fork the ffmpeg process, making sure that NO file handles (especially socket handlers)
     // are passed to the child process. The one socket handle that is passed in is the return pipe handle.
     // Standard I/O is redirected to /dev/null.
@@ -63,70 +64,25 @@ void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channe
     }
     // FORK THE FFMPEG decoder process.
 
-    // std::stringstream ss;
-    // ss << "/usr/bin/ffmpeg -i " << fileToCmdline(filename)
-    //    << " -f f32le -ar " << ((size_t)getRate())
-    //    << " -ac " << (isStereo ? 2 : 1)
-    //    << " pipe:" << pipeFd[1] << " 2>/dev/null 1>/dev/null";
-    // std::string command = ss.str();
-
     std::vector<std::string> args;
     args.push_back("/usr/bin/ffmpeg");
     args.push_back("-i");
     args.push_back(filePath.string());
 
-    if (!sampleAccurate)
-    {
-        // seek to the position in the file.
-        args.push_back("-ss");
-        args.push_back(std::to_string(seekPosSeconds));
-    }
+    // seek to the position in the file.
+    args.push_back("-ss");
+    args.push_back(std::to_string(seekPosSeconds));
 
     args.push_back("-f");
     args.push_back("f32le");
     args.push_back("-acodec");
     args.push_back("pcm_f32le");
-    if (sampleAccurate) {
-        args.push_back("-af"); // slow but accurate.
-        args.push_back(SS("atrim=start=" << seekPosSeconds));
-    }
     args.push_back("-ac");
     args.push_back(std::to_string(channels));
     args.push_back("-ar");
     args.push_back(std::to_string((int32_t)sampleRate));
     args.push_back("pipe:" + std::to_string(pipeFd[1]));
 
-    // args.push_back("/usr/bin/ffmpeg");
-    // args.push_back("-i");
-    // args.push_back(filePath.string());
-    // args.push_back("-avoid_negative_ts");
-    // args.push_back("make_zero");
-
-    // args.push_back("-f");
-    // args.push_back("f32le");
-    // args.push_back("-af");
-    // args.push_back(SS("atrim=start=" << seekPosSeconds));
-    // args.push_back("-ar");
-    // args.push_back(std::to_string((int32_t)sampleRate));
-    // args.push_back("-ac");
-    // args.push_back(std::to_string(channels));
-    // args.push_back("pipe:" + std::to_string(pipeFd[1]));
-
-    // args.push_back("/usr/bin/ffmpeg");
-    // args.push_back("-ss");
-    // args.push_back(std::to_string(seekPosSeconds));
-    // args.push_back("-i");
-    // args.push_back(filePath.string());
-    // args.push_back("-avoid_negative_ts");
-    // args.push_back("make_zero");
-
-    // args.push_back("-f");
-    // args.push_back("f32le");
-    // args.push_back("-ar");
-    // args.push_back(std::to_string((int32_t)sampleRate));
-    // args.push_back("-ac");
-    // args.push_back(std::to_string(channels));
-    // args.push_back("pipe:" + std::to_string(pipeFd[1]));
 
     std::vector<const char *> cArgv;
     for (auto &arg : args)
@@ -155,8 +111,9 @@ void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channe
                     ::close(i);
                 }
             }
-            int errorOutput = ::open("/tmp/ffmpeg.txt", O_CREAT | O_WRONLY, 0664);
-            // int errorOutput = ::open("/dev/null", O_WRONLY);
+            // int errorOutput = dup(STDERR_FILENO);
+            // int errorOutput = ::open("/tmp/ffmpeg.txt", O_CREAT | O_WRONLY, 0664);
+            int errorOutput = ::open("/dev/null", O_WRONLY);
 
             // Put /dev/null into stdin, stdout, stderr.
             int devnullr = ::open("/dev/null", O_RDONLY);
@@ -675,3 +632,5 @@ double toob::GetAudioFileDuration(const std::filesystem::path &path)
     AudioFileMetadata md = GetAudioFileMetadata(path);
     return md.getDuration();
 }
+
+// ffmpeg -i 01\ Eighty-One\ \(1\).m4a -c copy  -metadata title="xxx"   tmp.m4a

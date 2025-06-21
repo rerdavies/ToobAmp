@@ -78,6 +78,11 @@ namespace toob
         double tempo_ = 120;
         TimeSignature timeSignature_{4, 4};
 
+        bool isDefault() const
+        {
+            return units_ == (uint32_t)TimebaseUnits::Seconds && tempo_ == 120 && timeSignature_.numerator_ == 4 && timeSignature_.denominator_ == 4;
+        }
+        Timebase() = default;
         DECLARE_JSON_MAP(Timebase);
     };
 
@@ -89,6 +94,11 @@ namespace toob
         bool loopEnable_ = false;
         double loopStart_ = 0;
         double loopEnd_ = 0;
+
+        bool isDefault() const
+        {
+            return start_ == 0 && !loopEnable_ && loopStart_ == 0 && loopEnd_ == 0;
+        }
 
         DECLARE_JSON_MAP(LoopParameters);
     };
@@ -154,6 +164,10 @@ namespace toob
 
         virtual void OnProcessorRecordingComplete(
             const char *filePath) = 0;
+
+        virtual void OnFgLoopJsonChanged(const char*loopJson) = 0;
+        virtual std::string bgGetLoopJson(const std::string &filePath) = 0;
+        virtual void bgSaveLoopJson(const std::string &filePath, const std::string &loopJson) = 0;
     };
 
     class BgFileReader
@@ -179,7 +193,7 @@ namespace toob
             int channels,
             double sampleRate,
             const LoopControlInfo &loopControlInfo);
-
+        void PrepareLookaheadDecoderStream();
         toob::AudioFileBuffer *NextBuffer(
             toob::AudioFileBufferPool *bufferPool);
 
@@ -193,6 +207,7 @@ namespace toob
 
     public:
         std::filesystem::path filePath;
+        std::string loopParameterJson;
         int channels = 0;
         double sampleRate = 0.0;
         LoopParameters loopParameters;
@@ -202,6 +217,8 @@ namespace toob
         double duration = 0.0;
 
         std::unique_ptr<toob::FfmpegDecoderStream> decoderStream;
+        size_t lookaheadPosition = 0;
+        std::unique_ptr<toob::FfmpegDecoderStream> nextDecoderStream;
 
         LoopType loopType = LoopType::None;
         size_t originalSeekPosForLoop = 0; // original seek position before looping.
@@ -215,7 +232,7 @@ namespace toob
         std::vector<float> testdataL;
         std::vector<float> testdataR;
 
-        void decoderStreamOpen(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds, bool sampleAccurate);
+        void decoderStreamOpen(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds);
         size_t decoderStreamRead(float **buffers, size_t n_frames);
     };
 
@@ -231,6 +248,8 @@ namespace toob
         void SetState(ProcessorState newState);
 
     private:
+
+        std::string fgLoopParameterJson;
         static constexpr double PAUSE_TIME_SECONDS = 0.1;
 
         bool playAfterRecording = false;
@@ -271,15 +290,18 @@ namespace toob
         void StopPlayback();
         void HandleMessages();
 
+        void SetLoopParameters(const std::string& path,const std::string &jsonLoopParameters);
         void CuePlayback();
 
         void CuePlayback(
             const char *filename,
             size_t seekPos = 0,
             bool pauseAfterCue = true);
-        void CuePlayback(
+
+        // Test only. Atomically set both.
+        void TestCuePlayback(
             const char *filename,
-            const char *jsonLoopInfo,
+            const char*loopJson,
             size_t seekPos = 0,
             bool pauseAfterCue = true);
 
@@ -288,8 +310,6 @@ namespace toob
         void Play(float *dst, size_t n_samples);
         void Play(float *dstL, float *dstR, size_t n_samples);
 
-        const std::string &GetLoopParameterJson() const { return loopParameterJson; }
-        void SetLoopParameterJson(const char *json);
         const std::string &GetPath() const { return filePath; }
         void SetPath(const char *path);
         void SetDbVolume(float db, float pan = 0, bool immediate = false);
@@ -303,10 +323,10 @@ namespace toob
         toob::ControlDezipper volumeDezipperR;
 
         std::string filePath;
-        std::string loopParameterJson;
 
         void SendBufferToBackground();
 
+        void fgSetLoopParameters(const std::string&fileName,const std::string &jsonLoopParameters);
         void fgStartRecording(const std::string &recordingFilePath, OutputFormat recordFormat);
         void fgRecordBuffer(toob::AudioFileBuffer *buffer, size_t count);
         void fgStopRecording();
@@ -314,10 +334,6 @@ namespace toob
 
         void fgCuePlayback(
             const char *filename,
-            size_t seekPos);
-        void fgCuePlayback(
-            const char *filename,
-            const char *jsonLoopInfo, // json for ToobPlayerSettings  (loop parameters)
             size_t seekPos);
 
         void fgRequestNextPlayBuffer();
@@ -333,7 +349,11 @@ namespace toob
             toob::AudioFileBuffer *loopBuffer,
             const LoopParameters &loopParameters,
             size_t position,
-            float duration);
+            float duration,
+            const char*loopJson
+        );
+
+        void OnFgUpdateLoopParameters(const char *loopJson, double seekPosSeconds, double duration);
 
         void OnFgNextPlayBufferResponse(size_t operationId, toob::AudioFileBuffer *buffer);
 
@@ -363,7 +383,15 @@ namespace toob
         void bgWriteBuffer(toob::AudioFileBuffer *buffer, size_t count);
         void bgStopRecording();
 
-        void bgCuePlayback(uint64_t operationId, const char *filename, const char *jsonLoop, size_t seekPos);
+        void bgUpdateForegroundLoopParameters(
+            uint64_t operationId,
+            const char* loopJson,
+            double seekPosSeconds,
+            double duration);
+
+
+        void bgSetLoopParameters(uint64_t operationId, const char* fileName,const char *loopJson);
+        void bgCuePlayback(uint64_t operationId, const char *filename, size_t seekPos, const char *loopJson = nullptr);
         void bgStopPlaying();
         void bgError(const char *message);
 

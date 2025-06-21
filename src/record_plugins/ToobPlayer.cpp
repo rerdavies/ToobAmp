@@ -39,6 +39,16 @@ ToobPlayer::ToobPlayer(double rate,
     urids.player__loop_urid = MapURI("http://two-play.com/plugins/toob-player#loop");
     loopJson.reserve(1024);
 
+    this->fileMetadataFeature = nullptr;
+    for (const LV2_Feature *const *feature = features; *feature; ++feature)
+    {
+        if (strcmp((*feature)->URI, PIPEDAL__FILE_METADATA_FEATURE) == 0)
+        {
+            this->fileMetadataFeature = ( PIPEDAL_FileMetadata_Interface *)((*feature)->data);
+            break;
+        }
+    }
+
     zipInL.SetSampleRate(rate);
     zipInR.SetSampleRate(rate);
 
@@ -99,10 +109,15 @@ void ToobPlayer::Run(uint32_t n_samples)
 
     lv2AudioFileProcessor.HandleMessages();
 
-    if (this->loadRequested)
+    if (loopLoadRequested) {
+        lv2AudioFileProcessor.SetLoopParameters(this->filePath,this->loopJson);
+        loopLoadRequested = false;
+        loadRequested = false;
+    }
+    else if (this->loadRequested)
     {
         this->loadRequested = false;
-        CuePlayback(this->filePath.c_str(),loopJson.c_str(), requestedPlayPosition, true);
+        CuePlayback(this->filePath.c_str(), requestedPlayPosition, true);
     }
     HandleButtons();
 
@@ -148,8 +163,6 @@ void ToobPlayer::Activate()
 
     activated = true;
     super::Activate();
-    lv2AudioFileProcessor.Activate();
-    lv2AudioFileProcessor.SetDbVolume(volFile.GetDb(), panFile.GetValue(), true);
 
     float il, ir;
     applyPan(this->panIn.GetValue(), this->volIn.GetAf(), il, ir);
@@ -159,7 +172,22 @@ void ToobPlayer::Activate()
     if (!this->filePath.empty())
     {
         this->loadRequested = true;
+
+        // prefer host's metdata, but use what we have in state if not available.
+        std::string metadata =  bgGetLoopJsonMetadata(this->filePath);
+        if (!metadata.empty())
+        {
+            loopJson = metadata;
+        }  else {
+            bgSetLoopJsonMetadata(this->filePath, loopJson);
+        }
+        requestLoopJson = true; // request the loop json to be sent to the UI.
     }
+
+    lv2AudioFileProcessor.Activate();
+    lv2AudioFileProcessor.SetDbVolume(volFile.GetDb(), panFile.GetValue(), true);
+
+
 }
 void ToobPlayer::Deactivate()
 {
@@ -174,7 +202,7 @@ void ToobPlayer::Seek(float value)
     auto state = GetState();
     bool isPlaying = (state == ProcessorState::Playing || state == ProcessorState::CuePlayingThenPlay);
 
-    CuePlayback(this->filePath.c_str(), loopJson.c_str(), (size_t)value * getRate(),!isPlaying);
+    CuePlayback(this->filePath.c_str(), (size_t)value * getRate(),!isPlaying);
 }
 void ToobPlayer::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 {
@@ -182,6 +210,7 @@ void ToobPlayer::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
     {
         if (value->type == this->urids.atom__Float)
         {
+            // why do it this way instead of port values? becuase we need Double precision of the loop parameters! ffs!
             const LV2_Atom_Float *floatValue = (const LV2_Atom_Float *)value;
             float value = floatValue->body;
             Seek(value);
@@ -191,13 +220,12 @@ void ToobPlayer::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
     {
         if (value->type == this->urids.atom__String)
         {
-            // why do it this way instead of port values? becuase we need Double precision of the loop parameters! ffs!
             const LV2_Atom_String *string = (const LV2_Atom_String *)value;
             const char *body = static_cast<const char *>(LV2_ATOM_BODY_CONST(string));
             this->loopJson = body;
             requestLoopJson = true;
             requestedPlayPosition = 0;
-            loadRequested = true; // re-cue the audio buffers.
+            loopLoadRequested = true;
         }
     }
     else
@@ -263,18 +291,18 @@ void ToobPlayer::CuePlayback()
         {
             return;
         }
-        CuePlayback(this->filePath.c_str(),loopJson.c_str(),0, true);
+        CuePlayback(this->filePath.c_str(),0, true);
     }
 }
 
-void ToobPlayer::CuePlayback(const char *filename,const char*loopJson, size_t seekPos, bool pauseAfterLoad)
+void ToobPlayer::CuePlayback(const char *filename, size_t seekPos, bool pauseAfterLoad)
 {
 
     if (activated)
     {
         SetFilePath(filename);
 
-        lv2AudioFileProcessor.CuePlayback(filename,loopJson,seekPos,pauseAfterLoad);
+        lv2AudioFileProcessor.CuePlayback(filename,seekPos,pauseAfterLoad);
     }
     else
     {
@@ -468,5 +496,102 @@ void ToobPlayer::LogProcessorError(const char *message)
 void ToobPlayer::OnProcessorRecordingComplete(const char *fileName)
 {
 }
+std::string ToobPlayer::bgGetLoopJsonMetadata(const std::string &fileName)
+{
+    if (fileMetadataFeature)
+    {
+        char buffer[1024];
+        uint32_t size = fileMetadataFeature->getFileMetadata(
+            fileMetadataFeature->handle,
+            fileName.c_str(),
+            "ppLoop",
+            buffer, sizeof(buffer));
+        if (size > 0)
+        {
+            if (size > sizeof(buffer)) 
+            {
+                std::vector<char> tempBuffer(size);
+                size = fileMetadataFeature->getFileMetadata(
+                    fileMetadataFeature->handle,
+                    this->filePath.c_str(),
+                    "ppLoop",
+                    tempBuffer.data(), size);
+                return tempBuffer.data(); 
+            }
+
+            return buffer; // remove the null terminator.
+        }
+    }
+    return "";
+}
+
+static bool isDefaultParams(const ToobPlayerSettings &params)
+{
+    // Check if the parameters are default.
+    return params.loopParameters_.isDefault() && params.timebase_.isDefault();
+}
+
+void ToobPlayer::bgSetLoopJsonMetadata(const std::string &fileName,const std::string &loopJson)
+{
+    if (fileMetadataFeature)
+    {
+        if (loopJson.empty())
+        {
+            bgDeleteLoopJsonMetadata(fileName);
+            return;
+        }
+        std::stringstream ss(loopJson);
+        json_reader reader(ss);
+        ToobPlayerSettings loopParams;
+        reader.read(&loopParams);
+        if (isDefaultParams(loopParams)) {
+            bgDeleteLoopJsonMetadata(fileName);
+            return;
+        }
+
+        PIPEDAL_FileMetadata_Status status = fileMetadataFeature->setFileMetadata(
+            fileMetadataFeature->handle,
+            fileName.c_str(),
+            "ppLoop",
+            loopJson.c_str());
+        if (status != PIPEDAL_FileMetadata_Status::PIPEDAL_FILE_METADATA_SUCCESS)
+        {
+            std::stringstream ss;
+            ss << "ToobPlayer: Failed to set loop metadata: " << static_cast<int>(status);
+            LogError(ss.str());
+        }
+    }
+}
+
+void ToobPlayer::bgDeleteLoopJsonMetadata(const std::string &fileName) 
+{
+    if (fileMetadataFeature)
+    {
+        PIPEDAL_FileMetadata_Status status = fileMetadataFeature->deleteFileMetadata(
+            fileMetadataFeature->handle,
+            fileName.c_str(),
+            "ppLoop");
+        (void)status;
+    }
+}   
+
+std::string ToobPlayer::bgGetLoopJson(const std::string &filePath) 
+{
+    return bgGetLoopJsonMetadata(filePath);
+}
+void ToobPlayer::bgSaveLoopJson(const std::string &filePath, const std::string &loopJson) 
+{
+    bgSetLoopJsonMetadata(filePath, loopJson);
+}
+
+void ToobPlayer::OnFgLoopJsonChanged(const char*loopJson) 
+{
+    if (strcmp(loopJson, this->loopJson.c_str()) != 0)
+    {
+        this->loopJson = loopJson;
+        requestLoopJson = true; // request the loop json to be sent to the host.
+    }   
+}
+
 
 REGISTRATION_DECLARATION PluginRegistration<ToobPlayer> toobPlayerRegistration(ToobPlayer::URI);

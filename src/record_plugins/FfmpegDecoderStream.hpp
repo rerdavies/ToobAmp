@@ -35,7 +35,7 @@ namespace toob
     {
     public:
         ~FfmpegDecoderStream();
-        void open(const std::filesystem::path &file, int channels, uint32_t sampleRate, double seekPosSeconds = 0.0, bool sampleAccurate = false);
+        void open(const std::filesystem::path &file, int channels, uint32_t sampleRate, double seekPosSeconds = 0.0);
         size_t read(float **buffers, size_t frames);
         void close();
         bool eof() const { return pipefd == -1; }

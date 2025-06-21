@@ -116,7 +116,7 @@ Record the plugin's audio input signal to a monophonic file. See also: TooB Reco
                 lv2:index  3;
                 lv2:symbol "play" ;
                 lv2:name "⏵";
-                rdfs:comment "Preview recorded file. Click again to stop.";
+                rdfs:comment "Preview recorded file.";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;

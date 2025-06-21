@@ -26,6 +26,7 @@
 #include <memory>
 #include "Lv2AudioFileProcessor.hpp"
 #include "lv2ext/pipedal.lv2/ext/fileBrowser.h"
+#include "lv2ext/pipedal.lv2/ext/FileMetadataFeature.h"
 
 #include "../ControlDezipper.h"
 
@@ -92,11 +93,21 @@ protected:
     Lv2AudioFileProcessor lv2AudioFileProcessor;
 
 private:
+    PIPEDAL_FileMetadata_Interface *fileMetadataFeature = nullptr;
+    std::string bgGetLoopJsonMetadata(const std::string &fileName);
+    void bgSetLoopJsonMetadata(const std::string&fileName,const std::string &loopJson); 
+    void bgDeleteLoopJsonMetadata(const std::string&fileName); 
 
-    void OnProcessorStateChanged(
+    virtual void OnProcessorStateChanged(
         ProcessorState newState) override;
-    void LogProcessorError(const char *message) override;
-    void OnProcessorRecordingComplete(const char *fileName) override;
+    virtual void LogProcessorError(const char *message) override;
+    virtual void OnProcessorRecordingComplete(const char *fileName) override;
+    virtual std::string bgGetLoopJson(const std::string &filePath) override;
+    virtual void bgSaveLoopJson(const std::string &filePath, const std::string &loopJson) override;
+    virtual void OnFgLoopJsonChanged(const char*loopJson) override;
+
+
+
 
     struct Urids
     {
@@ -116,12 +127,15 @@ private:
 
     bool requestLoopJson = false;
     std::atomic<bool> loadRequested = false;
+    std::atomic<bool> loopLoadRequested = false;
+
     size_t requestedPlayPosition = 0;
 
     void RequestLoad(const char *filename);
 
+    
     void CuePlayback();
-    void CuePlayback(const char *filename, const char*loopJson, size_t seekPos, bool pauseAfterLoad);
+    void CuePlayback(const char *filename, size_t seekPos, bool pauseAfterLoad);
     void Seek(float value);
 
     void HandleButtons();

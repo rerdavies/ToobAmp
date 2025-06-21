@@ -42,6 +42,7 @@ namespace
         Stoprecording,
 
         CuePlayback,
+        SetLoopParameters,
         CuePlaybackResponse,
         DeleteLoopBuffer,
         RequestNextPlayBuffer,
@@ -49,61 +50,62 @@ namespace
         StartPlayback,
         StopPlayback,
 
+        UpdateLoopParameters,
         RecordingStopped,
         BackgroundError,
         Quit,
         Finished
     };
 
-    struct BufferCommand
+    struct BufferMessage
     {
-        BufferCommand(MessageType command, size_t size) : size(size), command(command)
+        BufferMessage(MessageType command, size_t size) : size(size), command(command)
         {
         }
         size_t size;
         MessageType command;
     };
 
-    struct StopPlaybackCommand : public BufferCommand
+    struct StopPlaybackMessage : public BufferMessage
     {
-        StopPlaybackCommand() : BufferCommand(MessageType::StopPlayback, sizeof(StopPlaybackCommand))
+        StopPlaybackMessage() : BufferMessage(MessageType::StopPlayback, sizeof(StopPlaybackMessage))
         {
         }
     };
-    struct StopRecordingCommand : public BufferCommand
+    struct StopRecordingMessage : public BufferMessage
     {
-        StopRecordingCommand() : BufferCommand(MessageType::Stoprecording, sizeof(StopRecordingCommand))
+        StopRecordingMessage() : BufferMessage(MessageType::Stoprecording, sizeof(StopRecordingMessage))
         {
         }
     };
-    struct RecordingStoppedCommand : public BufferCommand
+    struct RecordingStoppedMessage : public BufferMessage
     {
-        RecordingStoppedCommand(const char *filename) : BufferCommand(MessageType::RecordingStopped, sizeof(StopRecordingCommand))
+        RecordingStoppedMessage(const char *filename) : BufferMessage(MessageType::RecordingStopped, sizeof(StopRecordingMessage))
         {
             strncpy(this->filename, filename, sizeof(this->filename));
-            this->size = sizeof(RecordingStoppedCommand) + strlen(filename) - sizeof(filename) + 1;
+            this->size = sizeof(RecordingStoppedMessage) + strlen(filename) - sizeof(filename) + 1;
             this->size = (this->size + 3) & (~3);
         }
 
         char filename[1024];
     };
 
-    struct QuitCommand : public BufferCommand
+    struct QuitMessage : public BufferMessage
     {
-        QuitCommand() : BufferCommand(MessageType::Quit, sizeof(QuitCommand))
+        QuitMessage() : BufferMessage(MessageType::Quit, sizeof(QuitMessage))
         {
         }
     };
-    struct FinishedCommand : public BufferCommand
+    struct FinishedMessage : public BufferMessage
     {
-        FinishedCommand() : BufferCommand(MessageType::Finished, sizeof(QuitCommand))
+        FinishedMessage() : BufferMessage(MessageType::Finished, sizeof(QuitMessage))
         {
         }
     };
 
-    struct BackgroundErrorCommmand : public BufferCommand
+    struct BackgroundErrorCommmand : public BufferMessage
     {
-        BackgroundErrorCommmand(const std::string &message) : BufferCommand(MessageType::BackgroundError, sizeof(BackgroundErrorCommmand))
+        BackgroundErrorCommmand(const std::string &message) : BufferMessage(MessageType::BackgroundError, sizeof(BackgroundErrorCommmand))
         {
             if (message.length() > 1023)
             {
@@ -117,11 +119,40 @@ namespace
         char message[1024];
     };
 
-    struct ToobStartRecordingCommand : public BufferCommand
+    struct UpdateLoopParametersCommand : public BufferMessage
     {
-        ToobStartRecordingCommand(const std::string &fileName, OutputFormat outputFormat)
-            : BufferCommand(MessageType::StartRecording,
-                            sizeof(ToobStartRecordingCommand)),
+        UpdateLoopParametersCommand(
+            uint64_t operationId,
+            const char*loopJson,
+            double seekPosSeconds,
+            double duration
+        )
+            : BufferMessage(MessageType::UpdateLoopParameters, sizeof(UpdateLoopParametersCommand)),
+                operationId(operationId),
+              seekPosSeconds(seekPosSeconds),
+              duration(duration)
+        {
+            size_t len = strlen(loopJson) + 1;
+            this->size = sizeof(UpdateLoopParametersCommand);
+            this->size = sizeof(UpdateLoopParametersCommand)-sizeof(this->loopJson) + len;
+            if (this->size > sizeof(UpdateLoopParametersCommand))
+            {
+                throw std::runtime_error("Command size exceeds structure size");
+            }
+            this->size = (this->size + 3) & (~3);
+            memcpy(this->loopJson, loopJson, len);
+        }
+
+        uint64_t operationId = (uint64_t)-1;
+        double seekPosSeconds = 0.0; 
+        double duration = 0.0; 
+        char loopJson[1024] = {0};
+    };  
+    struct ToobStartRecordingMessage : public BufferMessage
+    {
+        ToobStartRecordingMessage(const std::string &fileName, OutputFormat outputFormat)
+            : BufferMessage(MessageType::StartRecording,
+                            sizeof(ToobStartRecordingMessage)),
               outputFormat(outputFormat)
         {
             if (fileName.length() > 1023)
@@ -129,7 +160,7 @@ namespace
                 throw std::runtime_error("Filename too long.");
             }
             std::strncpy(this->filename, fileName.c_str(), sizeof(filename));
-            this->size = sizeof(ToobStartRecordingCommand) + fileName.length() - sizeof(filename) + 1;
+            this->size = sizeof(ToobStartRecordingMessage) + fileName.length() - sizeof(filename) + 1;
             this->size = (size + 3) & (~3);
         }
 
@@ -137,12 +168,11 @@ namespace
         char filename[1024];
     };
 
-
-    struct ToobCuePlaybackCommand : public BufferCommand
+    struct ToobCuePlaybackMessage : public BufferMessage
     {
-        ToobCuePlaybackCommand(uint64_t operationId, const char *fileNameInput, const char *jsonLoop, size_t seekPos)
-            : BufferCommand(MessageType::CuePlayback,
-                            sizeof(ToobCuePlaybackCommand)),
+        ToobCuePlaybackMessage(uint64_t operationId, const char *fileNameInput, size_t seekPos)
+            : BufferMessage(MessageType::CuePlayback,
+                            sizeof(ToobCuePlaybackMessage)),
               operationId(operationId),
               seekPos(seekPos)
         {
@@ -152,29 +182,10 @@ namespace
                 throw std::runtime_error("Filename too long.");
             }
             std::memcpy(this->buffer, fileNameInput, fileNameLen + 1);
-
-            if (jsonLoop)
-            {
-                json_offset = fileNameLen + 1;
-                size_t jsonLen = strlen(jsonLoop);
-                if (jsonLen + 1 + fileNameLen + 1 > sizeof(buffer))
-                {
-                    throw std::runtime_error("JSON loop string too long.");
-                }
-
-                char *pDest = this->buffer + fileNameLen + 1;
-                memcpy(pDest, jsonLoop, jsonLen + 1);
-
-                this->size = sizeof(ToobCuePlaybackCommand) - sizeof(buffer) + fileNameLen + 1 + jsonLen + 1;
-            }
-            else
-            {
-                json_offset = 0;
-                this->size = sizeof(ToobCuePlaybackCommand) - sizeof(this->buffer) + fileNameLen + 1;
-            }
+            this->size = sizeof(ToobCuePlaybackMessage) - sizeof(this->buffer) + fileNameLen + 1;
 
             // Add final size check
-            if (this->size > sizeof(ToobCuePlaybackCommand))
+            if (this->size > sizeof(ToobCuePlaybackMessage))
             {
                 throw std::runtime_error("Command size exceeds structure size");
             }
@@ -183,48 +194,80 @@ namespace
             this->size = (size + 3) & (~3);
         }
 
-        const char *getJsonLoop() const
-        {
-            return json_offset == 0 ? nullptr : this->buffer + json_offset;
-        }
-
         const char *getFileName() const
         {
             return this->buffer;
         }
         uint64_t operationId = (size_t)-1;
         size_t seekPos = 0;
-        size_t json_offset;
 
     private:
         char buffer[1024];
     };
-
-    struct ToobDeleteLoopBufferCommand : public BufferCommand
+struct SetLoopParametersMessage : public BufferMessage
     {
-        ToobDeleteLoopBufferCommand(toob::AudioFileBuffer *buffer)
-            : BufferCommand(MessageType::DeleteLoopBuffer, sizeof(ToobDeleteLoopBufferCommand)),
+        SetLoopParametersMessage(uint64_t operationId, const char*fileName,const char *loopJson)
+            : BufferMessage(MessageType::SetLoopParameters,
+                            sizeof(SetLoopParametersMessage)),
+              operationId(operationId)
+        {
+            size_t fileNameLen = strlen(fileName);
+            size_t jsonLen  = strlen(loopJson);
+
+            this->size = sizeof(SetLoopParametersMessage) - sizeof(this->buffer) + fileNameLen + 1 + jsonLen + 1;
+
+            if (this->size > sizeof(SetLoopParametersMessage))
+            {
+                throw std::runtime_error("Command size exceeds structure size");
+            }
+
+            std::memcpy(this->buffer, fileName, fileNameLen+1);
+            this->loopOffset = fileNameLen + 1;
+            std::memcpy(this->buffer+loopOffset, loopJson, jsonLen + 1);
+
+            // Align to 4 bytes
+            this->size = (size + 3) & (~3);
+        }
+
+        const char *getFilename() const
+        {
+            return this->buffer;
+        }
+        const char *getLoopJson() const
+        {
+            return this->buffer+loopOffset;
+        }
+        uint64_t operationId = (uint64_t)-1;
+
+    private:
+        size_t loopOffset = 0;
+        char buffer[2048];
+    };
+    struct ToobDeleteLoopBufferMessage : public BufferMessage
+    {
+        ToobDeleteLoopBufferMessage(toob::AudioFileBuffer *buffer)
+            : BufferMessage(MessageType::DeleteLoopBuffer, sizeof(ToobDeleteLoopBufferMessage)),
               buffer(buffer)
         {
         }
         toob::AudioFileBuffer *buffer;
     };
 
-    struct ToobNextPlayBufferCommand : public BufferCommand
+    struct ToobNextPlayBufferMessage : public BufferMessage
     {
-        ToobNextPlayBufferCommand(uint64_t operationId)
-            : BufferCommand(MessageType::RequestNextPlayBuffer, sizeof(ToobNextPlayBufferCommand)),
+        ToobNextPlayBufferMessage(uint64_t operationId)
+            : BufferMessage(MessageType::RequestNextPlayBuffer, sizeof(ToobNextPlayBufferMessage)),
               operationId(operationId)
         {
         }
         uint64_t operationId = 0; // used to detect cancelled i/o requests.
     };
 
-    struct ToobNextPlayBufferResponseCommand : public BufferCommand
+    struct ToobNextPlayBufferResponseMessage : public BufferMessage
     {
-        ToobNextPlayBufferResponseCommand(uint64_t operationId, AudioFileBuffer *buffer)
-            : BufferCommand(MessageType::NextPlayBufferResponse,
-                            sizeof(ToobNextPlayBufferCommand)),
+        ToobNextPlayBufferResponseMessage(uint64_t operationId, AudioFileBuffer *buffer)
+            : BufferMessage(MessageType::NextPlayBufferResponse,
+                            sizeof(ToobNextPlayBufferMessage)),
               operationId(operationId),
               buffer(buffer)
         {
@@ -233,15 +276,16 @@ namespace
         AudioFileBuffer *buffer = nullptr;
     };
 
-    struct ToobCuePlaybackResponseCommand : public BufferCommand
+    struct ToobCuePlaybackResponseMessage : public BufferMessage
     {
-        ToobCuePlaybackResponseCommand(
+        ToobCuePlaybackResponseMessage(
             uint64_t operationId,
             size_t seekPos,
             const LoopParameters &loopParameters,
-            double duration)
-            : BufferCommand(MessageType::CuePlaybackResponse,
-                            sizeof(ToobCuePlaybackResponseCommand)),
+            double duration,
+            const char* loopParameterJson)
+            : BufferMessage(MessageType::CuePlaybackResponse,
+                            sizeof(ToobCuePlaybackResponseMessage)),
               operationId(operationId),
               seekPos(seekPos),
               duration(duration),
@@ -251,6 +295,13 @@ namespace
             {
                 buffers[i] = nullptr;
             }
+            size = sizeof(ToobCuePlaybackResponseMessage)-sizeof(this->loopParameterJson) + strlen(loopParameterJson) + 1;
+            if (size > sizeof(ToobCuePlaybackResponseMessage))
+            {
+                throw std::runtime_error("Command size exceeds structure size");
+            }
+            size = (size + 3) & (~3);
+            strncpy(this->loopParameterJson, loopParameterJson, sizeof(this->loopParameterJson) - 1);
         }
         uint64_t operationId;
         size_t seekPos;
@@ -259,12 +310,13 @@ namespace
         size_t bufferCount = 0;
         AudioFileBuffer *buffers[PREROLL_BUFFERS];
         AudioFileBuffer *loopBuffer = nullptr;
+        char loopParameterJson[1024] = {0};
     };
 
-    struct ToobRecordBufferCommand : BufferCommand
+    struct ToobRecordBufferMessage : BufferMessage
     {
-        ToobRecordBufferCommand(AudioFileBuffer *buffer, size_t bufferSize)
-            : BufferCommand(MessageType::RecordBuffer, sizeof(ToobRecordBufferCommand)),
+        ToobRecordBufferMessage(AudioFileBuffer *buffer, size_t bufferSize)
+            : BufferMessage(MessageType::RecordBuffer, sizeof(ToobRecordBufferMessage)),
               buffer(buffer), bufferSize(bufferSize)
         {
         }
@@ -370,7 +422,7 @@ void Lv2AudioFileProcessor::Activate()
                 bool quit = false;
 
                 std::vector<uint8_t> buffer(2048);
-                BufferCommand *cmd = (BufferCommand *)buffer.data();
+                BufferMessage *cmd = (BufferMessage *)buffer.data();
                 while (!quit)
                 {
                     this->toBackgroundQueue.readWait();
@@ -381,7 +433,7 @@ void Lv2AudioFileProcessor::Activate()
                     if (size > buffer.size())
                     {
                         buffer.resize(size);
-                        cmd = (BufferCommand *)buffer.data();
+                        cmd = (BufferMessage *)buffer.data();
                     }
                     if (!this->toBackgroundQueue.read_packet(buffer.size(), (uint8_t *)cmd))
                     {
@@ -394,14 +446,14 @@ void Lv2AudioFileProcessor::Activate()
                         {
                         case MessageType::StartRecording:
                         {
-                            ToobStartRecordingCommand *startCmd = (ToobStartRecordingCommand *)cmd;
+                            ToobStartRecordingMessage *startCmd = (ToobStartRecordingMessage *)cmd;
                             bgStartRecording(startCmd->filename, startCmd->outputFormat);
                             break;
                         }
                         case MessageType::RecordBuffer:
                         {
 
-                            ToobRecordBufferCommand *recordCmd = (ToobRecordBufferCommand *)cmd;
+                            ToobRecordBufferMessage *recordCmd = (ToobRecordBufferMessage *)cmd;
                             bgWriteBuffer(recordCmd->buffer, recordCmd->bufferSize);
 
                             bufferPool->PutBuffer(recordCmd->buffer);
@@ -413,16 +465,23 @@ void Lv2AudioFileProcessor::Activate()
                             bgStopRecording();
                             break;
                         }
+                        case MessageType::SetLoopParameters:
+                        {
+
+                            SetLoopParametersMessage *setLoopCmd = (SetLoopParametersMessage *)cmd;
+                            bgSetLoopParameters(setLoopCmd->operationId, setLoopCmd->getFilename(),setLoopCmd->getLoopJson());
+                            break;
+                        }
 
                         case MessageType::CuePlayback:
                         {
-                            ToobCuePlaybackCommand *cueCmd = (ToobCuePlaybackCommand *)cmd;
-                            bgCuePlayback(cueCmd->operationId, cueCmd->getFileName(), cueCmd->getJsonLoop(), cueCmd->seekPos);
+                            ToobCuePlaybackMessage *cueCmd = (ToobCuePlaybackMessage *)cmd;
+                            bgCuePlayback(cueCmd->operationId, cueCmd->getFileName(), cueCmd->seekPos);
                             break;
                         }
                         case MessageType::DeleteLoopBuffer:
                         {
-                            ToobDeleteLoopBufferCommand *deleteCmd = (ToobDeleteLoopBufferCommand *)cmd;
+                            ToobDeleteLoopBufferMessage *deleteCmd = (ToobDeleteLoopBufferMessage *)cmd;
                             if (deleteCmd->buffer)
                             {
                                 deleteCmd->buffer->Release();
@@ -431,11 +490,11 @@ void Lv2AudioFileProcessor::Activate()
                         }
                         case MessageType::RequestNextPlayBuffer:
                         {
-                            ToobNextPlayBufferCommand *nextCmd = (ToobNextPlayBufferCommand *)cmd;
+                            ToobNextPlayBufferMessage *nextCmd = (ToobNextPlayBufferMessage *)cmd;
                             if (nextCmd->operationId == fgOperationId)
                             {
                                 AudioFileBuffer *buffer = bgReadDecoderBuffer();
-                                ToobNextPlayBufferResponseCommand responseCommand(nextCmd->operationId, buffer);
+                                ToobNextPlayBufferResponseMessage responseCommand(nextCmd->operationId, buffer);
                                 this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t *)&responseCommand);
                             }
                             break;
@@ -473,8 +532,8 @@ void Lv2AudioFileProcessor::Activate()
             bgStopPlaying();
             bgCloseTempFile();
 
-            FinishedCommand finishedCommand;
-            this->fromBackgroundQueue.write_packet(sizeof(FinishedCommand), (uint8_t *)&finishedCommand);
+            FinishedMessage finishedCommand;
+            this->fromBackgroundQueue.write_packet(sizeof(FinishedMessage), (uint8_t *)&finishedCommand);
         });
 }
 void Lv2AudioFileProcessor::Deactivate()
@@ -485,7 +544,7 @@ void Lv2AudioFileProcessor::Deactivate()
     }
 
     activated = false;
-    QuitCommand cmd;
+    QuitMessage cmd;
     this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
 
     while (true)
@@ -514,14 +573,14 @@ void Lv2AudioFileProcessor::fgDeleteLoopBuffer(toob::AudioFileBuffer *buffer)
 {
     if (buffer)
     {
-        ToobDeleteLoopBufferCommand cmd(buffer);
+        ToobDeleteLoopBufferMessage cmd(buffer);
         this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
     }
 }
 
 void Lv2AudioFileProcessor::fgRequestNextPlayBuffer()
 {
-    ToobNextPlayBufferCommand cmd(this->fgOperationId);
+    ToobNextPlayBufferMessage cmd(this->fgOperationId);
     this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
 }
 
@@ -610,37 +669,35 @@ void Lv2AudioFileProcessor::SendBufferToBackground()
 
 void Lv2AudioFileProcessor::fgStartRecording(const std::string &recordingFilePath, OutputFormat recordFormat)
 {
-    ToobStartRecordingCommand cmd{recordingFilePath, recordFormat};
+    ToobStartRecordingMessage cmd{recordingFilePath, recordFormat};
     this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
 }
 void Lv2AudioFileProcessor::fgRecordBuffer(toob::AudioFileBuffer *buffer, size_t count)
 {
-    ToobRecordBufferCommand cmd{buffer, count};
+    ToobRecordBufferMessage cmd{buffer, count};
     this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
 }
 void Lv2AudioFileProcessor::fgStopRecording()
 {
-    StopRecordingCommand stopCmd;
+    StopRecordingMessage stopCmd;
     this->toBackgroundQueue.write_packet(sizeof(stopCmd), (uint8_t *)&stopCmd);
+}
+
+void Lv2AudioFileProcessor::fgSetLoopParameters(const std::string&fileName,const std::string &jsonLoopParameters)
+{
+    SetLoopParametersMessage cmd(++fgOperationId, fileName.c_str(),jsonLoopParameters.c_str());
+    this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
 }
 
 void Lv2AudioFileProcessor::fgStopPlaying()
 {
-    StopPlaybackCommand cmd;
+    StopPlaybackMessage cmd;
     this->toBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
 }
 
 void Lv2AudioFileProcessor::fgCuePlayback(const char *filename, size_t seekPos)
 {
-    fgCuePlayback(filename, nullptr, seekPos);
-}
-
-void Lv2AudioFileProcessor::fgCuePlayback(
-    const char *filename,
-    const char *jsonLoopInfo, // json for ToobPlayerSettings  (loop parameters)
-    size_t seekPos)
-{
-    ToobCuePlaybackCommand cmd{++fgOperationId, filename, jsonLoopInfo, seekPos};
+    ToobCuePlaybackMessage cmd{++fgOperationId, filename, seekPos};
     this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
 }
 
@@ -768,7 +825,7 @@ void Lv2AudioFileProcessor::bgStopRecording()
     }
     bgCloseTempFile();
 
-    RecordingStoppedCommand cmd(this->bgRecordingFilePath.c_str());
+    RecordingStoppedMessage cmd(this->bgRecordingFilePath.c_str());
     this->fromBackgroundQueue.write_packet(sizeof(cmd), (uint8_t *)&cmd);
 }
 
@@ -793,12 +850,12 @@ void Lv2AudioFileProcessor::HandleMessages()
     size_t packetSize = fromBackgroundQueue.read_packet(sizeof(buffer), buffer);
     if (packetSize != 0)
     {
-        BufferCommand *cmd = (BufferCommand *)buffer;
+        BufferMessage *cmd = (BufferMessage *)buffer;
         switch (cmd->command)
         {
         case MessageType::RecordingStopped:
         {
-            RecordingStoppedCommand *recordingStoppedCommand = (RecordingStoppedCommand *)cmd;
+            RecordingStoppedMessage *recordingStoppedCommand = (RecordingStoppedMessage *)cmd;
             OnFgRecordingStopped(recordingStoppedCommand->filename);
             break;
         }
@@ -813,9 +870,33 @@ void Lv2AudioFileProcessor::HandleMessages()
             this->fgFinished = true;
             break;
         }
+        case MessageType::UpdateLoopParameters:
+        {
+            UpdateLoopParametersCommand *updateCmd = (UpdateLoopParametersCommand *)cmd;
+            if (updateCmd->operationId != fgOperationId)
+            {
+                return; // cancelled request.
+            }
+            OnFgUpdateLoopParameters(updateCmd->loopJson, updateCmd->seekPosSeconds, updateCmd->duration);
+            break;
+        }
+        case MessageType::StartRecording:
+        {
+            ToobStartRecordingMessage *startCommand = (ToobStartRecordingMessage *)cmd;
+
+            bgStartRecording(startCommand->filename, startCommand->outputFormat);
+            break;
+        }
+        case MessageType::StopPlayback:
+        {
+            //StopPlaybackMessage *stopCommand = (StopPlaybackMessage *)cmd;
+            fgStopPlaying();
+            SetState(ProcessorState::Idle);
+            break;
+        }
         case MessageType::CuePlaybackResponse:
         {
-            ToobCuePlaybackResponseCommand *responseCommand = (ToobCuePlaybackResponseCommand *)cmd;
+            ToobCuePlaybackResponseMessage *responseCommand = (ToobCuePlaybackResponseMessage *)cmd;
             if (responseCommand->operationId != fgOperationId)
             {
                 for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
@@ -838,12 +919,13 @@ void Lv2AudioFileProcessor::HandleMessages()
                 responseCommand->loopBuffer,
                 responseCommand->loopParameters,
                 responseCommand->seekPos,
-                responseCommand->duration);
+                responseCommand->duration,
+                responseCommand->loopParameterJson);
             break;
         }
         case MessageType::NextPlayBufferResponse:
         {
-            ToobNextPlayBufferResponseCommand *responseCommand = (ToobNextPlayBufferResponseCommand *)cmd;
+            ToobNextPlayBufferResponseMessage *responseCommand = (ToobNextPlayBufferResponseMessage *)cmd;
             if (responseCommand->operationId != fgOperationId)
             {
                 this->bufferPool->PutBuffer(responseCommand->buffer);
@@ -868,9 +950,11 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
     toob::AudioFileBufferPool *bufferPool)
 {
 
+#ifndef NDEBUG
     using clock_t = std::chrono::high_resolution_clock;
+#endif
 
-    bufferPool->Reserve(PREROLL_BUFFERS+1);
+    bufferPool->Reserve(PREROLL_BUFFERS + 1);
 
     toob::AudioFileBuffer *buffer = nullptr;
     if (!this->decoderStream && !useTestData)
@@ -885,20 +969,33 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
 
         this->decoderStream.reset();
 
-        #ifndef NDEBUG
+#ifndef NDEBUG
         auto start = clock_t::now();
-        #endif
-
-        decoderStreamOpen(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate, true);
-        // print the time taken to open the decoder stream.
-        #ifndef NDEBUG
+#endif
+        if (useTestData)
+        {
+            decoderStreamOpen(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
+        }
+        else
+        {
+            if (this->readPos != this->lookaheadPosition) {
+                throw std::logic_error("Read position does not match lookahead position.");
+            }
+            this->decoderStream = std::move(nextDecoderStream);
+            // next decode stream will cue up asynchronously
+            nextDecoderStream = std::make_unique<FfmpegDecoderStream>();
+            this->lookaheadPosition = this->readPos;
+            nextDecoderStream->open(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
+        }
+// print the time taken to open the decoder stream.
+#ifndef NDEBUG
         auto end = clock_t::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
         if (duration > 500)
         {
             std::cerr << "Warning: Decoder stream open took " << duration << " ms for file: " << this->filePath << std::endl;
         }
-        #endif
+#endif
     }
 
     try
@@ -940,31 +1037,40 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             buffers[0] = buffer->GetChannel(0);
             buffers[1] = nullptr; // mono file, so we can just read the data directly.
         }
-        #ifndef NDEBUG
+#ifndef NDEBUG
         auto start = clock_t::now();
-        #endif
+#endif
         size_t nRead = this->decoderStreamRead(buffers, thisTime);
-        
-        #ifndef NDEBUG
+
+#ifndef NDEBUG
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count();
         if (elapsed > 300)
         {
             // xxx: DELETE ME.
             std::cerr << "Warning: Decoder stream read took " << elapsed << " ms for file: " << this->filePath << std::endl;
         }
-        #endif
-        // metatdata duration may not be accurate. supply missing samples if neccessary.
-        if (nRead < thisTime)
+#endif
+        if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
         {
-            for (size_t i = nRead; i < thisTime; ++i)
+            if (nRead < thisTime && nRead > 0)
             {
-                buffers[0][i] = 0.0f;
-                if (buffers[1])
+                // metatdata duration may not be accurate. supply missing samples if neccessary.
+                for (size_t i = nRead; i < thisTime; ++i)
                 {
-                    buffers[1][i] = 0.0f;
+                    buffers[0][i] = 0.0f;
+                    if (buffers[1])
+                    {
+                        buffers[1][i] = 0.0f;
+                    }
                 }
+                nRead = thisTime;
             }
-            nRead = thisTime;
+        }
+        if (nRead == 0)
+        {
+            bufferPool->PutBuffer(buffer);
+            decoderStream.reset();
+            return nullptr; // no more streamed data.
         }
         buffer->SetBufferSize(nRead);
 
@@ -978,6 +1084,7 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             bufferPool->PutBuffer(buffer);
         }
         decoderStream.reset();
+        nextDecoderStream.reset();
         return nullptr;
     }
 }
@@ -987,7 +1094,7 @@ Lv2AudioFileProcessor::Lv2AudioFileProcessor(ILv2AudioFileProcessorHost *host, d
 {
     this->bufferPool = std::make_unique<toob::AudioFileBufferPool>(channels, (size_t)sampleRate / 10);
     this->filePath.reserve(1024);
-    this->loopParameterJson.reserve(1024);
+    this->fgLoopParameterJson.reserve(1024);
     this->volumeDezipperL.SetSampleRate(sampleRate);
     this->volumeDezipperR.SetSampleRate(sampleRate);
     SetDbVolume(0.0, 0.0, true);
@@ -1052,16 +1159,55 @@ static void PreCacheFile(const std::filesystem::path &path)
     }
 }
 
+void Lv2AudioFileProcessor::bgUpdateForegroundLoopParameters(
+    uint64_t operationId,
+    const char*loopJson,
+    double seekPosSeconds,
+    double duration )
+{
+    if (operationId != fgOperationId)
+    {
+        // This is a cancelled request.
+        return;
+    }
+    UpdateLoopParametersCommand cmd{
+        operationId,
+        loopJson,
+        seekPosSeconds,
+        duration
+    };
+    this->fromBackgroundQueue.write_packet(
+        cmd.size,
+        (uint8_t *)&cmd);
+}
+
+void  Lv2AudioFileProcessor::bgSetLoopParameters(uint64_t operationId, const char*fileName,const char *loopJson)
+{
+    this->bgOperationId = operationId;
+
+    if (host) {
+        host->bgSaveLoopJson(
+            fileName,
+            loopJson);
+    }
+    bgReader.loopParameterJson = loopJson;    
+    bgCuePlayback(
+        operationId,
+        fileName,
+        0,
+        loopJson);
+}
 void Lv2AudioFileProcessor::bgCuePlayback(
-    uint64_t operationId, 
-    const char *filename, 
-    const char *jsonLoop, 
-    size_t seekPos)
+    uint64_t operationId,
+    const char *filename,
+    size_t seekPos,
+    const char *loopJson /* = nullptr*/)
 {
 
     this->bgOperationId = operationId;
     if (bgOperationId != fgOperationId)
     {
+        this->bgReader.filePath = filename;
         // This is a cancelled request.
         return;
     }
@@ -1070,11 +1216,21 @@ void Lv2AudioFileProcessor::bgCuePlayback(
     ToobPlayerSettings playerSettings;
     try
     {
-        if (jsonLoop && jsonLoop[0] != '\0')
+        if (loopJson != nullptr)
+        {
+            bgReader.loopParameterJson = loopJson;
+        }
+        else if (this->host)
+        {
+            bgReader.loopParameterJson = this->host->bgGetLoopJson(filename);
+        } else {
+            bgReader.loopParameterJson = "";
+        }
+        if (!bgReader.loopParameterJson.empty())
         {
             try
             {
-                std::stringstream ss(jsonLoop);
+                std::stringstream ss(bgReader.loopParameterJson);
                 pipedal::json_reader reader(ss);
 
                 reader.read(&playerSettings);
@@ -1085,7 +1241,7 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                 ss << "Failed to parse loop settings: " << e.what();
                 throw std::runtime_error(ss.str());
             }
-        }
+        } 
         // get file into memory cache in order to reduce dropouts while playing.
 
         if (bgReader.useTestData)
@@ -1104,10 +1260,12 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         // normalize the loop parameters.
         if (playerSettings.loopParameters_.loopEnable_)
         {
-            if (playerSettings.loopParameters_.loopStart_ >= playerSettings.loopParameters_.loopEnd_ )
+            if (playerSettings.loopParameters_.loopStart_ >= playerSettings.loopParameters_.loopEnd_)
             {
                 playerSettings.loopParameters_.loopEnable_ = false;
-            } else {
+            }
+            else
+            {
                 if (playerSettings.loopParameters_.loopEnd_ > duration)
                 {
                     playerSettings.loopParameters_.loopEnd_ = duration;
@@ -1118,19 +1276,21 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                 }
                 if (playerSettings.loopParameters_.start_ >= playerSettings.loopParameters_.loopEnd_)
                 {
-                    playerSettings.loopParameters_.start_  = playerSettings.loopParameters_.loopStart_;
+                    playerSettings.loopParameters_.start_ = playerSettings.loopParameters_.loopStart_;
                 }
             }
         }
         // handle seek pos.
-        if (seekPos == 0) 
+        if (seekPos == 0)
         {
             seekPos = (size_t)std::round(playerSettings.loopParameters_.start_ * this->sampleRate);
-        } else {
+        }
+        else
+        {
             double dSeekPos = seekPos / this->sampleRate;
             if (playerSettings.loopParameters_.loopEnable_)
             {
-                if (dSeekPos > duration) 
+                if (dSeekPos > duration)
                 {
                     dSeekPos = duration;
                 }
@@ -1154,11 +1314,23 @@ void Lv2AudioFileProcessor::bgCuePlayback(
             seekPosSeconds = duration;
         }
 
+        // interrim update of loop and play paramters to avoid unpleasant delay.
+        bgUpdateForegroundLoopParameters(
+            bgOperationId,
+            bgReader.loopParameterJson.c_str(),
+            seekPosSeconds,
+            duration);
+
         bgReader.loopType = bgReader.loopControlInfo.loopType;
         auto loopType = bgReader.loopControlInfo.loopType;
 
         size_t startSample = (size_t)std::round(seekPosSeconds * this->sampleRate);
-        ToobCuePlaybackResponseCommand responseCommand{operationId, startSample, bgReader.loopParameters, duration};
+        ToobCuePlaybackResponseMessage responseCommand{
+            operationId, 
+            startSample, 
+            bgReader.loopParameters, 
+            duration, 
+            bgReader.loopParameterJson.c_str()};
 
         if (loopType == LoopType::SmallLoop ||
             loopType == LoopType::BigStartSmallLoop)
@@ -1229,6 +1401,12 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                     responseCommand.bufferCount++;
                 }
             }
+            // if we are playing a big loop, cue up the next decoder stream, so it can initialize asynchronously.
+            if (loopType == LoopType::BigLoop)
+            {
+                bgReader.PrepareLookaheadDecoderStream();
+            }
+
             bool cancelled = operationId != fgOperationId;
 
             if (cancelled)
@@ -1301,6 +1479,8 @@ void Lv2AudioFileProcessor::OnFgError(const char *message)
     fgResetPlaybackQueue();
     SetState(ProcessorState::Error);
 }
+
+
 
 void Lv2AudioFileProcessor::SetState(ProcessorState newState)
 {
@@ -1420,13 +1600,26 @@ LoopControlInfo::LoopControlInfo(const LoopParameters &loopParameters, double sa
     }
 }
 
+void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char * loopJson, double seekPosSeconds,double duration)
+{
+    // Update the loop parameters in the background thread.
+    this->playPosition = (size_t)std::round(seekPosSeconds * this->sampleRate);
+    this->fgDuration = duration;
+    if (host)
+    {
+        host->OnFgLoopJsonChanged(loopJson);
+    }
+}
+
 void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
     AudioFileBuffer **buffers,
     size_t count,
     AudioFileBuffer *loopBuffer_,
     const LoopParameters &loopParameters,
     size_t seekPos,
-    float duration)
+    float duration,
+    const char* loopParameterJson
+)
 {
     AudioFileBuffer::ptr loopBuffer;
     loopBuffer.attach(loopBuffer_);
@@ -1481,7 +1674,10 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
                 }
             }
         }
-
+        if (host)
+        {
+            host->OnFgLoopJsonChanged(loopParameterJson);
+        }
     }
     else
     {
@@ -1634,7 +1830,11 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
             }
             if (loopType == LoopType::None)
             {
-                if (!this->fgPlaybackQueue.empty())
+                if (this->fgPlaybackQueue.empty())
+                {
+                    OnUnderrunError();
+                    return;
+                } else 
                 {
                     auto buffer = this->fgPlaybackQueue.front();
                     float *playDataL = buffer->GetChannel(0);
@@ -1719,6 +1919,11 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
             }
             else if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
             {
+                if (this->fgPlaybackQueue.empty())
+                {
+                    OnUnderrunError();
+                    return;
+                }
                 auto buffer = this->fgPlaybackQueue.front();
                 float *playDataL = buffer->GetChannel(0);
                 float *playDataR = buffer->GetChannel(1);
@@ -1817,7 +2022,6 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                         this->fgPlaybackIndex++;
                     }
 
-
                     dstL[ix] += vLeft * volumeDezipperL.Tick();
                     dstR[ix] += vRight * volumeDezipperR.Tick();
                     ++this->playPosition;
@@ -1894,22 +2098,6 @@ void Lv2AudioFileProcessor::Record(const float *srcL, const float *srcR, float l
     }
 }
 
-void Lv2AudioFileProcessor::SetLoopParameterJson(const char *json)
-{
-    if (strcmp(json, loopParameterJson.c_str()) == 0)
-    {
-        return;
-    }
-    loopParameterJson = json;
-    if (activated)
-    {
-        CuePlayback();
-    }
-    else
-    {
-        loadRequested = true;
-    }
-}
 void Lv2AudioFileProcessor::SetPath(const char *path)
 {
     if (strcmp(path, filePath.c_str()) == 0)
@@ -1928,13 +2116,28 @@ void Lv2AudioFileProcessor::SetPath(const char *path)
     }
 }
 
+void Lv2AudioFileProcessor::SetLoopParameters(const std::string& path,const std::string &jsonLoopParameters)
+{
+    if (activated)
+    {
+        fgStopPlaying();
+        this->filePath = path;
+        fgSetLoopParameters(path,jsonLoopParameters);
+        SetState(ProcessorState::CuePlayingThenPause);
+    }
+    else
+    {
+        throw std::logic_error("Cannot set loop parameters when not activated.");
+    }
+}
+
+
 void Lv2AudioFileProcessor::CuePlayback()
 {
-    CuePlayback(this->filePath.c_str(), this->loopParameterJson.c_str(), 0, true);
+    CuePlayback(this->filePath.c_str(), 0, true);
 }
 void Lv2AudioFileProcessor::CuePlayback(
     const char *filename,
-    const char *jsonLoopInfo,
     size_t seekPos,
     bool pauseAftercue)
 {
@@ -1942,10 +2145,6 @@ void Lv2AudioFileProcessor::CuePlayback(
     if (strcmp(filename, this->filePath.c_str()) != 0)
     {
         this->filePath = filename;
-    }
-    if (strcmp(jsonLoopInfo, this->loopParameterJson.c_str()) != 0)
-    {
-        this->loopParameterJson = jsonLoopInfo;
     }
 
     if (this->state == ProcessorState::Playing || this->state == ProcessorState::Paused)
@@ -1964,7 +2163,7 @@ void Lv2AudioFileProcessor::CuePlayback(
         return;
     }
 
-    fgCuePlayback(filename, jsonLoopInfo, seekPos);
+    fgCuePlayback(filename, seekPos);
     if (pauseAftercue)
     {
         SetState(ProcessorState::CuePlayingThenPause);
@@ -1975,14 +2174,52 @@ void Lv2AudioFileProcessor::CuePlayback(
     }
     this->playPosition = seekPos;
 }
-void Lv2AudioFileProcessor::CuePlayback(
+
+void Lv2AudioFileProcessor::TestCuePlayback(
     const char *filename,
+    const char *loopParameterJson,
     size_t seekPos,
     bool pauseAftercue)
 {
-    this->loopParameterJson = "";
-    CuePlayback(filename, this->loopParameterJson.c_str(), seekPos, pauseAftercue);
+    loadRequested = false;
+    if (strcmp(filename, this->filePath.c_str()) != 0)
+    {
+        this->filePath = filename;
+    }
+    if (strcmp(loopParameterJson, fgLoopParameterJson.c_str()) != 0)
+    {
+        fgLoopParameterJson = loopParameterJson;
+    }
+
+    if (this->state == ProcessorState::Playing || this->state == ProcessorState::Paused)
+    {
+        StopPlayback();
+    }
+    if (this->state == ProcessorState::StoppingRecording)
+    {
+        // Defer cueing until recording is stopped.
+        return;
+    }
+
+    if (strlen(filename) == 0)
+    {
+        SetState(ProcessorState::Idle);
+        return;
+    }
+
+    fgSetLoopParameters(filename, fgLoopParameterJson);
+
+    if (pauseAftercue)
+    {
+        SetState(ProcessorState::CuePlayingThenPause);
+    }
+    else
+    {
+        SetState(ProcessorState::CuePlayingThenPlay);
+    }
+    this->playPosition = seekPos;
 }
+
 
 void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
 {
@@ -2017,6 +2254,27 @@ void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
     volumeDezipperR.To(afRight, slew);
 }
 
+void BgFileReader::PrepareLookaheadDecoderStream()
+{
+    if (loopControlInfo.loopType != LoopType::BigLoop) 
+    {
+        throw std::logic_error("PrepareLookaheadDecoderStream called with invalid loop type.");
+    }
+    // prepare the next stream, so that  it cues up asynchronously.
+    if (!useTestData)
+    {
+        nextDecoderStream = std::make_unique<FfmpegDecoderStream>();
+        this->lookaheadPosition = this->loopControlInfo.loopEnd_1 -
+                this->loopControlInfo.loopSize -
+                (this->loopControlInfo.loopEnd_1 - this->loopControlInfo.loopEnd_0);
+        nextDecoderStream->open(
+            this->filePath, 
+            this->channels, 
+            this->sampleRate,
+            lookaheadPosition / sampleRate);
+    }
+}
+
 void BgFileReader::Init(
     const std::filesystem::path &filename,
     int channels,
@@ -2044,15 +2302,13 @@ void BgFileReader::Init(
 
     if (loopType == LoopType::None)
     {
-        bool sampleAccurate = false;
         if (loopParameters.start_ > 0 && seekPosSeconds < loopParameters.start_)
         {
             // if the seek position is before the loop start, then we need to seek to the loop start.
             seekPosSeconds = loopParameters_.start_;
-            sampleAccurate = true;
         }
 
-        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds, sampleAccurate);
+        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds);
     }
     else if (loopType == LoopType::SmallLoop)
     {
@@ -2068,7 +2324,7 @@ void BgFileReader::Init(
         }
         this->readPos = (size_t)std::round(seekPosSeconds * sampleRate);
 
-        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds, true);
+        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds);
     }
     else
     {
@@ -2092,7 +2348,7 @@ toob::AudioFileBuffer::ptr BgFileReader::ReadLoopBuffer(
     }
     else
     {
-        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, start / sampleRate, true);
+        decoderStreamOpen(filename, channels, (uint32_t)sampleRate, start / sampleRate);
     }
 
     float *buffers[2];
@@ -2236,7 +2492,7 @@ size_t BgFileReader::decoderStreamRead(float **buffers, size_t n_frames)
     if (useTestData)
     {
         size_t nRead = 0;
-        // xxx: duration is off. :-/
+
         for (size_t i = 0; i < n_frames; ++i)
         {
             if (testReadIndex >= testdataL.size())
@@ -2259,7 +2515,7 @@ size_t BgFileReader::decoderStreamRead(float **buffers, size_t n_frames)
     }
 }
 
-void BgFileReader::decoderStreamOpen(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds, bool sampleAccurate)
+void BgFileReader::decoderStreamOpen(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds)
 {
     if (useTestData)
     {
@@ -2269,7 +2525,7 @@ void BgFileReader::decoderStreamOpen(const std::filesystem::path &filePath, int 
     else
     {
         decoderStream = std::make_unique<FfmpegDecoderStream>();
-        decoderStream->open(filePath, channels, sampleRate, seekPosSeconds, sampleAccurate);
+        decoderStream->open(filePath, channels, sampleRate, seekPosSeconds);
     }
 }
 
