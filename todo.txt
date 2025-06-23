@@ -1,11 +1,6 @@
 
 Filename for copy ?
 
-Verify tooltips on touch UI.
-
-Feature: Multi-select in file browser.
-
-
 
 Check trigger button behaviour in native plugins.
-File types not being respected in native plugins.
+File types not being respected in native plugins../
