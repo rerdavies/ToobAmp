@@ -67,13 +67,15 @@ Play audio files. Audio files can optionally be loooped by pressing the "Set loo
 To skip the start of a file, press the "Set Loop" button, set the "Start" value in the seek dialog, and leave the "Loop Enabled" 
 checkbox unchecked.
 
-TooB Player will display audio metadata for a file (track number, title, album, artist) if available. If the file's metadata contains 
-album art, that will be displayed as well. If not, the player will look for a folder artwork file in the same directory. The 
-folder artwork file can be called any of "Folder.jpg", "Cover.jpg", "AlbumArt.jpg" or a number of other common names used by media players and taggers. You can upload folder 
-by opening the file browser, and clicking the "Upload" button, while can be used to upload either new tracks, or folder artwork files.
-
 Note that loop information is stored as per-file metadata, and is not stored in the preset. If you need different loop settings for the 
 same file, create a copy of the file. Files are copied using hard links, so the copy will not take up significant disk space.
+
+
+TooB Player will display audio metadata for a file (track number, title, album, artist) if available. 
+If the file's metadata contains album art, that will be displayed as well. If not, the player will look for a folder artwork file in the same directory. The 
+folder artwork file can be called any of "Folder.jpg", "Cover.jpg", "AlbumArt.jpg" or a number of other common names used by media players and taggers. 
+You can upload album artwork files using the Upload button in the file browser. The Upload button  will allow you to upload audio files, or 
+folder artwork files that have a .jpg file extension. 
 
 
 """ ;
