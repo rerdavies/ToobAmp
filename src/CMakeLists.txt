@@ -1219,6 +1219,7 @@ add_executable(PhaserTest
 
 add_executable(GraphicEqTest
     HoltersGraphicEqTest.cpp
+    LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
 )
 
 add_executable(FFMpegTest 
@@ -1226,6 +1227,7 @@ add_executable(FFMpegTest
     record_plugins/FfmpegDecoderStream.cpp 
     record_plugins/FfmpegDecoderStream.hpp
     json_variant.hpp json_variant.cpp
+    LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
     json.hpp json.cpp
 )
 

@@ -25,6 +25,8 @@
 #include <cstring>
 #include <chrono>
 #include <iostream>
+#include <algorithm>
+#include <memory>
 
 #include "FfmpegDecoderStream.hpp"
 
