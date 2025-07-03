@@ -230,6 +230,8 @@ add_library(ToobAmp  SHARED
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
         ToobDelay.cpp ToobDelay.h
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp 
         ToobPhaser.cpp ToobPhaser.hpp
         ToobChorus.cpp ToobChorus.h
         ToobFlanger.cpp ToobFlanger.h
