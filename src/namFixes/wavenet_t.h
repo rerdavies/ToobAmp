@@ -205,7 +205,7 @@ public:
     const long i_start, 
     const long j_start);
   void set_num_frames_(const long num_frames);
-  long get_channels() const { return _gated ? this->_conv_gated.get_in_channels() : this->_conv.get_in_channels(); };
+  long get_channels() const { return _gated ? this->_conv_gated.get_in_channels() : this->_conv_ungated.get_in_channels(); };
   int get_dilation() const { return _dilation; };
   long get_kernel_size() const { return KERNEL_SIZE; };
 

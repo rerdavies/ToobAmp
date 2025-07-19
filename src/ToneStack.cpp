@@ -78,6 +78,8 @@ ToneStack::ToneStack(double _rate,
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
+    gainDezipper.SetSampleRate(_rate);
+    gainDezipper.SetRate(0.1f); // 100ms dezipper time.
 }
 
 ToneStack::~ToneStack()
@@ -101,6 +103,10 @@ void ToneStack::ConnectPort(uint32_t port, void* data)
 	case PortId::AMP_MODEL:
 		AmpModel.SetData(data);
 		break;
+
+    case PortId::GAIN:
+        Gain.SetData(data);
+        break;
 	case PortId::AUDIO_IN:
 		this->input = (const float*)data;
 		break;
@@ -124,6 +130,7 @@ void ToneStack::Activate()
 	frameTime = 0;
 	this->toneStackFilter.Reset();
 	this->baxandallToneStack.Reset();
+    gainDezipper.Reset(Gain.GetValue());
 }
 void ToneStack::Deactivate()
 {
@@ -150,16 +157,19 @@ void ToneStack::Run(uint32_t n_samples)
 		this->responseChanged = true;
 	}
 
+
 	if (useBaxandall)
 	{
 		for (uint32_t i = 0; i < n_samples; ++i)
 		{
-			output[i] = Undenormalize((float)baxandallToneStack.Tick(input[i]));
+            float gain = gainDezipper.Tick();
+			output[i] = Undenormalize((float)baxandallToneStack.Tick(input[i])*gain);
 		}
 	} else {
 		for (uint32_t i = 0; i < n_samples; ++i)
 		{
-			output[i] = Undenormalize((float)toneStackFilter.Tick(input[i]));
+            float gain = gainDezipper.Tick();
+			output[i] = Undenormalize((float)toneStackFilter.Tick(input[i])*gain);
 		}
 	}
 	frameTime += n_samples;
@@ -207,7 +217,13 @@ void ToneStack::Run(uint32_t n_samples)
 
 bool ToneStack::UpdateControls()
 {
+    if (Gain.HasChanged())
+    {
+        float gain = Gain.GetValue();
+        gainDezipper.SetTarget(gain);
+    }
 	bool ampModelChanged = AmpModel.HasChanged();
+
 	if (Bass.HasChanged() || Mid.HasChanged() || Treble.HasChanged() || ampModelChanged)
 	{
 		double b = Bass.GetValue();

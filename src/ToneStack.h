@@ -37,6 +37,7 @@
 #include "FilterResponse.h"
 #include "LsNumerics/BaxandallToneStack.hpp"
 #include <string>
+#include "DbDezipper.h"
 
 #include <lv2_plugin/Lv2Plugin.hpp>
 
@@ -63,6 +64,7 @@ namespace toob {
 			MID,
 			TREBLE,
 			AMP_MODEL,
+            GAIN,
 			AUDIO_IN,
 			AUDIO_OUT,
 			CONTROL_IN,
@@ -157,8 +159,11 @@ namespace toob {
 		RangedInputPort Mid =RangedInputPort(0,1);
 		RangedInputPort Treble =RangedInputPort(0,1);
 		RangedInputPort AmpModel =RangedInputPort(0,2);
+        RangedInputPort Gain = RangedInputPort(-40,30);
 		bool useBaxandall = false;
 
+        DbDezipper gainDezipper;
+        
 		bool UpdateControls();
 
 		float CalculateFrequencyResponse(float f);

@@ -1,1 +1,6 @@
-File types not being respected in native plugins.
+
+Filename for copy ?
+
+
+Check trigger button behaviour in native plugins.
+File types not being respected in native plugins../

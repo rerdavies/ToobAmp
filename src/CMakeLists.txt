@@ -163,6 +163,7 @@ add_library(ToobAmp  SHARED
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMix.cpp ToobMix.hpp
 
+
         ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
         ToobGraphicEq.cpp ToobGraphicEq.hpp
         HoltersGraphicEq.cpp HoltersGraphicEq.hpp
@@ -181,8 +182,13 @@ add_library(ToobAmp  SHARED
         record_plugins/ToobRingBuffer.hpp
         record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
         record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp 
+        record_plugins/Lv2AudioFileProcessor.cpp record_plugins/Lv2AudioFileProcessor.hpp
 
         record_plugins/InputTrigger.hpp record_plugins/InputTrigger.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobPlayerInfo.hpp
+        record_plugins/ToobPlayer.cpp record_plugins/ToobPlayer.hpp
+
 
         TemporaryFile.cpp TemporaryFile.hpp
 
@@ -224,6 +230,8 @@ add_library(ToobAmp  SHARED
         CircularBuffer.h
         ToobFreeverb.cpp ToobFreeverb.h
         ToobDelay.cpp ToobDelay.h
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp 
         ToobPhaser.cpp ToobPhaser.hpp
         ToobChorus.cpp ToobChorus.h
         ToobFlanger.cpp ToobFlanger.h
@@ -256,6 +264,7 @@ add_library(ToobAmp  SHARED
          NeuralModel.h NeuralModel.cpp
          ToobML.h ToobML.cpp
          json.hpp json.cpp
+         json_variant.hpp json_variant.cpp
          Filters/ShelvingLowCutFilter2.h Filters/ShelvingLowCutFilter2.cpp
          Filters/FilterCoefficients.cpp Filters/FilterCoefficients.h
          Filters/Polynomial.cpp Filters/Polynomial.h
@@ -402,6 +411,24 @@ add_custom_command(
     DEPENDS
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobGraphicEq.ttl    
+        generate_lv2c_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobPlayer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobPlayer.ttl)
+
+add_custom_command(
+    OUTPUT  ToobPlayerInfo.hpp          # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info 
+             http://two-play.com/plugins/toob-player
+              --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+              --out ${CMAKE_CURRENT_BINARY_DIR}/ToobPlayerInfo.hpp 
+              --class ToobPlayerInfo
+              --namespace player_plugin
+              --ui-base-class ToobPlayerUiBase
+              --plugin-base-class ToobPlayerBase
+    DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobPlayer.ttl    
         generate_lv2c_plugin_info
 )
 
@@ -911,6 +938,21 @@ add_executable(BaxandallToneStackTest
 
 add_test(BaxandallToneStackTest BaxandallToneStackTest)
 
+
+add_executable(PlayerTest 
+    record_plugins/Lv2AudioFileProcessor.hpp record_plugins/Lv2AudioFileProcessor.cpp
+    record_plugins/Lv2AudioFileProcessorTest.cpp
+    record_plugins/AudioFileBufferManager.hpp record_plugins/AudioFileBufferManager.cpp
+    record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
+    json.hpp json.cpp
+    json_variant.hpp json_variant.cpp
+    TemporaryFile.hpp TemporaryFile.cpp
+)
+
+add_test(PlayerTest PlayerTest)
+
+
+
 # Exports no longer available.
 # add_executable(TestMlModels
 #     CheckMlModels.cpp
@@ -1179,6 +1221,16 @@ add_executable(PhaserTest
 
 add_executable(GraphicEqTest
     HoltersGraphicEqTest.cpp
+    LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
+)
+
+add_executable(FFMpegTest 
+    record_plugins/FfmpegTest.cpp
+    record_plugins/FfmpegDecoderStream.cpp 
+    record_plugins/FfmpegDecoderStream.hpp
+    json_variant.hpp json_variant.cpp
+    LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
+    json.hpp json.cpp
 )
 
 # add_executable(UiLinkageTest 

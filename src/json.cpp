@@ -20,8 +20,12 @@
 #include "json.hpp"
 #include <string_view>
 #include <cctype>
+#include "json_variant.hpp"
+#include "util.hpp"
+#include <string_view>
 
-using namespace toob;
+using namespace pipedal;
+
 
 
 
@@ -40,7 +44,6 @@ static char hex(int v)
         return (char)('0' + v);
     return (char)('A' + v - 10);
 }
-
 
 void json_writer::throw_encoding_error()
 {
@@ -65,7 +68,7 @@ void json_writer::write(string_view v,bool enforceValidUtf8Encoding)
     os << '"';
     while (p != v.end())
     {
-        uint32_t uc = 0;
+        uint32_t uc;
         uint8_t c = (uint8_t)*p++;
         if ((c & UTF8_ONE_BYTE_MASK) == UTF8_ONE_BYTE_BITS)
         {
@@ -267,7 +270,6 @@ void json_reader::skip_whitespace()
     }
 }
 
-
 static void utf32_to_utf8_stream(std::ostream &s, uint32_t uc)
 {
     if (uc < 0x80u)
@@ -441,7 +443,7 @@ void json_reader::skip_property()
     {
     case -1:
         throw_format_error("Premature end of file.");
-
+        break;
     case '[':
         skip_array();
         break;
@@ -470,10 +472,8 @@ void json_reader::skip_string()
     {
         int c;
         c = get();
-        if (c == -1)
-        {
-            throw_format_error("Premature end of file.");
-        }
+        if (c == -1) throw_format_error("Premature end of file.");
+
         if (c == '\"')
         {
             if (peek() == '\"')
@@ -532,13 +532,14 @@ void json_reader::skip_number()
 }
 void json_reader::skip_array()
 {
-    int  c;
-
+    int c;
     consume('[');
+
     while (true)
     {
         c = peek();
-        if (c == -1) throw_format_error("Premature end of file reading json.");
+        if (c == -1) throw_format_error("Premature end of file.");
+
         if (c == ']')
         {
             c = get();
@@ -560,9 +561,8 @@ void json_reader::skip_object()
     while (true)
     {
         c = peek();
-        if (c == -1) 
-            throw_format_error("Premature end of file.");
-        if (c  == '}')
+        if (c == -1) throw_format_error("Premature end of file.");
+        if (c == '}')
         {
             c = get();
             break;
@@ -639,7 +639,6 @@ void json_reader::throw_format_error(const char*error)
     } else {
         for (int i = 0; i < 40; ++i)
         {
-            if (is_.peek()) break;
             int c = get();
             if (c == -1) break;
             if (c == '\r') {
@@ -648,11 +647,72 @@ void json_reader::throw_format_error(const char*error)
             {
                 s << "\\n";
             } else {
-                s << c;
+                s << (char)c;
             }
         }
     }
     s << "'.";
-    throw JsonException(s.str());
+    std::string message = s.str();
+    throw JsonException(message);
 
 }
+
+static std::string timePointToISO8601(const std::chrono::system_clock::time_point &tp)
+{
+    auto tt = std::chrono::system_clock::to_time_t(tp);
+    std::tm tm = *std::gmtime(&tt);
+    std::stringstream ss;
+    ss << std::put_time(&tm,"%Y-%m-%dT%H:%M:%S") << "Z";
+    return ss.str();
+    
+}
+static std::chrono::system_clock::time_point ISO8601ToTimePoint(const std::string&timeString)
+{
+    if (timeString.empty())
+    {
+        return std::chrono::system_clock::time_point();
+    }
+    if (timeString.back() != 'Z')
+    {
+        throw std::runtime_error("Time string is not in UTC Z timezone. Time-zones are not supported.");
+    }
+
+    std::tm tm = {};
+    std::istringstream ss(timeString);
+    ss >> std::get_time(&tm,"%Y-%m-%dT%H:%M:%S"); 
+    if (ss.fail())
+    {
+        throw std::runtime_error("Failed to parse ISO 8601 time string.");
+    }
+    time_t tt;
+    #ifdef _WIN32
+    tt = _mkgmtime(&tm);
+    #else 
+    tt = timegm(&tm);
+    #endif
+    if (tt == -1)
+    {
+        throw std::runtime_error("Failed to conver ISO 8601 time string.");
+    }
+    return std::chrono::system_clock::from_time_t(tt);
+}
+
+void json_writer::write (const std::chrono::system_clock::time_point &time)
+{
+    std::string timeString = timePointToISO8601(time);
+    write(timeString);
+}
+
+void json_reader::read(std::chrono::system_clock::time_point *value)
+{
+    std::string timeString;
+    read(&timeString);
+    *value = ISO8601ToTimePoint(timeString);
+}
+        
+
+
+// void json_writer::write(const json_variant &value)
+// {
+//     ((JsonSerializable *)&value)->write_json(*this);
+// }

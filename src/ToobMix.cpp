@@ -80,11 +80,10 @@ void ToobMix::Activate()
     float rl, rr;
     applyPan(this->panL.GetValue(),this->trimL.GetAf(),ll,lr);
     applyPan(this->panR.GetValue(),this->trimR.GetAf(),rl,rr);
-    constexpr float DEZIP_DELAY_S = 0.0; // immediate.
-    zipLL.To(ll,DEZIP_DELAY_S);
-    zipLR.To(lr,DEZIP_DELAY_S);
-    zipRL.To(rl,DEZIP_DELAY_S);
-    zipRR.To(rr,DEZIP_DELAY_S);
+    zipLL.To(ll,0);
+    zipLR.To(lr,0);
+    zipRL.To(rl,0);
+    zipRR.To(rr,0);
 
 }
 void ToobMix::Deactivate() 

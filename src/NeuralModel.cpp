@@ -27,6 +27,7 @@
 #include "ss.hpp"
 
 using namespace toob;
+using namespace pipedal;
 using namespace std;
 
 

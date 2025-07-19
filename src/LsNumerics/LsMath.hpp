@@ -59,7 +59,12 @@ namespace LsNumerics {
 
 	inline float Db2Af(float value)
 	{
-		if (value < MIN_DB) return 0;
+		if (value <= MIN_DB) return 0;
+		return std::exp(value*(MathInternal::log10*0.05f));
+	}
+	inline float Db2Af(float value, float minDb)
+	{
+		if (value <= minDb) return 0;
 		return std::exp(value*(MathInternal::log10*0.05f));
 	}
 	#endif

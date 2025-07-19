@@ -46,7 +46,8 @@ namespace toob
         std::atomic<uint64_t> refCount = 1;
     };
 
-    template <typename T>
+    // like std::shared_ptr, but provides attach and deatch methods.
+    template <typename T> 
     class ToobPtr
     {
     public:
@@ -59,7 +60,7 @@ namespace toob
         }
         ToobPtr(ToobPtr &&other)
         {
-            swap(ptr, other.ptr);
+            std::swap(ptr, other.ptr);
         }
         ~ToobPtr()
         {
@@ -77,17 +78,18 @@ namespace toob
         }
         ToobPtr &operator=(ToobPtr &&other)
         {
-            swap(ptr, other.ptr);
+            std::swap(ptr, other.ptr);
             return *this;
         }
+        operator bool() const { return ptr != nullptr; }
 
-        T *Detach()
+        T *detach()
         {
             T *result = ptr;
             ptr = nullptr;
             return result;
         }
-        void Attach(T *newPtr)
+        void attach(T *newPtr)
         {
             if (ptr)
                 ptr->Release();
@@ -114,6 +116,12 @@ namespace toob
 
         size_t GetChannelCount() const { return data_.size(); }
         size_t GetBufferSize() const { return bufferSize_; }
+        void SetBufferSize(size_t size) { 
+            bufferSize_ = size; 
+        }
+        void ResetBufferSize() {
+            this->bufferSize_ = data_[0].size();
+        }
         float *GetChannel(size_t channel) { return data_[channel].data(); }
         const float *GetChannel(size_t channel) const { return data_[channel].data(); }
 

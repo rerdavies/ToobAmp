@@ -135,6 +135,7 @@ AudioFileBuffer *AudioFileBufferPool::TakeBuffer()
         if (freeList.compare_exchange_weak(current, next, std::memory_order_acquire, std::memory_order_relaxed))
         {
             pooledCount--;
+            current->ResetBufferSize();
             return current;
         }
     }
