@@ -12,7 +12,7 @@ option(INSTALL_LV2CAIRO_TEST_PLUGIN OFF)
 option(WARNINGS_ARE_ERRORS ON)
 
 
-project(ToobAmp VERSION 1.1.63 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+project(ToobAmp VERSION 1.1.64 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 
