@@ -258,6 +258,7 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 ### v1.1.65
 New in this release:
 - TooB Neural Amp Modeler: New "Threaded" control, which allows NAM to use multiple CPU cores for processing.
+- Dynamically load a76-optimized plugin code when running on a Raspberry 5. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins. 
 
 ### v1.1.64
 New in this release:
