@@ -8,11 +8,14 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(INSTALL_LV2CAIRO_TEST_PLUGIN OFF)
-option(WARNINGS_ARE_ERRORS ON)
+option(INSTALL_LV2CAIRO_TEST_PLUGIN OFF) # Install the lv2caoir test plugin.
+option(WARNINGS_ARE_ERRORS ON) # Treat warnings as errors.
+option(A76_OPTIMIZATION OFF) # Optimize for cortex-a76 (arm64 builds only)
+option(TOOB_MULTI_ARCH_BUILD OFF) # install both a72 and a76 Toob plugins in the same package.
 
 
-project(ToobAmp VERSION 1.1.64 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+
+project(ToobAmp VERSION 1.1.65 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 
@@ -20,6 +23,26 @@ set(PROJECT_RELEASE_QUALIFIER "")
 
 set(TOOBAMP_SEMANTIC_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PROJECT_RELEASE_QUALIFIER}")
 
+message(STATUS "ToobAmp Version: ${TOOBAMP_SEMANTIC_VERSION}")
+
+execute_process(COMMAND
+  dpkg-architecture
+    -qDEB_HOST_ARCH
+  OUTPUT_VARIABLE
+    CMAKE_DEB_HOST_ARCH
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+
+if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+    if (A76_OPTIMIZATION)
+        message(STATUS "Using Cortex-A76 optimizations")
+        add_compile_options("-mcpu=cortex-a76" "-mtune=cortex-a76")
+    else()
+        message(STATUS "Using Cortex-A72 optimizations")
+        add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
+    endif()
+endif()
 
 include(CTest)
 enable_testing()
@@ -31,6 +54,7 @@ if(WIN32)
 else()
 	include_directories("/usr/local/include")
 endif()
+
 
 
 # Include submodules

@@ -1,3 +1,5 @@
+Test 2k buffer size.
+Read of first frame?
 
 Filename for copy ?
 
