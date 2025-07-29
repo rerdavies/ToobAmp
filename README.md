@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.1.63
+### v1.1.65
 
 The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use 
@@ -37,15 +37,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.63/toobamp_1.1.63_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.63/toobamp_1.1.63_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.63/toobamp_1.1.63_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.65/toobamp_1.1.65_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.65/toobamp_1.1.65_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.65/toobamp_1.1.65_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.1.63_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.1.65_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`. 
@@ -230,7 +230,7 @@ ToobAmp was built using Visual Studio Code, with CMake build files, so it's easi
 TooBAmp if you are using Visual Studio Code.
 
 If you are using Visual Studio code, install the Microsoft CMake extension, and load the project directory. Visual Studio Code
-will automatically detect and configure the project. Build and configuration tools for the CMake project can be accessed on the Visual Studio Code status bar.
+will automaticalcly detect and configure the project. Build and configuration tools for the CMake project can be accessed on the Visual Studio Code status bar.
 
 If you are not usings Visual Studio Code, the following shell scripts, found in the root of the project, can be used to configure, build and install the project:
 
@@ -255,6 +255,14 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 
 # Releases Notes
 
+### v1.1.65
+New in this release:
+- TooB Neural Amp Modeler: New "Threaded" control, which allows NAM to use multiple CPU cores for processing.
+- Dynamically load a76-optimized plugin code when running on a Raspberry 5. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins. 
+
+### v1.1.64
+New in this release:
+- Fixes a minor memory leak.
 ### v1.1.63
 New in this release:
 - New Toob Player plugin, allows you to play audio files.

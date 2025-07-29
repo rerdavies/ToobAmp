@@ -3,16 +3,6 @@
 #
 cmake_minimum_required (VERSION 3.18)
 
-
-execute_process(COMMAND
-  dpkg-architecture
-    -qDEB_HOST_ARCH
-  OUTPUT_VARIABLE
-    CMAKE_DEB_HOST_ARCH
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-
 set(LV2C_INCLUDE_DIRS
    ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2c/include
    ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2c_ui/include
@@ -63,8 +53,14 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
     if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        # set(CXX_ARCH_FLAGS "-mtune=cortex-a72 -march=native -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a72
-        set(CXX_ARCH_FLAGS "-DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # 
+        # if (A76_OPTIMIZATION)
+        #     message(STATUS "src: Using Cortex-A76 optimizations.")
+        #     set(CXX_ARCH_FLAGS "-mcpu=cortex-a76 -mtune=cortex-a76 -DEIGEN_DEFAULT_L1_CACHE_SIZE=65536" ) # HUGE% compared to no option# raspberry pi 4. cortex-a76
+        # else()
+        #     message(STATUS "src: Using Cortex-A72 optimizations.")
+        #     set(CXX_ARCH_FLAGS "-mcpu=cortex-a72 -mtune=cortex-a72  -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a76
+        # endif()
+        #set(CXX_ARCH_FLAGS "-DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # 
     else()
         # MMX, SSE, SSE2 are enabled by default.
         
@@ -82,7 +78,7 @@ if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set (GCC_EXTRA_FLAGS "-Werror ${GCC_EXTRA_FLAGS}")
     endif()
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast --fast-math -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden ")
     if (CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -155,7 +151,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 # Add source to this project's executable.
 
 
-add_library(ToobAmp  SHARED
+add_library(ToobAmpArch  SHARED
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
         ToobNoiseGate.cpp ToobNoiseGate.hpp
@@ -193,7 +189,9 @@ add_library(ToobAmp  SHARED
         TemporaryFile.cpp TemporaryFile.hpp
 
         DebugPlot.cpp
+        NamBackgroundProcessor.cpp NamBackgroundProcessor.hpp
         NeuralAmpModeler.cpp NeuralAmpModeler.h
+
         nam_architecture.hpp
 
         lv2ext/filedialog.h
@@ -324,10 +322,21 @@ add_library(ToobAmp  SHARED
          
          )
 
-set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
-set_target_properties(ToobAmp PROPERTIES PREFIX "")
 
-target_link_options(ToobAmp PRIVATE
+if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+    if (A76_OPTIMIZATION)
+        set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a76")
+    else()
+        set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a72")
+    endif()
+else()
+    set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp")
+endif()
+set_target_properties(ToobAmpArch PROPERTIES PREFIX "")
+
+
+
+target_link_options(ToobAmpArch PRIVATE
       -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmp.version
          -Wl,-z,nodelete 
     -Wl,-uFLAC__stream_decoder_get_blocksize   # demand-link plugin.
@@ -335,7 +344,7 @@ target_link_options(ToobAmp PRIVATE
 )
 
 
-target_link_libraries(ToobAmp 
+target_link_libraries(ToobAmpArch 
     #${DBUS_LIBRARIES}
     lv2_plugin
     RTNeural
@@ -345,7 +354,7 @@ target_link_libraries(ToobAmp
     ${FLAC_LIBS}
     )
 
-target_include_directories(ToobAmp PRIVATE
+target_include_directories(ToobAmpArch PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     //${LV2C_INCLUDE_DIRS}
 
@@ -355,7 +364,7 @@ target_include_directories(ToobAmp PRIVATE
     ../modules/NeuralAmpModelerCore
     ../modules    
 )
-set_property(TARGET ToobAmp PROPERTY CXX_STANDARD 20)
+set_property(TARGET ToobAmpArch PROPERTY CXX_STANDARD 20)
 
 
 ####################################################
@@ -1151,16 +1160,54 @@ add_test(LinkageTest linkageTest)
 
 # set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
 
-set_target_properties(ToobAmp PROPERTIES OUTPUT_NAME "ToobAmp")
-set_target_properties(ToobAmp PROPERTIES PREFIX "")
+
+
+
+if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+
+    add_library(ToobAmpArchShim SHARED
+        lv2-shim.cpp
+    )
+
+
+    set_target_properties(ToobAmpArchShim PROPERTIES OUTPUT_NAME "ToobAmp")
+    set_target_properties(ToobAmpArchShim PROPERTIES PREFIX "")
+endif()
+
+
 
 include(GNUInstallDirs)
 
 
-install(TARGETS ToobAmp ToobAmpUI
+install(TARGETS ToobAmpUI
     LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     )
 
+
+if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+    install(TARGETS ToobAmpArchShim 
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    )
+    install(TARGETS ToobAmpArch
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+
+        )
+        if (TOOB_MULTI_ARCH_BUILD) 
+            install(FILES ${PROJECT_SOURCE_DIR}/build-a76/src/ToobAmp-a76.so
+                DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+                PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+                )
+        endif()
+
+else()
+    install(TARGETS ToobAmpArch
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        )
+endif()
 
 add_executable(BufferPoolTest 
     BufferPoolTest.cpp
@@ -1232,6 +1279,7 @@ add_executable(FFMpegTest
     LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
     json.hpp json.cpp
 )
+
 
 # add_executable(UiLinkageTest 
 

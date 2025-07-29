@@ -16,6 +16,10 @@ namespace nam {
         uint32_t sampleRate,
         int minBlockSize, 
         int maxBlockSize);
+
+    int GetPrewarmSamples(nam::DSP *dsp, double sampleRate);
 };
+
+
 
 #pragma GCC diagnostic pop

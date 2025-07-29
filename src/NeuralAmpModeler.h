@@ -50,13 +50,14 @@ SOFTWARE.
 #include <cstddef>
 #include "NAM/dsp.h"
 #include "namFixes/NoiseGate.h"
+#include "NamBackgroundProcessor.hpp"
 
 using namespace nam;
 
 namespace toob
 {
 
-    class NeuralAmpModeler final : public Lv2PluginWithState
+    class NeuralAmpModeler final : public Lv2PluginWithState, private nam_impl::NamBackgroundProcessorListener
     {
 
     public:
@@ -87,6 +88,7 @@ namespace toob
             kInputGain = 0,
             kInputLevelOut,
             kOutputGain,
+            kBuffer,
             kNoiseGateThreshold,
             kGateOut,
             
@@ -125,7 +127,30 @@ namespace toob
         };
 
 
+        ::toob::nam_impl::NamFadeProcessor fadeProcessor;
+
         Urids urids;
+
+        enum class BackgroundProcessorState {
+            ForegroundProcessing,
+            BackgroundProcessingEnabled,
+            FirstBackgroundProcessingFrame,
+            BackgroundProcessing,
+            FrameErrorState,
+        };
+
+        void HandleFrameSizeError();
+
+        BackgroundProcessorState backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
+        ::toob::nam_impl::NamBackgroundProcessor backgroundProcessor;
+
+
+        virtual void onStopBackgroundProcessingReply(nam::DSP *dsp) override;
+        virtual void onBackgroundProcessingComplete() override;
+        virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
+
+
+        bool frameSizeErrorGiven = false;
 
         void PrepareModel(DSP*pDSP);
 
@@ -155,6 +180,8 @@ namespace toob
         void OnIdle();
 
     private:
+        void ProcessNam(const float *input, float *output, size_t numFrames);
+
         std::string UnmapFilename(const LV2_Feature *const *features, const std::string &fileName);
 
         std::string MapFilename(
@@ -171,7 +198,7 @@ namespace toob
         virtual LV2_Worker_Status OnWorkResponse(uint32_t size, const void *data) override;
 
     private:
-        size_t nominalBlockLength = 64;
+        size_t maxBufferSize = 64;
         double rate = 44100;
         std::string bundle_path;
 
@@ -180,6 +207,9 @@ namespace toob
         RangedDbInputPort cInputGain{-40, 40};
         RangedDbInputPort cOutputGain{-40, 40};
         OutputPort cInputLevelOut;
+
+        RangedInputPort cBuffer{0.0,1.0};
+        bool lastBufferValue = false;
         RangedDbInputPort cNoiseGateThreshold{-100, 0};
         RangedInputPort cBass {0,10};
         RangedInputPort cMid{ 0,10};
@@ -221,6 +251,9 @@ namespace toob
         int64_t responseDelaySamples = 0;
 
     private:
+        void HandleBackgroundProcessorEvents();
+
+        void HandleBufferChange();
         void RequestLoad(const char *fileName);
         // Update tone stack filter designs.
         void UpdateToneStack();
@@ -234,6 +267,8 @@ namespace toob
 
         // Fallback that just copies inputs to outputs if mDSP doesn't hold a model.
         void _FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels, const size_t numFrames);
+        void _FallbackDSP(const nam_float_t *input, nam_float_t *output, size_t numFrames);
+
         // Sizes based on mInputArray
         size_t _GetBufferNumChannels() const;
         size_t _GetBufferNumFrames() const;

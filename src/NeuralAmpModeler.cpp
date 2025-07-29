@@ -64,7 +64,6 @@ SOFTWARE.
 
 #include "namFixes/dsp_ex.h"
 
-
 #pragma GCC diagnostic pop
 
 // clang-format off
@@ -181,7 +180,7 @@ NeuralAmpModeler::NeuralAmpModeler(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2PluginWithState(rate,bundle_path, features),
+    : Lv2PluginWithState(rate, bundle_path, features),
       rate(rate),
       mInputPointers(nullptr),
       mOutputPointers(nullptr),
@@ -189,6 +188,9 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
+    fadeProcessor.SetSampleRate(rate);
+    backgroundProcessor.SetSampleRate(rate);
+    backgroundProcessor.SetListener(this);
 
     mNAMPath.reserve(MAX_NAM_FILENAME + 1);
 
@@ -325,9 +327,23 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
         }
         this->mNAM = std::move(dspResult);
 
+
         if (mNAM)
         {
             PrepareModel(this->mNAM.get());
+
+            if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
+            {
+                nam::DSP *dsp = this->mNAM.release();
+                backgroundProcessor.fgSetModel(dsp, GetPrewarmSamples(dsp, rate));
+                this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+
+                fadeProcessor.Reset();
+            }
+            else
+            {
+                fadeProcessor.Prewarm(this->mNAM.get());
+            }
         }
         else
         {
@@ -337,6 +353,7 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
 
                 LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
             }
+            fadeProcessor.Reset();
         }
 
         return true;
@@ -352,11 +369,11 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
 
 void NeuralAmpModeler::PrepareModel(DSP *pDSP)
 {
-    //pDSP->SetNormalize(true);
+    // pDSP->SetNormalize(true);
 
     // Make the model allocate all of it's Matrices, which aren't initialized
     // until first execution. We don't want to be doing mallocs on the realtime thread.
-    int nFrames = (int)this->nominalBlockLength;
+    int nFrames = (int)this->maxBufferSize;
     if (nFrames > 128)
         nFrames = 128;
 
@@ -467,8 +484,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
     case NamMessageType::LoadResponse:
     {
         NamLoadResponseMessage *loadResponse = (NamLoadResponseMessage *)response;
-        DSP *oldModel = nullptr;
-        oldModel = this->mNAM.release();
+        DSP *oldModel = this->mNAM.release();
 
         this->mNAM = std::unique_ptr<DSP>(loadResponse->modelObject);
 
@@ -477,6 +493,20 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
             const LV2_Worker_Schedule *schedule = this->GetLv2WorkerSchedule();
             NamFreeMessage freeMessage{oldModel};
             schedule->schedule_work(schedule->handle, sizeof(freeMessage), &freeMessage);
+        }
+        if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
+        {
+            DSP *dsp = this->mNAM.release();
+            if (dsp)
+            {
+                backgroundProcessor.fgSetModel(dsp, GetPrewarmSamples(dsp, rate));
+                this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+            }
+            fadeProcessor.Reset();
+        }
+        else
+        {
+            fadeProcessor.Prewarm(this->mNAM.get());
         }
     }
     break;
@@ -503,6 +533,9 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
         break;
     case EParams::kNoiseGateThreshold:
         cNoiseGateThreshold.SetData(data);
+        break;
+    case EParams::kBuffer:
+        cBuffer.SetData(data);
         break;
     case EParams::kGateOut:
         cGateOutput.SetData(data);
@@ -541,17 +574,21 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
 }
 void NeuralAmpModeler::Activate()
 {
+    fadeProcessor.Reset();
     isActivated = true;
 
     this->toneStackFilter.Reset();
     this->baxandallToneStack.Reset();
 
     size_t maxBufferSize = this->GetBuffSizeOptions().maxBlockLength;
-    this->nominalBlockLength = this->GetBuffSizeOptions().nominalBlockLength;
+
     if (maxBufferSize == BufSizeOptions::INVALID_VALUE)
     {
         maxBufferSize = 2048;
     }
+    this->maxBufferSize = maxBufferSize;
+
+    backgroundProcessor.SetFrameSize(maxBufferSize);
 
     this->_PrepareIOPointers(1);
     this->mInputArray.resize(1);
@@ -572,6 +609,17 @@ void NeuralAmpModeler::Activate()
     this->mNoiseGateTrigger.PrepareBuffers(1, maxBufferSize);
     this->mNoiseGateGain.PrepareBuffers(1, maxBufferSize);
 
+    bool buffer = this->cBuffer.GetValue() != 0;
+    lastBufferValue = buffer;
+    if (buffer)
+    {
+        this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessingEnabled;
+    }
+    else
+    {
+        this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
+    }
+
     LoadModel(this->mNAMPath);
 }
 void NeuralAmpModeler::Run(uint32_t n_samples)
@@ -579,6 +627,7 @@ void NeuralAmpModeler::Run(uint32_t n_samples)
 
     BeginAtomOutput(this->controlOut);
     HandleEvents(this->controlIn);
+    HandleBackgroundProcessorEvents();
     ProcessBlock(n_samples);
     if (requestFileUpdate)
     {
@@ -588,10 +637,12 @@ void NeuralAmpModeler::Run(uint32_t n_samples)
 }
 void NeuralAmpModeler::Deactivate()
 {
+    backgroundProcessor.fgClose();
     isActivated = false;
 }
 NeuralAmpModeler::~NeuralAmpModeler()
 {
+    backgroundProcessor.fgClose();
 }
 
 void NeuralAmpModeler::UpdateToneStack()
@@ -638,6 +689,14 @@ void NeuralAmpModeler::UpdateToneStack()
     }
     // Request an update 15 ms later.
 }
+void NeuralAmpModeler::HandleFrameSizeError()
+{
+    if (!this->frameSizeErrorGiven)
+    {
+        this->frameSizeErrorGiven = true;
+        this->LogError("TooB NAM requires a host that provides fixed frame sizes.");
+    }
+}
 void NeuralAmpModeler::ProcessBlock(int nFrames)
 {
 
@@ -660,6 +719,10 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
             responseDelaySamples = responseDelaySamplesMax;
         }
     }
+    if (cBuffer.HasChanged())
+    {
+        HandleBufferChange();
+    }
 
     // Input is collapsed to mono in preparation for the NAM.
     this->_ProcessInput(&this->audioIn, numFrames, 1, 1);
@@ -678,10 +741,10 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
         this->mNoiseGateTrigger.SetParams(triggerParams);
         this->mNoiseGateTrigger.SetSampleRate(sampleRate);
-        if (!noiseGateActive) {
+        if (!noiseGateActive)
+        {
             this->cGateOutput.SetValue(0);
         }
-
     }
     float noiseGateOut = 1;
     if (noiseGateActive)
@@ -707,17 +770,8 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         break;
     }
 
-    if (mNAM != nullptr)
-    {
-        // mNAM->SetNormalize(cOutNorm.GetValue());
-        // TODO remove input / output gains from here.
-        // normalize input.
-        mNAM->process(toneStackOutput[0], this->mOutputPointers[0], nFrames);
-    }
-    else
-    {
-        this->_FallbackDSP(toneStackOutput, this->mOutputPointers, 1, numFrames);
-    }
+    ProcessNam(toneStackOutput[0], this->mOutputPointers[0], nFrames);
+
     // Apply the noise gate
     nam_float_t **gateGainOutput = noiseGateActive
                                        ? this->mNoiseGateGain.Process(this->mOutputPointers, numChannelsInternal, numFrames)
@@ -768,72 +822,31 @@ void NeuralAmpModeler::OnIdle()
 {
 }
 
-// bool NeuralAmpModeler::SerializeState(IByteChunk &chunk) const
-// {
-//     // Model directory (don't serialize the model itself; we'll just load it again
-//     // when we unserialize)
-//     chunk.PutStr(this->mNAMPath.Get());
-//     chunk.PutStr(this->mIRPath.Get());
-//     return SerializeParams(chunk);
-// }
-
-// int NeuralAmpModeler::UnserializeState(const IByteChunk &chunk, int startPos)
-// {
-//     std::string dir;
-//     startPos = chunk.GetStr(this->mNAMPath, startPos);
-//     startPos = chunk.GetStr(this->mIRPath, startPos);
-//     int retcode = UnserializeParams(chunk, startPos);
-//     if (this->mNAMPath.length())
-//         this->_GetNAM(this->mNAMPath);
-//     if (this->mIRPath.length())
-//         this->_GetIR(this->mIRPath);
-//     return retcode;
-// }
-
-// void NeuralAmpModeler::OnUIOpen()
-// {
-//     Plugin::OnUIOpen();
-
-//     if (this->mNAMPath.length())
-//         SendControlMsgFromDelegate(
-//             kCtrlTagModelFileBrowser, kMsgTagLoadedModel, this->mNAMPath.length(), this->mNAMPath.Get());
-//     if (this->mIRPath.length())
-//         SendControlMsgFromDelegate(kCtrlTagIRFileBrowser, kMsgTagLoadedIR, this->mIRPath.length(), this->mIRPath.Get());
-//     if (this->mNAM != nullptr)
-//         this->GetUI()->GetControlWithTag(kCtrlTagOutNorm)->SetDisabled(!this->mNAM->HasLoudness());
-// }
-
-// void NeuralAmpModeler::OnParamChangeUI(int paramIdx, EParamSource source)
-// {
-//     if (auto pGraphics = GetUI())
-//     {
-//         bool active = GetParam(paramIdx)->Bool();
-
-//         switch (paramIdx)
-//         {
-//         case kNoiseGateActive:
-//             pGraphics->GetControlWithParamIdx(kNoiseGateThreshold)->SetDisabled(!active);
-//             break;
-//         case kEQActive:
-//             pGraphics->ForControlInGroup("EQ_KNOBS", [active](IControl *pControl)
-//                                          { pControl->SetDisabled(!active); });
-//             break;
-//         case kIRToggle:
-//             pGraphics->GetControlWithTag(kCtrlTagIRFileBrowser)->SetDisabled(!active);
-//         default:
-//             break;
-//         }
-//     }
-// }
-
 // Private methods ============================================================
 
 void NeuralAmpModeler::_FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels,
                                     const size_t numFrames)
 {
     for (size_t c = 0; c < numChannels; c++)
+    {
+        float *restrict pOut = outputs[c];
+        float *restrict pIn = inputs[c];
+
         for (size_t s = 0; s < numFrames; s++)
-            outputs[c][s] = inputs[c][s];
+        {
+            pOut[s] = pIn[s];
+        }
+    }
+}
+void NeuralAmpModeler::_FallbackDSP(const nam_float_t *input, nam_float_t *output, size_t numFrames)
+{
+    float *restrict pOut = output;
+    const float *restrict pIn = input;
+
+    for (size_t s = 0; s < numFrames; s++)
+    {
+        pOut[s] = pIn[s];
+    }
 }
 
 std::unique_ptr<DSP> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
@@ -844,9 +857,9 @@ std::unique_ptr<DSP> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
     }
     auto dspPath = std::filesystem::path(modelPath);
     std::unique_ptr<DSP> nam = get_dsp_ex(dspPath,
-        (uint32_t)getRate(),
-        (int)(this->GetBuffSizeOptions().minBlockLength),
-        (int)(this->GetBuffSizeOptions().maxBlockLength));
+                                          (uint32_t)getRate(),
+                                          (int)(this->GetBuffSizeOptions().minBlockLength),
+                                          (int)(this->GetBuffSizeOptions().maxBlockLength));
     return nam;
 }
 
@@ -1068,7 +1081,7 @@ void NeuralAmpModeler::RequestLoad(const char *fileName)
     {
         // will be picked up in Activate.
         this->mNAMPath = fileName;
-        this->sendFileName = fileName;
+        this->sendFileName = true;
         return;
     }
 
@@ -1083,10 +1096,173 @@ void NeuralAmpModeler::RequestLoad(const char *fileName)
         schedule->schedule_work(
             schedule->handle,
             sizeof(loadMessage), &loadMessage); // must be POD!
+        fadeProcessor.IsFadedOut();
     }
     else
     {
         LoadModel(fileName); // do it on the foreground.
     }
 }
-//----------------------------------------------
+
+void NeuralAmpModeler::HandleBufferChange()
+{
+    bool buffer = this->cBuffer.GetValue() != 0;
+
+    if (buffer == lastBufferValue)
+        return;
+    lastBufferValue = buffer;
+    if (buffer)
+    {
+        switch (this->backgroundProcessorState)
+        {
+        case BackgroundProcessorState::BackgroundProcessing:
+        case BackgroundProcessorState::FirstBackgroundProcessingFrame:
+        case BackgroundProcessorState::BackgroundProcessingEnabled:
+        {
+            // no chagne.
+            break;
+        }
+        case BackgroundProcessorState::ForegroundProcessing:
+            if (this->mNAM)
+            {
+                fadeProcessor.FadeOut();
+                backgroundProcessor.fgSetModel(this->mNAM.release(), 0);
+                this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+            }
+            break;
+        case BackgroundProcessorState::FrameErrorState:
+        default:
+            // Unknown state, reset to not buffering
+            break;
+        };
+    }
+    else
+    {
+        switch (this->backgroundProcessorState)
+        {
+        case BackgroundProcessorState::BackgroundProcessingEnabled:
+        {
+            // ready to buffer, but no model running.
+            this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
+            break;
+        }
+        case BackgroundProcessorState::BackgroundProcessing:
+        case BackgroundProcessorState::FirstBackgroundProcessingFrame:
+        {
+            // bg processor owns the model. get it back.
+            backgroundProcessor.fgStopBackgroundProcessing(); // get our DSP back.
+            // xxx: Needs fade out fade in.
+            this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
+            break;
+        }
+
+        case BackgroundProcessorState::ForegroundProcessing:
+            // NO CHANGE.
+        default:
+        case BackgroundProcessorState::FrameErrorState:
+            break;
+        }
+    }
+}
+
+void NeuralAmpModeler::HandleBackgroundProcessorEvents()
+{
+    backgroundProcessor.fgProcessMessage(false);
+    
+}
+
+void NeuralAmpModeler::onStopBackgroundProcessingReply(nam::DSP *dsp)
+{
+    this->mNAM = std::unique_ptr<nam::DSP>(dsp); // re-attach to a unique_ptr!
+    this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
+    this->fadeProcessor.Reset();
+}
+void NeuralAmpModeler::onBackgroundProcessingComplete()
+{
+}
+void NeuralAmpModeler::onSamplesOut(uint64_t instanceId, float *data, size_t length)
+{
+}
+
+void NeuralAmpModeler::ProcessNam(const float *input, float *output, size_t numFrames)
+{
+    int nFrames = (int)numFrames;
+    switch (this->backgroundProcessorState)
+    {
+    case BackgroundProcessorState::ForegroundProcessing:
+    {
+        /****** FOREGROUND PROCESSING */
+        if (mNAM != nullptr)
+        {
+            // mNAM->SetNormalize(cOutNorm.GetValue());
+            // TODO remove input / output gains from here.
+            // normalize input.
+            if (fadeProcessor.IsFadedOut())
+            {
+                // save a soupcon of processing time at at time when we may really need it.
+                float *p = output;
+                for (size_t i = 0; i < numFrames; ++i)
+                {
+                    p[i] = 0;
+                }
+            }
+            else
+            {
+                mNAM->process(const_cast<float*>(input), output, nFrames);
+                fadeProcessor.Process(output, numFrames);
+            }
+        }
+        else
+        {
+            this->_FallbackDSP(input, output, numFrames);
+        }
+    }
+    break;
+    case BackgroundProcessorState::BackgroundProcessingEnabled:
+    case BackgroundProcessorState::FrameErrorState:
+        this->_FallbackDSP(input, output, numFrames);
+        break;
+    case BackgroundProcessorState::FirstBackgroundProcessingFrame:
+        // First frame of background processing. Prime the background processor with one frame lead time.
+        if (numFrames != 0)
+        {
+            if (numFrames != maxBufferSize)
+            {
+                HandleFrameSizeError();
+                fadeProcessor.Reset();
+                this->_FallbackDSP(input, output, numFrames);
+            }
+            else
+            {
+                float *pOut = output;
+                for (size_t i = 0; i < numFrames; ++i)
+                {
+                    pOut[i] = 0;
+                }
+                this->backgroundProcessor.fgWrite(input, numFrames);
+
+                this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessing;
+                this->_FallbackDSP(input, output, numFrames);
+                this->fadeProcessor.Process(output,numFrames);
+            }
+        }
+        break;
+    case BackgroundProcessorState::BackgroundProcessing:
+        if (numFrames != 0)
+        {
+            if (numFrames != maxBufferSize)
+            {
+                HandleFrameSizeError();
+                this->_FallbackDSP(input, output, numFrames);
+                fadeProcessor.Reset();
+                this->fadeProcessor.Process(output,numFrames);
+            }
+            else
+            {
+                this->backgroundProcessor.fgRead(output, numFrames);
+                this->backgroundProcessor.fgWrite(input, numFrames);
+            }
+        }
+        break;
+    }
+}
