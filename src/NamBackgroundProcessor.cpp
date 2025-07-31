@@ -121,7 +121,17 @@ void NamBackgroundProcessor::ThreadProc()
                         p[i] = 0;
                     }
                 } else {
-                    bgDsp->process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
+                    if (source->instanceId == this->fgInstanceId)
+                    {
+                        bgDsp->process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
+                    } else {
+                        // stale dsp. just return data as quickly as possible.
+                        float *p = backgroundReturnBuffer.data();
+                        for (size_t i = 0; i < frameSize; ++i)
+                        {
+                            p[i] = 0;
+                        }
+                    }
                 }
                 fadeProcessor.Process(backgroundReturnBuffer.data(), frameSize);
 
@@ -271,6 +281,10 @@ bool NamBackgroundProcessor::fgProcessMessage(bool wait)
             {
                 SampleDataMessage*msg = (SampleDataMessage*)m;
 
+                if (msg->instanceId != fgInstanceId)
+                {
+                    return true; // silently discard if it's stale data.
+                }
                 size_t len = msg->length;
                 if (backgroundReturnBuffer.size() < backgroundReturnTailPosition+len) 
                 {

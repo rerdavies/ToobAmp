@@ -442,7 +442,9 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
             try
             {
 
+                this->LogNote("Entering GetNAM");
                 dspResult = _GetNAM(filename);
+                this->LogNote("Exited GetNAM");
                 dspFilename = filename;
                 if (dspResult)
                 {
