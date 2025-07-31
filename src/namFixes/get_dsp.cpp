@@ -158,13 +158,7 @@ namespace nam
             returnedConfig.expected_sample_rate = -1.0;
         }
 
-        /*Copy to a new dsp_config object for get_dsp below,
-         since not sure if weights actually get modified as being non-const references on some
-         model constructors inside get_dsp(dsp_config& conf).
-         We need to return unmodified version of dsp_config via returnedConfig.*/
-        dspData conf = returnedConfig;
-
-        return get_dsp(conf, minBlockSize, maxBlockSize);
+        return get_dsp(returnedConfig, minBlockSize, maxBlockSize);
     }
 
     std::unique_ptr<DSP> get_dsp(dspData &conf)

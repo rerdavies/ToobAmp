@@ -232,7 +232,13 @@ namespace toob::nam_impl
                 {
                     return 0;
                 }
-                cv_read.wait(lock);
+                
+                while (true)
+                {
+                    if (cv_read.wait_for(lock,std::chrono::milliseconds(1000))
+                       == std::cv_status::no_timeout)
+                       break;
+                }
             }
         }
 
