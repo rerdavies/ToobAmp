@@ -82,35 +82,37 @@ namespace toob::nam_impl
             this->fadeOutSamples = maxFadeLength;
         }
         bool IsFadedOut() const {
-            return fadedOut;
+            return false;
+            //return fadedOut;
         }
         void Process(float*outputBuffer, size_t numFrames)
         {
-            size_t ix = 0;
-            if (prewarmSamples != 0)
-            {
-                for (/**/; ix < numFrames && prewarmSamples != 0; ++ix,--prewarmSamples)
-                {
-                    outputBuffer[ix] = 0;
-                }
-            }
-            if (fadeInSamples != 0)
-            {
-                for (/**/; ix < numFrames && fadeInSamples != 0; ++ix, --fadeInSamples) 
-                {
-                    float vol = 1.0f-fadeInSamples*fadeScale;
-                    outputBuffer[ix] *= vol;
-                }
-            }
-            if (fadeOutSamples != 0 && ix < numFrames)
-            {
-                for (/**/; ix < numFrames && fadeOutSamples != 0; ++ix, --fadeOutSamples)
-                {
-                    float vol = fadeOutSamples*fadeScale;
-                    outputBuffer[ix] *= vol;
-                }
-                fadedOut = fadeOutSamples == 0;
-            }
+            return;
+            // size_t ix = 0;
+            // if (prewarmSamples != 0)
+            // {
+            //     for (/**/; ix < numFrames && prewarmSamples != 0; ++ix,--prewarmSamples)
+            //     {
+            //         outputBuffer[ix] = 0;
+            //     }
+            // }
+            // if (fadeInSamples != 0)
+            // {
+            //     for (/**/; ix < numFrames && fadeInSamples != 0; ++ix, --fadeInSamples) 
+            //     {
+            //         float vol = 1.0f-fadeInSamples*fadeScale;
+            //         outputBuffer[ix] *= vol;
+            //     }
+            // }
+            // if (fadeOutSamples != 0 && ix < numFrames)
+            // {
+            //     for (/**/; ix < numFrames && fadeOutSamples != 0; ++ix, --fadeOutSamples)
+            //     {
+            //         float vol = fadeOutSamples*fadeScale;
+            //         outputBuffer[ix] *= vol;
+            //     }
+            //     fadedOut = fadeOutSamples == 0;
+            // }
 
         }
     private: 

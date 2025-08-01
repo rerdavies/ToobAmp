@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <unordered_set>
+#include <memory>
 
 #include "NAM/dsp.h"
 #include "dsp_ex.h"
@@ -23,6 +24,75 @@
 #include "wavenet_t.h"
 #include <stdexcept>
 #include <iostream>
+#include <stdexcept>
+
+
+
+class DspProtectedMethods : public nam::DSP {
+    using super = nam::DSP;
+public:
+    int PreWarmSamples() { return super::PrewarmSamples(); }
+};
+
+size_t nam::GetPrewarmSamples(nam::DSP *dsp, double sampleRate)
+{
+    return ((DspProtectedMethods*)dsp)->PreWarmSamples();
+    return 0;
+}
+
+// rip-and-strip of NAM/get_dsp.ccp GetWeights().
+
+static std::vector<float> NAM_GetWeights(nlohmann::json const& j)
+{
+  auto it = j.find("weights");
+  if (it != j.end())
+  {
+    return *it;
+  }
+  else
+    throw std::runtime_error("Corrupted model file is missing weights.");
+}
+
+// rip-and-strip of code in  get_dsp(...) from NAM/get_dsp.cpp
+
+static nam::dspData getNamConfig(const std::filesystem::path config_filename)
+{
+
+    if (!std::filesystem::exists(config_filename))
+        throw std::runtime_error("Config file doesn't exist!\n");
+    std::ifstream i(config_filename);
+    nlohmann::json j;
+    i >> j;
+
+    std::vector<float> weights = NAM_GetWeights(j);
+    nam::dspData returnedConfig;
+    returnedConfig.version = j["version"];
+    returnedConfig.architecture = j["architecture"];
+    returnedConfig.config = j["config"];
+    returnedConfig.metadata = j["metadata"];
+    returnedConfig.weights = weights;
+
+    return returnedConfig;
+}
+
+namespace nam
+{
+    std::unique_ptr<DSP> get_dsp_ex(
+        const std::filesystem::path config_filename,
+        uint32_t sampleRate,
+        int minBlockSize,
+        int maxBlockSize)
+    {
+        std::cout << "xxx: Loading model." << std::endl;
+
+        dspData config = getNamConfig(config_filename);
+        std::cout << "xxx: Model loaded." << std::endl;
+        return get_dsp(config);
+    }
+
+}
+
+#ifdef JUNK
 
 /*
 NOTE:
@@ -275,7 +345,8 @@ namespace nam
         // We REALLY ant dsp->PrewarmSamples(), but that's a protected method.
         // in fact v2 of the NAM CORE library just resturns a constant 1/2 second.
 
-        return (int)(sampleRate/2);
+        return (int)(sampleRate / 2);
     }
 
 }; // namespace nam
+#endif
