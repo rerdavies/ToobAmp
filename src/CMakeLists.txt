@@ -113,9 +113,10 @@ set(NAM_SOURCES
     ../modules/NeuralAmpModelerCore/NAM/wavenet.h
     ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
     ../modules/NeuralAmpModelerCore/NAM/convnet.h
+    ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
 
     namFixes/dsp_ex.h
-    namFixes/get_dsp.cpp
+    namFixes/dsp_ex.cpp
     namFixes/wavenet_t.h
     namFixes/wavenet_t.inl.h
     namFixes/NamDSP.cpp 

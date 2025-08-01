@@ -17,7 +17,7 @@ namespace nam {
         int minBlockSize, 
         int maxBlockSize);
 
-    int GetPrewarmSamples(nam::DSP *dsp, double sampleRate);
+    size_t GetPrewarmSamples(nam::DSP *dsp, double rate);
 };
 
 
