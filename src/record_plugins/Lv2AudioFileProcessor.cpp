@@ -1039,19 +1039,17 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             buffers[0] = buffer->GetChannel(0);
             buffers[1] = nullptr; // mono file, so we can just read the data directly.
         }
-#ifndef NDEBUG
         auto start = clock_t::now();
-#endif
+
         size_t nRead = this->decoderStreamRead(buffers, thisTime);
 
-#ifndef NDEBUG
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count();
-        if (elapsed > 300)
+
+        if (elapsed > 2000)
         {
             // xxx: DELETE ME.
             std::cerr << "Warning: Decoder stream read took " << elapsed << " ms for file: " << this->filePath << std::endl;
         }
-#endif
         if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
         {
             if (nRead < thisTime && nRead > 0)
