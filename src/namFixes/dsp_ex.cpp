@@ -18,10 +18,10 @@
 #include "NAM/dsp.h"
 #include "dsp_ex.h"
 #include "json.hpp"
-#include "NAM/lstm.h"
-#include "NAM/convnet.h"
-#include "NAM/wavenet.h"
-#include "wavenet_t.h"
+// #include "NAM/lstm.h"
+// #include "NAM/convnet.h"
+// #include "NAM/wavenet.h"
+// #include "wavenet_t.h"
 #include <stdexcept>
 #include <iostream>
 #include <stdexcept>
@@ -72,6 +72,13 @@ static nam::dspData getNamConfig(const std::filesystem::path config_filename)
     returnedConfig.metadata = j["metadata"];
     returnedConfig.weights = weights;
 
+    if (j.find("sample_rate") != j.end())
+        returnedConfig.expected_sample_rate = j["sample_rate"];
+    else
+    {
+        returnedConfig.expected_sample_rate = -1.0;
+    }
+
     return returnedConfig;
 }
 
@@ -87,7 +94,14 @@ namespace nam
 
         dspData config = getNamConfig(config_filename);
         std::cout << "xxx: Model loaded." << std::endl;
-        return get_dsp(config);
+        std::unique_ptr<DSP> result = get_dsp(config);
+        std::cout << "xxx: Got model." << std::endl;
+        if (result)
+        {
+            result->ResetAndPrewarm(sampleRate,maxBlockSize);
+            std::cout << "xxx: Model prewarmed." << std::endl;
+        }
+        return result;
     }
 
 }
