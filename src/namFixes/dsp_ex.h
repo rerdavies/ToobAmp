@@ -6,18 +6,22 @@
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
 
-#include "NAM/dsp.h"
-
 #include <memory>
 
-namespace nam {
-    std::unique_ptr<nam::DSP> get_dsp_ex(
+#include "NeuralAudio/NeuralModel.h"
+
+
+
+namespace toob {
+
+    using ToobNamDsp = ::NeuralAudio::NeuralModel;
+
+    std::unique_ptr<ToobNamDsp> get_dsp_ex(
         const std::filesystem::path config_filename, 
         uint32_t sampleRate,
         int minBlockSize, 
         int maxBlockSize);
 
-    size_t GetPrewarmSamples(nam::DSP *dsp, double rate);
 };
 
 

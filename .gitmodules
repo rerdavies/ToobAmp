@@ -1,12 +1,7 @@
-[submodule "modules/RTNeural"]
-	path = modules/RTNeural
-	url = https://github.com/jatinchowdhury18/RTNeural
-	branch = main
-[submodule "modules/NeuralAmpModelerCore"]
-	path = modules/NeuralAmpModelerCore
-	url = https://github.com/rerdavies/NeuralAmpModelerCore.git
-	update = merge
 [submodule "modules/lv2cairo"]
 	path = modules/lv2cairo
 	url = https://github.com/rerdavies/lv2cairo
 	update = merge
+[submodule "modules/NeuralAudio"]
+	path = modules/NeuralAudio
+	url = https://github.com/mikeoliphant/NeuralAudio

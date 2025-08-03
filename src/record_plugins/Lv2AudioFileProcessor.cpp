@@ -37,6 +37,8 @@ using namespace toob;
 namespace
 {
 
+    
+
     enum class MessageType
     {
         StartRecording,
@@ -952,9 +954,7 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
     toob::AudioFileBufferPool *bufferPool)
 {
 
-#ifndef NDEBUG
     using clock_t = std::chrono::high_resolution_clock;
-#endif
 
     bufferPool->Reserve(PREROLL_BUFFERS + 1);
 

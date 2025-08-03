@@ -14,6 +14,7 @@ option(A76_OPTIMIZATION OFF) # Optimize for cortex-a76 (arm64 builds only)
 option(TOOB_MULTI_ARCH_BUILD OFF) # install both a72 and a76 Toob plugins in the same package.
 
 
+add_compile_definitions(NAM_SAMPLE_FLOAT=1)
 
 project(ToobAmp VERSION 1.1.65 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 

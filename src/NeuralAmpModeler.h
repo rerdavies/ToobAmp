@@ -34,7 +34,6 @@ SOFTWARE.
 #pragma GCC diagnostic ignored "-Wpedantic"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-#include "NeuralAmpModelerCore/NAM/dsp.h"
 #include "LsNumerics/BaxandallToneStack.hpp"
 #include "LsNumerics/ToneStackFilter.h"
 
@@ -43,16 +42,16 @@ SOFTWARE.
 
 #pragma GCC diagnostic pop
 
+#include "namFixes/dsp_ex.h"
 #include <lv2_plugin/Lv2Plugin.hpp>
 #include <atomic>
 #include "InputPort.h"
 #include "OutputPort.h"
 #include <cstddef>
-#include "NAM/dsp.h"
 #include "namFixes/NoiseGate.h"
 #include "NamBackgroundProcessor.hpp"
 
-using namespace nam;
+
 
 namespace toob
 {
@@ -127,7 +126,6 @@ namespace toob
         };
 
 
-        ::toob::nam_impl::NamFadeProcessor fadeProcessor;
 
         Urids urids;
 
@@ -145,14 +143,14 @@ namespace toob
         ::toob::nam_impl::NamBackgroundProcessor backgroundProcessor;
 
 
-        virtual void onStopBackgroundProcessingReply(nam::DSP *dsp) override;
+        virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) override;
         virtual void onBackgroundProcessingComplete() override;
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
 
+        void SetVolumes();
         bool frameSizeErrorGiven = false;
 
-        void PrepareModel(DSP*pDSP);
 
         void ConnectPort(uint32_t port, void *data) override;
         void Activate() override;
@@ -180,7 +178,7 @@ namespace toob
         void OnIdle();
 
     private:
-        void ProcessNam(const float *input, float *output, size_t numFrames);
+        void ProcessNam(float *input, float *output, size_t numFrames);
 
         std::string UnmapFilename(const LV2_Feature *const *features, const std::string &fileName);
 
@@ -201,6 +199,9 @@ namespace toob
         size_t maxBufferSize = 64;
         double rate = 44100;
         std::string bundle_path;
+
+        float fgInputVolume = 1.0;
+        float fgOutputVolume = 1.0;
 
         //const int kNumPresets = 1;
 
@@ -274,7 +275,7 @@ namespace toob
         size_t _GetBufferNumFrames() const;
         // Gets a new Neural Amp Model
         // Throws an exception on error.
-        std::unique_ptr<DSP> _GetNAM(const std::string &dspFile);
+        std::unique_ptr<ToobNamDsp> _GetNAM(const std::string &dspFile);
 
         bool _HaveModel() const { return this->mNAM != nullptr; };
         // Prepare the input & output buffers
@@ -283,7 +284,7 @@ namespace toob
         void _PrepareIOPointers(const size_t nChans);
         // Copy the input buffer to the object, applying input level.
         // :param nChansIn: In from external
-        // :param nChansOut: Out to the internal of the DSP routine
+        // :param nChansOut: Out to the internal of the ToobNamDsp routine
         void _ProcessInput(const float_t **input, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
         // Copy the output to the output buffer, applying output level.
         // :param nChansIn: In from internal
@@ -313,7 +314,7 @@ namespace toob
         dsp::noise_gate::Gain mNoiseGateGain;
 
         // The Neural Amp Model (NAM) actually being used:
-        std::unique_ptr<DSP> mNAM;
+        std::unique_ptr<ToobNamDsp> mNAM;
 
         // Path to model's config.json or model.nam
         std::string mNAMPath;
