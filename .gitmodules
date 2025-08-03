@@ -4,4 +4,4 @@
 	update = merge
 [submodule "modules/NeuralAudio"]
 	path = modules/NeuralAudio
-	url = https://github.com/mikeoliphant/NeuralAudio
+	url = https://github.com/rerdavies/NeuralAudio.git
