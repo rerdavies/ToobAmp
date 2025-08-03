@@ -74,9 +74,9 @@ nam_float_t** dsp::noise_gate::Trigger::Process(nam_float_t** inputs, const size
   const double dClose = this->_GetMaxGainReduction() / this->mParams.GetCloseTime() * dt; // <0
 
   // The main algorithm: compute the gain reduction
-  for (auto c = 0; c < numChannels; c++)
+  for (size_t c = 0; c < numChannels; c++)
   {
-    for (auto s = 0; s < numFrames; s++)
+    for (size_t s = 0; s < numFrames; s++)
     {
       this->mLevel[c] =
         std::clamp(alpha * this->mLevel[c] + beta * (inputs[c][s] * inputs[c][s]), MINIMUM_LOUDNESS_POWER, 1000.0);
@@ -134,7 +134,7 @@ nam_float_t** dsp::noise_gate::Trigger::Process(nam_float_t** inputs, const size
     (*gain)->SetGainReduction(this->mGainReduction);
 
   // Copy input to output
-  for (auto c = 0; c < numChannels; c++)
+  for (size_t c = 0; c < numChannels; c++)
     memcpy(this->mOutputs[c].data(), inputs[c], numFrames * sizeof(nam_float_t));
   return this->_GetPointers();
 }
@@ -204,8 +204,8 @@ nam_float_t** dsp::noise_gate::Gain::Process(nam_float_t** inputs, const size_t 
   }
 
   // Apply gain!
-  for (auto c = 0; c < numChannels; c++)
-    for (auto s = 0; s < numFrames; s++)
+  for (size_t c = 0; c < numChannels; c++)
+    for (size_t s = 0; s < numFrames; s++)
       this->mOutputs[c][s] = pGainReduction->at(c)[s] * inputs[c][s];
 
   return this->_GetPointers();

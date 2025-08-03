@@ -21,7 +21,7 @@
  *   SOFTWARE.
  */
 
-#include "NeuralModel.h"
+#include "ToobNeuralModel.h"
 #include <fstream>
 #include <stdexcept>
 #include "ss.hpp"

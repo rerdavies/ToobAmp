@@ -55,8 +55,11 @@ using namespace toob;
 #ifndef __clang__ // GCC-only pragma
 #pragma GCC diagnostic ignored "-Waggressive-loop-optimizations"
 #endif
+#ifndef __clang__ // GCC-only pragma
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#endif
 
-#include "NeuralModel.h"
+#include "ToobNeuralModel.h"
 
 #pragma GCC diagnostic push
 
@@ -419,21 +422,11 @@ void ToobML::Activate()
 
 }
 
-static std::filesystem::path MyDirectory()
-{
-	#ifdef WIN32
-	  #error FIXME!
-	#else
-		Dl_info dl_info;
-		dladdr((void*)MyDirectory,&dl_info);
-		return dl_info.dli_fname;
-	#endif
-}
 
 
 void ToobML::LoadModelIndex()
 {
-    auto filePath = MyDirectory().parent_path();
+    std::filesystem::path filePath = GetBundlePath();
 	filePath = filePath / "models" / "tones";
 
     auto indexFile = filePath / "model.index";

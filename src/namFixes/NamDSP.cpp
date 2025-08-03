@@ -63,7 +63,7 @@ void dsp::NamDSP::_PrepareBuffers(const size_t numChannels, const size_t numFram
         this->mOutputs.resize(numChannels);
         this->mOutputPointers.resize(resizeChannels);
     }
-    for (auto c = 0; c < numChannels; c++)
+    for (size_t c = 0; c < numChannels; c++)
     {
       this->mOutputs[c].resize(numFrames);
       this->mOutputPointers[c] = &(this->mOutputs[c][0]);

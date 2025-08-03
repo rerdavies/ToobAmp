@@ -37,7 +37,7 @@ SOFTWARE.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-#include <NAM/dsp.h>
+#include "namFixes/dsp_ex.h"
 
 #pragma GCC diagnostic pop
 
@@ -47,7 +47,6 @@ namespace toob
 };
 namespace toob::nam_impl
 {
-    using DSP = ::nam::DSP;
 
 
     class NamFadeProcessor 
@@ -69,7 +68,7 @@ namespace toob::nam_impl
             fadedOut = false;
 
         }
-        void Prewarm(nam::DSP*dsp) {
+        void Prewarm(ToobNamDsp*dsp) {
             this->prewarmSamples = (size_t)(sampleRate/4);
             this->fadeInSamples = maxFadeLength;
             this->fadeOutSamples = 0;
@@ -273,7 +272,7 @@ namespace toob::nam_impl
     };
     struct SetDspMessage : public NamMessage
     {
-        SetDspMessage(uint64_t instanceId, DSP *dsp, size_t antiPopLength)
+        SetDspMessage(uint64_t instanceId, ToobNamDsp *dsp, size_t antiPopLength)
             : NamMessage(NamMessageType::SetDsp),
               instanceId(instanceId),
               dsp(dsp),
@@ -281,7 +280,7 @@ namespace toob::nam_impl
         {
         }
 
-        DSP *dsp;
+        ToobNamDsp *dsp;
         uint64_t instanceId;
         size_t antiPopLength;
     };
@@ -293,11 +292,11 @@ namespace toob::nam_impl
     {
         FadeOutProcessingMessage() : NamMessage(NamMessageType::FadeOut) {}
     };
-    // give me back my DSP!
+    // give me back my ToobNamDsp!
     struct StopBackgroundProcessingReplyMessage : public NamMessage
     {
-        StopBackgroundProcessingReplyMessage(DSP *dsp) : NamMessage(NamMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
-        DSP *dsp;
+        StopBackgroundProcessingReplyMessage(ToobNamDsp *dsp) : NamMessage(NamMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
+        ToobNamDsp *dsp;
     };
     static constexpr size_t MAX_DATA_MESSAGE_SAMPLES = 256;
     struct SampleDataMessage : public NamMessage
@@ -351,7 +350,7 @@ namespace toob::nam_impl
     class NamBackgroundProcessorListener
     {
     public:
-        virtual void onStopBackgroundProcessingReply(nam::DSP *dsp) = 0;
+        virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) = 0;
         virtual void onBackgroundProcessingComplete() = 0;
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) = 0;
     };
@@ -380,7 +379,7 @@ namespace toob::nam_impl
         {
             this->listener = listener;
         }
-        void fgSetModel(DSP *model, size_t antiPopSamples)
+        void fgSetModel(ToobNamDsp *model, size_t antiPopSamples)
         {
             if (!thread)
             {
@@ -431,8 +430,13 @@ namespace toob::nam_impl
 
     private:
         void ThreadProc();
+        void SetBgVolumes();
+
+
 
     private:
+        float bgInputVolume = 0.0;
+        float bgOutputVolume = 0.0;
 
         std::vector<float> backgroundReturnBuffer;
         size_t backgroundReturnTailPosition = 0;
@@ -443,7 +447,7 @@ namespace toob::nam_impl
         std::atomic<uint64_t> fgInstanceId = 0;
         NamFadeProcessor fadeProcessor;
 
-        std::unique_ptr<DSP> bgDsp;
+        std::unique_ptr<ToobNamDsp> bgDsp;
         NamQueue fgToBgQueue{8 * 1024};
         NamQueue bgToFgQueue{8 * 1024};
         std::unique_ptr<std::jthread> thread;

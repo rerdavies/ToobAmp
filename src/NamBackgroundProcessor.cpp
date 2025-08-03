@@ -23,10 +23,12 @@ SOFTWARE.
 */
 #include "NamBackgroundProcessor.hpp"
 #include "namFixes/dsp_ex.h"
+#include "LsNumerics/LsMath.hpp"
 #include <iostream>
 
 using namespace toob;
 using namespace toob::nam_impl;
+using namespace LsNumerics;
 
 static constexpr float FADE_LENGTH_SEC = 0.1;
 
@@ -34,13 +36,12 @@ void NamBackgroundProcessor::ThreadProc()
 {
     // set RT scheduling priority (if able)
 
-    
     struct sched_param param;
     memset(&param, 0, sizeof(param));
     param.sched_priority = 40;
 
     pthread_t pid = pthread_self();
-    pthread_setname_np(pid,"tnam_bg");
+    pthread_setname_np(pid, "tnam_bg");
 
     int result = sched_setscheduler(0, SCHED_RR, &param);
     if (result != 0)
@@ -48,7 +49,7 @@ void NamBackgroundProcessor::ThreadProc()
         std::cout << "ToobNAM: Failed to set background thread priority. (" << strerror(result) << ")";
     }
 
-    uint8_t messageBuffer[1024+100];
+    uint8_t messageBuffer[1024 + 100];
 
     bool done = false;
     while (!done)
@@ -61,13 +62,16 @@ void NamBackgroundProcessor::ThreadProc()
         {
             SetDspMessage *m = (SetDspMessage *)message;
             bgDsp = nullptr;
-            this->bgDsp = std::unique_ptr<DSP>(m->dsp);
+            this->bgDsp = std::unique_ptr<ToobNamDsp>(m->dsp);
+            SetBgVolumes();
             this->backgroundInputTailPosition = 0;
             this->backgroundReturnTailPosition = 0;
             if (m->antiPopLength == 0)
             {
                 fadeProcessor.Reset();
-            } else {
+            }
+            else
+            {
                 fadeProcessor.Prewarm(this->bgDsp.get());
             }
             this->bgInstanceId = m->instanceId;
@@ -85,14 +89,14 @@ void NamBackgroundProcessor::ThreadProc()
 
             done = true;
             QuitMessage msg;
-            this->bgToFgQueue.write(&msg,sizeof(msg));
+            this->bgToFgQueue.write(&msg, sizeof(msg));
             break;
         }
         case NamMessageType::SampleData:
         {
             SampleDataMessage *source = (SampleDataMessage *)message;
             uint64_t instanceId = source->instanceId;
-            if (instanceId != this->fgInstanceId) 
+            if (instanceId != this->fgInstanceId)
             {
                 return; // data that's no longer useful. save some CPU.
             }
@@ -100,7 +104,7 @@ void NamBackgroundProcessor::ThreadProc()
 
             if (this->backgroundInputTailPosition + source->length > this->backgroundInputBuffer.size())
             {
-                backgroundInputBuffer.resize(backgroundInputBuffer.size()*2);
+                backgroundInputBuffer.resize(backgroundInputBuffer.size() * 2);
                 backgroundReturnBuffer.resize(backgroundInputBuffer.size());
             }
             const float *restrict pIn = source->samples;
@@ -111,20 +115,39 @@ void NamBackgroundProcessor::ThreadProc()
             }
             backgroundInputTailPosition += length;
 
-            while (backgroundInputTailPosition >= this->frameSize) {
+            while (backgroundInputTailPosition >= this->frameSize)
+            {
                 // PROCESS NAM AUDIO FRAME
-                if (fadeProcessor.IsFadedOut()) {
+                if (fadeProcessor.IsFadedOut())
+                {
                     // free up a little CPU at an awkward and busy time!
                     float *p = backgroundReturnBuffer.data();
                     for (size_t i = 0; i < frameSize; ++i)
                     {
                         p[i] = 0;
                     }
-                } else {
+                }
+                else
+                {
                     if (source->instanceId == this->fgInstanceId)
                     {
-                        bgDsp->process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
-                    } else {
+                        float *input = backgroundInputBuffer.data();
+                        for (size_t i = 0; i < frameSize; ++i)
+                        {
+                            input[i] *= bgInputVolume;
+                        }
+
+
+                        bgDsp->Process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
+
+                        float *output = backgroundInputBuffer.data();
+                        for (size_t i = 0; i < frameSize; ++i)
+                        {
+                            output[i] *= bgOutputVolume;
+                        }
+                    }
+                    else
+                    {
                         // stale dsp. just return data as quickly as possible.
                         float *p = backgroundReturnBuffer.data();
                         for (size_t i = 0; i < frameSize; ++i)
@@ -138,9 +161,9 @@ void NamBackgroundProcessor::ThreadProc()
                 // send results back to the foreground thread.
                 for (size_t ix = 0; ix < frameSize; /**/)
                 {
-                    size_t thisTime = std::min(MAX_DATA_MESSAGE_SAMPLES, frameSize-ix);
-                    SampleDataMessage message(bgInstanceId,thisTime);
-                    pIn = backgroundReturnBuffer.data()+ix;
+                    size_t thisTime = std::min(MAX_DATA_MESSAGE_SAMPLES, frameSize - ix);
+                    SampleDataMessage message(bgInstanceId, thisTime);
+                    pIn = backgroundReturnBuffer.data() + ix;
                     pOut = message.samples;
                     for (size_t i = 0; i < thisTime; ++i)
                     {
@@ -150,30 +173,30 @@ void NamBackgroundProcessor::ThreadProc()
                     ix += thisTime;
                 }
 
-
                 // remove frameSize samples from the input buffer.
                 if (backgroundInputTailPosition > frameSize)
                 {
-                    auto newTail = backgroundInputTailPosition-frameSize;
+                    auto newTail = backgroundInputTailPosition - frameSize;
                     pIn = backgroundInputBuffer.data() + frameSize;
                     pOut = backgroundInputBuffer.data();
-                    for (size_t i = 0; i < newTail; ++i) 
+                    for (size_t i = 0; i < newTail; ++i)
                     {
                         pOut[i] = pIn[i];
                     }
                     backgroundInputTailPosition = newTail;
-                }   
-                else {
+                }
+                else
+                {
                     backgroundInputTailPosition = 0;
-                } 
+                }
             }
             break;
         }
         case NamMessageType::StopBackgroundProcessing:
         {
-            // return the currently ative DSP to the foreground.
+            // return the currently ative ToobNamDsp to the foreground.
             StopBackgroundProcessingReplyMessage msg{this->bgDsp.release()};
-            bgToFgQueue.write(&msg,sizeof(msg));
+            bgToFgQueue.write(&msg, sizeof(msg));
             this->bgDsp = nullptr;
             break;
         }
@@ -201,11 +224,11 @@ void NamBackgroundProcessor::fgWrite(const float *samples, size_t nFrames)
 
         SampleDataMessage msg{fgInstanceId, samples, thisTime};
 
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Winvalid-offsetof"
-        static_assert(offsetof(SampleDataMessage,samples) > offsetof(SampleDataMessage,length));
-        #pragma GCC diagnostic pop
-        
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+        static_assert(offsetof(SampleDataMessage, samples) > offsetof(SampleDataMessage, length));
+#pragma GCC diagnostic pop
+
         fgToBgQueue.write(&msg, msg.MessageSize());
         samples += thisTime;
         nFrames -= thisTime;
@@ -225,18 +248,21 @@ bool NamBackgroundProcessor::fgRead(float *samples, size_t nFrames)
             if (this->backgroundReturnTailPosition > nFrames)
             {
                 // shouldn't actually ever happen.
-                size_t remainder = this->backgroundReturnTailPosition-nFrames;
+                size_t remainder = this->backgroundReturnTailPosition - nFrames;
                 for (size_t i = 0; i < remainder; ++i)
                 {
-                    this->backgroundReturnBuffer[i] = this->backgroundReturnBuffer[i+remainder];
+                    this->backgroundReturnBuffer[i] = this->backgroundReturnBuffer[i + remainder];
                 }
                 this->backgroundReturnTailPosition = remainder;
-            } else {
+            }
+            else
+            {
                 this->backgroundReturnTailPosition = 0;
             }
             return true;
         }
-        if (this->backgroundQueueComplete) {
+        if (this->backgroundQueueComplete)
+        {
             // an error for us to get here, really.  Shouldn't ever happen.
             for (size_t i = 0; i < nFrames; ++i)
             {
@@ -248,7 +274,6 @@ bool NamBackgroundProcessor::fgRead(float *samples, size_t nFrames)
     }
 }
 
-
 bool NamBackgroundProcessor::fgProcessMessage(bool wait)
 {
     bool messageProcessed = false;
@@ -256,70 +281,70 @@ bool NamBackgroundProcessor::fgProcessMessage(bool wait)
 
     while (true)
     {
-        size_t nRead = this->bgToFgQueue.read(buffer,sizeof(buffer),false);
-        if (nRead == 0) 
+        size_t nRead = this->bgToFgQueue.read(buffer, sizeof(buffer), false);
+        if (nRead == 0)
         {
             if (!wait || messageProcessed)
             {
                 return messageProcessed;
             }
-            this->bgToFgQueue.read(buffer,sizeof(buffer),true);
+            this->bgToFgQueue.read(buffer, sizeof(buffer), true);
         }
         messageProcessed = true;
 
-        NamMessage*m = (NamMessage*)buffer;
-        switch (m->messageType) 
+        NamMessage *m = (NamMessage *)buffer;
+        switch (m->messageType)
         {
-            case NamMessageType::Quit:
-                this->backgroundQueueComplete = true;
-                if (this->listener)
-                {
-                    this->listener->onBackgroundProcessingComplete();
-                }
-                return true;
-            case NamMessageType::SampleData:
+        case NamMessageType::Quit:
+            this->backgroundQueueComplete = true;
+            if (this->listener)
             {
-                SampleDataMessage*msg = (SampleDataMessage*)m;
+                this->listener->onBackgroundProcessingComplete();
+            }
+            return true;
+        case NamMessageType::SampleData:
+        {
+            SampleDataMessage *msg = (SampleDataMessage *)m;
 
-                if (msg->instanceId != fgInstanceId)
-                {
-                    return true; // silently discard if it's stale data.
-                }
-                size_t len = msg->length;
-                if (backgroundReturnBuffer.size() < backgroundReturnTailPosition+len) 
-                {
-                    // should never happen.
-                    backgroundReturnBuffer.resize(backgroundReturnTailPosition+ len);
-                }
-                float* restrict  pDest = backgroundReturnBuffer.data() + backgroundReturnTailPosition;
-                const float *restrict pSource  = msg->samples;
-                for (size_t i = 0; i < len; ++i)
-                {
-                    pDest[i] = pSource[i];
-                }
-                this->backgroundReturnTailPosition += len;
+            if (msg->instanceId != fgInstanceId)
+            {
+                return true; // silently discard if it's stale data.
+            }
+            size_t len = msg->length;
+            if (backgroundReturnBuffer.size() < backgroundReturnTailPosition + len)
+            {
+                // should never happen.
+                backgroundReturnBuffer.resize(backgroundReturnTailPosition + len);
+            }
+            float *restrict pDest = backgroundReturnBuffer.data() + backgroundReturnTailPosition;
+            const float *restrict pSource = msg->samples;
+            for (size_t i = 0; i < len; ++i)
+            {
+                pDest[i] = pSource[i];
+            }
+            this->backgroundReturnTailPosition += len;
 
-                if (this->listener) {
-                    this->listener->onSamplesOut(msg->instanceId,msg->samples,msg->length);
-                }
+            if (this->listener)
+            {
+                this->listener->onSamplesOut(msg->instanceId, msg->samples, msg->length);
+            }
+        }
+        break;
+
+        case NamMessageType::StopBackgroundProcessingReply:
+        {
+            StopBackgroundProcessingReplyMessage *msg =
+                (StopBackgroundProcessingReplyMessage *)m;
+            if (this->listener)
+            {
+                this->listener->onStopBackgroundProcessingReply(
+                    msg->dsp);
             }
             break;
-
-            case NamMessageType::StopBackgroundProcessingReply:
-            {
-                StopBackgroundProcessingReplyMessage *msg = 
-                    (StopBackgroundProcessingReplyMessage *)m;
-                if (this->listener)
-                {
-                    this->listener->onStopBackgroundProcessingReply(
-                        msg->dsp
-                    );
-                }
-                break;
-            }
-            default: 
-                throw std::logic_error("Invalid foreground message id.");
-                break;
+        }
+        default:
+            throw std::logic_error("Invalid foreground message id.");
+            break;
         }
     }
 }
@@ -328,20 +353,36 @@ void NamBackgroundProcessor::fgClose()
 {
     // relese all resources (but be preapared for a restart)
 
-    if (this->thread) {
+    if (this->thread)
+    {
         QuitMessage msg;
-        fgToBgQueue.write(&msg,sizeof(msg));
+        fgToBgQueue.write(&msg, sizeof(msg));
 
         while (!backgroundQueueComplete)
         {
             this->fgProcessMessage(true);
         }
-        this->thread.reset(); //probable  jthread join.
+        this->thread.reset(); // probable  jthread join.
         // return state to pre-activate, paranoid mode.
         this->backgroundReturnTailPosition = 0;
         this->backgroundInputTailPosition = 0;
         this->threadActive = false;
         this->fadeProcessor.Reset();
     }
-        
+}
+
+void NamBackgroundProcessor::SetBgVolumes()
+{
+    if (bgDsp)
+    {
+        float inputDb = bgDsp->GetRecommendedInputDBAdjustment();
+        bgInputVolume = Db2Af(inputDb);
+        float outputDb = bgDsp->GetRecommendedOutputDBAdjustment();
+        bgOutputVolume = Db2Af(outputDb);
+    }
+    else
+    {
+        bgInputVolume = 0.0;
+        bgOutputVolume = 0.0;
+    }
 }
