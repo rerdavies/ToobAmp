@@ -1,5 +1,4 @@
-Test 2k buffer size.
-Read of first frame?
+Mike's NAM file dialog failes after selectiong <none>
 
 Filename for copy ?
 
