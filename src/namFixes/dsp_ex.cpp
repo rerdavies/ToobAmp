@@ -43,9 +43,12 @@ namespace toob
             NeuralAudio::NeuralModel::SetDefaultMaxAudioBufferSize(maxBlockSize);   
         }
 
+
         ToobNamDsp *model = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
-        // model->GetRecommendedInputDBAdjustment();
-        // model->GetRecommendedOutputDBAdjustment()
+        if (model) 
+        {
+            model->SetAudioInputLevelDBu(0);
+        }
 
         return std::unique_ptr<ToobNamDsp>(model);
 
