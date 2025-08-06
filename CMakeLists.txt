@@ -3,8 +3,11 @@
 #
 cmake_minimum_required (VERSION 3.9)
 set(VERBOSE true)
-
 set(CMAKE_VERBOSE_MAKEFILE ON)
+
+project(ToobAmp VERSION 1.1.66 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+# Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
+
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -16,8 +19,7 @@ option(TOOB_MULTI_ARCH_BUILD OFF) # install both a72 and a76 Toob plugins in the
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
 
-project(ToobAmp VERSION 1.1.65 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
-
+project(ToobAmp VERSION 1.1.66 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 
 set(PROJECT_RELEASE_QUALIFIER "")
