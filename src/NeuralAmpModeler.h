@@ -148,7 +148,7 @@ namespace toob
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
 
-        void SetVolumes();
+        void SetModelVolumes();
         bool frameSizeErrorGiven = false;
 
 
