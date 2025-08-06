@@ -12,11 +12,15 @@ project(ToobAmp VERSION 1.1.66 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
+
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
 option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
 option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" OFF)
 option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
 option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.
+
+message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
@@ -37,6 +41,8 @@ execute_process(COMMAND
     CMAKE_DEB_HOST_ARCH
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency"))
     add_compile_options("-ffast-math")
