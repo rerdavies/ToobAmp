@@ -335,7 +335,7 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
 
             } else {
-                SetVolumes();
+                SetModelVolumes();
             }
         }
         else
@@ -415,9 +415,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
             try
             {
 
-                this->LogNote("Entering GetNAM");
                 dspResult = _GetNAM(filename);
-                this->LogNote("Exited GetNAM");
                 dspFilename = filename;
                 if (!dspResult)
                 {
@@ -458,7 +456,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
         ToobNamDsp *oldModel = this->mNAM.release();
 
         this->mNAM = std::unique_ptr<ToobNamDsp>(loadResponse->modelObject);
-        SetVolumes();
+        SetModelVolumes();
 
         if (oldModel != nullptr)
         {
@@ -1092,6 +1090,8 @@ void NeuralAmpModeler::HandleBufferChange()
             {
                 backgroundProcessor.fgSetModel(this->mNAM.release(), 0);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+            } else {
+                this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessingEnabled;
             }
             break;
         case BackgroundProcessorState::FrameErrorState:
@@ -1138,7 +1138,7 @@ void NeuralAmpModeler::HandleBackgroundProcessorEvents()
 void NeuralAmpModeler::onStopBackgroundProcessingReply(ToobNamDsp *dsp)
 {
     this->mNAM = std::unique_ptr<ToobNamDsp>(dsp); // re-attach to a unique_ptr!
-    SetVolumes();
+    SetModelVolumes();
     this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
 }
 void NeuralAmpModeler::onBackgroundProcessingComplete()
@@ -1222,7 +1222,7 @@ void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
     }
 }
 
-void NeuralAmpModeler::SetVolumes()
+void NeuralAmpModeler::SetModelVolumes()
 {
     if (mNAM)
     {

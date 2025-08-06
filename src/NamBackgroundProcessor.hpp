@@ -365,7 +365,6 @@ namespace toob::nam_impl
         void SetSampleRate(double sampleRate)
         {
             this->sampleRate = (uint32_t)sampleRate;
-            this->fadeProcessor.SetSampleRate(this->sampleRate);
         }
         void SetFrameSize(size_t frameSize) {
             this->frameSize = frameSize;
@@ -445,7 +444,6 @@ namespace toob::nam_impl
 
         uint64_t bgInstanceId = 0;
         std::atomic<uint64_t> fgInstanceId = 0;
-        NamFadeProcessor fadeProcessor;
 
         std::unique_ptr<ToobNamDsp> bgDsp;
         NamQueue fgToBgQueue{8 * 1024};

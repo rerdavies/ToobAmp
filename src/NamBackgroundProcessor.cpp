@@ -66,14 +66,6 @@ void NamBackgroundProcessor::ThreadProc()
             SetBgVolumes();
             this->backgroundInputTailPosition = 0;
             this->backgroundReturnTailPosition = 0;
-            if (m->antiPopLength == 0)
-            {
-                fadeProcessor.Reset();
-            }
-            else
-            {
-                fadeProcessor.Prewarm(this->bgDsp.get());
-            }
             this->bgInstanceId = m->instanceId;
             break;
         };
@@ -94,12 +86,10 @@ void NamBackgroundProcessor::ThreadProc()
         }
         case NamMessageType::SampleData:
         {
-            SampleDataMessage *source = (SampleDataMessage *)message;
-            uint64_t instanceId = source->instanceId;
-            if (instanceId != this->fgInstanceId)
             {
-                return; // data that's no longer useful. save some CPU.
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
+            SampleDataMessage *source = (SampleDataMessage *)message;
             size_t length = source->length;
 
             if (this->backgroundInputTailPosition + source->length > this->backgroundInputBuffer.size())
@@ -118,45 +108,32 @@ void NamBackgroundProcessor::ThreadProc()
             while (backgroundInputTailPosition >= this->frameSize)
             {
                 // PROCESS NAM AUDIO FRAME
-                if (fadeProcessor.IsFadedOut())
+                if (source->instanceId == this->fgInstanceId)
                 {
-                    // free up a little CPU at an awkward and busy time!
+                    float *input = backgroundInputBuffer.data();
+                    for (size_t i = 0; i < frameSize; ++i)
+                    {
+                        input[i] *= bgInputVolume;
+                    }
+
+
+                    bgDsp->Process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
+
+                    float *output = backgroundInputBuffer.data();
+                    for (size_t i = 0; i < frameSize; ++i)
+                    {
+                        output[i] *= bgOutputVolume;
+                    }
+                }
+                else
+                {
+                    // stale dsp. just return data as quickly as possible.
                     float *p = backgroundReturnBuffer.data();
                     for (size_t i = 0; i < frameSize; ++i)
                     {
                         p[i] = 0;
                     }
                 }
-                else
-                {
-                    if (source->instanceId == this->fgInstanceId)
-                    {
-                        float *input = backgroundInputBuffer.data();
-                        for (size_t i = 0; i < frameSize; ++i)
-                        {
-                            input[i] *= bgInputVolume;
-                        }
-
-
-                        bgDsp->Process(backgroundInputBuffer.data(), backgroundReturnBuffer.data(), frameSize);
-
-                        float *output = backgroundInputBuffer.data();
-                        for (size_t i = 0; i < frameSize; ++i)
-                        {
-                            output[i] *= bgOutputVolume;
-                        }
-                    }
-                    else
-                    {
-                        // stale dsp. just return data as quickly as possible.
-                        float *p = backgroundReturnBuffer.data();
-                        for (size_t i = 0; i < frameSize; ++i)
-                        {
-                            p[i] = 0;
-                        }
-                    }
-                }
-                fadeProcessor.Process(backgroundReturnBuffer.data(), frameSize);
 
                 // send results back to the foreground thread.
                 for (size_t ix = 0; ix < frameSize; /**/)
@@ -202,7 +179,6 @@ void NamBackgroundProcessor::ThreadProc()
         }
         case NamMessageType::FadeOut:
         {
-            this->fadeProcessor.FadeOut();
             break;
         }
 
@@ -367,7 +343,6 @@ void NamBackgroundProcessor::fgClose()
         this->backgroundReturnTailPosition = 0;
         this->backgroundInputTailPosition = 0;
         this->threadActive = false;
-        this->fadeProcessor.Reset();
     }
 }
 
