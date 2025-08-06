@@ -751,110 +751,116 @@ add_custom_command(
 configure_file(ToobAmp.lv2/ttl.in/PowerStage2.ttl.in ToobAmp.lv2/PowerStage2.ttl)
 
 
+if(TOOB_BUILD_UI)
+    add_library(ToobAmpUI SHARED
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
+        ToobNoiseGateUi.cpp
 
-add_library(ToobAmpUI SHARED
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmpVersion.hpp
-     ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
-    ToobNoiseGateUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
+        ToobMixUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
-    ToobMixUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
-    ToobGraphicEqUi.cpp
-
-
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
-    ToobVolumeUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
-    ToobGraphicEqUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp
-    record_plugins/ToobRecordMonoUi.cpp
-    record_plugins/ToobRecordStereoUi.cpp
-    record_plugins/ToobLooperFourUi.cpp
-    record_plugins/ToobLooperOneUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
+        ToobGraphicEqUi.cpp
 
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp
-    ToobNeuralAmpModelerUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp
-    CabIRUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
+        ToobVolumeUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp
-    ConvolutionReverbStereoUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
+        ToobGraphicEqUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp
-    ConvolutionReverbUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp
-    ToobTunerUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp
-    SpectrumAnalyzerUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp
-    ToobMlUi.cpp
-
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp
-    ToobFreeverbUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordMonoInfo.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobRecordStereoInfo.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp
+        record_plugins/ToobRecordMonoUi.cpp
+        record_plugins/ToobRecordStereoUi.cpp
+        record_plugins/ToobLooperFourUi.cpp
+        record_plugins/ToobLooperOneUi.cpp
 
 
-    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp
-    Tf2FlangerUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobNeuralAmpModelerInfo.hpp
+        ToobNeuralAmpModelerUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp
-    Tf2FlangerStereoUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/CabIRInfo.hpp
+        CabIRUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp
-    ToneStackUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbStereoInfo.hpp
+        ConvolutionReverbStereoUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp
-    CabSimUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ConvolutionReverbInfo.hpp
+        ConvolutionReverbUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp
-    ToobChorusUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobTunerInfo.hpp
+        ToobTunerUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp
-    ToobDelayUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/SpectrumAnalyzerInfo.hpp
+        SpectrumAnalyzerUi.cpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp
-    ToobPhaserUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMLInfo.hpp
+        ToobMlUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobFreeverbInfo.hpp
+        ToobFreeverbUi.cpp
 
 
-    ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp
-    InputStageUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerInfo.hpp
+        Tf2FlangerUi.cpp
 
-    AboutDialog.hpp AboutDialog.cpp
-    ToobUi.hpp ToobUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/Tf2FlangerStereoInfo.hpp
+        Tf2FlangerStereoUi.cpp
 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp
+        ToneStackUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp
+        CabSimUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobChorusInfo.hpp
+        ToobChorusUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobDelayInfo.hpp
+        ToobDelayUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobPhaserInfo.hpp
+        ToobPhaserUi.cpp
+
+
+        ${CMAKE_CURRENT_BINARY_DIR}/InputStageInfo.hpp
+        InputStageUi.cpp
+
+        AboutDialog.hpp AboutDialog.cpp
+        ToobUi.hpp ToobUi.cpp
+
+    )
+    set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
+    set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
+
+    target_link_options(ToobAmpUI PRIVATE
+        -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmpUi.version
+        -Wl,-z,nodelete
+    )
+
+
+
+    target_include_directories(
+        ToobAmpUI PRIVATE
+        ${LV2C_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_BINARY_DIR}
+    )
+    target_link_libraries(
+        ToobAmpUI PRIVATE
+        lv2c lv2c_ui
+    )
+
+    install(TARGETS ToobAmpUI
+    LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
 )
-set_target_properties(ToobAmpUI PROPERTIES OUTPUT_NAME "ToobAmpUI")
-set_target_properties(ToobAmpUI PROPERTIES PREFIX "")
 
-target_link_options(ToobAmpUI PRIVATE
-    -Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/ToobAmpUi.version
-    -Wl,-z,nodelete
-)
-
-
-
-target_include_directories(
-    ToobAmpUI PRIVATE
-    ${LV2C_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_BINARY_DIR}
-)
-target_link_libraries(
-    ToobAmpUI PRIVATE
-    lv2c lv2c_ui
-)
-
+endif()
 # Requires update of wavnet_t.hpp to synch with latest NAM Core fork.
 # add_executable(NamTTest 
 #     NamTTestMain.cpp
@@ -1146,10 +1152,6 @@ endif()
 include(GNUInstallDirs)
 
 
-install(TARGETS ToobAmpUI
-    LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-)
 
 
 if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
