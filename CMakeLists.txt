@@ -1,4 +1,5 @@
-﻿# CMakeList.txt : Top-level CMake project file, do global configuration
+﻿
+# CMakeList.txt : Top-level CMake project file, do global configuration
 # and include sub-projects here.
 #
 cmake_minimum_required (VERSION 3.9)
@@ -11,10 +12,11 @@ project(ToobAmp VERSION 1.1.66 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(INSTALL_LV2CAIRO_TEST_PLUGIN OFF) # Install the lv2caoir test plugin.
-option(WARNINGS_ARE_ERRORS ON) # Treat warnings as errors.
-option(A76_OPTIMIZATION OFF) # Optimize for cortex-a76 (arm64 builds only)
-option(TOOB_MULTI_ARCH_BUILD OFF) # install both a72 and a76 Toob plugins in the same package.
+option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
+option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
+option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" OFF)
+option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
+option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.
 
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
@@ -36,16 +38,17 @@ execute_process(COMMAND
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
 
-
-if (CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency"))
+    add_compile_options("-ffast-math")
     if (A76_OPTIMIZATION)
-        message(STATUS "Using Cortex-A76 optimizations")
+        message(STATUS "Using Cortex-A76/Pi 5 optimizations")
         add_compile_options("-mcpu=cortex-a76" "-mtune=cortex-a76")
-    else()
-        message(STATUS "Using Cortex-A72 optimizations")
+    else ()
+        message(STATUS "Using Cortex-A72/Pi 4 optimizations")
         add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
     endif()
 endif()
+
 
 include(CTest)
 enable_testing()
