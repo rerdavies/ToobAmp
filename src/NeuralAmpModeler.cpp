@@ -1214,8 +1214,22 @@ void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
             }
             else
             {
+                using clock_t = ::toob::nam_impl::NamBackgroundProcessor::clock_t;
+                #if TRACE_PROCESSING
+                    auto start = clock_t::now();
+                    backgroundProcessor.TraceProcessing('f',0,clock_t::duration(0));
+                #endif
                 this->backgroundProcessor.fgRead(output, numFrames);
+                #if TRACE_PROCESSING
+                    auto writeStart = clock_t::now();
+                    backgroundProcessor.TraceProcessing('f',1, writeStart-start);
+                #endif
                 this->backgroundProcessor.fgWrite(input, numFrames);
+                #if TRACE_PROCESSING
+                    auto writeEnd = clock_t::now();
+                    backgroundProcessor.TraceProcessing('f',2, writeEnd-writeStart);
+                #endif
+
             }
         }
         break;
