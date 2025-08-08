@@ -86,9 +86,10 @@ void NamBackgroundProcessor::ThreadProc()
         }
         case NamMessageType::SampleData:
         {
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
+            TraceProcessing('b',0, clock_t::duration(0));
+            #if TRACE_PROCESSING
+            auto start = clock_t::now();
+            #endif
             SampleDataMessage *source = (SampleDataMessage *)message;
             size_t length = source->length;
 
@@ -107,6 +108,7 @@ void NamBackgroundProcessor::ThreadProc()
 
             while (backgroundInputTailPosition >= this->frameSize)
             {
+                
                 // PROCESS NAM AUDIO FRAME
                 if (source->instanceId == this->fgInstanceId)
                 {
@@ -138,6 +140,10 @@ void NamBackgroundProcessor::ThreadProc()
                 // send results back to the foreground thread.
                 for (size_t ix = 0; ix < frameSize; /**/)
                 {
+                    #if TRACE_PROCESSING
+                    TraceProcessing('b',1, start-clock_t::now());
+                    #endif
+                    
                     size_t thisTime = std::min(MAX_DATA_MESSAGE_SAMPLES, frameSize - ix);
                     SampleDataMessage message(bgInstanceId, thisTime);
                     pIn = backgroundReturnBuffer.data() + ix;

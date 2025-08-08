@@ -33,6 +33,7 @@ SOFTWARE.
 #include <thread>
 #include <atomic>
 #include "restrict.hpp"
+#include <chrono>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -41,91 +42,13 @@ SOFTWARE.
 
 #pragma GCC diagnostic pop
 
+#define TRACE_PROCESSING false
 namespace toob
 {
     class NeuralAmpModeler;
 };
 namespace toob::nam_impl
 {
-
-
-    class NamFadeProcessor 
-    {
-    public:
-        NamFadeProcessor() {
-            Reset();
-        }
-        void SetSampleRate(double sampleRate) {
-            this->sampleRate = (size_t)sampleRate;
-            this->maxFadeLength = (size_t)sampleRate*0.1;
-            this->fadeScale = 1.0f/maxFadeLength;
-        }
-        void Reset()
-        {
-            prewarmSamples = 0;
-            fadeInSamples = 0;
-            fadeOutSamples = 0;
-            fadedOut = false;
-
-        }
-        void Prewarm(ToobNamDsp*dsp) {
-            this->prewarmSamples = (size_t)(sampleRate/4);
-            this->fadeInSamples = maxFadeLength;
-            this->fadeOutSamples = 0;
-            this->fadedOut = false;
-
-        }
-        void FadeOut() {
-            this->prewarmSamples = 0;
-            this->fadeInSamples = 0;
-            this->fadeOutSamples = maxFadeLength;
-        }
-        bool IsFadedOut() const {
-            return false;
-            //return fadedOut;
-        }
-        void Process(float*outputBuffer, size_t numFrames)
-        {
-            return;
-            // size_t ix = 0;
-            // if (prewarmSamples != 0)
-            // {
-            //     for (/**/; ix < numFrames && prewarmSamples != 0; ++ix,--prewarmSamples)
-            //     {
-            //         outputBuffer[ix] = 0;
-            //     }
-            // }
-            // if (fadeInSamples != 0)
-            // {
-            //     for (/**/; ix < numFrames && fadeInSamples != 0; ++ix, --fadeInSamples) 
-            //     {
-            //         float vol = 1.0f-fadeInSamples*fadeScale;
-            //         outputBuffer[ix] *= vol;
-            //     }
-            // }
-            // if (fadeOutSamples != 0 && ix < numFrames)
-            // {
-            //     for (/**/; ix < numFrames && fadeOutSamples != 0; ++ix, --fadeOutSamples)
-            //     {
-            //         float vol = fadeOutSamples*fadeScale;
-            //         outputBuffer[ix] *= vol;
-            //     }
-            //     fadedOut = fadeOutSamples == 0;
-            // }
-
-        }
-    private: 
-        size_t sampleRate;
-        float fadeScale;
-        size_t maxFadeLength;
-
-        size_t  prewarmSamples = 0;
-        size_t fadeInSamples = 0;
-        size_t fadeOutSamples = 0;
-        bool fadedOut = false;
-
-    
-    };
 
     // Packet reader/writer, blocking reads and writes. single-reader, multi-writer.
     class NamQueue
@@ -362,6 +285,35 @@ namespace toob::nam_impl
         std::atomic<bool> backgroundQueueComplete = false;
 
     public:
+        using clock_t = std::chrono::system_clock;
+        using trace_duration_t = std::chrono::microseconds;
+
+        struct TraceRecord {
+            trace_duration_t time;
+            trace_duration_t elapsed;
+            char fgBg;
+            uint16_t phase; 
+        };
+        std::mutex traceMutex;
+        size_t traceIndex = 0;
+        std::vector<TraceRecord> traces{10000};
+
+        void TraceProcessing(char fgBg, uint16_t phase, clock_t::duration duration)
+        {
+            #if TRACE_PROCESSING
+            std::lock_guard lock{traceMutex};
+            traces[traceIndex++] = {
+                std::chrono::duration_cast<std::chrono::microseconds>(clock_t::now().time_since_epoch()),
+                std::chrono::duration_cast<std::chrono::microseconds>(duration),
+                fgBg,
+                phase
+            };
+            if (traceIndex >= traces.size())
+            {
+                traceIndex = 0;
+            }
+            #endif
+        }
         void SetSampleRate(double sampleRate)
         {
             this->sampleRate = (uint32_t)sampleRate;
