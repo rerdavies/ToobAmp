@@ -173,15 +173,15 @@ void ToobPlayer::Activate()
     {
         this->loadRequested = true;
 
-        // prefer host's metdata, but use what we have in state if not available.
-        std::string metadata =  bgGetLoopJsonMetadata(this->filePath);
-        if (!metadata.empty())
-        {
-            loopJson = metadata;
-        }  else {
-            bgSetLoopJsonMetadata(this->filePath, loopJson);
-        }
-        requestLoopJson = true; // request the loop json to be sent to the UI.
+        // // prefer host's metdata, but use what we have in state if not available.
+        // std::string metadata =  bgGetLoopJsonMetadata(this->filePath);
+        // if (!metadata.empty())
+        // {
+        //     loopJson = metadata;
+        // }  else {
+        //     bgSetLoopJsonMetadata(this->filePath, loopJson);
+        // }
+        //requestLoopJson = true; // request the loop json to be sent to the UI.
     }
 
     lv2AudioFileProcessor.Activate();

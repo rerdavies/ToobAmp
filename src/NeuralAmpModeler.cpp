@@ -73,6 +73,7 @@ using namespace toob;
 using namespace LsNumerics;
 
 
+
 #include <time.h>
 uint64_t timeMs();
 
@@ -322,8 +323,6 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
             dspResult = _GetNAM(modelFileName);
         }
         this->mNAM = std::move(dspResult);
-        
-
 
         if (mNAM)
         {
@@ -333,8 +332,12 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
                 ToobNamDsp *dsp = this->mNAM.release();
                 backgroundProcessor.fgSetModel(dsp, 0);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+                fgSendIx = 0;
+                fgReturnIx = 0;
 
-            } else {
+            }
+            else
+            {
                 SetModelVolumes();
             }
         }
@@ -358,7 +361,6 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
         return false;
     }
 }
-
 
 LV2_State_Status
 NeuralAmpModeler::OnRestoreLv2State(
@@ -471,6 +473,9 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
             {
                 backgroundProcessor.fgSetModel(dsp, 0);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+                fgSendIx = 0;
+                fgReturnIx = 0;
+
             }
         }
     }
@@ -821,9 +826,9 @@ std::unique_ptr<ToobNamDsp> NeuralAmpModeler::_GetNAM(const std::string &modelPa
     }
     auto dspPath = std::filesystem::path(modelPath);
     std::unique_ptr<ToobNamDsp> nam = get_dsp_ex(dspPath,
-                                          (uint32_t)getRate(),
-                                          (int)(this->GetBuffSizeOptions().minBlockLength),
-                                          (int)(this->GetBuffSizeOptions().maxBlockLength));
+                                                 (uint32_t)getRate(),
+                                                 (int)(this->GetBuffSizeOptions().minBlockLength),
+                                                 (int)(this->GetBuffSizeOptions().maxBlockLength));
     return nam;
 }
 
@@ -1090,7 +1095,9 @@ void NeuralAmpModeler::HandleBufferChange()
             {
                 backgroundProcessor.fgSetModel(this->mNAM.release(), 0);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
-            } else {
+            }
+            else
+            {
                 this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessingEnabled;
             }
             break;
@@ -1115,7 +1122,7 @@ void NeuralAmpModeler::HandleBufferChange()
         {
             // bg processor owns the model. get it back.
             backgroundProcessor.fgStopBackgroundProcessing(); // get our ToobNamDsp back.
-            
+
             this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
             break;
         }
@@ -1132,7 +1139,6 @@ void NeuralAmpModeler::HandleBufferChange()
 void NeuralAmpModeler::HandleBackgroundProcessorEvents()
 {
     backgroundProcessor.fgProcessMessage(false);
-    
 }
 
 void NeuralAmpModeler::onStopBackgroundProcessingReply(ToobNamDsp *dsp)
@@ -1148,9 +1154,8 @@ void NeuralAmpModeler::onSamplesOut(uint64_t instanceId, float *data, size_t len
 {
 }
 
-void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
+void NeuralAmpModeler::ProcessNam(float *restrict input,  float * restrict output, size_t numFrames)
 {
-    int nFrames = (int)numFrames;
     switch (this->backgroundProcessorState)
     {
     case BackgroundProcessorState::ForegroundProcessing:
@@ -1158,14 +1163,11 @@ void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
         /****** FOREGROUND PROCESSING */
         if (mNAM != nullptr)
         {
-            // mNAM->SetNormalize(cOutNorm.GetValue());
-            // TODO remove input / output gains from here.
-            // normalize input.
             for (size_t i = 0; i < numFrames; ++i)
             {
                 input[i] *= fgInputVolume;
             }
-            mNAM->Process(const_cast<float*>(input), output, nFrames);
+            mNAM->Process(const_cast<float *>(input), output, numFrames);
             for (size_t i = 0; i < numFrames; ++i)
             {
                 output[i] *= fgOutputVolume;
@@ -1192,15 +1194,36 @@ void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
             }
             else
             {
-                float *pOut = output;
-                for (size_t i = 0; i < numFrames; ++i)
+                if (numFrames < 64)
                 {
-                    pOut[i] = 0;
+                    const float *restrict pIn = input;
+                    float *restrict pOut = fgSendBuffer.data() + fgSendIx;
+                    for (size_t i = 0; i < numFrames; ++i)
+                    {
+                        pOut[i] = pIn[i];
+                    }
+                    fgSendIx += numFrames;
+                    if (fgSendIx == 64)
+                    {
+                        backgroundProcessor.fgWrite(fgSendBuffer.data(), 64);
+                        fgSendIx = 0;
+                        this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessing;
+                    }
+                    this->_FallbackDSP(input, output, numFrames);
                 }
-                this->backgroundProcessor.fgWrite(input, numFrames);
+                else
+                {
+                    float *pOut = output;
+                    for (size_t i = 0; i < numFrames; ++i)
+                    {
+                        pOut[i] = 0;
+                    }
+                    this->backgroundProcessor.fgWrite(input, numFrames);
 
-                this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessing;
-                this->_FallbackDSP(input, output, numFrames);
+                    this->_FallbackDSP(input, output, numFrames);
+                    this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessing;
+
+                }
             }
         }
         break;
@@ -1214,38 +1237,73 @@ void NeuralAmpModeler::ProcessNam(float *input, float *output, size_t numFrames)
             }
             else
             {
-                #if TRACE_PROCESSING
+                if (numFrames < 64)
+                {
+                    const float *restrict pIn = input;
+                    float *restrict pOut = fgSendBuffer.data() + fgSendIx;
+                    for (size_t i = 0; i < numFrames; ++i)
+                    {
+                        pOut[i] = pIn[i];
+                    }
+                    fgSendIx += numFrames;
+                    if (fgSendIx == 64)
+                    {
+                        backgroundProcessor.fgWrite(fgSendBuffer.data(), 64);
+                        fgSendIx = 0;
+                    }
+                    if (fgReturnIx == 0)
+                    {
+                        backgroundProcessor.fgRead(fgReturnBuffer.data(), 64);
+                    }
+                    pIn = fgReturnBuffer.data() + fgReturnIx;
+                    pOut = output;
+                    for (size_t i = 0; i < numFrames; ++i)
+                    {
+                        pOut[i] = pIn[i];
+                    }
+                    fgReturnIx += numFrames;
+                    if (fgReturnIx >= 64)
+                    {
+                        fgReturnIx = 0;
+                    }
+                }
+                else
+                {
+#if TRACE_PROCESSING
                     using clock_t = ::toob::nam_impl::NamBackgroundProcessor::clock_t;
                     auto start = clock_t::now();
-                    backgroundProcessor.TraceProcessing('f',0,clock_t::duration(0));
-                #endif
-                this->backgroundProcessor.fgRead(output, numFrames);
-                #if TRACE_PROCESSING
+                    backgroundProcessor.TraceProcessing('f', 0, clock_t::duration(0));
+#endif
+                    this->backgroundProcessor.fgRead(output, numFrames);
+#if TRACE_PROCESSING
                     auto writeStart = clock_t::now();
-                    backgroundProcessor.TraceProcessing('f',1, writeStart-start);
-                #endif
-                this->backgroundProcessor.fgWrite(input, numFrames);
-                #if TRACE_PROCESSING
+                    backgroundProcessor.TraceProcessing('f', 1, writeStart - start);
+#endif
+                    this->backgroundProcessor.fgWrite(input, numFrames);
+#if TRACE_PROCESSING
                     auto writeEnd = clock_t::now();
-                    backgroundProcessor.TraceProcessing('f',2, writeEnd-writeStart);
-                #endif
-
+                    backgroundProcessor.TraceProcessing('f', 2, writeEnd - writeStart);
+#endif
+                }
             }
         }
         break;
     }
 }
 
+
 void NeuralAmpModeler::SetModelVolumes()
 {
+    using namespace nam_impl;
     if (mNAM)
     {
-        float inputDb = mNAM->GetRecommendedInputDBAdjustment();
-        fgInputVolume = Db2Af(inputDb);
-        float outputDb = mNAM->GetRecommendedOutputDBAdjustment();
-        fgOutputVolume = Db2Af(outputDb);
-    } else {
-        fgInputVolume = 1.0;
-        fgOutputVolume  = 1.0;
+        NamBackgroundProcessor::VolumeAdjustments adjustments = NamBackgroundProcessor::CalculateVolumeAdjustments(mNAM.get());
+        fgInputVolume = adjustments.input;
+        fgOutputVolume = adjustments.output;
+    }
+    else
+    {
+        fgInputVolume = 0.0;
+        fgOutputVolume = 0.0;
     }
 }
