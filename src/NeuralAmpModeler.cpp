@@ -1213,11 +1213,6 @@ void NeuralAmpModeler::ProcessNam(float *restrict input,  float * restrict outpu
                 }
                 else
                 {
-                    float *pOut = output;
-                    for (size_t i = 0; i < numFrames; ++i)
-                    {
-                        pOut[i] = 0;
-                    }
                     this->backgroundProcessor.fgWrite(input, numFrames);
 
                     this->_FallbackDSP(input, output, numFrames);
