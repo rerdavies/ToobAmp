@@ -2,4 +2,4 @@
 # Run a CMake build.
 
 
-cmake --build ./build-a76 --config Release --target all 
+cmake --build ./build-a76 --config Release --target all -- -j 3

@@ -6,7 +6,7 @@ cmake_minimum_required (VERSION 3.9)
 set(VERBOSE true)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-project(ToobAmp VERSION 1.1.67 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+project(ToobAmp VERSION 1.1.68 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 
 
@@ -48,10 +48,10 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Rele
     add_compile_options("-ffast-math")
     if (A76_OPTIMIZATION)
         message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-        add_compile_options("-mcpu=cortex-a76" "-mtune=cortex-a76")
+        add_compile_options("-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
     else ()
         message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-        add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
+        add_compile_options("-mcpu=cortex-a72" "-march=armv8.1a" "-mtune=cortex-a72")
     endif()
 endif()
 
