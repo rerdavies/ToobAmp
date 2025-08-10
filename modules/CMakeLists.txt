@@ -7,7 +7,7 @@ set(LSTM_MATH "FastMath" CACHE STRING "LSTM math functions" )
 
 add_subdirectory("lv2cairo")
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency"))
+if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency")
     add_compile_options("-Ofast")
 endif()
 
