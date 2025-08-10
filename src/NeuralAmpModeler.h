@@ -48,6 +48,7 @@ SOFTWARE.
 #include "InputPort.h"
 #include "OutputPort.h"
 #include <cstddef>
+#include <array>
 #include "namFixes/NoiseGate.h"
 #include "NamBackgroundProcessor.hpp"
 
@@ -141,7 +142,10 @@ namespace toob
 
         BackgroundProcessorState backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
         ::toob::nam_impl::NamBackgroundProcessor backgroundProcessor;
-
+        std::array<float,64> fgReturnBuffer;
+        std::array<float,64> fgSendBuffer;
+        size_t fgSendIx = 0;
+        size_t fgReturnIx = 0;
 
         virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) override;
         virtual void onBackgroundProcessingComplete() override;

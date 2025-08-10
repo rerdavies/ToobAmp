@@ -32,6 +32,7 @@ SOFTWARE.
 #include <cassert>
 #include <thread>
 #include <atomic>
+#include <array>
 #include "restrict.hpp"
 #include <chrono>
 
@@ -43,6 +44,7 @@ SOFTWARE.
 #pragma GCC diagnostic pop
 
 #define TRACE_PROCESSING false
+#define NBG_MINIMUM_THREADING_BUFFER_SIZE 64
 namespace toob
 {
     class NeuralAmpModeler;
@@ -177,7 +179,7 @@ namespace toob::nam_impl
         std::vector<uint8_t> queue;
     };
 
-    enum NamMessageType
+    enum NamBgMessageType
     {
         Illegal,
         SetDsp,
@@ -190,13 +192,13 @@ namespace toob::nam_impl
     };
     struct NamMessage
     {
-        NamMessage(NamMessageType messageType) : messageType(messageType) {}
-        NamMessageType messageType;
+        NamMessage(NamBgMessageType messageType) : messageType(messageType) {}
+        NamBgMessageType messageType;
     };
     struct SetDspMessage : public NamMessage
     {
         SetDspMessage(uint64_t instanceId, ToobNamDsp *dsp, size_t antiPopLength)
-            : NamMessage(NamMessageType::SetDsp),
+            : NamMessage(NamBgMessageType::SetDsp),
               instanceId(instanceId),
               dsp(dsp),
               antiPopLength(antiPopLength)
@@ -209,16 +211,16 @@ namespace toob::nam_impl
     };
     struct StopBackgroundProcessingMessage : public NamMessage
     {
-        StopBackgroundProcessingMessage() : NamMessage(NamMessageType::StopBackgroundProcessing) {}
+        StopBackgroundProcessingMessage() : NamMessage(NamBgMessageType::StopBackgroundProcessing) {}
     };
     struct FadeOutProcessingMessage : public NamMessage
     {
-        FadeOutProcessingMessage() : NamMessage(NamMessageType::FadeOut) {}
+        FadeOutProcessingMessage() : NamMessage(NamBgMessageType::FadeOut) {}
     };
     // give me back my ToobNamDsp!
     struct StopBackgroundProcessingReplyMessage : public NamMessage
     {
-        StopBackgroundProcessingReplyMessage(ToobNamDsp *dsp) : NamMessage(NamMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
+        StopBackgroundProcessingReplyMessage(ToobNamDsp *dsp) : NamMessage(NamBgMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
         ToobNamDsp *dsp;
     };
     static constexpr size_t MAX_DATA_MESSAGE_SAMPLES = 256;
@@ -226,13 +228,13 @@ namespace toob::nam_impl
     {
 
         SampleDataMessage(uint64_t instanceId, size_t length)
-            : NamMessage(NamMessageType::SampleData),
+            : NamMessage(NamBgMessageType::SampleData),
               instanceId(instanceId),
               length(length)
         {
         }
         SampleDataMessage(uint64_t instanceId, const float *inputData, size_t length)
-            : NamMessage(NamMessageType::SampleData),
+            : NamMessage(NamBgMessageType::SampleData),
               instanceId(instanceId)
 
         {
@@ -258,7 +260,7 @@ namespace toob::nam_impl
     struct SetGainMessage : public NamMessage
     {
         SetGainMessage(float gain)
-            : NamMessage(NamMessageType::SetGain),
+            : NamMessage(NamBgMessageType::SetGain),
               gain(gain)
         {
         }
@@ -267,7 +269,7 @@ namespace toob::nam_impl
     };
     struct QuitMessage : public NamMessage
     {
-        QuitMessage() : NamMessage(NamMessageType::Quit) {}
+        QuitMessage() : NamMessage(NamBgMessageType::Quit) {}
     };
 
     class NamBackgroundProcessorListener
@@ -320,8 +322,9 @@ namespace toob::nam_impl
         }
         void SetFrameSize(size_t frameSize) {
             this->frameSize = frameSize;
-            this->backgroundReturnBuffer.resize(2*frameSize);
-            this->backgroundInputBuffer.resize(2*frameSize);
+            size_t bufferSize = std::max((size_t)64,frameSize);
+            this->backgroundReturnBuffer.resize(2*bufferSize);
+            this->backgroundInputBuffer.resize(2*bufferSize);
             this->backgroundInputTailPosition = 0;
             this->backgroundReturnTailPosition = 0;
         }
@@ -378,7 +381,11 @@ namespace toob::nam_impl
         {
             return threadActive;
         }
-
+        struct VolumeAdjustments {
+            float input;
+            float output;
+        };
+        static VolumeAdjustments CalculateVolumeAdjustments(ToobNamDsp*dsp);
     private:
         void ThreadProc();
         void SetBgVolumes();
