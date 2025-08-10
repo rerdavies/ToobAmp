@@ -78,7 +78,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(GCC_EXTRA_FLAGS "-Werror ${GCC_EXTRA_FLAGS}")
     endif()
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast --fast-math -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
+    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
     set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden ")
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
