@@ -6,7 +6,7 @@ set(WAVENET_MATH "FastMath" CACHE STRING "WaveNet math functions" FORCE)
 set(LSTM_MATH "FastMath" CACHE STRING "LSTM math functions" )
 
 add_subdirectory("lv2cairo")
-
+ 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency")
     add_compile_options("-Ofast")
 endif()
@@ -14,3 +14,5 @@ endif()
 add_subdirectory("NeuralAudio")
 # add_subdirectory("RTNeural")
 # add_subdirectory("NeuralAmpModelerCore")
+
+add_subdirectory("libsamplerate")

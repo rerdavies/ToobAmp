@@ -47,6 +47,16 @@
 
 namespace toob
 {
+    struct MixOptions {
+        bool isReverb = false;
+        float predelayObsolete = 0;
+        float predelayNew = 0;
+        float stretch = -999;
+        float decay = 0;
+        float width = -999;
+        float pan = -9999;
+        float maxTime = 30.0;
+    };
 
 	class ToobConvolutionReverbBase : public Lv2PluginWithState
 	{
@@ -56,8 +66,14 @@ namespace toob
 			TIME = 0,
 			DIRECT_MIX,
 			REVERB_MIX,
-			PREDELAY,
+			PREDELAY_OBSOLETE, // For backward compatibility
+            PREDELAY_NEW,
+            STRETCH,
+            DECAY,
+            TAILS,
+
 			LOADING_STATE,
+
 			AUDIO_INL,
 			AUDIO_OUTL,
 			CONTROL_IN,
@@ -70,8 +86,15 @@ namespace toob
 			REVERB_MIX,
 			WIDTH,
 			PAN,
-			PREDELAY,
-			LOADING_STATE,
+
+			PREDELAY_OBSOLETE, // For backward compatibility
+            PREDELAY_NEW,
+            STRETCH,
+            DECAY,
+            TAILS,
+
+
+            LOADING_STATE,
 			AUDIO_INL,
 			AUDIO_INR,
 			AUDIO_OUTL,
@@ -192,9 +215,7 @@ namespace toob
 
 			LoadWorker(Lv2Plugin *pPlugin);
 			void Initialize(size_t sampleRate, ToobConvolutionReverbBase *pReverb);
-			bool SetWidth(float width);
-			bool SetPan(float pan);
-			bool SetTime(float timeInSeconds);
+            void SetMixOptions(const MixOptions &mixOptions);
 			bool SetFileName(const char *szName);
 			bool SetFileName2(const char *szName);
 			bool SetFileName3(const char *szName);
@@ -202,21 +223,21 @@ namespace toob
 			bool SetMix2(float mix);
 			bool SetMix3(float mix);
 
-			bool SetPredelay(bool usePredelay);
 			const char *GetFileName() const { return this->fileName; }
 			const char *GetFileName2() const { return this->fileName2; }
 			const char *GetFileName3() const { return this->fileName3; }
-			bool Changed() const { return this->changed; }
+			bool Changed() const;
 			bool IsIdle() const { return this->state == State::Idle || this->state == State::Error || this->state == State::NotLoaded; }
-			bool IsChanging() const { return this->changed || !IsIdle(); };
+			bool IsChanging() const { return Changed() || !IsIdle(); };
 
 			void Tick()
 			{ // on audio thread. Don't start loading unless audio is actually running.
 				if (IsIdle())
 				{
-					if (changed)
+					if (Changed())
 					{
 						changed = false;
+                        fgMixOptionsChanged = false;
 						Request();
 					}
 				}
@@ -233,12 +254,12 @@ namespace toob
 		private:
 			AudioData LoadFile(const std::filesystem::path &fileName, float level);
 
+            bool fgMixOptionsChanged = true;
+            MixOptions fgMixOptions;
+            MixOptions bgMixOptions;
+
 			double getRate() { return rate; }
-			bool predelay = true;
-			bool workingPredelay = true;
 			float tailScale = 0;
-			float timeInSeconds = -1;
-			float workingTimeInSeconds = -1;
 			State state = State::NotLoaded;
 
 			bool hasWorkError = false;
@@ -253,8 +274,6 @@ namespace toob
 			char fileName[MAX_FILENAME];
 			char fileName2[MAX_FILENAME];
 			char fileName3[MAX_FILENAME];
-			float width = 1;
-			float pan = 0;
 			float mix = 1;
 			float mix2 = 0;
 			float mix3 = 0;
@@ -262,8 +281,6 @@ namespace toob
 			char requestFileName2[MAX_FILENAME];
 			char requestFileName3[MAX_FILENAME];
 			float requestMix = 1;
-			float requestPan = 0;
-			float requestWidth = 1;
 			float requestMix2 = 0;
 			float requestMix3 = 0;
 			convolution_reverb_ptr convolutionReverbResult;
@@ -340,7 +357,13 @@ namespace toob
 		float *pReverbMix = nullptr;
 		float *pReverb2Mix = nullptr;
 		float *pReverb3Mix = nullptr;
-		float *pPredelay = nullptr;
+		float *pPredelayObsolete = nullptr;
+
+		float *pPredelayNew = nullptr;
+		float *pStretch = nullptr;
+		float *pDecay = nullptr;
+		float *pTails = nullptr;
+
 		float *pLoadingState = nullptr;
 		float *pWidth = nullptr;
 		float *pPan = nullptr;
@@ -353,14 +376,13 @@ namespace toob
 		LV2_Atom_Sequence *controlIn = nullptr;
 		LV2_Atom_Sequence *controlOut = nullptr;
 
-		float lastTime = -999;
-		float lastWidth = 0;
-		float lastPan = -999;
+        MixOptions fgMixOptions;
+
 		float lastDirectMix = -999;
 		float lastReverbMix = -999;
 		float lastReverb2Mix = -999;
 		float lastReverb3Mix = -999;
-		float lastPredelay = -999;
+		float lastPredelayObsolete = -999;
 		float lastLoadingState = 0;
 
 		float reverb2MixAf = 0;
@@ -432,5 +454,6 @@ namespace toob
 		{
 		}
 	};
+
 
 } // namespace toob

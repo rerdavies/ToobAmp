@@ -46,6 +46,7 @@ using namespace toob;
 
 constexpr float MIN_MIX_DB = -40;
 
+
 ToobConvolutionReverbBase::ToobConvolutionReverbBase(
     PluginType pluginType,
     double rate,
@@ -96,9 +97,26 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case MonoReverbPortId::REVERB_MIX:
             this->pReverbMix = (float *)data;
             break;
-        case MonoReverbPortId::PREDELAY:
-            this->pPredelay = (float *)data;
+        case MonoReverbPortId::PREDELAY_OBSOLETE:
+            this->pPredelayObsolete = (float *)data;
             break;
+
+        case MonoReverbPortId::PREDELAY_NEW:
+            this->pPredelayNew = (float *)data;
+            break;
+        case MonoReverbPortId::STRETCH:
+            this->pStretch = (float *)data;
+            break;
+        case MonoReverbPortId::DECAY:
+            this->pDecay = (float *)data;
+            break;
+        case MonoReverbPortId::TAILS:
+            this->pTails = (float *)data;
+            break;
+
+
+
+
         case MonoReverbPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
             if (this->pLoadingState)
@@ -137,9 +155,23 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case StereoReverbPortId::REVERB_MIX:
             this->pReverbMix = (float *)data;
             break;
-        case StereoReverbPortId::PREDELAY:
-            this->pPredelay = (float *)data;
+        case StereoReverbPortId::PREDELAY_OBSOLETE:
+            this->pPredelayObsolete = (float *)data;
             break;
+
+        case StereoReverbPortId::PREDELAY_NEW:
+            this->pPredelayNew = (float *)data;
+            break;
+        case StereoReverbPortId::STRETCH:
+            this->pStretch = (float *)data;
+            break;
+        case StereoReverbPortId::DECAY:
+            this->pDecay = (float *)data;
+            break;
+        case StereoReverbPortId::TAILS:
+            this->pTails = (float *)data;
+            break;
+
         case StereoReverbPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
             if (this->pLoadingState)
@@ -200,7 +232,7 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
             break;
 
         case CabIrPortId::PREDELAY:
-            this->pPredelay = (float *)data;
+            this->pPredelayObsolete = (float *)data;
             break;
         case CabIrPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
@@ -241,21 +273,51 @@ void ToobConvolutionReverbBase::clear()
 
 void ToobConvolutionReverbBase::UpdateControls()
 {
-    if (pPan != nullptr && lastPan != *pPan)
+    bool mixOptionsChanged = false;
+    if (pWidth != nullptr && fgMixOptions.width != *pWidth)
     {
-        lastPan = *pPan;
-        loadWorker.SetPan(lastPan);
+        fgMixOptions.width  = *pWidth;
+        mixOptionsChanged = true;
     }
-    if (pWidth != nullptr && lastWidth != *pWidth)
+    if (pPan != nullptr && fgMixOptions.pan != *pPan)
     {
-        lastWidth = *pWidth;
-        loadWorker.SetWidth(lastWidth);
+        fgMixOptions.pan = *pPan;
+        mixOptionsChanged = true;
     }
-    if (lastTime != *pTime)
+    if (pPredelayNew != nullptr && fgMixOptions.predelayNew != *pPredelayNew)
     {
-        lastTime = *pTime;
-        time = lastTime;
-        loadWorker.SetTime(time);
+        fgMixOptions.predelayNew = *pPredelayNew;
+        mixOptionsChanged = true;
+    }
+    if (pDecay != nullptr && fgMixOptions.decay != *pDecay)
+    {
+        fgMixOptions.decay = *pDecay;
+        mixOptionsChanged = true;
+    }
+    if (pStretch != nullptr && fgMixOptions.stretch != *pStretch)
+    {
+        fgMixOptions.stretch = *pStretch;
+        mixOptionsChanged = true;
+    }
+    if (pDecay != nullptr && fgMixOptions.decay != *pDecay)
+    {
+        fgMixOptions.decay = *pDecay;
+        mixOptionsChanged = true;
+    }
+    if (fgMixOptions.maxTime != *pTime)
+    {
+        fgMixOptions.maxTime = *pTime;
+        mixOptionsChanged = true;
+    }
+    if (pPredelayObsolete != nullptr && fgMixOptions.predelayObsolete != *pPredelayObsolete)
+    {
+        fgMixOptions.predelayObsolete = *pPredelayObsolete;
+        mixOptionsChanged = true;
+    }
+
+    if (mixOptionsChanged) 
+    {
+        loadWorker.SetMixOptions(fgMixOptions);
     }
     if (lastDirectMix != *pDirectMix)
     {
@@ -326,17 +388,13 @@ void ToobConvolutionReverbBase::UpdateControls()
         loadWorker.SetMix3(reverb3MixAf);
     }
 
-    if (lastPredelay != *pPredelay)
-    {
-        lastPredelay = *pPredelay;
-        loadWorker.SetPredelay(lastPredelay != 0);
-    }
 }
 void ToobConvolutionReverbBase::Activate()
 {
     activated = true;
-    lastReverbMix = lastDirectMix = lastTime = std::numeric_limits<float>::min(); // force updates
+    this->fgMixOptions.isReverb = IsConvolutionReverb();
     UpdateControls();
+    loadWorker.SetMixOptions(this->fgMixOptions);
     RequestNotifyOnLoad();
     clear();
 }
@@ -562,47 +620,13 @@ void ToobConvolutionReverbBase::LoadWorker::Initialize(size_t sampleRate, ToobCo
     this->pReverb = pReverb;
 }
 
-bool ToobConvolutionReverbBase::LoadWorker::SetWidth(float width)
+
+void ToobConvolutionReverbBase::LoadWorker::SetMixOptions(const MixOptions &mixOptions)
 {
-    if (this->width != width)
-    {
-        this->width = width;
-        this->changed = true;
-        return true;
-    }
-    return false;
-}
-bool ToobConvolutionReverbBase::LoadWorker::SetPan(float pan)
-{
-    if (this->pan != pan)
-    {
-        this->pan = pan;
-        this->changed = true;
-        return true;
-    }
-    return false;
+    fgMixOptions = mixOptions;
+    fgMixOptionsChanged = true;
 }
 
-bool ToobConvolutionReverbBase::LoadWorker::SetTime(float timeInSeconds)
-{
-    if (this->timeInSeconds != timeInSeconds)
-    {
-        this->timeInSeconds = timeInSeconds;
-        this->changed = true;
-        return true;
-    }
-    return false;
-}
-bool ToobConvolutionReverbBase::LoadWorker::SetPredelay(bool usePredelay)
-{
-    if (this->predelay != usePredelay)
-    {
-        this->predelay = usePredelay;
-        this->changed = true;
-        return true;
-    }
-    return false;
-}
 bool ToobConvolutionReverbBase::LoadWorker::SetFileName(const char *szName)
 {
     size_t length = strlen(szName);
@@ -700,9 +724,8 @@ void ToobConvolutionReverbBase::LoadWorker::Request()
     strncpy(requestFileName, fileName, sizeof(requestFileName));
     strncpy(requestFileName2, fileName2, sizeof(requestFileName2));
     strncpy(requestFileName3, fileName3, sizeof(requestFileName3));
-    this->requestWidth = this->width;
+    this->bgMixOptions = fgMixOptions;
     this->requestMix = this->mix;
-    this->requestPan = this->pan;
     this->requestMix2 = this->mix2;
     this->requestMix3 = this->mix3;
 
@@ -710,8 +733,6 @@ void ToobConvolutionReverbBase::LoadWorker::Request()
 
     // take the existing convolution reverb off the main thread.
     this->oldConvolutionReverb = std::move(pReverb->pConvolutionReverb);
-    this->workingPredelay = predelay; // capture a copy
-    this->workingTimeInSeconds = this->timeInSeconds;
 
     WorkerAction::Request();
 }
@@ -807,6 +828,162 @@ static float GetTailScale(const std::vector<float> &data, size_t tailPosition)
     }
     return (float)max;
 }
+static bool HasDiracImpulse(const AudioData &data) {
+    constexpr size_t PULSE_LENGTH = 4;
+    constexpr float MAX_ZERO_VALUE = 1E-9;
+    // [1, 0,0,0...] in at least one chennl, 
+    // [0, 0,0,0 ...] otherwise. 
+
+    if (data.getSize() <= PULSE_LENGTH) return false;
+    bool hasSpike = false;
+    for (size_t c = 0; c < data.getChannelCount(); ++c) {
+        float sample0 = fabs(data[c][0]);
+        if (sample0 >= 0.1) {
+            hasSpike = true;
+        } else if (sample0 > MAX_ZERO_VALUE)
+        {
+            return false;
+        }
+
+        for (size_t i = 1; i <= PULSE_LENGTH; ++i) 
+        {
+            if (fabs(data[c][i]) > MAX_ZERO_VALUE) return false;
+        }
+    }
+    return hasSpike;
+
+}
+static AudioData RemoveDiracImpulse(AudioData &data) {
+    AudioData result;
+    if (HasDiracImpulse(data)) {
+        result.setSampleRate(data.getSampleRate());
+        result.setChannelCount(data.getChannelCount());
+        result.setSize(1);
+        for (size_t c = 0; c < data.getChannelCount(); ++c) {
+            result[c][0] = data[c][0];
+            data[c][0] = 0;
+        }
+    }
+    return result;
+}
+
+static void RestoreDiracImpulse(AudioData &data, const AudioData&diracImpulse) {
+    for (size_t c = 0; c < data.getChannelCount(); ++c) {
+        data[c][0] += diracImpulse[c][0];
+    } 
+}
+
+static size_t GetShotSpikeLength(const AudioData&data) {
+    // loooking for a string of N consecutive zeros, in the first two millisecond of data. 
+    // otherwise, return 0.
+    constexpr float EPSILON = 1E-7f;
+    constexpr size_t INSERTION_LENGTH = 5;
+
+    size_t maxSample = (size_t)(data.getSampleRate()*0.002);
+    if (maxSample > data.getSize()) return 0;
+
+    size_t consecutiveZeroes = 0;
+    size_t result = 0;
+    for (size_t i = 0; i < maxSample; ++i)
+    {
+        bool isZero = true;
+        for (size_t c = 0; c < data.getChannelCount(); ++c) {
+            if (fabs(data[c][i]) > EPSILON) {
+                isZero = false;
+                break;
+            }
+        }
+        if (isZero) {
+            ++consecutiveZeroes;
+            if (consecutiveZeroes == INSERTION_LENGTH) {
+                result = i - INSERTION_LENGTH + 1;
+            }
+        } else {
+            consecutiveZeroes = 0;
+        }
+    }
+    return result;
+
+}
+
+static size_t GetEarlyReflectionPosition(AudioData &data, size_t startPosition, size_t endPosition) 
+{
+    constexpr float EPSILON = 1E-7f;
+    if (endPosition > data.getSize()) 
+    {
+        endPosition = data.getSize();
+    }
+
+    for (size_t i = startPosition; i < endPosition; ++i)
+    {
+        for (size_t c = 0; c < data.getChannelCount(); ++i)
+        {
+            float sample = fabs(data[c][i]);
+            if (sample > EPSILON) return i;
+        }
+    }
+    return endPosition;
+
+}
+static void AdjustPredelay(AudioData &data, float predelaySeconds) {
+
+    int64_t samples = (int64_t)(data.getSampleRate() * predelaySeconds);
+    if (samples == 0) 
+    {
+        return;
+    }
+    size_t insertPosition = GetShotSpikeLength(data);
+    if (samples > 0) 
+    {
+        data.InsertZeroes(insertPosition,(size_t)samples);
+    } else if (samples < 0) 
+    {
+        size_t samplesToRemove = (size_t)-samples;
+        // or the first early reflection, whichever comes first.
+        size_t endPosition = GetEarlyReflectionPosition(data,insertPosition,insertPosition+samplesToRemove);
+
+        if (endPosition <= insertPosition)
+        {
+            return;
+        }
+        data.Erase(insertPosition,endPosition);
+
+
+    }
+
+
+}
+
+static void ApplyDecay(AudioData &data, float decay)
+{
+    if (decay == 0) 
+    {
+        return;
+    }
+    constexpr double TRef = 4.0; // seconds.
+    constexpr double T0 = 0.010; // seconds.
+    double tF = T0+(TRef-T0)*decay;
+    double yF = tF*(1.0f/TRef);
+    // y = exp(k*t)
+    // yF = exp(k*tF)
+    // ln(yF) = k*tF
+    // k = ln(yF)/tF;
+    double k = log(yF)/tF;
+
+    k /= data.getSampleRate();
+
+    for (size_t i = 0; i < data.getSize(); ++i)
+    {
+        float scale = exp(k*i);
+        for (size_t c = 0; c < data.getChannelCount(); ++c)
+        {
+            data[c][i] *= scale;
+        }
+    }
+
+}
+
+
 
 AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem::path &fileName, float level)
 {
@@ -834,12 +1011,12 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
             break;
         case 2:
         default:
-            data.SetStereoWidth(this->requestWidth);
+            data.SetStereoWidth(this->bgMixOptions.width);
             break;
         case 4:
         {
-            float angle = 90 * (this->requestWidth);
-            data.AmbisonicDownmix({AmbisonicMicrophone(-angle + 90 * requestPan, 0), AmbisonicMicrophone(angle + 90 * requestPan, 0)});
+            float angle = 90 * (this->bgMixOptions.width);
+            data.AmbisonicDownmix({AmbisonicMicrophone(-angle + 90 * this->bgMixOptions.pan, 0), AmbisonicMicrophone(angle + 90 * this->bgMixOptions.pan, 0)});
         }
         break;
         }
@@ -855,15 +1032,44 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
             data.ConvertToMono();
         }
     }
+
+    // yyy: postprocessing!
     pThis->LogTrace("%s\n", SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
-    NormalizeConvolution(data);
-    if (!predelay) // bbetter to do it on the pristine un-filtered data.
+    // NormalizeConvolution(data);
+    if (!this->bgMixOptions.predelayObsolete) // bbetter to do it on the pristine un-filtered data.
     {
         RemovePredelay(data);
     }
-    data.Resample((size_t)pReverb->getSampleRate());
 
+
+
+    AudioData diracImpulse;
+    if (this->bgMixOptions.isReverb) {
+
+        if (this->bgMixOptions.predelayNew != 0) {
+            AdjustPredelay(data, this->bgMixOptions.predelayNew*0.001);
+        }
+        diracImpulse = RemoveDiracImpulse(data);
+
+        if (this->bgMixOptions.decay != 0) {
+            ApplyDecay(data, this->bgMixOptions.decay);
+        }
+
+    }
+
+    double effectiveSampleRate = pReverb->getSampleRate();
+    if (this->bgMixOptions.isReverb && this->bgMixOptions.stretch != 1)
+    {
+        effectiveSampleRate = effectiveSampleRate*this->bgMixOptions.stretch;
+    }
+    data.Resample(effectiveSampleRate); // potentially stretched.
+    data.setSampleRate(pReverb->getSampleRate());
+
+    if (this->bgMixOptions.isReverb)
+    {
+        RestoreDiracImpulse(data,diracImpulse);
+    }
     NormalizeConvolution(data);
 
     data.Scale(level);
@@ -892,14 +1098,14 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
             AudioData data3 = LoadFile(requestFileName3, requestMix3);
             data += data3;
         }
-        size_t maxSize = (size_t)std::ceil(workingTimeInSeconds * pReverb->getSampleRate());
+        size_t maxSize = (size_t)std::ceil(this->bgMixOptions.maxTime * pReverb->getSampleRate());
         this->tailScale = 0;
         if (maxSize < data.getSize())
         {
             this->tailScale = GetTailScale(data.getChannel(0), maxSize);
             data.setSize(maxSize);
 
-            pThis->LogTrace("%s\n", SS("Max T: " << std::setprecision(3) << workingTimeInSeconds << "s Feedback: " << tailScale).c_str());
+            pThis->LogTrace("%s\n", SS("Max T: " << std::setprecision(3) << this->bgMixOptions.maxTime << "s Feedback: " << tailScale).c_str());
         }
         if (data.getSize() == 0)
         {
@@ -1237,4 +1443,15 @@ void ToobConvolutionReverbBase::SetDefaultFile(const LV2_Feature *const *feature
         targetPath = MapFilename(features,targetPath);
         this->loadWorker.SetFileName(targetPath.c_str());
     }
+}
+
+bool ToobConvolutionReverbBase::LoadWorker::Changed() const { 
+    return this->changed
+    || (this->fgMixOptionsChanged && 
+        (
+            // ( but only if there's a valid file)
+            this->fileName[0] != '\0' || this->fileName2[0] != '\0' || this->fileName3[0] != '\0'
+
+        )
+    );
 }

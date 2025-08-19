@@ -181,16 +181,16 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default 1.5 ;
                 lv2:minimum 0.1 ;
-                lv2:maximum 10.0 ;    
+                lv2:maximum 30.0 ;
 
-                lv2:portProperty epp:notAutomatic ;
+                lv2:portProperty epp:notAutomatic, epp:notOnGUI ;
                 lv2:portProperty epp:expensive ;
 
                 units:unit units:s ;
 
                 rdfs:comment "Maximum length of impulse data to use." ;
 
-        ],  
+        ],
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -200,7 +200,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:name "Direct";
                 lv2:default -40.0 ;
                 lv2:minimum -40.0 ;
-                lv2:maximum 20.0 ;    
+                lv2:maximum 20.0 ;
                 units:unit units:db ;
 
                 lv2:scalePoint [
@@ -209,7 +209,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 ];
                 rdfs:comment "Direct mix. Set to minimum to disable." ;
 
-        ],          
+        ],
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -220,7 +220,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default -10.0 ;
                 lv2:minimum -40.0 ;
-                lv2:maximum 20.0 ;    
+                lv2:maximum 20.0 ;
                 units:unit units:db ;
 
                 lv2:scalePoint [
@@ -258,7 +258,6 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 rdfs:comment "Pan." ;
         ],  
-
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -269,9 +268,10 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default 1 ;
                 lv2:minimum 0 ;
-                lv2:maximum 1 ;    
+                lv2:maximum 1 ;
                 
-                lv2:portProperty lv2:enumeration ;
+                
+                lv2:portProperty lv2:enumeration, lv2:notOnGUI ;
 
                 lv2:scalePoint [
                         rdfs:label "Remove" ;
@@ -285,17 +285,83 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         ],  
 
         [
-                a lv2:OutputPort ,
+                a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 6 ;
+                lv2:symbol "predelay_new" ;
+                lv2:name "Predelay";
+
+                lv2:default 0 ;
+                lv2:minimum 0;
+                lv2:maximum 500 ;
+                
+                units:unit units:ms;
+
+                rdfs:comment "Delay first early reflection" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 7 ;
+                lv2:symbol "stretch" ;
+                lv2:name "Stretch";
+
+                lv2:default 1 ;
+                lv2:minimum 0.25;
+                lv2:maximum 2 ;
+                
+                lv2:portProperty epp:logarithmic;
+
+
+                rdfs:comment "Stretch the source i/r file" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 8 ;
+                lv2:symbol "decay" ;
+                lv2:name "Decay";
+
+                lv2:default 1.0 ;
+                lv2:minimum -1.0;
+                lv2:maximum 1.0 ;
+                
+
+                rdfs:comment "Apply a decay envelope to the source i/r file" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 9 ;
+                lv2:symbol "tails" ;
+                lv2:name "Tails";
+
+                lv2:default 0 ;
+                lv2:minimum 0;
+                lv2:maximum 1 ;
+                lv2:portProperty lv2:toggled
+
+                rdfs:comment "Reverb tails when bypassed" ;
+        ],  
+
+
+
+        [
+                a lv2:OutputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 10 ;
                 lv2:symbol "loading_state" ;
                 lv2:name "Status";
 
                 lv2:portProperty lv2:enumeration ;
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 5.0 ;    
+                lv2:maximum 5.0 ;
 
 				# NotLoaded = 0,
 				# Idle = 1,
@@ -328,40 +394,16 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 7 ;
-                lv2:symbol "inL" ;
-                lv2:name "InL" ;
-                lv2:designation pg:left ;
-                pg:group toobcrs:mainIn
-
-
-        ],
-        [
-                a lv2:AudioPort ,
-                        lv2:InputPort ;
-                lv2:index 8 ;
-                lv2:symbol "inR" ;
-                lv2:name "InR" ;
-                lv2:designation pg:right ;
-                pg:group toobcrs:mainIn;
+                lv2:index 11 ;
+                lv2:symbol "in" ;
+                lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 9 ;
-                lv2:symbol "outL" ;
-                lv2:name "OutL" ;
-                lv2:designation pg:left ;
-                pg:group toobcrs:mainOut;
-        ],
-        [
-                a lv2:AudioPort ,
-                        lv2:OutputPort ;
-                lv2:index 10 ;
-                lv2:symbol "outR" ;
-                lv2:name "OutR" ;
-                lv2:designation pg:right ;
-                pg:group toobcrs:mainOut;
+                lv2:index 12 ;
+                lv2:symbol "out" ;
+                lv2:name "Out"
         ],
         [
                 a atom:AtomPort ,
@@ -371,7 +413,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 11 ;
+                lv2:index 13 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -381,38 +423,11 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 atom:bufferType atom:Sequence ;
                 # atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 12;
+                lv2:index 14;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;
         ]
-        .
-
-
-<http://two-play.com/plugins/toob-convolution-reverb-stereo>  pipedal_ui:ui toobcrs:ui .
-
-toobcrs:ui 
-        a pipedal_ui:ui ;
-        pipedal_ui:fileProperties 
-        [
-                a pipedal_ui:fileProperty;
-                rdfs:label "Reverb Impulse File" ;
-                lv2:index 3 ;
-                pipedal_ui:patchProperty toobimpulse:impulseFile ;
-                pipedal_ui:directory "ReverbImpulseFiles";
-                pipedal_ui:resourceDirectory "impulseFiles/reverb";
-                pipedal_ui:fileTypes 
-                [
-                        a pipedal_ui:fileType;
-                        rdfs:label "WAV File";
-                        pipedal_ui:mimeType "audio/wav";
-                ],
-                [
-                        a pipedal_ui:fileType;
-                        rdfs:label "FLAC File";
-                        pipedal_ui:mimeType "audio/flac";
-                ]                ;
-        ];
         .
 
 <http://two-play.com/plugins/convolution-reverb-stereo-ui> 

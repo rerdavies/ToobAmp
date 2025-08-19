@@ -28,53 +28,79 @@
 #include "Filters/ChebyshevDownsamplingFilter.h"
 #include "LsNumerics/LsMath.hpp"
 #include <iostream>
+#include "ss.hpp"
 
+
+#if USE_SECRET_RABBIT_RESAMPLER
+#include "samplerate.h"
+#endif
 using namespace toob;
 using namespace LsNumerics;
 
-void AudioData::Resample(size_t outputSampleRate, AudioData &output)
+void AudioData::Resample(double outputSampleRate, AudioData &output)
 {
 
-    output.setSampleRate(getSampleRate());
+    output.setSampleRate(outputSampleRate);
     output.setChannelCount(getChannelCount());
+#if USE_SECRET_RABBIT_RESAMPLER
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), outputSampleRate, getChannel(c));
+        output.getData()[c] = std::move(resampledChannel);
+    }
+    
+
+#else
 
     if (outputSampleRate < getSampleRate())
     {
-        auto downsamplingFilter = DesignFilter(getSampleRate(),outputSampleRate);
+        auto downsamplingFilter = DesignFilter(getSampleRate(), outputSampleRate);
         for (size_t c = 0; c < getChannelCount(); ++c)
         {
-            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), outputSampleRate, getChannel(c),&downsamplingFilter);
-            output.getData()[c] = std::move(resampledChannel);
-        }
-
-    } else {
-        for (size_t c = 0; c < getChannelCount(); ++c)
-        {
-            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), outputSampleRate, getChannel(c),nullptr);
+            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), outputSampleRate, getChannel(c), &downsamplingFilter);
             output.getData()[c] = std::move(resampledChannel);
         }
     }
+    else
+    {
+        for (size_t c = 0; c < getChannelCount(); ++c)
+        {
+            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), outputSampleRate, getChannel(c), nullptr);
+            output.getData()[c] = std::move(resampledChannel);
+        }
+    }
+#endif
     output.size = output.data[0].size();
 }
-void AudioData::Resample(size_t sampleRate)
+void AudioData::Resample(double sampleRate)
 {
+
+#if USE_SECRET_RABBIT_RESAMPLER
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), sampleRate, getChannel(c));
+        data[c] = std::move(resampledChannel);
+    }
+#else
     if (sampleRate < getSampleRate())
     {
-        auto downsamplingFilter = DesignFilter(getSampleRate(),sampleRate);
+        auto downsamplingFilter = DesignFilter(getSampleRate(), sampleRate);
 
         for (size_t c = 0; c < getChannelCount(); ++c)
         {
-            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), sampleRate, getChannel(c),&downsamplingFilter);
-            data[c] = std::move(resampledChannel);
-        }
-
-    } else {
-        for (size_t c = 0; c < getChannelCount(); ++c)
-        {
-            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), sampleRate, getChannel(c),nullptr);
+            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), sampleRate, getChannel(c), &downsamplingFilter);
             data[c] = std::move(resampledChannel);
         }
     }
+    else
+    {
+        for (size_t c = 0; c < getChannelCount(); ++c)
+        {
+            std::vector<float> resampledChannel = AudioData::Resample(getSampleRate(), sampleRate, getChannel(c), nullptr);
+            data[c] = std::move(resampledChannel);
+        }
+    }
+#endif
     this->sampleRate = sampleRate;
     if (data.size() == 0)
     {
@@ -86,8 +112,8 @@ void AudioData::Resample(size_t sampleRate)
     }
 }
 
-
-struct ChannelMatrixValue {
+struct ChannelMatrixValue
+{
     ChannelMask channel;
     float scale;
 };
@@ -96,26 +122,25 @@ static constexpr float SQRT2 = 1.4142135623730950488016887242097f;
 // static constexpr float INV_SQRT2  = (float)(1.0 / SQRT2);
 // static constexpr float INV_2SQRT2  = (float)(1.0 / (2* SQRT2));
 
-
 std::vector<ChannelMatrixValue> monoMatrix = {
-        {ChannelMask::SPEAKER_FRONT_LEFT,	1.0f/SQRT2	},
-        {ChannelMask::SPEAKER_FRONT_RIGHT,	1.0f/SQRT2},
-        {ChannelMask::SPEAKER_FRONT_CENTER,	1.0f},
-        {ChannelMask::SPEAKER_SIDE_LEFT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_SIDE_RIGHT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_BACK_LEFT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_BACK_RIGHT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_TOP_FRONT_LEFT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_TOP_FRONT_CENTER,	1.0f/SQRT2},
-        {ChannelMask::SPEAKER_TOP_FRONT_RIGHT,	1.0f/2.0f},
-        {ChannelMask::SPEAKER_TOP_BACK_LEFT,	1.0f/(2*SQRT2)},
-        {ChannelMask::SPEAKER_TOP_BACK_RIGHT,	1.0f/(2*SQRT2)},
-    };
+    {ChannelMask::SPEAKER_FRONT_LEFT, 1.0f / SQRT2},
+    {ChannelMask::SPEAKER_FRONT_RIGHT, 1.0f / SQRT2},
+    {ChannelMask::SPEAKER_FRONT_CENTER, 1.0f},
+    {ChannelMask::SPEAKER_SIDE_LEFT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_SIDE_RIGHT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_BACK_LEFT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_BACK_RIGHT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_TOP_FRONT_LEFT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_TOP_FRONT_CENTER, 1.0f / SQRT2},
+    {ChannelMask::SPEAKER_TOP_FRONT_RIGHT, 1.0f / 2.0f},
+    {ChannelMask::SPEAKER_TOP_BACK_LEFT, 1.0f / (2 * SQRT2)},
+    {ChannelMask::SPEAKER_TOP_BACK_RIGHT, 1.0f / (2 * SQRT2)},
+};
 
-static float GetMonoChannelDownmix(size_t channel,ChannelMask mask)
+static float GetMonoChannelDownmix(size_t channel, ChannelMask mask)
 {
-    ChannelMask thisChannel = GetChannel(channel,mask);
-    for (auto & entry: monoMatrix)
+    ChannelMask thisChannel = GetChannel(channel, mask);
+    for (auto &entry : monoMatrix)
     {
         if (entry.channel == thisChannel)
         {
@@ -129,27 +154,29 @@ void AudioData::ConvertToMono()
     if (getChannelCount() > 1)
     {
         // https://www.audiokinetic.com/en/library/edge/?source=Help&id=downmix_tables
-        if (channelMask != ChannelMask::ZERO )
+        if (channelMask != ChannelMask::ZERO)
         {
-            try {
+            try
+            {
                 std::vector<float> scale;
                 scale.resize(getChannelCount());
                 for (size_t i = 0; i < getChannelCount(); ++i)
                 {
-                    scale[i] = GetMonoChannelDownmix(i,channelMask);
+                    scale[i] = GetMonoChannelDownmix(i, channelMask);
                 }
                 for (size_t i = 0; i < size; ++i)
                 {
                     float sum = 0;
                     for (size_t c = 0; c < getChannelCount(); ++c)
                     {
-                        sum += this->data[c][i]*scale[i];
+                        sum += this->data[c][i] * scale[i];
                     }
                     this->data[0][i] = sum;
                 }
                 data.resize(1);
                 return;
-            } catch(...)
+            }
+            catch (...)
             {
                 // presumably, the channel mask doens't match the number of channels. fall through.
             }
@@ -182,6 +209,7 @@ void AudioData::ConvertToMono()
     }
 }
 
+#if !USE_SECRET_RABBIT_RESAMPLER
 /*static*/ ChebyshevDownsamplingFilter AudioData::DesignFilter(size_t inputSampleRate, size_t outputSampleRate)
 {
     ChebyshevDownsamplingFilter downsamplingFilter;
@@ -192,25 +220,67 @@ void AudioData::ConvertToMono()
     }
     else
     {
-        cutoff = outputSampleRate*20000.0/44100;;
+        cutoff = outputSampleRate * 20000.0 / 44100;
+        ;
     }
     downsamplingFilter.Design(inputSampleRate, 0.1, cutoff, -20, outputSampleRate / 2);
     return downsamplingFilter;
-
 }
+#endif
 
-std::vector<float> AudioData::Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values)
+std::vector<float> AudioData::Resample(double inputSampleRate, double outputSampleRate, std::vector<float> &values)
 {
+#if USE_SECRET_RABBIT_RESAMPLER
+    return Resample2(inputSampleRate, outputSampleRate, values);
+#else 
     if (outputSampleRate < inputSampleRate)
     {
         ChebyshevDownsamplingFilter downsamplingFilter = DesignFilter(inputSampleRate, outputSampleRate);
-        return Resample(inputSampleRate,outputSampleRate,values,&downsamplingFilter);
-    } else {
-        return Resample(inputSampleRate,outputSampleRate,values,nullptr);
+        return Resample(inputSampleRate, outputSampleRate, values, &downsamplingFilter);
     }
-
+    else
+    {
+        return Resample(inputSampleRate, outputSampleRate, values, nullptr);
+    }
+#endif
 }
-std::vector<float> AudioData::Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values,ChebyshevDownsamplingFilter *downsamplingFilter)
+
+#if USE_SECRET_RABBIT_RESAMPLER
+std::vector<float> AudioData::Resample2(double inputSampleRate, double outputSampleRate, std::vector<float> &values)
+{
+    if (inputSampleRate == outputSampleRate)
+    {
+        return values;
+    }
+    std::vector<float> result;
+
+    size_t outputLength = (size_t)(values.size() * outputSampleRate / inputSampleRate);
+    result.resize(outputLength);
+
+    SRC_DATA data;
+    data.data_in = values.data();
+    data.input_frames = values.size();
+    data.data_out = result.data();
+    data.output_frames = result.size();
+    data.input_frames_used = 0;
+    data.output_frames_gen = 0;
+    data.end_of_input = 0;
+    data.src_ratio = outputSampleRate * 1.0 / inputSampleRate;
+
+    int rc = src_simple(&data, SRC_SINC_MEDIUM_QUALITY, 1);
+    if (rc != 0)
+    {
+        throw std::runtime_error(SS("Sample rate conversion failed." << src_strerror(rc)));
+    }
+    if ((size_t)data.output_frames_gen != result.size())
+    {
+        result.resize((size_t)data.output_frames_gen);
+    }
+    return result;
+}
+
+#else
+std::vector<float> AudioData::Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values, ChebyshevDownsamplingFilter *downsamplingFilter)
 {
     if (inputSampleRate == outputSampleRate)
     {
@@ -238,7 +308,7 @@ std::vector<float> AudioData::Resample(size_t inputSampleRate, size_t outputSamp
             filteredData[i] = downsamplingFilter->Tick(0);
         }
 
-        size_t newLength = (size_t)std::ceil(values.size() * (double)outputSampleRate*1.0f / inputSampleRate) + ORDER / 2;
+        size_t newLength = (size_t)std::ceil(values.size() * (double)outputSampleRate * 1.0f / inputSampleRate) + ORDER / 2;
         std::vector<float> result(newLength);
         double dx = inputSampleRate / (double)outputSampleRate;
 
@@ -267,10 +337,11 @@ std::vector<float> AudioData::Resample(size_t inputSampleRate, size_t outputSamp
         return result;
     }
 }
+#endif
 
 static double degreesToRadians(double degrees)
 {
-    return degrees*LsNumerics::Pi/180.0;
+    return degrees * LsNumerics::Pi / 180.0;
 }
 std::vector<float> AudioData::AmbisonicDownmixChannel(const AmbisonicMicrophone &micParameter)
 {
@@ -279,23 +350,22 @@ std::vector<float> AudioData::AmbisonicDownmixChannel(const AmbisonicMicrophone 
     result.resize(size);
 
     double p = micParameter.getMicP();
-    double w = p*std::sqrt(2.0);
-    double x = -(1-p)*std::cos(degreesToRadians(micParameter.getHorizontalAngle()));
-    double y = -(1-p)*std::sin(degreesToRadians(micParameter.getHorizontalAngle()));
+    double w = p * std::sqrt(2.0);
+    double x = -(1 - p) * std::cos(degreesToRadians(micParameter.getHorizontalAngle()));
+    double y = -(1 - p) * std::sin(degreesToRadians(micParameter.getHorizontalAngle()));
 
-    //std::cout << "a: " << micParameter.getHorizontalAngle() << " w: " << w << " x: " << x << " y: " << y << std::endl;
+    // std::cout << "a: " << micParameter.getHorizontalAngle() << " w: " << w << " x: " << x << " y: " << y << std::endl;
 
-    const std::vector<float>&W = getChannel(0);
-    const std::vector<float>&X = getChannel(1);
-    const std::vector<float>&Y = getChannel(2);
+    const std::vector<float> &W = getChannel(0);
+    const std::vector<float> &X = getChannel(1);
+    const std::vector<float> &Y = getChannel(2);
     for (size_t i = 0; i < size; ++i)
     {
-        result[i] = w*W[i]+x*X[i]+y*Y[i];
+        result[i] = w * W[i] + x * X[i] + y * Y[i];
     }
 
     return result;
 }
-
 
 void AudioData::AmbisonicDownmix(const std::vector<AmbisonicMicrophone> &micParameters)
 {
@@ -311,13 +381,13 @@ void AudioData::AmbisonicDownmix(const std::vector<AmbisonicMicrophone> &micPara
 
 void AudioData::Erase(size_t start, size_t end)
 {
-    if (end <= start) return;
+    if (end <= start)
+        return;
     for (size_t c = 0; c < getChannelCount(); ++c)
     {
-        std::vector<float>&channel = getChannel(c);
-        channel.erase(channel.begin()+start, channel.begin()+end);
+        std::vector<float> &channel = getChannel(c);
+        channel.erase(channel.begin() + start, channel.begin() + end);
     }
-
 }
 
 void AudioData::Scale(float value)
@@ -332,7 +402,6 @@ void AudioData::Scale(float value)
     }
 }
 
-
 void AudioData::MonoToStereo()
 {
     this->data.resize(2);
@@ -343,29 +412,25 @@ void AudioData::MonoToStereo()
 void AudioData::SetStereoWidth(float width)
 {
     this->data.resize(2);
-    float fLL = width*0.5f+0.5f;
-    float fLR = -width*0.5f+0.5f;
-    float fRL = -width*0.5+0.5f;
-    float fRR = width*0.5f+0.5f;
+    float fLL = width * 0.5f + 0.5f;
+    float fLR = -width * 0.5f + 0.5f;
+    float fRL = -width * 0.5 + 0.5f;
+    float fRR = width * 0.5f + 0.5f;
 
-    auto & left = data[0];
-    auto & right = data[1];
+    auto &left = data[0];
+    auto &right = data[1];
     size_t size = data[0].size();
 
     for (size_t i = 0; i < size; ++i)
     {
-        float lVal = left[i]*fLL + right[i]*fLR;
-        float rVal = left[i]*fRL + right[i]*fRR;
+        float lVal = left[i] * fLL + right[i] * fLR;
+        float rVal = left[i] * fRL + right[i] * fRR;
         left[i] = lVal;
         right[i] = rVal;
-
     }
 }
 
-
-
-
-AudioData& AudioData::operator+=(const AudioData&other) 
+AudioData &AudioData::operator+=(const AudioData &other)
 {
     assert(this->getChannelCount() == other.getChannelCount());
 
@@ -385,6 +450,26 @@ AudioData& AudioData::operator+=(const AudioData&other)
     }
 
     return *this;
-
 }
 
+void AudioData::InsertZeroes(size_t start, size_t count)
+{
+    if (count == 0)
+        return;
+
+    this->setSize(getSize() + count);
+    for (size_t c = 0; c < getChannelCount(); ++c)
+    {
+        auto &chan = this->data[c];
+
+        float *source = chan.data() + start;
+        float *dest = chan.data() + start + count;
+        size_t n = chan.size() - start - count;
+        memmove(dest, source, n * sizeof(float)); // (maximally efficient)
+
+        for (size_t i = 0; i < count; ++i)
+        {
+            chan[start + i] = 0;
+        }
+    }
+}
