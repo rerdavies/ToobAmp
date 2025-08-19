@@ -28,11 +28,14 @@
 #include "WavConstants.hpp"
 
 
+#define USE_SECRET_RABBIT_RESAMPLER 1
+
+
 namespace toob
 {
-    
+#if !USE_SECRET_RABBIT_RESAMPLER
     class ChebyshevDownsamplingFilter;
-
+#endif
     // Position of an virtual ambisonic microphone.
     class AmbisonicMicrophone
     {
@@ -67,7 +70,6 @@ namespace toob
     private:
         double horizontalAngle, verticalAngle, micP;
     };
-
     class AudioData
     {
     public:
@@ -178,6 +180,8 @@ namespace toob
 
         AudioData&operator+=(const AudioData&other);
 
+        const std::vector<float>&operator[](size_t ix) const { return data[ix]; }
+        std::vector<float>&operator[](size_t ix) { return data[ix]; }
 
         
         /// @brief Downmix ambisonic data into a single channel
@@ -198,11 +202,11 @@ namespace toob
         /// @param outputSampleRate The new sample rate.
         /// @param output The AudioData object in which to store the result.
 
-        void Resample(size_t outputSampleRate, AudioData &output);
+        void Resample(double outputSampleRate, AudioData &output);
 
         /// @brief Resample the audio data.
         /// @param outputSampleRate The new sample rate.
-        void Resample(size_t outputSampleRate);
+        void Resample(double outputSampleRate);
 
 
         /// @brief Remove samples from the audio data.
@@ -210,11 +214,20 @@ namespace toob
         /// @param end The end of samples to remove.
         void Erase(size_t start, size_t end);
 
-    private:
-        static std::vector<float> Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values);
+        /// @brief Insert zeroes
+        /// @param start The position at which to insert zeroes.
+        /// @param count The number of zeroes to insert.
+        void InsertZeroes(size_t start, size_t count);
 
+    private:
+        static std::vector<float> Resample(double inputSampleRate, double outputSampleRate, std::vector<float> &values);
+
+#if !USE_SECRET_RABBIT_RESAMPLER        
         static ChebyshevDownsamplingFilter DesignFilter(size_t inputSampleRate, size_t outputSampleRate);
-        static std::vector<float> Resample(size_t inputSampleRate, size_t outputSampleRate, std::vector<float> &values,ChebyshevDownsamplingFilter*downsamplingFilter);
+        static std::vector<float> Resample(double inputSampleRate, double outputSampleRate, std::vector<float> &values,ChebyshevDownsamplingFilter*downsamplingFilter);
+#else 
+        static std::vector<float> Resample2(double inputSampleRate, double outputSampleRate, std::vector<float> &values);
+#endif        
         ChannelMask channelMask = ChannelMask::ZERO;
         size_t sampleRate = 22050;
         size_t size = 0;

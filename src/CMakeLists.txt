@@ -319,6 +319,7 @@ target_link_libraries(ToobAmpArch
     #${DBUS_LIBRARIES}
     lv2_plugin
     NeuralAudio
+    samplerate
     dl pthread
     ${Boost_LIBRARIES}
     ${FLAC_LIBS}
@@ -907,6 +908,8 @@ add_executable(ResamplerTest
     TestAssert.hpp
 )
 
+target_link_libraries(ResamplerTest PRIVATE samplerate)
+
 add_test(FftTest FftTest)
 
 
@@ -1014,6 +1017,7 @@ add_executable(ConvolutionReverbTest
 
 )
 
+target_link_libraries(ConvolutionReverbTest PRIVATE samplerate)
 
 if(PROFILER)
     target_link_libraries(ConvolutionReverbTest PRIVATE BalancedConvolution profiler)

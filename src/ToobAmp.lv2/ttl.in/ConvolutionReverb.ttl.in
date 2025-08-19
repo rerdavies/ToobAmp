@@ -178,9 +178,9 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
 
                 lv2:default 1.5 ;
                 lv2:minimum 0.1 ;
-                lv2:maximum 10.0 ;
+                lv2:maximum 30.0 ;
 
-                lv2:portProperty epp:notAutomatic ;
+                lv2:portProperty epp:notAutomatic, lv2:notOnGUI ; 
                 lv2:portProperty epp:expensive ;
 
                 units:unit units:s ;
@@ -238,7 +238,8 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:minimum 0 ;
                 lv2:maximum 1 ;
                 
-                lv2:portProperty lv2:enumeration ;
+                
+                lv2:portProperty lv2:enumeration, lv2:notOnGUI ;
 
                 lv2:scalePoint [
                         rdfs:label "Remove" ;
@@ -252,10 +253,76 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         ],  
 
         [
-                a lv2:OutputPort ,
+                a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 4 ;
+                lv2:symbol "predelay_new" ;
+                lv2:name "Predelay";
+
+                lv2:default 0 ;
+                lv2:minimum 0;
+                lv2:maximum 500 ;
+                
+                units:unit units:ms;
+
+                rdfs:comment "Delay first early reflection" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 5 ;
+                lv2:symbol "stretch" ;
+                lv2:name "Stretch";
+
+                lv2:default 1 ;
+                lv2:minimum 0.25;
+                lv2:maximum 2 ;
+                
+                lv2:portProperty epp:logarithmic;
+
+
+                rdfs:comment "Stretch the source i/r file" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 6 ;
+                lv2:symbol "decay" ;
+                lv2:name "Decay";
+
+                lv2:default 1.0 ;
+                lv2:minimum -1.0;
+                lv2:maximum 1.0 ;
+                
+
+                rdfs:comment "Apply a decay envelope to the source i/r file" ;
+        ],  
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 7 ;
+                lv2:symbol "tails" ;
+                lv2:name "Tails";
+
+                lv2:default 0 ;
+                lv2:minimum 0;
+                lv2:maximum 1 ;
+                lv2:portProperty lv2:toggled
+
+                rdfs:comment "Reverb tails when bypassed" ;
+        ],  
+
+
+
+        [
+                a lv2:OutputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 8 ;
                 lv2:symbol "loading_state" ;
                 lv2:name "Status";
 
@@ -295,14 +362,14 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 5 ;
+                lv2:index 9 ;
                 lv2:symbol "in" ;
                 lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 6 ;
+                lv2:index 10 ;
                 lv2:symbol "out" ;
                 lv2:name "Out"
         ],
@@ -314,7 +381,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 7 ;
+                lv2:index 11 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -324,7 +391,7 @@ Source: https://www.openair.hosted.york.ac.uk/?page_id=483
                 atom:bufferType atom:Sequence ;
                 # atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 8;
+                lv2:index 12;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;
