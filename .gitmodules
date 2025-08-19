@@ -5,3 +5,6 @@
 [submodule "modules/NeuralAudio"]
 	path = modules/NeuralAudio
 	url = https://github.com/rerdavies/NeuralAudio.git
+[submodule "modules/libsamplerate"]
+	path = modules/libsamplerate
+	url = https://github.com/rerdavies/libsamplerate.git
