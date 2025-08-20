@@ -25,7 +25,7 @@ message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
 
-project(ToobAmp VERSION 1.1.67 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+project(ToobAmp VERSION 1.1.68 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 
 set(PROJECT_RELEASE_QUALIFIER "")

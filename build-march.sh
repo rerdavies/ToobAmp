@@ -10,7 +10,7 @@ cd build-a76
 cmake .. -D CMAKE_BUILD_TYPE=Release  -D A76_OPTIMIZATION=ON -D TOOB_MULTI_ARCH_BUILD=OFF -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja $@
 cd ..
 
-time cmake --build ./build-a76 --target ToobAmpArch  --config Release -- -j 3
+time cmake --build ./build-a76 --target ToobAmpArch  --config Release -- -j 6
 
 
 # Configure main build to do an a72+a76 build
@@ -19,7 +19,7 @@ cd build
 cmake .. -D CMAKE_BUILD_TYPE=Release  -D A72_OPTIMIZATION=ON -D TOOB_MULTI_ARCH_BUILD=ON -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja  $@
 cd ..
 
-time cmake --build ./build --target all --config Release -- -j 3
+time cmake --build ./build --target all --config Release -- -j 6
 
 
 
