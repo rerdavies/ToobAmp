@@ -1,7 +1,9 @@
-Mike's NAM file dialog failes after selectiong <none>
 
 Filename for copy ?
 
 
 Check trigger button behaviour in native plugins.
 File types not being respected in native plugins../
+
+buf-size.lv2 nominalBlockLength
+

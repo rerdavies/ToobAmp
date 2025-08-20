@@ -33,6 +33,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <complex>
 #include "ss.hpp"
 
 #define TOOB_CONVOLUTION_REVERB_URI "http://two-play.com/plugins/toob-convolution-reverb"
@@ -45,7 +46,6 @@
 using namespace toob;
 
 constexpr float MIN_MIX_DB = -40;
-
 
 ToobConvolutionReverbBase::ToobConvolutionReverbBase(
     PluginType pluginType,
@@ -113,9 +113,6 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case MonoReverbPortId::TAILS:
             this->pTails = (float *)data;
             break;
-
-
-
 
         case MonoReverbPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
@@ -276,7 +273,7 @@ void ToobConvolutionReverbBase::UpdateControls()
     bool mixOptionsChanged = false;
     if (pWidth != nullptr && fgMixOptions.width != *pWidth)
     {
-        fgMixOptions.width  = *pWidth;
+        fgMixOptions.width = *pWidth;
         mixOptionsChanged = true;
     }
     if (pPan != nullptr && fgMixOptions.pan != *pPan)
@@ -288,6 +285,14 @@ void ToobConvolutionReverbBase::UpdateControls()
     {
         fgMixOptions.predelayNew = *pPredelayNew;
         mixOptionsChanged = true;
+    }
+    if (pPredelayObsolete) // now used as a version marker.
+    {
+        CrvbVersion version = *pPredelayObsolete < 0 ? CrvbVersion::V2: CrvbVersion::V1;
+        if (fgMixOptions.version != version) {
+            fgMixOptions.version = version;
+            mixOptionsChanged = true;
+        }
     }
     if (pDecay != nullptr && fgMixOptions.decay != *pDecay)
     {
@@ -315,7 +320,7 @@ void ToobConvolutionReverbBase::UpdateControls()
         mixOptionsChanged = true;
     }
 
-    if (mixOptionsChanged) 
+    if (mixOptionsChanged)
     {
         loadWorker.SetMixOptions(fgMixOptions);
     }
@@ -387,7 +392,6 @@ void ToobConvolutionReverbBase::UpdateControls()
         }
         loadWorker.SetMix3(reverb3MixAf);
     }
-
 }
 void ToobConvolutionReverbBase::Activate()
 {
@@ -620,7 +624,6 @@ void ToobConvolutionReverbBase::LoadWorker::Initialize(size_t sampleRate, ToobCo
     this->pReverb = pReverb;
 }
 
-
 void ToobConvolutionReverbBase::LoadWorker::SetMixOptions(const MixOptions &mixOptions)
 {
     fgMixOptions = mixOptions;
@@ -737,14 +740,74 @@ void ToobConvolutionReverbBase::LoadWorker::Request()
     WorkerAction::Request();
 }
 
-static void NormalizeConvolution(AudioData &data)
+static bool HasDiracImpulse(const AudioData &data)
 {
+    constexpr size_t PULSE_LENGTH = 4;
+    constexpr float MAX_ZERO_VALUE = 1E-9;
+    // [1, 0,0,0...] in at least one chennl,
+    // [0, 0,0,0 ...] otherwise.
+
+    if (data.getSize() <= PULSE_LENGTH)
+        return false;
+    bool hasSpike = false;
+    for (size_t c = 0; c < data.getChannelCount(); ++c)
+    {
+        float sample0 = fabs(data[c][0]);
+        if (sample0 >= 0.1)
+        {
+            hasSpike = true;
+        }
+        else if (sample0 > MAX_ZERO_VALUE)
+        {
+            return false;
+        }
+
+        for (size_t i = 1; i <= PULSE_LENGTH; ++i)
+        {
+            if (fabs(data[c][i]) > MAX_ZERO_VALUE)
+                return false;
+        }
+    }
+    return hasSpike;
+}
+static AudioData RemoveDiracImpulse(AudioData &data)
+{
+    AudioData result;
+    if (HasDiracImpulse(data))
+    {
+        result.setSampleRate(data.getSampleRate());
+        result.setChannelCount(data.getChannelCount());
+        result.setSize(1);
+        for (size_t c = 0; c < data.getChannelCount(); ++c)
+        {
+            result[c][0] = data[c][0];
+            data[c][0] = 0;
+        }
+    }
+    return result;
+}
+
+void RestoreDiracImpulse(AudioData &data, const AudioData &diracImpulse)
+{
+    if (diracImpulse.getSize() != 0)
+    {
+        for (size_t c = 0; c < data.getChannelCount(); ++c)
+        {
+            data[c][0] += diracImpulse[c][0];
+        }
+    }
+}
+
+static double CalculateLegacyResponse(AudioData &data)
+{
+    // normalization calculation for version 1 settings.
     size_t size = data.getSize();
+
+    double maxValue = 0;
 
     for (size_t c = 0; c < data.getChannelCount(); ++c)
     {
         auto &channel = data.getChannel(c);
-        double maxValue = 0;
         // find the worst-case convolution output.
         double sum = 0;
         for (size_t i = 0; i < size; ++i)
@@ -755,9 +818,120 @@ static void NormalizeConvolution(AudioData &data)
                 maxValue = std::abs(sum);
             }
         }
-        // std::cout << "MaxValue: " << maxValue << std::endl;
+    }
+    return maxValue;
+}
 
-        float scale = (float)(1 / maxValue);
+static void LegacyNormalizeConvolution(AudioData &data)
+{
+    size_t size = data.getSize();
+
+    double maxValue = CalculateLegacyResponse(data);
+
+    float scale = (float)(1 / maxValue);
+    for (size_t c = 0; c < data.getChannelCount(); ++c)
+    {
+        auto &channel = data.getChannel(c);
+
+        for (size_t i = 0; i < size; ++i)
+        {
+            channel[i] *= scale;
+        }
+    }
+}
+
+static double CalculateResponse(AudioData &data)
+{
+    double maxMagnitude = 0;
+
+    // blown cache is the problem. 
+    // so doing multiple frequecies in one pass yeilds big gains.
+
+    for (double frequency = 0; frequency <= 880; frequency += 80) {
+        double w = M_PI *frequency/data.getSampleRate();
+        double w2 = M_PI *(frequency+20)/data.getSampleRate();
+        double w3 = M_PI *(frequency+40)/data.getSampleRate();
+        double w4 = M_PI *(frequency+60)/data.getSampleRate();
+   
+        //std::complex<double> dRotation = std::exp(std::complex<double>(0,w));
+        std::complex<double> phasor = std::complex<double>(1,0);
+        std::complex<double> phasor2 = std::complex<double>(1,0);
+        std::complex<double> phasor3 = std::complex<double>(1,0);
+        std::complex<double> phasor4 = std::complex<double>(1,0);
+
+
+        for (size_t c = 0; c < data.getChannelCount(); ++c)
+        {
+            const auto&ch = data[c];
+
+            std::complex<double> sum {0.0,0.0};
+            std::complex<double> sum2 {0.0,0.0};
+            std::complex<double> sum3 {0.0,0.0};
+            std::complex<double> sum4 {0.0,0.0};
+
+            size_t i = 0;
+
+
+            for (/**/; i < ch.size(); ++i)
+            {
+                float v = ch[i];
+                phasor = std::exp(std::complex<double>(0,i*w)); // fix rounding errors.
+                sum += std::complex<double>(v,0)*phasor;
+
+                phasor2 = std::exp(std::complex<double>(0,i*w2)); // fix rounding errors.
+                sum2 += std::complex<double>(v,0)*phasor2;
+
+                phasor3 = std::exp(std::complex<double>(0,i*w3)); // fix rounding errors.
+                sum3 += std::complex<double>(v,0)*phasor3;
+
+                phasor4 = std::exp(std::complex<double>(0,i*w4)); // fix rounding errors.
+                sum4 += std::complex<double>(v,0)*phasor4;
+            }
+            double m = std::abs(sum);
+            //std::cout << "sum: " << sum << std::endl;
+            if (m > maxMagnitude)
+            {
+                maxMagnitude = m;
+            }
+            double m2 = std::abs(sum2);
+            if (m2 > maxMagnitude)
+            {
+                maxMagnitude = m2;
+            }
+            double m3 = std::abs(sum3);
+            if (m3 > maxMagnitude)
+            {
+                maxMagnitude = m3;
+            }
+            double m4 = std::abs(sum4);
+            if (m2 > maxMagnitude)
+            {
+                maxMagnitude = m4;
+            }
+
+        }
+    }
+    if (maxMagnitude < 1)
+    {
+        return 1;
+    }
+    return maxMagnitude;
+}
+
+static void NormalizeConvolution(AudioData &data)
+{
+    if (HasDiracImpulse(data))
+    {
+        return;
+    }
+    size_t size = data.getSize();
+
+    double maxValue = CalculateResponse(data);
+
+    float scale = (float)(1 / maxValue);
+    for (size_t c = 0; c < data.getChannelCount(); ++c)
+    {
+        auto &channel = data.getChannel(c);
 
         for (size_t i = 0; i < size; ++i)
         {
@@ -807,9 +981,9 @@ static void RemovePredelay(AudioData &audioData)
         float blend = (i - db60Index) / (float)(db30Index - db60Index);
         channel[i] *= blend;
     }
-    // std::cout << "Removing predelay. db60Index: " << db60Index << " db30Index: " << db30Index << std::endl;
     audioData.Erase(0, db60Index);
 }
+#ifdef JUNK
 static float GetTailScale(const std::vector<float> &data, size_t tailPosition)
 {
     double max = 0;
@@ -828,88 +1002,53 @@ static float GetTailScale(const std::vector<float> &data, size_t tailPosition)
     }
     return (float)max;
 }
-static bool HasDiracImpulse(const AudioData &data) {
-    constexpr size_t PULSE_LENGTH = 4;
-    constexpr float MAX_ZERO_VALUE = 1E-9;
-    // [1, 0,0,0...] in at least one chennl, 
-    // [0, 0,0,0 ...] otherwise. 
+#endif
 
-    if (data.getSize() <= PULSE_LENGTH) return false;
-    bool hasSpike = false;
-    for (size_t c = 0; c < data.getChannelCount(); ++c) {
-        float sample0 = fabs(data[c][0]);
-        if (sample0 >= 0.1) {
-            hasSpike = true;
-        } else if (sample0 > MAX_ZERO_VALUE)
-        {
-            return false;
-        }
 
-        for (size_t i = 1; i <= PULSE_LENGTH; ++i) 
-        {
-            if (fabs(data[c][i]) > MAX_ZERO_VALUE) return false;
-        }
-    }
-    return hasSpike;
-
-}
-static AudioData RemoveDiracImpulse(AudioData &data) {
-    AudioData result;
-    if (HasDiracImpulse(data)) {
-        result.setSampleRate(data.getSampleRate());
-        result.setChannelCount(data.getChannelCount());
-        result.setSize(1);
-        for (size_t c = 0; c < data.getChannelCount(); ++c) {
-            result[c][0] = data[c][0];
-            data[c][0] = 0;
-        }
-    }
-    return result;
-}
-
-static void RestoreDiracImpulse(AudioData &data, const AudioData&diracImpulse) {
-    for (size_t c = 0; c < data.getChannelCount(); ++c) {
-        data[c][0] += diracImpulse[c][0];
-    } 
-}
-
-static size_t GetShotSpikeLength(const AudioData&data) {
-    // loooking for a string of N consecutive zeros, in the first two millisecond of data. 
+static size_t GetShotSpikeLength(const AudioData &data)
+{
+    // loooking for a string of N consecutive zeros, in the first two millisecond of data.
     // otherwise, return 0.
     constexpr float EPSILON = 1E-7f;
     constexpr size_t INSERTION_LENGTH = 5;
 
-    size_t maxSample = (size_t)(data.getSampleRate()*0.002);
-    if (maxSample > data.getSize()) return 0;
+    size_t maxSample = (size_t)(data.getSampleRate() * 0.002);
+    if (maxSample > data.getSize())
+        return 0;
 
     size_t consecutiveZeroes = 0;
     size_t result = 0;
     for (size_t i = 0; i < maxSample; ++i)
     {
         bool isZero = true;
-        for (size_t c = 0; c < data.getChannelCount(); ++c) {
-            if (fabs(data[c][i]) > EPSILON) {
+        for (size_t c = 0; c < data.getChannelCount(); ++c)
+        {
+            if (fabs(data[c][i]) > EPSILON)
+            {
                 isZero = false;
                 break;
             }
         }
-        if (isZero) {
+        if (isZero)
+        {
             ++consecutiveZeroes;
-            if (consecutiveZeroes == INSERTION_LENGTH) {
+            if (consecutiveZeroes == INSERTION_LENGTH)
+            {
                 result = i - INSERTION_LENGTH + 1;
             }
-        } else {
+        }
+        else
+        {
             consecutiveZeroes = 0;
         }
     }
     return result;
-
 }
 
-static size_t GetEarlyReflectionPosition(AudioData &data, size_t startPosition, size_t endPosition) 
+static size_t GetEarlyReflectionPosition(AudioData &data, size_t startPosition, size_t endPosition)
 {
     constexpr float EPSILON = 1E-7f;
-    if (endPosition > data.getSize()) 
+    if (endPosition > data.getSize())
     {
         endPosition = data.getSize();
     }
@@ -919,71 +1058,75 @@ static size_t GetEarlyReflectionPosition(AudioData &data, size_t startPosition, 
         for (size_t c = 0; c < data.getChannelCount(); ++i)
         {
             float sample = fabs(data[c][i]);
-            if (sample > EPSILON) return i;
+            if (sample > EPSILON)
+                return i;
         }
     }
     return endPosition;
-
 }
-static void AdjustPredelay(AudioData &data, float predelaySeconds) {
+static void AdjustPredelay(AudioData &data, float predelaySeconds)
+{
 
     int64_t samples = (int64_t)(data.getSampleRate() * predelaySeconds);
-    if (samples == 0) 
+    if (samples == 0)
     {
         return;
     }
     size_t insertPosition = GetShotSpikeLength(data);
-    if (samples > 0) 
+    if (samples > 0)
     {
-        data.InsertZeroes(insertPosition,(size_t)samples);
-    } else if (samples < 0) 
+        data.InsertZeroes(insertPosition, (size_t)samples);
+    }
+    else if (samples < 0)
     {
         size_t samplesToRemove = (size_t)-samples;
         // or the first early reflection, whichever comes first.
-        size_t endPosition = GetEarlyReflectionPosition(data,insertPosition,insertPosition+samplesToRemove);
+        size_t endPosition = GetEarlyReflectionPosition(data, insertPosition, insertPosition + samplesToRemove);
 
         if (endPosition <= insertPosition)
         {
             return;
         }
-        data.Erase(insertPosition,endPosition);
-
-
+        data.Erase(insertPosition, endPosition);
     }
-
-
 }
 
 static void ApplyDecay(AudioData &data, float decay)
 {
-    if (decay == 0) 
+    if (decay == 0)
     {
         return;
     }
-    constexpr double TRef = 4.0; // seconds.
+    double TRef = data.getSize()/(double)(data.getSampleRate()); // seconds.
+    if (TRef < 1.0) TRef = 1.0;
+
     constexpr double T0 = 0.010; // seconds.
-    double tF = T0+(TRef-T0)*decay;
-    double yF = tF*(1.0f/TRef);
+    double tF, yF;
+    if (decay < 0)
+    {
+        tF = T0 + (TRef - T0) * (1.0 + decay);
+        yF = tF * (1.0f / TRef);
+    } else {
+        tF = TRef;
+        yF = Db2AF(decay*60.0f,-96);
+    }
     // y = exp(k*t)
     // yF = exp(k*tF)
     // ln(yF) = k*tF
     // k = ln(yF)/tF;
-    double k = log(yF)/tF;
+    double k = log(yF) / tF;
 
     k /= data.getSampleRate();
 
     for (size_t i = 0; i < data.getSize(); ++i)
     {
-        float scale = exp(k*i);
+        float scale = exp(k * i);
         for (size_t c = 0; c < data.getChannelCount(); ++c)
         {
             data[c][i] *= scale;
         }
     }
-
 }
-
-
 
 AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem::path &fileName, float level)
 {
@@ -1036,41 +1179,54 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
     // yyy: postprocessing!
     pThis->LogTrace("%s\n", SS("File loaded. Sample rate: " << data.getSampleRate() << std::setprecision(3) << " Length: " << (data.getSize() * 1.0f / data.getSampleRate()) << "s.").c_str());
 
-    // NormalizeConvolution(data);
+    // using clock_t = std::chrono::steady_clock;
+    // clock_t::time_point start = clock_t::now();
+
+    if (this->bgMixOptions.version >= CrvbVersion::V2) {
+        NormalizeConvolution(data);
+    } else {
+        LegacyNormalizeConvolution(data);
+    }
+
+    // auto duration = clock_t::now()-start;
+
+    // std::cout << " Normalization: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms" << std::endl;
+
+
     if (!this->bgMixOptions.predelayObsolete) // bbetter to do it on the pristine un-filtered data.
     {
         RemovePredelay(data);
     }
 
-
-
     AudioData diracImpulse;
-    if (this->bgMixOptions.isReverb) {
+    if (this->bgMixOptions.isReverb)
+    {
 
-        if (this->bgMixOptions.predelayNew != 0) {
-            AdjustPredelay(data, this->bgMixOptions.predelayNew*0.001);
+        if (this->bgMixOptions.predelayNew > 1)
+        {
+            AdjustPredelay(data, this->bgMixOptions.predelayNew * 0.001);
         }
         diracImpulse = RemoveDiracImpulse(data);
+        (void)diracImpulse;
 
-        if (this->bgMixOptions.decay != 0) {
+        if (this->bgMixOptions.decay != 0)
+        {
             ApplyDecay(data, this->bgMixOptions.decay);
         }
-
     }
 
     double effectiveSampleRate = pReverb->getSampleRate();
     if (this->bgMixOptions.isReverb && this->bgMixOptions.stretch != 1)
     {
-        effectiveSampleRate = effectiveSampleRate*this->bgMixOptions.stretch;
+        effectiveSampleRate = effectiveSampleRate * this->bgMixOptions.stretch;
     }
     data.Resample(effectiveSampleRate); // potentially stretched.
     data.setSampleRate(pReverb->getSampleRate());
 
-    if (this->bgMixOptions.isReverb)
-    {
-        RestoreDiracImpulse(data,diracImpulse);
-    }
-    NormalizeConvolution(data);
+    // if (this->bgMixOptions.isReverb)
+    // {
+    //     RestoreDiracImpulse(data, diracImpulse);
+    // }
 
     data.Scale(level);
 
@@ -1098,8 +1254,9 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
             AudioData data3 = LoadFile(requestFileName3, requestMix3);
             data += data3;
         }
-        size_t maxSize = (size_t)std::ceil(this->bgMixOptions.maxTime * pReverb->getSampleRate());
         this->tailScale = 0;
+#ifdef JUNK
+        size_t maxSize = (size_t)std::ceil(this->bgMixOptions.maxTime * pReverb->getSampleRate());
         if (maxSize < data.getSize())
         {
             this->tailScale = GetTailScale(data.getChannel(0), maxSize);
@@ -1107,6 +1264,7 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
 
             pThis->LogTrace("%s\n", SS("Max T: " << std::setprecision(3) << this->bgMixOptions.maxTime << "s Feedback: " << tailScale).c_str());
         }
+#endif
         if (data.getSize() == 0)
         {
             data.setSize(1);
@@ -1288,8 +1446,8 @@ void ToobConvolutionReverbBase::PublishResourceFiles(
     if (status == LV2_FileBrowser_Status::LV2_FileBrowser_Status_Err_Filesystem)
     {
         LogWarning("%s: %s\n",
-                IsConvolutionReverb() ? "TooB Convolution Reverb" : "Toob Cab IR",
-                "Failed to publish resource audio files.");
+                   IsConvolutionReverb() ? "TooB Convolution Reverb" : "Toob Cab IR",
+                   "Failed to publish resource audio files.");
     }
 }
 
@@ -1440,18 +1598,17 @@ void ToobConvolutionReverbBase::SetDefaultFile(const LV2_Feature *const *feature
     if (IsConvolutionReverb())
     {
         auto targetPath = std::filesystem::path(this->getBundlePath()) / "impulseFiles" / "reverb" / "Genesis 6 Studio Live Room.wav";
-        targetPath = MapFilename(features,targetPath);
+        targetPath = MapFilename(features, targetPath);
         this->loadWorker.SetFileName(targetPath.c_str());
     }
 }
 
-bool ToobConvolutionReverbBase::LoadWorker::Changed() const { 
-    return this->changed
-    || (this->fgMixOptionsChanged && 
-        (
-            // ( but only if there's a valid file)
-            this->fileName[0] != '\0' || this->fileName2[0] != '\0' || this->fileName3[0] != '\0'
+bool ToobConvolutionReverbBase::LoadWorker::Changed() const
+{
+    return this->changed || (this->fgMixOptionsChanged &&
+                             (
+                                 // ( but only if there's a valid file)
+                                 this->fileName[0] != '\0' || this->fileName2[0] != '\0' || this->fileName3[0] != '\0'
 
-        )
-    );
+                                 ));
 }

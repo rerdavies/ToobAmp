@@ -51,7 +51,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Rele
         add_compile_options("-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
     else ()
         message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-        add_compile_options("-mcpu=cortex-a72" "-march=armv8.1a" "-mtune=cortex-a72")
+        add_compile_options("-march=armv8-a" "-mtune=cortex-a72")
     endif()
 endif()
 
