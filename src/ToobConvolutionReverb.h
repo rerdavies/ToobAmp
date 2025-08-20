@@ -47,7 +47,14 @@
 
 namespace toob
 {
+    enum CrvbVersion {
+        V1 = 0,
+        V2 = 100, // new normalization procedure.
+    };
+
     struct MixOptions {
+        CrvbVersion version = CrvbVersion::V1;
+
         bool isReverb = false;
         float predelayObsolete = 0;
         float predelayNew = 0;
