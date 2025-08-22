@@ -57,6 +57,7 @@ namespace toob
 			RATE,
 			LFO,
 			RES,
+            DRYWET,
 			AUDIO_INL,
 			AUDIO_OUTL,
 			AUDIO_OUTR,
@@ -66,16 +67,20 @@ namespace toob
 		const float *pRate = nullptr;
 		const float *pDepth = nullptr;
 		const float *pRes = nullptr;
+		const float *pDryWet = nullptr;
 		float *pLfo = nullptr;
 		const float *inL = nullptr;
 		float *outL = nullptr;
 		float *outR = nullptr;
 
 		float lastRes = -2;
+		float lastDryWet = -2;
 		float lastManual = -2;
 		float lastRate = -2;
 		float lastDepth = -2;
 
+        ControlDezipper dryWetDezipper;
+        
 		double rate = 44100;
 		std::string bundle_path;
 

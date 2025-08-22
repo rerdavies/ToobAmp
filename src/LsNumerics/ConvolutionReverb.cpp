@@ -1524,3 +1524,14 @@ void BalancedConvolution::SetAssemblyThreadStartupSucceeded()
     }
     startup_cv.notify_all();
 }
+
+    void ConvolutionReverb::SetBypass(bool bypass, bool immediate)
+    {
+        float delay = immediate? 0.0: 0.1;
+        this->bypass = bypass;
+        bypassDezipper.To(bypass? 1.0f: 0.0f, delay);
+    }
+    void ConvolutionReverb::SetTails(bool tails)
+    {
+        this->tails = tails;
+    }

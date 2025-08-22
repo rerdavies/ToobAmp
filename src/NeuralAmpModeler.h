@@ -177,6 +177,8 @@ namespace toob
         void OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value) override;
         void OnPatchGet(LV2_URID propertyUrid) override;
 
+        void UpdateNoiseGateParams();
+        
         void ProcessBlock(int nFrames);
         void OnReset();
         void OnIdle();
@@ -215,7 +217,7 @@ namespace toob
 
         RangedInputPort cBuffer{0.0,1.0};
         bool lastBufferValue = false;
-        RangedDbInputPort cNoiseGateThreshold{-100, 0};
+        RangedDbInputPort cNoiseGateThreshold{-120, 0};
         RangedInputPort cBass {0,10};
         RangedInputPort cMid{ 0,10};
         RangedInputPort cTreble{ 0,10};

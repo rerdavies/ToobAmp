@@ -56,23 +56,29 @@ namespace toob {
 	class ToobFreeverb : public Lv2Plugin {
 	private:
 		enum class PortId {
-			DRYWET = 0,
+            BYPASS,
+			DRYWET,
 			ROOMSIZE,
 			DAMPING,
+            TAILS,
 			AUDIO_INL,
 			AUDIO_INR,
 			AUDIO_OUTL,
 			AUDIO_OUTR,
 		};
 
-		float*dryWet = nullptr;
-		float *roomSize= nullptr;
-		float *damping = nullptr;
+		const float*bypass = nullptr;
+		const float*dryWet = nullptr;
+		const float *roomSize= nullptr;
+		const float *damping = nullptr;
+        const float *tails = nullptr;
 		const float*inL = nullptr;
 		const float*inR = nullptr;
 		float*outL = nullptr;
 		float*outR = nullptr;
 
+		bool bypassValue = true;
+        bool tailsValue = true;
 		float dryWetValue = -1;
 		float roomSizeValue = -1;
 		float dampingValue = -1;

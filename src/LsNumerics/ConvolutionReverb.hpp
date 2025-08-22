@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2023 Robin E. R. Davies
+ * Copyright (c) 2023-2025 Robin E. R. Davies
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of
  * this software and associated documentation files (the "Software"), to deal in
@@ -74,10 +74,11 @@ namespace LsNumerics
         class AssemblyQueue
         {
             // single-reader, single-writer, designed to be friendly to the reader.
-       
+
         public:
-            AssemblyQueue(bool isStereo) { 
-                buffer.resize(BUFFER_SIZE); 
+            AssemblyQueue(bool isStereo)
+            {
+                buffer.resize(BUFFER_SIZE);
                 if (isStereo)
                 {
                     bufferRight.resize(BUFFER_SIZE);
@@ -226,7 +227,7 @@ namespace LsNumerics
                         read_cv.notify_all();
                         return;
                     }
-                    
+
                     if (count < buffer.size())
                     {
                         size_t thisTime = buffer.size() - count;
@@ -244,7 +245,7 @@ namespace LsNumerics
                                 {
                                     buffer[i + writeHead] = outputBuffer[inputIx++];
                                 }
-                                writeHead = thisTime-firstPart;
+                                writeHead = thisTime - firstPart;
                                 for (size_t i = 0; i < writeHead; ++i)
                                 {
                                     buffer[i] = outputBuffer[inputIx++];
@@ -288,7 +289,7 @@ namespace LsNumerics
                         read_cv.notify_all();
                         return;
                     }
-                    
+
                     if (count < buffer.size())
                     {
                         size_t thisTime = buffer.size() - count;
@@ -307,7 +308,7 @@ namespace LsNumerics
                                     buffer[i + writeHead] = outputBufferL[inputIx];
                                     bufferRight[i + writeHead] = outputBufferR[inputIx++];
                                 }
-                                writeHead = thisTime-firstPart;
+                                writeHead = thisTime - firstPart;
                                 for (size_t i = 0; i < writeHead; ++i)
                                 {
                                     buffer[i] = outputBufferL[inputIx];
@@ -390,7 +391,7 @@ namespace LsNumerics
         public:
             DirectConvolutionSection(
                 size_t size,
-                size_t sampleOffset, const std::vector<float> &impulseData, const std::vector<float>*impulseDataRightOpt,
+                size_t sampleOffset, const std::vector<float> &impulseData, const std::vector<float> *impulseDataRightOpt,
                 size_t directSectionDelay = 0,
                 size_t inputDelay = 0,
                 size_t threadNumber = -1);
@@ -444,7 +445,7 @@ namespace LsNumerics
 
         private:
             using Fft = StagedFft;
-            
+
             void UpdateBuffer();
 
             bool isStereo = false;
@@ -488,14 +489,14 @@ namespace LsNumerics
         /// audio systems. Very large FFTs are schedule below +6 inorder not to interfere with USB audio services
         /// which run at RT priority +6.
         ///
-        /// If Scheduler::Normal is specified, the thread priorities are set using nice (3). When running in 
+        /// If Scheduler::Normal is specified, the thread priorities are set using nice (3). When running in
         /// realtime, the schedulerPolicy should always be SchedulerPolicy::Realtime.
         /// SchedulerPolicy::Normal allows unit testing in an environment where the running process may not have
         /// sufficient privileges to set a realtime thread priority, or perhaps processing offline.
         ///
         /// An dedicated thread (the assembly thread) is responsibile for assembling convolution sections calculated on
-        /// the background thread into a single stream for consumption by the audio thread. This ensures that (hopefully rare) 
-        /// system calls required to wait for background data don't execute on the audio thread. 
+        /// the background thread into a single stream for consumption by the audio thread. This ensures that (hopefully rare)
+        /// system calls required to wait for background data don't execute on the audio thread.
         ///
         /// The sampleRate and maxAudioBufferSize parameters are used to control scheduling of the background convolution
         /// sections. Note that sampleRate is the sample rate at which the audio thread is running, NOT the sample
@@ -507,7 +508,7 @@ namespace LsNumerics
         /// and consequently, the amount of non-FFT processing that has to be done on the real-time thread.
         ///
         /// If determined to run with large buffer sizes, it would be a good idea to modifiy the realtime processing
-        /// thread to use short FFT-sections when processing in realtime. This is not currently implemented. The 
+        /// thread to use short FFT-sections when processing in realtime. This is not currently implemented. The
         /// current implementation runs reasonable efficiently with buffer sizes less that 256 frames, and may well
         /// behave badly with buffer sizes of 1024.
         ///
@@ -519,11 +520,10 @@ namespace LsNumerics
 
         BalancedConvolution(
             SchedulerPolicy schedulerPolicy,
-            size_t size, 
+            size_t size,
             const std::vector<float> &impulseResponseLeft, const std::vector<float> &impulseResponseRight,
             size_t sampleRate,
             size_t maxAudioBufferSize);
-
 
         BalancedConvolution(
             SchedulerPolicy schedulerPolicy,
@@ -540,10 +540,10 @@ namespace LsNumerics
             size_t sampleRate = 44100,
             size_t maxAudioBufferSize = 128)
             : BalancedConvolution(
-                schedulerPolicy, 
-                impulseResponseLeft.size(), 
-                impulseResponseLeft, impulseResponseRight,
-                sampleRate, maxAudioBufferSize)
+                  schedulerPolicy,
+                  impulseResponseLeft.size(),
+                  impulseResponseLeft, impulseResponseRight,
+                  sampleRate, maxAudioBufferSize)
         {
             if (impulseResponseLeft.size() != impulseResponseRight.size())
             {
@@ -557,7 +557,7 @@ namespace LsNumerics
 
     private:
         void WaitForAssemblyThreadStartup();
-        void SetAssemblyThreadStartupFailed(const std::string & e);
+        void SetAssemblyThreadStartupFailed(const std::string &e);
         void SetAssemblyThreadStartupSucceeded();
 
         bool isStereo = false;
@@ -576,14 +576,13 @@ namespace LsNumerics
             return (float)(backgroundValue + audioThreadToBackgroundQueue.DirectConvolve(directImpulse));
         }
 
-        void TickUnsynchronized(float valueL, float backgroundValueL, float valueR, float backgroundValueR,float *outL, float *outR)
+        void TickUnsynchronized(float valueL, float backgroundValueL, float valueR, float backgroundValueR, float *outL, float *outR)
         {
-            audioThreadToBackgroundQueue.Write(valueL,valueR);
+            audioThreadToBackgroundQueue.Write(valueL, valueR);
             float directL, directR;
-            audioThreadToBackgroundQueue.DirectConvolve(directImpulse,directImpulseRight,&directL, &directR);
+            audioThreadToBackgroundQueue.DirectConvolve(directImpulse, directImpulseRight, &directL, &directR);
             *outL = backgroundValueL + directL;
             *outR = backgroundValueR + directR;
-
         }
 
     public:
@@ -594,7 +593,7 @@ namespace LsNumerics
             Tick(1, &value, &output);
             return output;
         }
-        void Tick(size_t frames, const float * RESTRICT input, float * RESTRICT output)
+        void Tick(size_t frames, const float *RESTRICT input, float *RESTRICT output)
         {
             size_t ix = 0;
             size_t remaining = frames;
@@ -622,7 +621,6 @@ namespace LsNumerics
                     ix += nRead;
                     remaining -= nRead;
                     audioThreadToBackgroundQueue.SynchWrite();
-                    
                 }
             }
         }
@@ -687,8 +685,9 @@ namespace LsNumerics
             void Close() { outputDelayLine.Close(); }
 
             float Tick() { return outputDelayLine.Read(); }
-            void Tick(float*left, float*right) {
-                outputDelayLine.Read(left,right);
+            void Tick(float *left, float *right)
+            {
+                outputDelayLine.Read(left, right);
             }
 
             DirectSection *GetDirectSection() { return this->section; }
@@ -738,14 +737,14 @@ namespace LsNumerics
                 }
                 return result;
             }
-            void  Tick(float*left, float*right)
+            void Tick(float *left, float *right)
             {
                 double resultL = 0;
                 double resultR = 0;
                 for (auto section : sections)
                 {
-                    float l,r;
-                    section->Tick(&l,&r);
+                    float l, r;
+                    section->Tick(&l, &r);
                     resultL += l;
                     resultR += r;
                 }
@@ -811,11 +810,11 @@ namespace LsNumerics
             }
         }
         ConvolutionReverb(
-            SchedulerPolicy schedulerPolicy, 
-            size_t size, const std::vector<float> &impulseLeft,const std::vector<float> &impulseRight,
+            SchedulerPolicy schedulerPolicy,
+            size_t size, const std::vector<float> &impulseLeft, const std::vector<float> &impulseRight,
             size_t sampleRate, size_t maxBufferSize)
             : convolution(schedulerPolicy, size == 0 ? 0 : size - 1, impulseLeft, impulseRight, sampleRate, maxBufferSize), // the last value is recirculated.
-                isStereo(true)
+              isStereo(true)
         {
             directMixDezipper.To(0, 0);
             reverbMixDezipper.To(1.0, 0);
@@ -838,9 +837,13 @@ namespace LsNumerics
                 feedbackScale = 0;
             }
         }
-        ~ConvolutionReverb() {
-            
+        ~ConvolutionReverb()
+        {
         }
+
+        void SetBypass(bool bypass, bool immediate);
+        void SetTails(bool tails);
+
         void SetFeedback(float feedback, size_t tapPosition)
         {
 
@@ -851,7 +854,6 @@ namespace LsNumerics
             }
             feedbackScale = feedback;
             hasFeedback = feedbackScale != 0;
-            
         }
 
     protected:
@@ -879,6 +881,7 @@ namespace LsNumerics
             this->sampleRate = rate;
             this->reverbMixDezipper.SetSampleRate(rate);
             this->directMixDezipper.SetSampleRate(rate);
+            this->bypassDezipper.SetSampleRate(rate);
         }
         void ResetDirectMix(float value)
         {
@@ -915,9 +918,9 @@ namespace LsNumerics
             }
         }
 
-        void Tick(size_t count, 
-            const float  * RESTRICT inputL, const float  * RESTRICT inputR, 
-            float * RESTRICT outputL,float * RESTRICT outputR)
+        void Tick(size_t count,
+                  const float *RESTRICT inputL, const float *RESTRICT inputR,
+                  float *RESTRICT outputL, float *RESTRICT outputR)
         {
             // TODO: there has to be a way to refactor this sensibly. :-/
             if (hasFeedback)
@@ -937,7 +940,6 @@ namespace LsNumerics
                         float valueR = inputR[ix + i];
                         float recirculationValueR = feedbackDelayRight.Value() * feedbackScale;
                         float inputR = Undenormalize(valueR + recirculationValueR);
-
 
                         float reverbL, reverbR;
                         convolution.TickUnsynchronized(inputL, 0, inputR, 0, &reverbL, &reverbR);
@@ -964,7 +966,7 @@ namespace LsNumerics
                         {
                             thisTime = remaining;
                         }
-                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer,convolution.assemblyInputBufferRight,  thisTime);
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, convolution.assemblyInputBufferRight, thisTime);
                         for (size_t i = 0; i < nRead; ++i)
                         {
                             float valueL = inputL[ix + i];
@@ -974,8 +976,6 @@ namespace LsNumerics
                             float valueR = inputR[ix + i];
                             float recirculationValueR = feedbackDelayRight.Value() * feedbackScale;
                             float inputR = Undenormalize(valueR + recirculationValueR);
-
-
 
                             float reverbL, reverbR;
                             convolution.TickUnsynchronized(
@@ -1008,17 +1008,46 @@ namespace LsNumerics
                     size_t thisTime = remaining;
                     for (size_t i = 0; i < thisTime; ++i)
                     {
-                        float valueL = inputL[ix + i];
-                        float valueR = inputR[ix + i];
+                        float bypassValue = bypassDezipper.Tick();
 
-                        float reverbL,reverbR;
-                        convolution.TickUnsynchronized(valueL, 0,valueR,0,&reverbL, &reverbR);
+                        float reverbInL = inputL[ix + i];
+                        float reverbInR = inputR[ix + i];
 
+                        float reverbL, reverbR;
+                        if (tails)
+                        {
+                            reverbInL *= bypassValue;
+                            reverbInR *= bypassValue;
+                        } else if (!bypass)
+                        {
+                            reverbInL = 0;
+                            reverbInR = 0;
+                        }
+                        convolution.TickUnsynchronized(reverbInL, 0, reverbInR, 0, &reverbL, &reverbR);
 
                         float directMix = directMixDezipper.Tick();
                         float reverbMix = reverbMixDezipper.Tick();
-                        float returnValueL = valueL * directMix + (reverbL)*reverbMix;
-                        float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                        float valueL = inputL[ix + i];
+                        float valueR = inputR[ix + i];
+
+                        float returnValueL, returnValueR;
+                        if (tails)
+                        {
+                            // cross-fade direct signal, tails are unmodified on bypass
+                            float effectiveDirectMix = (1.0f - bypassValue) + bypassValue * directMix;
+                            returnValueL = valueL * effectiveDirectMix + (reverbL)*reverbMix;
+                            returnValueR = valueR * effectiveDirectMix + (reverbR)*reverbMix;
+                        }
+                        else
+                        {
+                            // cross-fade everything on bypass
+                            returnValueL = valueL * directMix + (reverbL)*reverbMix;
+                            returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                            float dryMix = 1.0 - bypassValue;
+                            returnValueL = dryMix * valueL + bypassValue * returnValueL;
+                            returnValueR = dryMix * valueR + bypassValue * returnValueR;
+                        }
+
                         outputL[ix + i] = returnValueL;
                         outputR[ix + i] = returnValueR;
                     }
@@ -1036,22 +1065,54 @@ namespace LsNumerics
                         {
                             thisTime = remaining;
                         }
-                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer,convolution.assemblyInputBufferRight, thisTime);
+                        size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, convolution.assemblyInputBufferRight, thisTime);
                         for (size_t i = 0; i < nRead; ++i)
                         {
+                            float bypassValue = bypassDezipper.Tick();
+
                             float valueL = inputL[ix + i];
                             float valueR = inputR[ix + i];
-                            
+                            if (tails)
+                            {
+                                valueL *= bypassValue;
+                                valueR *= bypassValue;
+                            } else if (!bypass)
+                            {
+                                valueL = 0;
+                                valueR = 0;
+                            }
+
                             float reverbL, reverbR;
                             convolution.TickUnsynchronized(
                                 valueL, convolution.assemblyInputBuffer[i],
                                 valueR, convolution.assemblyInputBufferRight[i],
-                                &reverbL,&reverbR);
+                                &reverbL, &reverbR);
 
                             float directMix = directMixDezipper.Tick();
                             float reverbMix = reverbMixDezipper.Tick();
-                            float returnValueL = valueL * directMix + (reverbL)*reverbMix;
-                            float returnValueR = valueR * directMix + (reverbR)*reverbMix;
+
+                            float originalInputL = inputL[ix + i];
+                            float originalInputR = inputR[ix + i];
+                            float returnValueL, returnValueR;
+
+                            if (tails)
+                            {
+                                // crossfade input level, reverb unmodified, when bypassing.
+                                float effectiveDirectMix = (1.0 - bypassValue) + bypassValue * directMix;
+
+                                returnValueL = originalInputL * effectiveDirectMix + (reverbL)*reverbMix;
+                                returnValueR = originalInputR * effectiveDirectMix + (reverbR)*reverbMix;
+                            }
+                            else
+                            {
+                                // crossfade everything when bypassing.
+                                returnValueL = originalInputL * directMix + (reverbL)*reverbMix;
+                                returnValueR = originalInputR * directMix + (reverbR)*reverbMix;
+
+                                float dryMix = 1.0f - bypassValue;
+                                returnValueL = (dryMix)*originalInputL + bypassValue * returnValueL;
+                                returnValueR = (dryMix)*originalInputR + bypassValue * returnValueR;
+                            }
                             outputL[ix + i] = returnValueL;
                             outputR[ix + i] = returnValueR;
                         }
@@ -1063,7 +1124,7 @@ namespace LsNumerics
             }
         }
 
-        void Tick(size_t count, const float  * RESTRICT input, float * RESTRICT output)
+        void Tick(size_t count, const float *RESTRICT input, float *RESTRICT output)
         {
             // TODO: there has to be a way to refactor this sensibly. :-/
             if (hasFeedback)
@@ -1128,10 +1189,31 @@ namespace LsNumerics
                     for (size_t i = 0; i < thisTime; ++i)
                     {
                         float value = input[ix + i];
+                        float bypassValue = bypassDezipper.Tick();
+                        if (tails)
+                        {
+                            value *= bypassValue;
+                        } else if (!bypass)
+                        {
+                            value = 0;
+                        }
 
                         float reverb = convolution.TickUnsynchronized(value, 0);
 
-                        float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                        float returnValue;
+                        if (tails)
+                        {
+                            value = input[ix + i];
+                            // crossfade direct level, and reverb unmodified when bypassing.
+                            float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
+                            returnValue = value * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                        }
+                        else
+                        {
+                            // crossfade everything when bypassing.
+                            returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                            returnValue = (1.0 - bypassValue) * value + bypassValue * returnValue;
+                        }
                         output[ix + i] = returnValue;
                     }
                     ix += thisTime;
@@ -1152,10 +1234,34 @@ namespace LsNumerics
                         for (size_t i = 0; i < nRead; ++i)
                         {
                             float value = input[ix + i];
-                            
+                            float bypassValue = bypassDezipper.Tick();
+                            if (tails) 
+                            {
+                                value *= bypassValue;
+                            } else if (!bypass)
+                            {
+                                value = 0;
+                            }
+
                             float reverb = convolution.TickUnsynchronized(value, convolution.assemblyInputBuffer[i]);
                             feedbackDelay.Put(reverb);
-                            float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+
+                            float returnValue;
+                            if (tails)
+                            {
+                                value = input[ix + i];
+                                // crossfade direct level, and reverb unmodified when bypassing.
+                                float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
+                                returnValue = value * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                            }
+                            else
+                            {
+                                // crossfade everything when bypassing.
+                                returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+
+                                returnValue = (1.0 - bypassValue) * value + bypassValue * returnValue;
+                            }
+
                             output[ix + i] = returnValue;
                         }
                         ix += nRead;
@@ -1169,12 +1275,16 @@ namespace LsNumerics
         {
             Tick(count, &input[0], &output[0]);
         }
-        void Tick(size_t count, const std::vector<float> &inputL, const std::vector<float> &inputR,std::vector<float> &outputL,std::vector<float> &outputR)
+        void Tick(size_t count, const std::vector<float> &inputL, const std::vector<float> &inputR, std::vector<float> &outputL, std::vector<float> &outputR)
         {
-            Tick(count, &inputL[0], &inputR[0],  &outputL[0],&outputR[0]);
+            Tick(count, &inputL[0], &inputR[0], &outputL[0], &outputR[0]);
         }
 
     private:
+        bool tails = true;
+        bool bypass = true;
+        ::toob::ControlDezipper bypassDezipper;
+
         bool isStereo = false;
         double sampleRate = 0;
         toob::ControlDezipper directMixDezipper;

@@ -88,6 +88,9 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
     {
         switch ((MonoReverbPortId)port)
         {
+        case MonoReverbPortId::BYPASS:
+            this->pBypass = (const float*)data;
+            break;
         case MonoReverbPortId::TIME:
             this->pTime = (float *)data;
             break;
@@ -143,6 +146,9 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
     {
         switch ((StereoReverbPortId)port)
         {
+        case StereoReverbPortId::BYPASS:
+            this->pBypass = (const float*)data;
+            break;
         case StereoReverbPortId::TIME:
             this->pTime = (float *)data;
             break;
@@ -275,6 +281,26 @@ void ToobConvolutionReverbBase::UpdateControls()
     {
         fgMixOptions.width = *pWidth;
         mixOptionsChanged = true;
+    }
+    bool bBypass = *pBypass != 0;
+    if (this->bypass != bBypass) 
+    {
+        this->bypass = bBypass;
+        if (pConvolutionReverb) 
+        {
+            pConvolutionReverb->SetBypass(bBypass,false);
+        }
+
+    }
+    bool bTails = *pTails != 0;
+    if (this->tails != bTails)
+    {
+        this->tails = bTails;
+        if (pConvolutionReverb)
+        {
+            pConvolutionReverb->SetTails(bTails);
+        }
+
     }
     if (pPan != nullptr && fgMixOptions.pan != *pPan)
     {
@@ -1306,6 +1332,8 @@ void ToobConvolutionReverbBase::LoadWorker::OnResponse()
         convolutionReverbResult->ResetReverbMix(0);
 
         convolutionReverbResult->SetDirectMix(pReverb->directMixAf);
+        convolutionReverbResult->SetTails(pReverb->tails);
+        convolutionReverbResult->SetBypass(pReverb->bypass,true);
 
         if (pReverb->IsConvolutionReverb())
         {

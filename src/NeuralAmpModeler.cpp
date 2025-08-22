@@ -86,6 +86,15 @@ const int INPUT_LEVEL_MAX=10;
 
 const char NeuralAmpModeler::URI[] = "http://two-play.com/plugins/toob-nam";
 
+// Because intern Noisegate calculation is incorrect.
+static inline float ToNoiseGateThreshold(float db)
+{
+    // *2 because Internal value is RMS^2
+    // - 3 because it's RMS not peak.
+
+    return (db) * 2;
+}
+
 enum class NamMessageType
 {
     Load,
@@ -334,7 +343,6 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
                 fgSendIx = 0;
                 fgReturnIx = 0;
-
             }
             else
             {
@@ -475,7 +483,6 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
                 fgSendIx = 0;
                 fgReturnIx = 0;
-
             }
         }
     }
@@ -564,16 +571,8 @@ void NeuralAmpModeler::Activate()
     this->mOutputArray.resize(1);
     this->_PrepareBuffers(maxBufferSize);
 
-    const double time = 0.01;
-    const double threshold = cNoiseGateThreshold.GetDb();
-    const double ratio = 0.1; // Quadratic...
-    const double openTime = 0.005;
-    const double holdTime = 0.02;
-    const double closeTime = 0.03;
-    dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
-    this->mNoiseGateTrigger.SetParams(triggerParams);
-    this->mNoiseGateTrigger.SetSampleRate(rate);
-    this->noiseGateActive = cNoiseGateThreshold.GetDb() != -100;
+    UpdateNoiseGateParams();
+
 
     this->mNoiseGateTrigger.PrepareBuffers(1, maxBufferSize);
     this->mNoiseGateGain.PrepareBuffers(1, maxBufferSize);
@@ -666,12 +665,30 @@ void NeuralAmpModeler::HandleFrameSizeError()
         this->LogError("TooB NAM requires a host that provides fixed frame sizes.");
     }
 }
+
+void NeuralAmpModeler::UpdateNoiseGateParams()
+{
+    
+    this->noiseGateActive = cNoiseGateThreshold.GetDb() != -120;
+    const double time = 0.01;
+    const double threshold = ToNoiseGateThreshold(cNoiseGateThreshold.GetDb());
+    const double ratio = 0.1; // Quadratic...
+    const double openTime = 0.005;
+    const double holdTime = 0.02;
+    const double closeTime = 0.05;
+    dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
+    this->mNoiseGateTrigger.SetParams(triggerParams);
+    this->mNoiseGateTrigger.SetSampleRate(rate);
+    if (!noiseGateActive)
+    {
+        this->cGateOutput.SetValue(0);
+    }
+}
 void NeuralAmpModeler::ProcessBlock(int nFrames)
 {
 
     constexpr size_t numChannelsInternal = 1;
     const size_t numFrames = (size_t)nFrames;
-    const double sampleRate = this->rate;
 
     // Disable floating point denormals
 
@@ -700,20 +717,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     nam_float_t **triggerOutput = mInputPointers;
     if (cNoiseGateThreshold.HasChanged())
     {
-        this->noiseGateActive = cNoiseGateThreshold.GetDb() != -100;
-        const double time = 0.01;
-        const double threshold = cNoiseGateThreshold.GetDb();
-        const double ratio = 0.1; // Quadratic...
-        const double openTime = 0.005;
-        const double holdTime = 0.01;
-        const double closeTime = 0.05;
-        dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
-        this->mNoiseGateTrigger.SetParams(triggerParams);
-        this->mNoiseGateTrigger.SetSampleRate(sampleRate);
-        if (!noiseGateActive)
-        {
-            this->cGateOutput.SetValue(0);
-        }
+        UpdateNoiseGateParams();
     }
     float noiseGateOut = 1;
     if (noiseGateActive)
@@ -1154,7 +1158,7 @@ void NeuralAmpModeler::onSamplesOut(uint64_t instanceId, float *data, size_t len
 {
 }
 
-void NeuralAmpModeler::ProcessNam(float *restrict input,  float * restrict output, size_t numFrames)
+void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output, size_t numFrames)
 {
     switch (this->backgroundProcessorState)
     {
@@ -1217,7 +1221,6 @@ void NeuralAmpModeler::ProcessNam(float *restrict input,  float * restrict outpu
 
                     this->_FallbackDSP(input, output, numFrames);
                     this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessing;
-
                 }
             }
         }
@@ -1285,7 +1288,6 @@ void NeuralAmpModeler::ProcessNam(float *restrict input,  float * restrict outpu
         break;
     }
 }
-
 
 void NeuralAmpModeler::SetModelVolumes()
 {
