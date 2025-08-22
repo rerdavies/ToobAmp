@@ -70,7 +70,8 @@ namespace toob
 	private:
 		enum class MonoReverbPortId
 		{
-			TIME = 0,
+            BYPASS = 0,
+			TIME,
 			DIRECT_MIX,
 			REVERB_MIX,
 			PREDELAY_OBSOLETE, // For backward compatibility
@@ -88,7 +89,8 @@ namespace toob
 		};
 		enum class StereoReverbPortId
 		{
-			TIME = 0,
+            BYPASS = 0,
+			TIME,
 			DIRECT_MIX,
 			REVERB_MIX,
 			WIDTH,
@@ -359,21 +361,22 @@ namespace toob
 
 		double sampleRate = 0;
 		bool activated = false;
-		float *pTime = nullptr;
-		float *pDirectMix = nullptr;
-		float *pReverbMix = nullptr;
-		float *pReverb2Mix = nullptr;
-		float *pReverb3Mix = nullptr;
-		float *pPredelayObsolete = nullptr;
+        const float *pBypass = nullptr;
+		const float *pTime = nullptr;
+		const float *pDirectMix = nullptr;
+		const float *pReverbMix = nullptr;
+		const float *pReverb2Mix = nullptr;
+		const float *pReverb3Mix = nullptr;
+		const float *pPredelayObsolete = nullptr;
 
-		float *pPredelayNew = nullptr;
-		float *pStretch = nullptr;
-		float *pDecay = nullptr;
-		float *pTails = nullptr;
+		const float *pPredelayNew = nullptr;
+		const float *pStretch = nullptr;
+		const float *pDecay = nullptr;
+		const float *pTails = nullptr;
 
 		float *pLoadingState = nullptr;
-		float *pWidth = nullptr;
-		float *pPan = nullptr;
+		const float *pWidth = nullptr;
+		const float *pPan = nullptr;
 		const float *inL = nullptr;
 		float *outL = nullptr;
 		const float *inR = nullptr;
@@ -391,6 +394,8 @@ namespace toob
 		float lastReverb3Mix = -999;
 		float lastPredelayObsolete = -999;
 		float lastLoadingState = 0;
+        bool bypass = true;
+        bool tails = true;
 
 		float reverb2MixAf = 0;
 		float reverb3MixAf = 0;

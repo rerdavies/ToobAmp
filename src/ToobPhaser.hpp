@@ -59,6 +59,7 @@ protected:
 	virtual void Activate() override;
 	virtual void Deactivate() override;
 private:
+    ControlDezipper dryWetDezipper;
 	Phaser phaser;
 };
 

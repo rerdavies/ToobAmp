@@ -75,7 +75,11 @@ Freeverb::Freeverb(StkFloat sampleRate)
 
 void Freeverb::Init(StkFloat sampleRate)
 {
+  
   this->sampleRate_ = sampleRate;
+
+  bypassDezipper.SetSampleRate(sampleRate);
+
   // Initialize parameters
   effectMix_ = 0.75;                             // set initially to 3/4 wet 1/4 dry signal (different than original freeverb)
   roomSizeMem_ = (0.75 * scaleRoom) + offsetRoom; // feedback attenuation in LBFC
@@ -122,6 +126,14 @@ void Freeverb::Init(StkFloat sampleRate)
 
 Freeverb::~Freeverb()
 {
+}
+
+void Freeverb::setBypass(bool value, bool immediate)
+{
+    this->bypass_ = value;
+    float delay = immediate? 0.0f: 0.1f;
+
+    bypassDezipper.To(value? 1.0F: 0.0F,delay);
 }
 
 void Freeverb::setEffectMix(StkFloat mix)
@@ -174,6 +186,7 @@ StkFloat Freeverb::getMode()
   return frozenMode_;
 }
 
+
 void Freeverb::update()
 {
   StkFloat wet = scaleWet * effectMix_;
@@ -224,6 +237,11 @@ void Freeverb::clear()
     allPassDelayL_[i].clear();
     allPassDelayR_[i].clear();
   }
+}
+
+void Freeverb::setTails(bool value)
+{
+    this->tails_ = value;
 }
 
 

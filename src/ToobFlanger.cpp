@@ -47,6 +47,7 @@ ToobFlangerBase::ToobFlangerBase(
       flanger(rate)
 
 {
+    dryWetDezipper.SetSampleRate(rate);
 }
 
 const char *ToobFlanger::URI = TOOB_FLANGER_URI;
@@ -61,6 +62,9 @@ void ToobFlangerBase::ConnectPort(uint32_t port, void *data)
         break;
     case PortId::RES:
         this->pRes = (const float*)data;
+        break;
+    case PortId::DRYWET:
+        this->pDryWet = (const float*)data;
         break;
     case PortId::RATE:
         this->pRate = (const float *)data;
@@ -107,6 +111,11 @@ inline void ToobFlangerBase::updateControls()
 
         flanger.SetRes(value);
     }
+    if (lastDryWet != *pDryWet)
+    {
+        lastDryWet = *pDryWet;
+        dryWetDezipper.To(lastDryWet,0.1);
+    }
 
     if (lastRate != *pRate)
     {
@@ -130,6 +139,7 @@ void ToobFlangerBase::Activate()
 {
     lastRate = lastDepth = -1E30; // force updates
     updateControls();
+    dryWetDezipper.To(this->lastDryWet,0);
     clear();
 }
 
@@ -142,14 +152,25 @@ void ToobFlangerBase::Run(uint32_t n_samples)
         {
             float input = inL[i];
 
-            flanger.Tick(input,&(outL[i]),&(outR[i]));
+            float wet = dryWetDezipper.Tick();
+            float dry = 1.0f-wet;
+
+            float l, r;
+
+            flanger.Tick(input,&l,&r);
+
+            outL[i] = input*dry + l*wet;
+            outR[i] = input*dry + r*wet;
         }
     } else {
         for (uint32_t i = 0; i < n_samples; ++i)
         {
             float input = inL[i];
 
-            outL[i] = flanger.Tick(input);
+            float wet = dryWetDezipper.Tick();
+            float dry = 1.0-wet;
+
+            outL[i] = input*dry + flanger.Tick(input)*wet;
         }
 
     }

@@ -26,6 +26,7 @@ ToobPhaser::ToobPhaser(double rate,
     : ToobPhaserBase(rate,bundle_path,features),
       phaser(rate)
 {
+    dryWetDezipper.SetSampleRate(rate);
 }
 
 ToobPhaser::~ToobPhaser()
@@ -41,15 +42,25 @@ void ToobPhaser::Run(uint32_t n_samples) {
     float rate = this->rate.GetValue();
     phaser.setLfoRate(rate);
 
+    if (this->dryWet.HasChanged())
+    {
+        dryWetDezipper.To(dryWet.GetValue(),0.1f);
+    }
+
     for (size_t i = 0; i < n_samples; ++i)
     {
-        outL[i] = phaser.process(inL[i]);
+        float input = inL[i];
+        float output = phaser.process(input);
+        float wet = dryWetDezipper.Tick();
+        float dry = 1.0f-wet;
+        outL[i] = dry*input+wet*output;
     }
 }
 
 void ToobPhaser::Activate() 
 {
     phaser.reset();
+    dryWetDezipper.To(dryWet.GetValue(),0);
 }
 void ToobPhaser::Deactivate() 
 {

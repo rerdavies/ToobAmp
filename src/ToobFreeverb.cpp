@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -26,15 +26,14 @@
 using namespace toob;
 using namespace LsNumerics;
 
-
 ToobFreeverb::ToobFreeverb(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    :   Lv2Plugin(rate,bundle_path,features),
-        freeverb(rate),
-        rate(rate),
-        bundle_path(bundle_path)
+    : Lv2Plugin(rate, bundle_path, features),
+      freeverb(rate),
+      rate(rate),
+      bundle_path(bundle_path)
 {
 }
 
@@ -44,14 +43,20 @@ void ToobFreeverb::ConnectPort(uint32_t port, void *data)
 {
     switch ((PortId)port)
     {
+    case PortId::BYPASS:
+        this->bypass = (const float *)data;
+        break;
+    case PortId::TAILS:
+        this->tails = (const float *)data;
+        break;
     case PortId::DRYWET:
-        this->dryWet = (float *)data;
+        this->dryWet = (const float *)data;
         break;
     case PortId::ROOMSIZE:
-        this->roomSize = (float *)data;
+        this->roomSize = (const float *)data;
         break;
     case PortId::DAMPING:
-        this->damping = (float *)data;
+        this->damping = (const float *)data;
         break;
     case PortId::AUDIO_INL:
         this->inL = (const float *)data;
@@ -78,6 +83,13 @@ void ToobFreeverb::Activate()
     dampingValue = *damping;
     freeverb.setDamping(dampingValue);
 
+    bypassValue = *bypass != 0;
+    tailsValue = *tails != 0;
+
+    freeverb.setTails(*tails != 0);
+    freeverb.setBypass(bypassValue,true);
+
+
     freeverb.clear();
 }
 void ToobFreeverb::Run(uint32_t n_samples)
@@ -101,15 +113,21 @@ void ToobFreeverb::Run(uint32_t n_samples)
         dampingValue = *damping;
         freeverb.setDamping(dampingValue);
     }
+    freeverb.setTails(*tails != 0);
+
+    bool t = *bypass != 0;
+    if (bypassValue != t) 
+    {
+        bypassValue = t;
+        freeverb.setBypass(t,false);
+    }
 
     for (uint32_t i = 0; i < n_samples; ++i)
     {
-        freeverb.tick(inL[i],inR[i],&outL[i],&outR[i]);
+        freeverb.tick(inL[i], inR[i], &outL[i], &outR[i]);
     }
     restore_denorms(oldstate);
-
 }
 void ToobFreeverb::Deactivate()
 {
-
 }

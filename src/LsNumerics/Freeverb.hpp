@@ -1,5 +1,6 @@
 /*
 Copyright (c) 1995-2021 Perry R. Cook and Gary P. Scavone
+Copyright (c) 2025 Robin E. R. Davies
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -38,6 +39,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <vector>
 #include <exception>
 #include <sstream>
+#include "../ControlDezipper.h"
 
 namespace LsNumerics
 {
@@ -249,6 +251,7 @@ namespace LsNumerics
             StkFloat tick(StkFloat input);
 
         private:
+        
             std::vector<StkFloat> a_;
             std::vector<StkFloat> b_;
             StkFloat lastOutput_ = 0;
@@ -295,10 +298,16 @@ namespace LsNumerics
         */
         Freeverb(StkFloat sampleRate = 44100);
 
-        void Init(StkFloat ampleRate);
+        void Init(StkFloat sampleRate);
+
 
         //! Destructor
         ~Freeverb();
+
+        void setTails(bool value);
+        void setBypass(bool value, bool immediate);
+
+
 
         //! Set the effect mix [0 = mostly dry, 1 = mostly wet].
         void setEffectMix(StkFloat mix);
@@ -369,6 +378,8 @@ namespace LsNumerics
         StkFloat dry_;
         StkFloat width_;
         bool frozenMode_;
+        bool bypass_ = true;
+        bool tails_ = true;
 
         // LBFC: Lowpass Feedback Comb Filters
         Delay combDelayL_[nCombs];
@@ -379,6 +390,12 @@ namespace LsNumerics
         // AP: Allpass Filters
         Delay allPassDelayL_[nAllpasses];
         Delay allPassDelayR_[nAllpasses];
+
+        bool tailProcesing = true;
+        bool enabled = true;
+
+        ::toob::ControlDezipper bypassDezipper;
+
     };
 
     inline void Freeverb::tick(
@@ -393,7 +410,12 @@ namespace LsNumerics
         }
 #endif
 
+        float bypassLevel = bypassDezipper.Tick();
+
         StkFloat fInput = (inputL + inputR) * gain_;
+        if (tails_) {
+            fInput *= bypassLevel;
+        }
         StkFloat outL = 0.0;
         StkFloat outR = 0.0;
 
@@ -436,8 +458,20 @@ namespace LsNumerics
         }
 
         // Mix output
-        *pOutL = outL * wet1_ + outR * wet2_ + inputL * dry_;
-        *pOutR = outR * wet1_ + outL * wet2_ + inputR * dry_;
+        if (tails_) {
+            // on bypass crossfade dry signal, and compute full reverb tail
+            float effectiveDry = (1.0f-bypassLevel)*1.0f + (bypassLevel) * dry_;
+            *pOutL = outL * wet1_ + outR * wet2_ + inputL * effectiveDry;
+            *pOutR = outR * wet1_ + outL * wet2_ + inputR * effectiveDry;
+        } else {
+            // crossfade on bypass.
+            float effectLeft = outL * wet1_ + outR * wet2_ + inputL * dry_;
+            float effectRight = outR * wet1_ + outL * wet2_ + inputR * dry_;
+            float wet = bypassLevel;
+            float dry = 1.0f-bypassLevel;
+            *pOutL = dry*inputL + wet*effectLeft;
+            *pOutR = dry*inputR + wet*effectRight;
+        }
     }
 
 }

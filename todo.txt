@@ -7,3 +7,15 @@ File types not being respected in native plugins../
 
 buf-size.lv2 nominalBlockLength
 
+
+[
+        a lv2:InputPort, lv2:ControlPort ;
+        lv2:index 10 ;
+        lv2:name "Enabled" ;
+        lv2:symbol "lv2_enabled" ;
+        lv2:default 1 ;
+        lv2:minimum 0 ;
+        lv2:maximum 1 ;
+        lv2:portProperty lv2:toggled , lv2:integer ;
+        lv2:designation lv2:enabled ;
+    ] ,

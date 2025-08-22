@@ -254,14 +254,14 @@ SOFTWARE.
                 lv2:index 4;
                 lv2:symbol "gate" ;
                 lv2:name "Noise Gate";
-                lv2:default -100.0 ;
-                lv2:minimum -100.0;
+                lv2:default -120.0 ;
+                lv2:minimum -120.0;
                 lv2:maximum 0.0;
                 rdfs:comment "Noise gate threshold. Set to minimum to disable.";
                 units:unit units:db;
                 lv2:scalePoint [
                         rdfs:label "Off" ;
-                        rdf:value -100.0
+                        rdf:value -120.0
                 ];
 
 

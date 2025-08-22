@@ -58,6 +58,9 @@ void ToobChorus::ConnectPort(uint32_t port, void *data)
     case PortId::DEPTH:
         this->pDepth = (float *)data;
         break;
+    case PortId::DRYWET:
+        this->pDryWet = (const float*)data;
+        break;
     case PortId::AUDIO_INL:
         this->inL = (const float *)data;
         break;
@@ -92,11 +95,17 @@ inline void ToobChorus::updateControls()
         chorus.SetDepth(value);
 
     }
+    if (lastDryWet != *pDryWet)
+    {
+        lastDryWet = *pDryWet;
+        dryWetDezipper.To(lastDryWet,0.1f);
+    }
 }
 void ToobChorus::Activate()
 {
     lastRate = lastDepth = -1E30; // force updates
     updateControls();
+    dryWetDezipper.To(lastDryWet,0);
     clear();
 }
 
@@ -107,7 +116,13 @@ void ToobChorus::Run(uint32_t n_samples)
     {
         for (uint32_t i = 0; i < n_samples; ++i)
         {
-            chorus.Tick(inL[i],outL+i,outR+i);
+            float wet = dryWetDezipper.Tick();
+            float dry = 1.0-wet;
+            float l,r;
+            float input = inL[i];
+            chorus.Tick(inL[i],&l,&r);
+            outL[i] = input*dry+l*wet;
+            outR[i] = input*dry+r*wet;
         }
     } else {
         for (uint32_t i = 0; i < n_samples; ++i)
@@ -115,8 +130,10 @@ void ToobChorus::Run(uint32_t n_samples)
             float input = inL[i];
 
             float output = chorus.Tick(input);
+            float wet = dryWetDezipper.Tick();
+            float dry = 1.0f-wet;
             
-            outL[i] = output;
+            outL[i] = dry*input+wet*output;
         }
     }
 }

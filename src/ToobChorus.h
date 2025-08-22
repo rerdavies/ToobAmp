@@ -53,6 +53,7 @@ namespace toob {
 		enum class PortId {
 			RATE = 0,
 			DEPTH,
+            DRYWET,
 			AUDIO_INL,
 			AUDIO_OUTL,
 			AUDIO_OUTR,
@@ -60,12 +61,15 @@ namespace toob {
 
 		float*pRate = nullptr;
 		float *pDepth= nullptr;
+        const float*pDryWet = nullptr;
 		const float*inL = nullptr;
 		float*outL = nullptr;
 		float*outR = nullptr;
 
 		float lastRate = -2;
 		float lastDepth = -2;
+        float lastDryWet = -2;
+        ControlDezipper dryWetDezipper;
 
 		double rate = 44100;
 		std::string bundle_path;
