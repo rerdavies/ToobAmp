@@ -48,9 +48,32 @@ SOFTWARE.
 namespace toob
 {
     class NeuralAmpModeler;
+
+
+
 };
 namespace toob::nam_impl
 {
+
+
+    enum class OutputCalibrationMode {
+        Normalized,
+        Calibrated,
+        Raw 
+    };
+    struct NamCalibrationSettings {
+        bool calibrateInput = true;
+        float calibrationDbu = -6;
+        OutputCalibrationMode outputCalbration;
+    };
+
+    struct NamVolumeAdjustments {
+        float input;
+        float output;
+    };
+    NamVolumeAdjustments CalculateNamVolumeAdjustments(ToobNamDsp*dsp, const NamCalibrationSettings&calibrationSettings);
+
+
 
     // Packet reader/writer, blocking reads and writes. single-reader, multi-writer.
     class NamQueue
@@ -183,7 +206,7 @@ namespace toob::nam_impl
     {
         Illegal,
         SetDsp,
-        SetGain,
+        SetCalibration,
         SampleData,
         StopBackgroundProcessing,
         FadeOut,
@@ -197,17 +220,17 @@ namespace toob::nam_impl
     };
     struct SetDspMessage : public NamMessage
     {
-        SetDspMessage(uint64_t instanceId, ToobNamDsp *dsp, size_t antiPopLength)
+        SetDspMessage(uint64_t instanceId, ToobNamDsp *dsp, const NamCalibrationSettings &calibrationSettings)
             : NamMessage(NamBgMessageType::SetDsp),
               instanceId(instanceId),
               dsp(dsp),
-              antiPopLength(antiPopLength)
+              calibrationSettings(calibrationSettings)
         {
         }
 
         ToobNamDsp *dsp;
         uint64_t instanceId;
-        size_t antiPopLength;
+        NamCalibrationSettings calibrationSettings;
     };
     struct StopBackgroundProcessingMessage : public NamMessage
     {
@@ -257,15 +280,15 @@ namespace toob::nam_impl
         size_t length;
         float samples[MAX_DATA_MESSAGE_SAMPLES];
     };
-    struct SetGainMessage : public NamMessage
+    struct SetCalibrationMessage : public NamMessage
     {
-        SetGainMessage(float gain)
-            : NamMessage(NamBgMessageType::SetGain),
-              gain(gain)
+        SetCalibrationMessage(const NamCalibrationSettings& calibrationSettings)
+            : NamMessage(NamBgMessageType::SetCalibration),
+              calibrationSettings(calibrationSettings)
         {
         }
 
-        float gain;
+        NamCalibrationSettings calibrationSettings;
     };
     struct QuitMessage : public NamMessage
     {
@@ -333,7 +356,7 @@ namespace toob::nam_impl
         {
             this->listener = listener;
         }
-        void fgSetModel(ToobNamDsp *model, size_t antiPopSamples)
+        void fgSetModel(ToobNamDsp *model, const NamCalibrationSettings&calibrationSettings)
         {
             if (!thread)
             {
@@ -345,11 +368,16 @@ namespace toob::nam_impl
                     { this->ThreadProc(); });
             }
             auto instanceId = ++fgInstanceId; // xxx: pop handling.
-            SetDspMessage msg{instanceId, model, antiPopSamples};
+            SetDspMessage msg{instanceId, model, calibrationSettings};
             fgToBgQueue.write(&msg, sizeof(msg));
             this->backgroundReturnTailPosition = 0; //xxx: pop handling.
             this->backgroundInputTailPosition = 0;
 
+        }
+        void fgSetCalibrationSettings(const NamCalibrationSettings &calibrationSettings)
+        {
+            SetCalibrationMessage message(calibrationSettings);
+            fgToBgQueue.write(&message,sizeof(message));
         }
         void fgFadeOut() 
         {
@@ -381,11 +409,6 @@ namespace toob::nam_impl
         {
             return threadActive;
         }
-        struct VolumeAdjustments {
-            float input;
-            float output;
-        };
-        static VolumeAdjustments CalculateVolumeAdjustments(ToobNamDsp*dsp);
     private:
         void ThreadProc();
         void SetBgVolumes();
@@ -405,6 +428,7 @@ namespace toob::nam_impl
         std::atomic<uint64_t> fgInstanceId = 0;
 
         std::unique_ptr<ToobNamDsp> bgDsp;
+        NamCalibrationSettings bgCalibrationSettings;
         NamQueue fgToBgQueue{8 * 1024};
         NamQueue bgToFgQueue{8 * 1024};
         std::unique_ptr<std::jthread> thread;

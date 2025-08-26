@@ -188,14 +188,19 @@ namespace toob {
 
 	class BooleanInputPort  {
 	public:
-		bool GetValue() const {
-			return *pData > 0;
+		bool GetValue() {
+			bValue = *pData > 0;
+            return bValue;
 		}
 		void SetData(void*pData)
 		{
 			this->pData = (float*)pData;
 		}
+        bool HasChanged() const {
+            return bValue != (*pData > 0);
+        }
 	private:
+        bool bValue = false;
 		float *pData = nullptr;
 	};
 

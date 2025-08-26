@@ -335,22 +335,20 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
 
         if (mNAM)
         {
+            UpdateCalibrationFactors();
 
             if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
             {
                 ToobNamDsp *dsp = this->mNAM.release();
-                backgroundProcessor.fgSetModel(dsp, 0);
+                backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
                 fgSendIx = 0;
                 fgReturnIx = 0;
             }
-            else
-            {
-                SetModelVolumes();
-            }
         }
         else
         {
+            UpdateCalibrationFactors();
             if (!mNAMPath.empty())
             {
                 std::string fileNameOnly = std::filesystem::path(modelFileName).filename().replace_extension();
@@ -466,7 +464,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
         ToobNamDsp *oldModel = this->mNAM.release();
 
         this->mNAM = std::unique_ptr<ToobNamDsp>(loadResponse->modelObject);
-        SetModelVolumes();
+        SetModelVolumes_();
 
         if (oldModel != nullptr)
         {
@@ -479,7 +477,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
             ToobNamDsp *dsp = this->mNAM.release();
             if (dsp)
             {
-                backgroundProcessor.fgSetModel(dsp, 0);
+                backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
                 fgSendIx = 0;
                 fgReturnIx = 0;
@@ -529,6 +527,17 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
     case EParams::kStackType:
         cToneStackType.SetData(data);
         break;
+    case EParams::kInputCalibrationMode:
+        cInputCalibrationMode.SetData(data);
+        break;
+    case EParams::kCalibration:
+        cCalibrationValue.SetData(data);
+        break;
+    case EParams::kOutputCalbrationMode:
+        cOutputCalibrationMode.SetData(data);
+        break;
+        
+
     // case EParams::kOutNorm:
     //     cOutNorm.SetData(data);
     //     break;
@@ -695,6 +704,15 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     fp_state_t fp_state = LsNumerics::disable_denorms();
 
     this->_PrepareBuffers(numFrames);
+
+    if (cCalibrationValue.HasChanged() || cInputCalibrationMode.HasChanged() || cOutputCalibrationMode.HasChanged())
+    {
+        UpdateCalibrationFactors();
+        if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
+        {
+            this->backgroundProcessor.fgSetCalibrationSettings(fgCalibrationSettings);
+        }
+    }
 
     if (cBass.HasChanged() || cMid.HasChanged() || cTreble.HasChanged() || cToneStackType.HasChanged())
     {
@@ -1097,7 +1115,7 @@ void NeuralAmpModeler::HandleBufferChange()
         case BackgroundProcessorState::ForegroundProcessing:
             if (this->mNAM)
             {
-                backgroundProcessor.fgSetModel(this->mNAM.release(), 0);
+                backgroundProcessor.fgSetModel(this->mNAM.release(), fgCalibrationSettings);
                 this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
             }
             else
@@ -1148,7 +1166,7 @@ void NeuralAmpModeler::HandleBackgroundProcessorEvents()
 void NeuralAmpModeler::onStopBackgroundProcessingReply(ToobNamDsp *dsp)
 {
     this->mNAM = std::unique_ptr<ToobNamDsp>(dsp); // re-attach to a unique_ptr!
-    SetModelVolumes();
+    UpdateCalibrationFactors();
     this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
 }
 void NeuralAmpModeler::onBackgroundProcessingComplete()
@@ -1289,12 +1307,12 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
     }
 }
 
-void NeuralAmpModeler::SetModelVolumes()
+void NeuralAmpModeler::SetModelVolumes_()
 {
     using namespace nam_impl;
     if (mNAM)
     {
-        NamBackgroundProcessor::VolumeAdjustments adjustments = NamBackgroundProcessor::CalculateVolumeAdjustments(mNAM.get());
+        NamVolumeAdjustments adjustments = CalculateNamVolumeAdjustments(mNAM.get(), fgCalibrationSettings);
         fgInputVolume = adjustments.input;
         fgOutputVolume = adjustments.output;
     }
@@ -1303,4 +1321,16 @@ void NeuralAmpModeler::SetModelVolumes()
         fgInputVolume = 0.0;
         fgOutputVolume = 0.0;
     }
+}
+
+void NeuralAmpModeler::UpdateCalibrationFactors() 
+{
+    nam_impl::NamCalibrationSettings settings;
+    settings.calibrateInput = cInputCalibrationMode.GetValue();
+    settings.outputCalbration = (nam_impl::OutputCalibrationMode)cOutputCalibrationMode.GetValue();
+    settings.calibrationDbu = cCalibrationValue.GetValue();
+    fgCalibrationSettings = settings;
+    fgCalibrationFactors = nam_impl::CalculateNamVolumeAdjustments(mNAM.get(),settings);
+    SetModelVolumes_();
+
 }

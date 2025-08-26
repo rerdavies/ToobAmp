@@ -27,6 +27,7 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
+#include "../util.hpp"
 
 #include "FfmpegDecoderStream.hpp"
 
@@ -424,7 +425,8 @@ void Lv2AudioFileProcessor::Activate()
             try
             {
                 bool quit = false;
-
+                SetThreadName("tply_bg");
+                SetThreadNice(-11);
                 std::vector<uint8_t> buffer(2048);
                 BufferMessage *cmd = (BufferMessage *)buffer.data();
                 while (!quit)
