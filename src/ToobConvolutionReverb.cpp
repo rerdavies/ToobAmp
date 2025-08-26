@@ -1281,16 +1281,16 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
             data += data3;
         }
         this->tailScale = 0;
-#ifdef JUNK
-        size_t maxSize = (size_t)std::ceil(this->bgMixOptions.maxTime * pReverb->getSampleRate());
+
+        // Ignore old maxTime parameter. Just truncate anthing over 30 seconds.
+        size_t maxSize = (size_t)std::ceil(30* pReverb->getSampleRate());
         if (maxSize < data.getSize())
         {
-            this->tailScale = GetTailScale(data.getChannel(0), maxSize);
             data.setSize(maxSize);
 
-            pThis->LogTrace("%s\n", SS("Max T: " << std::setprecision(3) << this->bgMixOptions.maxTime << "s Feedback: " << tailScale).c_str());
+            pThis->LogWarning("%s\n", "Maximum file size exceeded. Truncated to 30 seconds.");
         }
-#endif
+
         if (data.getSize() == 0)
         {
             data.setSize(1);
