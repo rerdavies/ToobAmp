@@ -79,16 +79,18 @@ void NamBackgroundProcessor::ThreadProc()
             SetDspMessage *m = (SetDspMessage *)message;
             bgDsp = nullptr;
             this->bgDsp = std::unique_ptr<ToobNamDsp>(m->dsp);
+            this->bgCalibrationSettings = m->calibrationSettings;
             SetBgVolumes();
             this->backgroundInputTailPosition = 0;
             this->backgroundReturnTailPosition = 0;
             this->bgInstanceId = m->instanceId;
             break;
         };
-        case NamBgMessageType::SetGain:
+        case NamBgMessageType::SetCalibration:
         {
-            SetGainMessage *m = (SetGainMessage *)message;
-            (void)m;
+            SetCalibrationMessage *m = (SetCalibrationMessage *)message;
+            this->bgCalibrationSettings = m->calibrationSettings;
+            SetBgVolumes();
             break;
         }
         case NamBgMessageType::Quit:
@@ -354,19 +356,63 @@ void NamBackgroundProcessor::fgClose()
     }
 }
 
-NamBackgroundProcessor::VolumeAdjustments NamBackgroundProcessor::CalculateVolumeAdjustments(
-    ToobNamDsp *dsp)
+
+// gain access to NeuralModel protected members.
+class NeuralModelHack : private NeuralAudio::NeuralModel 
 {
-    VolumeAdjustments result;
+public:
+
+    static float GetModelOutputLevelDbu(NeuralAudio::NeuralModel*model)
+    {
+        return ((NeuralModelHack*)model)->modelOutputLevelDBu;
+    }
+    static float GetModelInputLevelDbu(NeuralAudio::NeuralModel*model)
+    {
+        return ((NeuralModelHack*)model)->modelInputLevelDBu;
+    }
+
+};
+
+NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
+    ToobNamDsp *dsp,
+    const NamCalibrationSettings&calibrationSettings
+)
+{
+    NamVolumeAdjustments result;
+    if (dsp == nullptr) {
+        return {0.0f,0.0f};
+    }
     result.input = 1.0f; // calbration goes here later.
-    result.output = Db2Af(dsp->GetRecommendedOutputDBAdjustment());
+    if (calibrationSettings.calibrateInput)
+    {
+        float modelAdjustment = NeuralModelHack::GetModelInputLevelDbu(dsp);
+        result.input = Db2Af(calibrationSettings.calibrationDbu - modelAdjustment);
+    } else {
+        result.input = 1.0f;
+    }
+    switch (calibrationSettings.outputCalbration)
+    {
+        case OutputCalibrationMode::Raw:
+            result.output = 1.0;
+            break;
+        case OutputCalibrationMode::Normalized:
+            result.output = Db2Af(dsp->GetRecommendedOutputDBAdjustment(),-200);
+            break;
+        case OutputCalibrationMode::Calibrated:
+            result.output = Db2Af(
+                NeuralModelHack::GetModelOutputLevelDbu(dsp)
+                -calibrationSettings.calibrationDbu
+            );
+            break;
+    }
+    std::cout << "Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
     return result;
 }
 void NamBackgroundProcessor::SetBgVolumes()
 {
     if (bgDsp)
     {
-        VolumeAdjustments adjustments = CalculateVolumeAdjustments(bgDsp.get());
+        NamVolumeAdjustments adjustments = CalculateNamVolumeAdjustments(bgDsp.get(),bgCalibrationSettings);
         bgInputVolume = adjustments.input;
         bgOutputVolume = adjustments.output;
     }

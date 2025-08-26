@@ -47,6 +47,12 @@ toobNam:eqGroup
     lv2:name "Tone" ;
     lv2:symbol "eqGroup" .
 
+toobNam:calibrationGroup
+    a param:ControlGroup ,
+        pg:InputGroup ;
+    lv2:name "Calibration" ;
+    lv2:symbol "calibrationGroup" .
+
 
 
 <http://two-play.com/plugins/toob-nam>
@@ -280,6 +286,8 @@ SOFTWARE.
                 lv2:portProperty lv2:toggled;
 
         ],
+
+        #### EQ ###
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
@@ -349,17 +357,82 @@ SOFTWARE.
                 rdfs:comment "Bass";
                 pg:group toobNam:eqGroup ;
         ],
+
+
+        ### CALIBRATION ######
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 10 ;
+                lv2:symbol "inputCalibrationMode" ;
+                lv2:name "Input";
+                lv2:default 1.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 1.0; 
+                lv2:portProperty lv2:toggled ;
+                pg:group toobNam:calibrationGroup ;
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 11 ;
+                lv2:symbol "calibration" ;
+                lv2:name "Calibration";
+                lv2:default -6.0 ;
+                lv2:minimum -30.0 ;
+                lv2:maximum 12.0; 
+                units:unit [
+                    a units:Unit ;
+                    rdfs:label   "dBU" ;
+                    units:symbol "dbu" ;
+                    units:render "%f dBU";
+                ];
+                rdfs:comment "Measured instrument voltage level in dBU";
+                pg:group toobNam:calibrationGroup ;
+
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 12;
+                lv2:symbol "outputCalibration" ;
+                lv2:name "Output Calibration";
+                lv2:default 0.0;
+                lv2:minimum 0.0;
+                lv2:maximum 2.0;
+                rdfs:comment "Scaling applied to model output";
+
+                lv2:portProperty lv2:enumeration ;
+                 lv2:scalePoint [
+                        rdfs:label "Normalized" ;
+                        rdf:value 0.0
+                ] , [
+                        rdfs:label "Calibrated" ;
+                        rdf:value 1.0
+                ], [
+                        rdfs:label "Raw" ;
+                        rdf:value 2.0
+                ];   
+
+                pg:group toobNam:calibrationGroup ;
+
+        ],
+
+
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 10 ;
+                lv2:index 13 ;
                 lv2:symbol "in" ;
                 lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 11 ;
+                lv2:index 14 ;
                 lv2:symbol "out" ;
                 lv2:name "Out"
         ],
@@ -371,7 +444,7 @@ SOFTWARE.
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 12 ;
+                lv2:index 15 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -381,7 +454,7 @@ SOFTWARE.
                 atom:bufferType atom:Sequence ;
                 # atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 13;
+                lv2:index 16;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;

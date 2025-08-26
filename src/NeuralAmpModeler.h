@@ -97,6 +97,10 @@ namespace toob
             kMid,
             kTreble,
 
+            kInputCalibrationMode,
+            kCalibration,
+            kOutputCalbrationMode,
+
             kAudioIn,
             kAudioOut,
             kControlIn,
@@ -152,7 +156,7 @@ namespace toob
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
 
-        void SetModelVolumes();
+        void SetModelVolumes_();
         bool frameSizeErrorGiven = false;
 
 
@@ -222,6 +226,10 @@ namespace toob
         RangedInputPort cMid{ 0,10};
         RangedInputPort cTreble{ 0,10};
         EnumeratedInputPort cToneStackType { 4};
+        BooleanInputPort cInputCalibrationMode;
+        enum class OutputCalbrationMode { Normalized=0,Calibrated=1,Raw=2};
+        EnumeratedInputPort cOutputCalibrationMode { 3};
+        RangedInputPort cCalibrationValue { -40,+40}; 
 
         enum ToneStackType {
             Bassman = 0, // matches enum values in .ttl file.
@@ -232,6 +240,11 @@ namespace toob
         ToneStackType toneStackType = ToneStackType::Bypass;
 		ToneStackFilter toneStackFilter;
 		BaxandallToneStack baxandallToneStack;
+
+        float inputCalibrationFactor = 1.0f;
+        float outputCalbrationFactor = 1.0f;
+        
+        void UpdateCalibrationFactors();
 
         float vuValue = 0;
         uint32_t vuSampleCount = 0;
@@ -321,6 +334,8 @@ namespace toob
 
         // The Neural Amp Model (NAM) actually being used:
         std::unique_ptr<ToobNamDsp> mNAM;
+        nam_impl::NamCalibrationSettings fgCalibrationSettings;
+        nam_impl::NamVolumeAdjustments fgCalibrationFactors;
 
         // Path to model's config.json or model.nam
         std::string mNAMPath;

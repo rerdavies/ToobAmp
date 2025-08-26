@@ -53,6 +53,11 @@ void toob::SetThreadName(const std::string &name)
     pthread_setname_np(pid, threadName.c_str());
 }
 
+int toob::SetThreadNice(int niceness)
+{
+    return nice(niceness);
+}
+
 
 int toob::SetRtThreadPriority(int schedPriority)
 {

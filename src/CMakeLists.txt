@@ -930,6 +930,7 @@ add_executable(PlayerTest
     record_plugins/AudioFileBufferManager.hpp record_plugins/AudioFileBufferManager.cpp
     record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
     json.hpp json.cpp
+    util.cpp util.hpp
     json_variant.hpp json_variant.cpp
     TemporaryFile.hpp TemporaryFile.cpp
 )

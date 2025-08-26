@@ -1,3 +1,4 @@
+Input and output node volume controls are gone!!!
 
 Filename for copy ?
 
