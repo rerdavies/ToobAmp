@@ -1,4 +1,4 @@
-Input and output node volume controls are gone!!!
+Move status to bottom-right of pedalboard view.
 
 Filename for copy ?
 

@@ -199,6 +199,9 @@ NeuralAmpModeler::NeuralAmpModeler(
 {
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);
+#if NAM_RMS_METER
+    cInputLevelOut.SetSampleRate(rate);
+#endif
 
     mNAMPath.reserve(MAX_NAM_FILENAME + 1);
 
@@ -235,6 +238,7 @@ void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
     atom__float = this_.MapURI(LV2_ATOM__Float);
     atom__int = this_.MapURI(LV2_ATOM__Int);
     units__Frame = this_.MapURI(LV2_UNITS__frame);
+    toob_nam__model_metadata = this_.MapURI(TOOB_NAM__MODEL_METADATA);
 }
 
 std::string NeuralAmpModeler::UnmapFilename(const LV2_Feature *const *features, const std::string &fileName)
@@ -333,30 +337,13 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
         }
         this->mNAM = std::move(dspResult);
 
-        if (mNAM)
+        if (!this->mNAM && !mNAMPath.empty())
         {
-            UpdateCalibrationFactors();
+            std::string fileNameOnly = std::filesystem::path(modelFileName).filename().replace_extension();
 
-            if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
-            {
-                ToobNamDsp *dsp = this->mNAM.release();
-                backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
-                this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
-                fgSendIx = 0;
-                fgReturnIx = 0;
-            }
+            LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
         }
-        else
-        {
-            UpdateCalibrationFactors();
-            if (!mNAMPath.empty())
-            {
-                std::string fileNameOnly = std::filesystem::path(modelFileName).filename().replace_extension();
-
-                LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
-            }
-        }
-
+        SetModel();
         return true;
     }
     catch (const std::exception &e)
@@ -366,6 +353,76 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
         mNAM = nullptr;
         return false;
     }
+}
+
+void NeuralAmpModeler::SetModel()
+{
+    using namespace toob::nam_impl;
+
+    if (mNAM)
+    {
+        UpdateCalibrationFactors();
+
+        int32_t flags = TOOB_NAM_METADATA_FLAGS::has_model;
+        if (mNAM->HasModelGainDB())
+        {
+            flags |= TOOB_NAM_METADATA_FLAGS::has_gain;
+            fgModelMetadata.gain = mNAM->GetModelGainDB();
+        }
+        else
+        {
+            fgModelMetadata.gain = 0;
+        }
+        if (mNAM->HasModelLoudnessDB())
+        {
+            flags |= TOOB_NAM_METADATA_FLAGS::has_loudness;
+            fgModelMetadata.loudness = mNAM->GetModelLoudnessDB();
+        }
+        else
+        {
+            fgModelMetadata.loudness = 0;
+        }
+        if (mNAM->HasModelInputLevelDBu())
+        {
+            flags |= TOOB_NAM_METADATA_FLAGS::has_input_level_dbu;
+            fgModelMetadata.input_level_dbu = mNAM->GetModelInputLevelDBu();
+        }
+        else
+        {
+            fgModelMetadata.input_level_dbu = 0;
+        }
+        fgModelMetadata.flags = flags;
+
+        if (mNAM->HasModelOutputLevelDBu())
+        {
+            flags |= TOOB_NAM_METADATA_FLAGS::has_output_level_dbu;
+            fgModelMetadata.output_level_dbu = mNAM->GetModelInputLevelDBu();
+        }
+        else
+        {
+            fgModelMetadata.output_level_dbu = 0;
+        }
+
+        if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
+        {
+            ToobNamDsp *dsp = this->mNAM.release();
+            backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
+            this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
+            fgSendIx = 0;
+            fgReturnIx = 0;
+        }
+    }
+    else
+    {
+        UpdateCalibrationFactors();
+        fgModelMetadata = NamModelMetadata(); // reset to defaults.
+
+        if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
+        {
+            this->backgroundProcessorState = BackgroundProcessorState::BackgroundProcessingEnabled;
+        }
+    }
+    requestModelMetdataNotification = true;
 }
 
 LV2_State_Status
@@ -464,25 +521,14 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
         ToobNamDsp *oldModel = this->mNAM.release();
 
         this->mNAM = std::unique_ptr<ToobNamDsp>(loadResponse->modelObject);
-        SetModelVolumes_();
-
         if (oldModel != nullptr)
         {
             const LV2_Worker_Schedule *schedule = this->GetLv2WorkerSchedule();
             NamFreeMessage freeMessage{oldModel};
             schedule->schedule_work(schedule->handle, sizeof(freeMessage), &freeMessage);
         }
-        if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
-        {
-            ToobNamDsp *dsp = this->mNAM.release();
-            if (dsp)
-            {
-                backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
-                this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
-                fgSendIx = 0;
-                fgReturnIx = 0;
-            }
-        }
+
+        SetModel();
     }
     break;
     default:
@@ -501,7 +547,9 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
         break;
     case EParams::kInputLevelOut:
         cInputLevelOut.SetData(data);
+#if !NAM_RMS_METER
         cInputLevelOut.SetValue(INPUT_LEVEL_MIN);
+#endif
         break;
     case EParams::kOutputGain:
         cOutputGain.SetData(data);
@@ -533,10 +581,12 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
     case EParams::kCalibration:
         cCalibrationValue.SetData(data);
         break;
-    case EParams::kOutputCalbrationMode:
+    case EParams::kPresetVersion:
+        cPresetVersion.SetData(data);
+        break;
+    case EParams::kOutputCalibrationMode:
         cOutputCalibrationMode.SetData(data);
         break;
-        
 
     // case EParams::kOutNorm:
     //     cOutNorm.SetData(data);
@@ -560,6 +610,7 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
 }
 void NeuralAmpModeler::Activate()
 {
+
     isActivated = true;
 
     this->toneStackFilter.Reset();
@@ -581,7 +632,6 @@ void NeuralAmpModeler::Activate()
     this->_PrepareBuffers(maxBufferSize);
 
     UpdateNoiseGateParams();
-
 
     this->mNoiseGateTrigger.PrepareBuffers(1, maxBufferSize);
     this->mNoiseGateGain.PrepareBuffers(1, maxBufferSize);
@@ -610,6 +660,11 @@ void NeuralAmpModeler::Run(uint32_t n_samples)
     {
         requestFileUpdate = false;
         this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
+    }
+    if (requestModelMetdataNotification)
+    {
+        requestModelMetdataNotification = false;
+        this->SendModelMetadataNotification();
     }
 }
 void NeuralAmpModeler::Deactivate()
@@ -677,7 +732,7 @@ void NeuralAmpModeler::HandleFrameSizeError()
 
 void NeuralAmpModeler::UpdateNoiseGateParams()
 {
-    
+
     this->noiseGateActive = cNoiseGateThreshold.GetDb() != -120;
     const double time = 0.01;
     const double threshold = ToNoiseGateThreshold(cNoiseGateThreshold.GetDb());
@@ -688,6 +743,7 @@ void NeuralAmpModeler::UpdateNoiseGateParams()
     dsp::noise_gate::TriggerParams triggerParams(time, threshold, ratio, openTime, holdTime, closeTime);
     this->mNoiseGateTrigger.SetParams(triggerParams);
     this->mNoiseGateTrigger.SetSampleRate(rate);
+    this->mNoiseGateTrigger.Reset();
     if (!noiseGateActive)
     {
         this->cGateOutput.SetValue(0);
@@ -935,6 +991,9 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
             this->mInputArray[0][s] += gain * inputs[c][s];
         }
     }
+#if NAM_RMS_METER
+    cInputLevelOut.Tick(this->mInputArray[0].data(),nFrames);
+#else
     float vuValue = this->vuValue;
     for (size_t i = 0; i < nFrames; ++i)
     {
@@ -963,6 +1022,7 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
         this->vuSampleCount = 0;
         this->vuValue = 0;
     }
+#endif
 }
 
 void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
@@ -1002,6 +1062,10 @@ void NeuralAmpModeler::OnPatchGet(LV2_URID propertyUrid)
     else if (propertyUrid == this->urids.nam__FrequencyResponse)
     {
         this->responseGet = true;
+    }
+    else if (propertyUrid == this->urids.toob_nam__model_metadata)
+    {
+        this->requestModelMetdataNotification = true;
     }
 }
 
@@ -1323,14 +1387,30 @@ void NeuralAmpModeler::SetModelVolumes_()
     }
 }
 
-void NeuralAmpModeler::UpdateCalibrationFactors() 
+void NeuralAmpModeler::UpdateCalibrationFactors()
 {
     nam_impl::NamCalibrationSettings settings;
     settings.calibrateInput = cInputCalibrationMode.GetValue();
     settings.outputCalbration = (nam_impl::OutputCalibrationMode)cOutputCalibrationMode.GetValue();
     settings.calibrationDbu = cCalibrationValue.GetValue();
     fgCalibrationSettings = settings;
-    fgCalibrationFactors = nam_impl::CalculateNamVolumeAdjustments(mNAM.get(),settings);
+    fgCalibrationFactors = nam_impl::CalculateNamVolumeAdjustments(mNAM.get(), settings);
     SetModelVolumes_();
+}
 
+void NeuralAmpModeler::SendModelMetadataNotification()
+{
+    using namespace toob::nam_impl;
+
+    std::array<float, (size_t)(TOOB_NAM_METADATA_OFFSETS::max_metadata_offset)>
+        values;
+
+    values[TOOB_NAM_METADATA_OFFSETS::flags] = fgModelMetadata.flags;
+    values[TOOB_NAM_METADATA_OFFSETS::preset_version] = cPresetVersion.GetValue();
+    values[TOOB_NAM_METADATA_OFFSETS::gain] = fgModelMetadata.gain;
+    values[TOOB_NAM_METADATA_OFFSETS::loudness] = fgModelMetadata.loudness;
+    values[TOOB_NAM_METADATA_OFFSETS::input_level_dbu] = fgModelMetadata.input_level_dbu;
+    values[TOOB_NAM_METADATA_OFFSETS::output_level_dbu] = fgModelMetadata.output_level_dbu;
+
+    this->PutPatchProperty(0, this->urids.toob_nam__model_metadata, values.size(), (const float *)values.data());
 }

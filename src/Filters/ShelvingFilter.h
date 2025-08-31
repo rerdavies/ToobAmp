@@ -29,20 +29,19 @@
 namespace toob {
     using namespace LsNumerics;
 
-    class ShelvingLowCutFilter2: public AudioFilter2 {
+    class ShelvingFilter: public AudioFilter2 {
     private:
 
         float lowCutDb = 0;
-        bool disabled = false;
         float sampleRate = 48000.0;
         float cutoffFrequency = 4000;
     public:
-        ShelvingLowCutFilter2()
+        ShelvingFilter()
         {
-            SetLowCutDb(0);
+            Disable();
         }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
+        void SetLowShelf(float db, float fC);
+        void SetHighShelf(float db, float fC);
 
         void SetSampleRate(float sampleRate)
         {
@@ -50,14 +49,6 @@ namespace toob {
             this->sampleRate = sampleRate;
         }
 
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
 
     };
 

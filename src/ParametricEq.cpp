@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2025 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,45 +20,31 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-#pragma once
-#include "AudioFilter2.h"
-#include "../LsNumerics/LsMath.hpp"
-#include <cmath>
-#include <functional>
 
-namespace toob {
-    using namespace LsNumerics;
+ #include "ParametricEq.hpp"
 
-    class ShelvingLowCutFilter2: public AudioFilter2 {
-    private:
+ using namespace toob;
 
-        float lowCutDb = 0;
-        bool disabled = false;
-        float sampleRate = 48000.0;
-        float cutoffFrequency = 4000;
-    public:
-        ShelvingLowCutFilter2()
-        {
-            SetLowCutDb(0);
-        }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
 
-        void SetSampleRate(float sampleRate)
-        {
-            AudioFilter2::SetSampleRate(sampleRate);
-            this->sampleRate = sampleRate;
-        }
 
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
+ void ParametricEq::SetSampleRate(double sampleRate)
+ {
+    this->sampleRate = sampleRate;
+    lowCut.SetSampleRate(sampleRate);
+    highCut.SetSampleRate(sampleRate);
+    lowShelf.SetSampleRate(sampleRate);
+    highShelf.SetSampleRate(sampleRate);
+    lmf.SetSampleRate(sampleRate);
+    hmf.SetSampleRate(sampleRate);
+ }
 
-    };
-
-}
+ double ParametricEq::GetFrequencyResponse(float frequency)
+ {
+    double result = lowCut.GetFrequencyResponse(frequency);
+    result *= highCut.GetFrequencyResponse(frequency);
+    result *= lowShelf.GetFrequencyResponse(frequency);
+    result *= highShelf.GetFrequencyResponse(frequency);
+    result *= lmf.GetFrequencyResponse(frequency);
+    result *= hmf.GetFrequencyResponse(frequency);
+    return (result);
+ }

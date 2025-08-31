@@ -160,8 +160,10 @@ add_library(ToobAmpArch SHARED
     TemporaryFile.cpp TemporaryFile.hpp
 
     DebugPlot.cpp
+    RmsMeterPort.hpp
     NamBackgroundProcessor.cpp NamBackgroundProcessor.hpp
     NeuralAmpModeler.cpp NeuralAmpModeler.h
+    NeuralAmpModeler_Lv2Extensions.hpp
 
     nam_architecture.hpp
 
@@ -225,6 +227,17 @@ add_library(ToobAmpArch SHARED
     Filters/AudioFilter2.h
     Filters/FilterCoefficients2.h Filters/AudioFilter2.cpp OutputPort.h
     ToneStack.cpp ToneStack.h GainSection.cpp GainSection.h IDelay.h SagProcessor.h
+
+    NamTonestack/tonestack_dsp.cpp NamTonestack/tonestack_dsp.h
+    NamTonestack/ToneStack.cpp NamTonestack/ToneStack.h
+    NamTonestack/RecursiveLinearFilter.cpp NamTonestack/RecursiveLinearFilter.h
+    Toob3BandEq.cpp Toob3BandEq.h 
+
+    Filters/PeakingFilter2.cpp Filters/PeakingFilter2.h
+    Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
+    ParametricEq.cpp ParametricEq.hpp
+    ToobParametricEq.cpp ToobParametricEq.h 
+
     NoiseGate.cpp NoiseGate.h
     GainStage.cpp GainStage.h
     WaveShapes.cpp WaveShapes.h
@@ -643,6 +656,35 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToneStack.ttl
     generate_lv2c_plugin_info
 )
+
+configure_file(ToobAmp.lv2/ttl.in/Toob3BandEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEq.ttl)
+add_custom_command(
+    OUTPUT Toob3BandEqInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-three-band-eq
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/Toob3BandEqInfo.hpp
+    --class Toob3BandEqPluginInfo
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEq.ttl
+    generate_lv2c_plugin_info
+)
+configure_file(ToobAmp.lv2/ttl.in/ToobParametricEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEq.ttl)
+add_custom_command(
+    OUTPUT ToobParametricEqInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-parametric-eq
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
+    --class ToobParametricEqPluginInfo
+    --plugin-base-class ToobParametricEqBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEq.ttl
+    generate_lv2c_plugin_info
+)
+
 configure_file(ToobAmp.lv2/ttl.in/ToobFlanger.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobFlanger.ttl)
 add_custom_command(
     OUTPUT Tf2FlangerInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
@@ -815,6 +857,15 @@ if(TOOB_BUILD_UI)
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToneStackInfo.hpp
         ToneStackUi.cpp
+
+
+
+        ${CMAKE_CURRENT_BINARY_DIR}/Toob3BandEqInfo.hpp
+        Toob3BandEqUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
+        ToobParametricEqUi.cpp
+
 
         ${CMAKE_CURRENT_BINARY_DIR}/CabSimInfo.hpp
         CabSimUi.cpp

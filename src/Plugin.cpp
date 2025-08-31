@@ -30,6 +30,7 @@
 #include "PowerStage2.h"
 #include "CabSim.h"
 #include "ToneStack.h"
+#include "Toob3BandEq.h"
 #include <lv2_plugin/Lv2Plugin.hpp>
 #include <string.h>
 #include "lv2/state/state.h"
@@ -76,6 +77,7 @@ using namespace toob;
     PLUGIN_REGISTER(NeuralAmpModeler);
     PLUGIN_REGISTER(ToobFlanger);
     PLUGIN_REGISTER(ToobFlangerStereo);
+    PLUGIN_REGISTER(Toob3BandEq);
     // see also PLUGIN_REGISTER(ToobRecordMono); in ToobRecordMono.cpp
     // see also PLUGIN_REGISTER(ToobRecorStereo); in ToobRecordMono.cpp
     // see also PLUGIN_REGISTER(ToobLooperFour); in ToobLooperFour.cpp

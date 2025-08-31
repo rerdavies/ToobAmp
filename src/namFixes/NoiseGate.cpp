@@ -57,6 +57,16 @@ dsp::noise_gate::Trigger::Trigger()
 {
 }
 
+void dsp::noise_gate::Trigger::Reset()
+{
+  const double maxGainReduction = this->_GetMaxGainReduction();
+
+  std::fill(this->mLastGainReductionDB.begin(), this->mLastGainReductionDB.end(), maxGainReduction);
+  std::fill(this->mState.begin(), this->mState.end(), dsp::noise_gate::Trigger::State::MOVING);
+  std::fill(this->mLevel.begin(), this->mLevel.end(), MINIMUM_LOUDNESS_POWER);
+  std::fill(this->mTimeHeld.begin(), this->mTimeHeld.end(), 0.0);
+}
+
 
 nam_float_t** dsp::noise_gate::Trigger::Process(nam_float_t** inputs, const size_t numChannels, const size_t numFrames)
 {

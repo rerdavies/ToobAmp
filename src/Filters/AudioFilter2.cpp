@@ -85,7 +85,6 @@ double AudioFilter2::GetFrequencyResponse(float frequency)
 	complex<double> ejw = std::exp(complex<double>(0.0, w0));
 	complex<double> ejw2 = ejw * ejw;
 
-
 	complex<double> result =
 		(
 			zTransformCoefficients.b[0]

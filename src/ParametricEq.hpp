@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2025 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,43 +21,45 @@
  *   SOFTWARE.
  */
 #pragma once
-#include "AudioFilter2.h"
-#include "../LsNumerics/LsMath.hpp"
-#include <cmath>
-#include <functional>
+
+#include "Filters/AudioFilter2.h"
+#include "Filters/ShelvingFilter.h"
+#include "Filters/LowPassFilter.h"
+#include "Filters/HighPassFilter.h"
+#include "Filters/PeakingFilter2.h"
+
 
 namespace toob {
-    using namespace LsNumerics;
-
-    class ShelvingLowCutFilter2: public AudioFilter2 {
-    private:
-
-        float lowCutDb = 0;
-        bool disabled = false;
-        float sampleRate = 48000.0;
-        float cutoffFrequency = 4000;
+    class ParametricEq {
     public:
-        ShelvingLowCutFilter2()
-        {
-            SetLowCutDb(0);
-        }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
+        
+        void SetSampleRate(double sampleRate);
 
-        void SetSampleRate(float sampleRate)
-        {
-            AudioFilter2::SetSampleRate(sampleRate);
-            this->sampleRate = sampleRate;
-        }
+        HighPassFilter lowCut;
+        LowPassFilter highCut;
 
-        virtual void SetCutoffFrequency(float frequency)
+        ShelvingFilter lowShelf;    
+        ShelvingFilter highShelf;    
+        PeakingFilter2 lmf;
+        PeakingFilter2 hmf;
+
+        float Tick(float value)
         {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
+            return lowCut.Tick(
+                highCut.Tick(
+                    lowShelf.Tick(
+                        highShelf.Tick(
+                            lmf.Tick(
+                                hmf.Tick(value)
+                            )
+                        )
+                    )
+                )
+            );
         }
+        double GetFrequencyResponse(float f);
+    private: 
+        double sampleRate;
 
     };
 

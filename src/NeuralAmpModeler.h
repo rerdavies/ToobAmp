@@ -36,6 +36,7 @@ SOFTWARE.
 
 #include "LsNumerics/BaxandallToneStack.hpp"
 #include "LsNumerics/ToneStackFilter.h"
+#include "RmsMeterPort.hpp"
 
 #include "FilterResponse.h"
 
@@ -51,17 +52,31 @@ SOFTWARE.
 #include <array>
 #include "namFixes/NoiseGate.h"
 #include "NamBackgroundProcessor.hpp"
+#include "NeuralAmpModeler_Lv2Extensions.hpp"
 
 
+#define NAM_RMS_METER 0
 
 namespace toob
 {
 
+
+    struct NamModelMetadata {
+        int32_t flags = 0;
+        float loudness = 0;
+        float gain = 0;
+        float input_level_dbu = 0;
+        float output_level_dbu = 0;
+    };
+
+
+
     class NeuralAmpModeler final : public Lv2PluginWithState, private nam_impl::NamBackgroundProcessorListener
     {
-
     public:
         static const char URI[];
+
+        using super = Lv2PluginWithState;
 
         using float_t = float;   // external float type.
 #ifdef NAM_SAMPLE_FLOAT
@@ -88,9 +103,9 @@ namespace toob
             kInputGain = 0,
             kInputLevelOut,
             kOutputGain,
-            kBuffer,
             kNoiseGateThreshold,
             kGateOut,
+            kBuffer,
             
             kStackType,
             kBass,
@@ -99,7 +114,9 @@ namespace toob
 
             kInputCalibrationMode,
             kCalibration,
-            kOutputCalbrationMode,
+            kOutputCalibrationMode,
+
+            kPresetVersion,
 
             kAudioIn,
             kAudioOut,
@@ -109,6 +126,8 @@ namespace toob
         bool LoadModel(const std::string&filename); // (for tests)
 
     private:
+        bool requestModelMetdataNotification = false;
+        void SetModel();
         struct Urids
         {
             void Initialize(NeuralAmpModeler &this_);
@@ -126,6 +145,7 @@ namespace toob
 			LV2_URID atom__float;
 			LV2_URID atom__int;
 			LV2_URID units__Frame;
+            LV2_URID toob_nam__model_metadata;
 
 
         };
@@ -157,6 +177,7 @@ namespace toob
 
 
         void SetModelVolumes_();
+        void SendModelMetadataNotification();
         bool frameSizeErrorGiven = false;
 
 
@@ -217,7 +238,11 @@ namespace toob
 
         RangedDbInputPort cInputGain{-40, 40};
         RangedDbInputPort cOutputGain{-40, 40};
+        #if NAM_RMS_METER
+        RmsMeterPort cInputLevelOut;
+        #else
         OutputPort cInputLevelOut;
+        #endif
 
         RangedInputPort cBuffer{0.0,1.0};
         bool lastBufferValue = false;
@@ -230,6 +255,7 @@ namespace toob
         enum class OutputCalbrationMode { Normalized=0,Calibrated=1,Raw=2};
         EnumeratedInputPort cOutputCalibrationMode { 3};
         RangedInputPort cCalibrationValue { -40,+40}; 
+        RangedInputPort cPresetVersion { 0, 1000};
 
         enum ToneStackType {
             Bassman = 0, // matches enum values in .ttl file.
@@ -336,6 +362,7 @@ namespace toob
         std::unique_ptr<ToobNamDsp> mNAM;
         nam_impl::NamCalibrationSettings fgCalibrationSettings;
         nam_impl::NamVolumeAdjustments fgCalibrationFactors;
+        NamModelMetadata fgModelMetadata;
 
         // Path to model's config.json or model.nam
         std::string mNAMPath;

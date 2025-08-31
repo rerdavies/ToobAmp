@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2023 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- 
+
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- 
+
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -20,45 +20,41 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  */
-#pragma once
-#include "AudioFilter2.h"
-#include "../LsNumerics/LsMath.hpp"
-#include <cmath>
+
+#include "PeakingFilter2.h"
+#include <complex>
 #include <functional>
 
-namespace toob {
-    using namespace LsNumerics;
+using namespace toob;
 
-    class ShelvingLowCutFilter2: public AudioFilter2 {
-    private:
+void PeakingFilter2::Set(float fc, float gainDb, float q)
+{
+    // Q_new = Q_base * pow(2, abs(dBgain) / K)
 
-        float lowCutDb = 0;
-        bool disabled = false;
-        float sampleRate = 48000.0;
-        float cutoffFrequency = 4000;
-    public:
-        ShelvingLowCutFilter2()
-        {
-            SetLowCutDb(0);
-        }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
 
-        void SetSampleRate(float sampleRate)
-        {
-            AudioFilter2::SetSampleRate(sampleRate);
-            this->sampleRate = sampleRate;
-        }
+    double g = Db2Af(gainDb);
 
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
 
-    };
+    //float adjustedQ = q / (1.0f + 0.2f * (g - 1.0f));
+    float adjustedQ = q;
+    if (gainDb > 0) 
+    {
+        adjustedQ += gainDb/12;
+    }
+    else  {
+        adjustedQ = adjustedQ/2- gainDb/12;
+    }
+    double B = 1.0/adjustedQ;
+    // H(s) = (s^2+ gBs + 1) / (s^2 + Bs + 1);
 
+    prototype.b[2] = 1;
+    prototype.b[1] = g*B;
+    prototype.b[0] = 1;
+    prototype.a[2] = 1;
+    prototype.a[1] = B;
+    prototype.a[0] = 1;
+
+    this->cutoffFrequency = fc;
+    PeakingFilter2::SetCutoffFrequency(this->cutoffFrequency);
 }
+

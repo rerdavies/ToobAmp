@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2025 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,20 +29,17 @@
 namespace toob {
     using namespace LsNumerics;
 
-    class ShelvingLowCutFilter2: public AudioFilter2 {
+    class PeakingFilter2: public AudioFilter2 {
     private:
 
-        float lowCutDb = 0;
         bool disabled = false;
-        float sampleRate = 48000.0;
+        float sampleRate = 44100;
         float cutoffFrequency = 4000;
     public:
-        ShelvingLowCutFilter2()
+        PeakingFilter2()
         {
-            SetLowCutDb(0);
+            Set(1000,0,1);
         }
-        void Design(float lowDb, float highDb, float fC);
-        void SetLowCutDb(float db);
 
         void SetSampleRate(float sampleRate)
         {
@@ -50,14 +47,7 @@ namespace toob {
             this->sampleRate = sampleRate;
         }
 
-        virtual void SetCutoffFrequency(float frequency)
-        {
-            this->cutoffFrequency = frequency;
-            if (!disabled)
-            {
-                AudioFilter2::SetCutoffFrequency(frequency);
-            }
-        }
+        virtual void Set(float fc, float gain, float q);
 
     };
 

@@ -116,6 +116,10 @@ public:
   using super = NamDSP;
 
   Trigger();
+  
+  void Reset();
+
+  
 
   nam_float_t** Process(nam_float_t** inputs, const size_t numChannels, const size_t numFrames) override;
   const std::vector<std::vector<nam_float_t>> &GetGainReduction() const { return this->mGainReduction; };

@@ -114,8 +114,6 @@ void ShelvingLowCutFilter2::Design(float lowDb, float highDb, float fL)
 void ShelvingLowCutFilter2::SetLowCutDb(float db)
 {
     this->lowCutDb = db;
-    if (db > 0)
-        db = -db;
     if (db != 0)
     {
         disabled = false;
