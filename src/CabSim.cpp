@@ -314,8 +314,8 @@ void CabSim::WriteFrequencyResponse()
 
 	lv2_atom_forge_float(&forge,30.0f);
 	lv2_atom_forge_float(&forge,20000.0f);
-	lv2_atom_forge_float(&forge,5.0f);
-	lv2_atom_forge_float(&forge,-35.0f);
+	lv2_atom_forge_float(&forge,20.0f);
+	lv2_atom_forge_float(&forge,-20.0f);
 
 
 	float trimAf = this->trim.GetAf();

@@ -141,6 +141,7 @@ namespace toob
 
 		void LoadModelIndex();
 		ToobMlModel *LoadModel(const std::string &fileName);
+        void WarmModel(ToobMlModel*model);
 
 		float *output = nullptr;
 

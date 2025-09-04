@@ -110,8 +110,8 @@ void ToobParametricEq::Activate()
 
     eq.lowShelf.SetLowShelf(this->lfLevel.GetDb(),this->lfC.GetValue());
     eq.highShelf.SetHighShelf(this->hfLevel.GetDb(),this->hfC.GetValue()*1000.0f);
-    eq.lmf.Set(this->lmfC.GetValue(),this->lmfLevel.GetDb(),this->lmfQ.GetValue());
-    eq.hmf.Set(this->hmfC.GetValue()*1000.0f,this->hmfLevel.GetDb(),this->hmfQ.GetValue());
+    eq.lmf.SetParameters(this->lmfC.GetValue(),this->lmfLevel.GetDb(),this->lmfQ.GetValue());
+    eq.hmf.SetParameters(this->hmfC.GetValue()*1000.0f,this->hmfLevel.GetDb(),this->hmfQ.GetValue());
 
     this->responseChanged = true;
 }
@@ -225,12 +225,12 @@ bool ToobParametricEq::UpdateControls()
     }
     if (this->lmfLevel.HasChanged() || this->lmfC.HasChanged() || this->lmfQ.HasChanged())
     {
-        eq.lmf.Set(this->lmfC.GetValue(),this->lmfLevel.GetDb(),this->lmfQ.GetValue());
+        eq.lmf.SetParameters(this->lmfC.GetValue(),this->lmfLevel.GetDb(),this->lmfQ.GetValue());
         changed = true;
     }
     if (this->hmfLevel.HasChanged() || this->hmfC.HasChanged() || this->hmfQ.HasChanged())
     {
-        eq.hmf.Set(this->hmfC.GetValue()*1000.0,this->hmfLevel.GetDb(),this->hmfQ.GetValue());
+        eq.hmf.SetParameters(this->hmfC.GetValue()*1000.0,this->hmfLevel.GetDb(),this->hmfQ.GetValue());
         changed = true;
     }
 	return changed;

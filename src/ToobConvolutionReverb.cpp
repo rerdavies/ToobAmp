@@ -89,7 +89,7 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         switch ((MonoReverbPortId)port)
         {
         case MonoReverbPortId::BYPASS:
-            this->pBypass = (const float*)data;
+            this->pBypass = (const float *)data;
             break;
         case MonoReverbPortId::TIME:
             this->pTime = (float *)data;
@@ -147,7 +147,7 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         switch ((StereoReverbPortId)port)
         {
         case StereoReverbPortId::BYPASS:
-            this->pBypass = (const float*)data;
+            this->pBypass = (const float *)data;
             break;
         case StereoReverbPortId::TIME:
             this->pTime = (float *)data;
@@ -283,14 +283,13 @@ void ToobConvolutionReverbBase::UpdateControls()
         mixOptionsChanged = true;
     }
     bool bBypass = *pBypass != 0;
-    if (this->bypass != bBypass) 
+    if (this->bypass != bBypass)
     {
         this->bypass = bBypass;
-        if (pConvolutionReverb) 
+        if (pConvolutionReverb)
         {
-            pConvolutionReverb->SetBypass(bBypass,false);
+            pConvolutionReverb->SetBypass(bBypass, false);
         }
-
     }
     bool bTails = *pTails != 0;
     if (this->tails != bTails)
@@ -300,7 +299,6 @@ void ToobConvolutionReverbBase::UpdateControls()
         {
             pConvolutionReverb->SetTails(bTails);
         }
-
     }
     if (pPan != nullptr && fgMixOptions.pan != *pPan)
     {
@@ -314,8 +312,9 @@ void ToobConvolutionReverbBase::UpdateControls()
     }
     if (pPredelayObsolete) // now used as a version marker.
     {
-        CrvbVersion version = *pPredelayObsolete < 0 ? CrvbVersion::V2: CrvbVersion::V1;
-        if (fgMixOptions.version != version) {
+        CrvbVersion version = *pPredelayObsolete < 0 ? CrvbVersion::V2 : CrvbVersion::V1;
+        if (fgMixOptions.version != version)
+        {
             fgMixOptions.version = version;
             mixOptionsChanged = true;
         }
@@ -868,80 +867,99 @@ static void LegacyNormalizeConvolution(AudioData &data)
 
 static double CalculateResponse(AudioData &data)
 {
-    double maxMagnitude = 0;
-
-    // blown cache is the problem. 
-    // so doing multiple frequecies in one pass yeilds big gains.
-
-    for (double frequency = 0; frequency <= 880; frequency += 80) {
-        double w = M_PI *frequency/data.getSampleRate();
-        double w2 = M_PI *(frequency+20)/data.getSampleRate();
-        double w3 = M_PI *(frequency+40)/data.getSampleRate();
-        double w4 = M_PI *(frequency+60)/data.getSampleRate();
-   
-        //std::complex<double> dRotation = std::exp(std::complex<double>(0,w));
-        std::complex<double> phasor = std::complex<double>(1,0);
-        std::complex<double> phasor2 = std::complex<double>(1,0);
-        std::complex<double> phasor3 = std::complex<double>(1,0);
-        std::complex<double> phasor4 = std::complex<double>(1,0);
-
-
-        for (size_t c = 0; c < data.getChannelCount(); ++c)
+    double maxMag = 0;
+    for (size_t c = 0; c < data.getChannelCount(); ++c)
+    {
+        const auto &ch = data[c];
+        double sumsq = 0;
+        for (size_t i = 0; i < ch.size(); ++i)
         {
-            const auto&ch = data[c];
-
-            std::complex<double> sum {0.0,0.0};
-            std::complex<double> sum2 {0.0,0.0};
-            std::complex<double> sum3 {0.0,0.0};
-            std::complex<double> sum4 {0.0,0.0};
-
-            size_t i = 0;
-
-
-            for (/**/; i < ch.size(); ++i)
-            {
-                float v = ch[i];
-                phasor = std::exp(std::complex<double>(0,i*w)); // fix rounding errors.
-                sum += std::complex<double>(v,0)*phasor;
-
-                phasor2 = std::exp(std::complex<double>(0,i*w2)); // fix rounding errors.
-                sum2 += std::complex<double>(v,0)*phasor2;
-
-                phasor3 = std::exp(std::complex<double>(0,i*w3)); // fix rounding errors.
-                sum3 += std::complex<double>(v,0)*phasor3;
-
-                phasor4 = std::exp(std::complex<double>(0,i*w4)); // fix rounding errors.
-                sum4 += std::complex<double>(v,0)*phasor4;
-            }
-            double m = std::abs(sum);
-            //std::cout << "sum: " << sum << std::endl;
-            if (m > maxMagnitude)
-            {
-                maxMagnitude = m;
-            }
-            double m2 = std::abs(sum2);
-            if (m2 > maxMagnitude)
-            {
-                maxMagnitude = m2;
-            }
-            double m3 = std::abs(sum3);
-            if (m3 > maxMagnitude)
-            {
-                maxMagnitude = m3;
-            }
-            double m4 = std::abs(sum4);
-            if (m2 > maxMagnitude)
-            {
-                maxMagnitude = m4;
-            }
-
+            float v = ch[i];
+            sumsq += v * v;
+        }
+        double rms = std::sqrt(sumsq);
+        double mag = rms;
+        std::cout << "Mag: " << LsNumerics::Af2Db(mag) << "dB" << std::endl;
+        if (mag > maxMag)
+        {
+            maxMag = mag;
         }
     }
-    if (maxMagnitude < 1)
-    {
-        return 1;
-    }
-    return maxMagnitude;
+
+    return maxMag;
+
+// double maxMagnitude = 0;
+
+// // blown cache is the problem.
+// // so doing multiple frequecies in one pass yeilds big gains.
+
+// for (double frequency = 0; frequency <= 880; frequency += 80) {
+//     double w = M_PI *frequency/data.getSampleRate();
+//     double w2 = M_PI *(frequency+20)/data.getSampleRate();
+//     double w3 = M_PI *(frequency+40)/data.getSampleRate();
+//     double w4 = M_PI *(frequency+60)/data.getSampleRate();
+
+//     //std::complex<double> dRotation = std::exp(std::complex<double>(0,w));
+//     std::complex<double> phasor = std::complex<double>(1,0);
+//     std::complex<double> phasor2 = std::complex<double>(1,0);
+//     std::complex<double> phasor3 = std::complex<double>(1,0);
+//     std::complex<double> phasor4 = std::complex<double>(1,0);
+
+//     for (size_t c = 0; c < data.getChannelCount(); ++c)
+//     {
+//         const auto&ch = data[c];
+
+//         std::complex<double> sum {0.0,0.0};
+//         std::complex<double> sum2 {0.0,0.0};
+//         std::complex<double> sum3 {0.0,0.0};
+//         std::complex<double> sum4 {0.0,0.0};
+
+//         size_t i = 0;
+
+//         for (/**/; i < ch.size(); ++i)
+//         {
+//             float v = ch[i];
+//             phasor = std::exp(std::complex<double>(0,i*w)); // fix rounding errors.
+//             sum += std::complex<double>(v,0)*phasor;
+
+//             phasor2 = std::exp(std::complex<double>(0,i*w2)); // fix rounding errors.
+//             sum2 += std::complex<double>(v,0)*phasor2;
+
+//             phasor3 = std::exp(std::complex<double>(0,i*w3)); // fix rounding errors.
+//             sum3 += std::complex<double>(v,0)*phasor3;
+
+//             phasor4 = std::exp(std::complex<double>(0,i*w4)); // fix rounding errors.
+//             sum4 += std::complex<double>(v,0)*phasor4;
+//         }
+//         double m = std::abs(sum);
+//         //std::cout << "sum: " << sum << std::endl;
+//         if (m > maxMagnitude)
+//         {
+//             maxMagnitude = m;
+//         }
+//         double m2 = std::abs(sum2);
+//         if (m2 > maxMagnitude)
+//         {
+//             maxMagnitude = m2;
+//         }
+//         double m3 = std::abs(sum3);
+//         if (m3 > maxMagnitude)
+//         {
+//             maxMagnitude = m3;
+//         }
+//         double m4 = std::abs(sum4);
+//         if (m2 > maxMagnitude)
+//         {
+//             maxMagnitude = m4;
+//         }
+
+//     }
+// }
+// if (maxMagnitude < 1)
+// {
+//     return 1;
+// }
+// return maxMagnitude*Db2Af(-6);
 }
 
 static void NormalizeConvolution(AudioData &data)
@@ -1029,7 +1047,6 @@ static float GetTailScale(const std::vector<float> &data, size_t tailPosition)
     return (float)max;
 }
 #endif
-
 
 static size_t GetShotSpikeLength(const AudioData &data)
 {
@@ -1123,8 +1140,9 @@ static void ApplyDecay(AudioData &data, float decay)
     {
         return;
     }
-    double TRef = data.getSize()/(double)(data.getSampleRate()); // seconds.
-    if (TRef < 1.0) TRef = 1.0;
+    double TRef = data.getSize() / (double)(data.getSampleRate()); // seconds.
+    if (TRef < 1.0)
+        TRef = 1.0;
 
     constexpr double T0 = 0.010; // seconds.
     double tF, yF;
@@ -1132,9 +1150,11 @@ static void ApplyDecay(AudioData &data, float decay)
     {
         tF = T0 + (TRef - T0) * (1.0 + decay);
         yF = tF * (1.0f / TRef);
-    } else {
+    }
+    else
+    {
         tF = TRef;
-        yF = Db2AF(decay*60.0f,-96);
+        yF = Db2AF(decay * 60.0f, -96);
     }
     // y = exp(k*t)
     // yF = exp(k*tF)
@@ -1208,16 +1228,18 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
     // using clock_t = std::chrono::steady_clock;
     // clock_t::time_point start = clock_t::now();
 
-    if (this->bgMixOptions.version >= CrvbVersion::V2) {
+    if (this->bgMixOptions.version >= CrvbVersion::V2)
+    {
         NormalizeConvolution(data);
-    } else {
+    }
+    else
+    {
         LegacyNormalizeConvolution(data);
     }
 
     // auto duration = clock_t::now()-start;
 
     // std::cout << " Normalization: " << std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() << "ms" << std::endl;
-
 
     if (!this->bgMixOptions.predelayObsolete) // bbetter to do it on the pristine un-filtered data.
     {
@@ -1283,7 +1305,7 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
         this->tailScale = 0;
 
         // Ignore old maxTime parameter. Just truncate anthing over 30 seconds.
-        size_t maxSize = (size_t)std::ceil(30* pReverb->getSampleRate());
+        size_t maxSize = (size_t)std::ceil(30 * pReverb->getSampleRate());
         if (maxSize < data.getSize())
         {
             data.setSize(maxSize);
@@ -1333,7 +1355,7 @@ void ToobConvolutionReverbBase::LoadWorker::OnResponse()
 
         convolutionReverbResult->SetDirectMix(pReverb->directMixAf);
         convolutionReverbResult->SetTails(pReverb->tails);
-        convolutionReverbResult->SetBypass(pReverb->bypass,true);
+        convolutionReverbResult->SetBypass(pReverb->bypass, true);
 
         if (pReverb->IsConvolutionReverb())
         {
