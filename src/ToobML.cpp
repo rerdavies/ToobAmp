@@ -158,7 +158,7 @@ namespace toob
             std::vector<float> dense_bias = data.lin__bias();
             dense.setBias(dense_bias.data());
         }
-        virtual void Reset()
+        virtual void Reset() 
         {
             model.reset();
         }
@@ -178,7 +178,7 @@ namespace toob
             inData[2] = param;
             for (int i = 0; i < numSamples; ++i)
             {
-                inData[0] = inData[i];
+                inData[0] = input[i];
                 output[i] = model.forward(inData);
             }
         }
@@ -453,7 +453,7 @@ void ToobML::LoadModelIndex()
 void ToobML::WarmModel(ToobMlModel *model)
 {
     constexpr size_t BUFFSIZE = 64;
-    constexpr size_t PREWARM_SAMPLES = 1024;
+    constexpr size_t PREWARM_SAMPLES = 44100/4;
     float input[BUFFSIZE];
     float output[BUFFSIZE];
     for (size_t i = 0; i < BUFFSIZE; ++i)
@@ -478,7 +478,7 @@ ToobMlModel *ToobML::LoadModel(const std::string &fileName)
     {
         ToobMlModel *result = ToobMlModel::Load(fileName);
 
-        WarmModel(result, 1000);
+        WarmModel(result);
         return result;
     }
     catch (std::exception &error)
@@ -712,6 +712,7 @@ void ToobML::Run(uint32_t n_samples)
     if (asyncState == AsyncState::Idle && modelChanged)
     {
         modelChanged = false;
+        masterDezipper.To(0, MODEL_FADE_RATE);
         loadWorker.StartRequest();
     }
     for (uint32_t i = 0; i < n_samples; ++i)

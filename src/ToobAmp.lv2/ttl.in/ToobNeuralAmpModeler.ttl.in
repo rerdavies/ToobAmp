@@ -510,6 +510,11 @@ toobNam:ui
                         rdfs:label ".nam file";
                         pipedal_ui:fileExtension ".nam";
                         pipedal_ui:mimeType "application/octet-stream";
+                ],[
+                        a pipedal_ui:fileType;
+                        rdfs:label ".aidax file";
+                        pipedal_ui:fileExtension ".aidax";
+                        pipedal_ui:mimeType "application/octet-stream";
                 ];
         ];
         pipedal_ui:frequencyPlot 
