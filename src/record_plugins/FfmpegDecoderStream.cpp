@@ -47,7 +47,19 @@ using namespace pipedal;
 
 #pragma GCC diagnostic ignored "-Wunused-result" // GCC 12 bug.
 
+
 void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds)
+{
+    openLoop(filePath,channels,sampleRate,(size_t)std::round(seekPosSeconds*sampleRate),0,0);
+}
+
+void FfmpegDecoderStream::openLoop(
+    const std::filesystem::path &filePath, 
+    int channels, 
+    uint32_t sampleRate, 
+    size_t startFrame,
+    size_t loopStartFrame,
+    size_t loopEndFrame)
 {
     this->channels = channels;
 
@@ -71,8 +83,18 @@ void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channe
 
     // seek to the position in the file.
     args.push_back("-ss");
-    args.push_back(std::to_string(seekPosSeconds));
+    args.push_back(std::to_string(startFrame/(double)sampleRate));
 
+    if (loopStartFrame != loopEndFrame) 
+    {
+        /// -filter_complex "loop=loop=<num_loops>:size=<frame_count>:start=<start_frame>"        
+        args.push_back("-filter_complex");
+        std::string loopArgs = 
+            SS("loop=loop=-1:size=" << (loopEndFrame-loopStartFrame) 
+                << ":start=" << loopStartFrame);
+        args.push_back(loopArgs);
+
+    }
     args.push_back("-f");
     args.push_back("f32le");
     args.push_back("-acodec");
