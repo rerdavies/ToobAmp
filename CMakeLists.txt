@@ -8,6 +8,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 project(ToobAmp VERSION 1.2.69 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
+set(PROJECT_RELEASE_QUALIFIER "")
 
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -25,10 +26,6 @@ message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
 
-project(ToobAmp VERSION 1.1.68 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
-# Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
-
-set(PROJECT_RELEASE_QUALIFIER "")
 
 set(TOOBAMP_SEMANTIC_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PROJECT_RELEASE_QUALIFIER}")
 

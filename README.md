@@ -2,9 +2,9 @@
 
 ### v1.2.69
 
-The ToobAmp Project provides 24 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
-no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use 
-with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo 
+The ToobAmp Project provides 24 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
+no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
+with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo
 user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
 
 - TooB Neural Amp Modeler (NAM models)
@@ -35,23 +35,23 @@ https://github.com/user-attachments/assets/c9763757-cfd8-43ac-af1c-2c1140152e09
 
 Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the latest and best versions of PiPedal plugins already.
 
-ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64, but should be compatible 
+ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64, but should be compatible
 with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.68/toobamp_1.1.68_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.68/toobamp_1.1.68_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.1.68/toobamp_1.1.68_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.69/toobamp_1.2.69_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.69/toobamp_1.2.69_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.69/toobamp_1.2.69_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.1.68_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.2.69_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
-given by `apt-get`. 
+given by `apt-get`.
 
 ## Plugins
 
@@ -60,10 +60,10 @@ The ToobAmp package includes the following plugins.
 *   **TooB Neural Amp Modeler**
 
     Guitar amp emulations based on Neural Net modeling. A port of Steven Atkinson's astounding [Neural Amp Modeler](https://github.com/sdatkinson/NeuralAmpModelerCore) to LV2.  
-      
+
     Download model files from [ToneHunt.org](https://tonehunt.org), or (if you're feeling adventurous) [train your own models](https://github.com/sdatkinson/neural-amp-modeler).
     &nbsp;
-    
+
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/nam-sshot.png)
 
     &nbsp;
@@ -85,7 +85,7 @@ The ToobAmp package includes the following plugins.
     Simulates stereo reverb from pre-recorded stereo or Ambisonic b-format impulse response files. Mono and Stereo versions available.
 
     &nbsp;
-    
+
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Convolution Reverb UI](docs/img/crvb-sshot.png)
 
     &nbsp;
@@ -107,7 +107,7 @@ The ToobAmp package includes the following plugins.
     Simulates a Boss BF-2 flanger. Available in mono and stereo versions.
 
     &nbsp;
-    
+
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB BF-2 Flanger UI](docs/img/bf-sshot.png)
 
     &nbsp;
@@ -149,11 +149,11 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-sshot.png)
 
-    &nbsp;    
+    &nbsp;
 
 *   **TooB Tuner**
 
-    An stable, accurate guitar tuner. 
+    An stable, accurate guitar tuner.
 
     &nbsp;
 
@@ -174,7 +174,7 @@ The ToobAmp package includes the following plugins.
 
 *   **TooB Input Stage**
 
-    For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that 
+    For initial conditioning of guitar input signals. Trim level, noise-gating, and an EQ section that
     provides low-pass, hi-pass and bright-boost filtering.
 
     &nbsp;
@@ -182,15 +182,15 @@ The ToobAmp package includes the following plugins.
 
 *   **TooB Cab Simulator**
 
-    Rather than relying on expensive convolution effects, TooB CabSim provides an EQ section designed to 
-    allow easy emulation of guitar cabinet/microphone combinations. 
+    Rather than relying on expensive convolution effects, TooB CabSim provides an EQ section designed to
+    allow easy emulation of guitar cabinet/microphone combinations.
 
     &nbsp;
 
 *  **TooB Mix**
 
-    Remix stereo channels. Independent level and pan position for 
-    left and right input channels. 
+    Remix stereo channels. Independent level and pan position for
+    left and right input channels.
 
 *  **TooB Volume**
 
@@ -224,12 +224,12 @@ Then, in the project directory, run:
      cd ~/src/ToobAmp
      git submodule update --init --recursive
 
-If you are using Visual Studio Code, you will still need to perform the previous command after 
+If you are using Visual Studio Code, you will still need to perform the previous command after
 cloning the project, since Visual Studio Code does not yet understand submodules.
 
-##### Building 
+##### Building
 
-ToobAmp was built using Visual Studio Code, with CMake build files, so it's easier to configure and build 
+ToobAmp was built using Visual Studio Code, with CMake build files, so it's easier to configure and build
 TooBAmp if you are using Visual Studio Code.
 
 If you are using Visual Studio code, install the Microsoft CMake extension, and load the project directory. Visual Studio Code
@@ -249,7 +249,7 @@ To build the debian package, run
 
     ./makePackage
 
-Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that 
+Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that
 Debian packages don't conflict with each other.
 
 If you are building the plugins for use with a host other than PiPedal, you should read this:
@@ -262,12 +262,12 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 
 New in this release:
 
-- TooB Neural Amp Modeler: Calibration. 
+- TooB Neural Amp Modeler: input calibration.
 - TooB Convolution Reverb: Predelay, Stretch and Decay controls allow adjustments of impulse/response characteristics.
 - TooB Convolution Reverb, Freeverb: New "Tails" control, which allows reverb tails to continue after bypassing the effect.
 - TooB Parametric EQ: New plugin providing a 4-band parametric EQ.
 - TooB 3 Band EQ: New plugin providing a simple 3-band EQ.
-- TooB CE-2 Chorus, TooB BF-2 Flanger: TooB  Phaser: New "Wet/Dry" controls. 
+- TooB CE-2 Chorus, TooB BF-2 Flanger: TooB  Phaser: New "Wet/Dry" controls.
 
 
 ### v1.1.67
@@ -279,7 +279,7 @@ Fix for stalling problems in TooB Neural AmpModeler.
 New in this release:
 
 - TooB Neural Amp Modeler: New "Threaded" control, which allows NAM to use multiple CPU cores for processing.
-- Dynamically load a76-optimized plugin code when running on a Raspberry 5. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins. 
+- Dynamically load a76-optimized plugin code when running on a Raspberry 5. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins.
 
 ### v1.1.64
 
@@ -311,11 +311,11 @@ New in this release:
 ### v1.1.60
 Bug fixes:
 - Improvements to TooB Tuner stability and accuracy.
-- TooB Tuner: Correct pitch detection of notes above Bb4 
+- TooB Tuner: Correct pitch detection of notes above Bb4
 
-### v1.1.59 
+### v1.1.59
 - NEW TooB 4Looper, TooB One-Button Looper and TooB Record Input plugins.  
-- Fixes for Reaper UI compatibility. 
+- Fixes for Reaper UI compatibility.
 
 
 
