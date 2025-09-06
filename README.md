@@ -8,23 +8,41 @@ with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also 
 user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
 
 - TooB Neural Amp Modeler (NAM models)
+
 - TooB ML neural network amp modeler (ML models).
+
 - TooB Cab IR (convolution-based cab impulse responses)
+
 - TooB Convolution Reverb (mono and stereo)
+
 - TooB Parameteric EQ
+
 - TooB 3 Band EQ
+
 - TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
+
 - TooB Freeverb
+
 - TooB Phaser
+
 - TooB Delay,
+
 - TooB CE-2 Chorus
+
 - TooB BF-2 Flanger (mono and stereo)
+
 - TooB Tuner
+
 - TooB Noise Gate
+
 - TooB 4Looper (4 channel looper)
+
 - TooB One-Button Looper (for use with MIDI footswitches)
+
 - TooB CabSim (lightweight cab modeler)
+
 - TooB Input Stage (all-in-one noise gate, volume control, and EQ)
+
 - Utility plugins (TooB Spectrum Analyzer, TooB Input Recorder, TooB Volume, TooB Mix).
 
 Note that PiPedal always includes the latest ToobAmp plugins, so you should not install ToobAmp plugins on top of an existing PiPedal install.
