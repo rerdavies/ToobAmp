@@ -1,12 +1,3 @@
-REV Lick fails in player at end of loop.
-
-Convert CRVB presets!
-Default presets.
-
-
-
-
-License text files.
 
 
 Check ToOB Cab SIM F/R range.

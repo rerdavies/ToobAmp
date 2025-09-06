@@ -882,6 +882,7 @@ namespace LsNumerics
             this->reverbMixDezipper.SetSampleRate(rate);
             this->directMixDezipper.SetSampleRate(rate);
             this->bypassDezipper.SetSampleRate(rate);
+            this->bypassDezipper.To(1.0f,0.0f);
         }
         void ResetDirectMix(float value)
         {

@@ -72,7 +72,7 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/MlAmplifier.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![Toob ML UI](docs/img/MlAmplifier.png)
 
     &nbsp;
 
@@ -83,7 +83,7 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
     
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/crvb-sshot.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Convolution Reverb UI](docs/img/crvb-sshot.png)
 
     &nbsp;
 
@@ -94,7 +94,7 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/freeverb-sshot.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Freeverb UI](docs/img/freeverb-sshot.png)
 
     &nbsp;
 
@@ -105,7 +105,7 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
     
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/bf-sshot.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB BF-2 Flanger UI](docs/img/bf-sshot.png)
 
     &nbsp;
 
@@ -114,7 +114,7 @@ The ToobAmp package includes the following plugins.
     A faithful digital replica of the Boss CE-2 chorus pedal.
 
     &nbsp;
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ce-sshot.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB CE-2 Chorus UI](docs/img/ce-sshot.png)
 
     &nbsp;
 
@@ -125,7 +125,7 @@ The ToobAmp package includes the following plugins.
 
 *  **TooB Noise Gate**
 
-    A flexible Noise Gate, than provide both Noise Gate and 
+    A flexible Noise Gate, than provide both Noise Gate and
     Slow Gear effects.
 
 *   **TooB Freeverb**
@@ -134,7 +134,7 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
 
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/freeverb-sshot.png)
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Freeverb UI](docs/img/freeverb-sshot.png)
 
     &nbsp;
 
