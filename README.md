@@ -1,26 +1,29 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.1.68
+### v1.2.69
 
-The ToobAmp Project provides 22 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
+The ToobAmp Project provides 24 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a 
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use 
 with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo 
 user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
 
 - TooB Neural Amp Modeler (NAM models)
 - TooB ML neural network amp modeler (ML models).
-- TooB Convolution Reverb (mono and stereo)
-- TooB Freeverb
-- TooB 4Looper (4 channel looper)
-- TooB One-Button Looper (for use with MIDI footswitches)
 - TooB Cab IR (convolution-based cab impulse responses)
-- TooB CabSim (lightweight cab modeler)
+- TooB Convolution Reverb (mono and stereo)
+- TooB Parameteric EQ
+- TooB 3 Band EQ
+- TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
+- TooB Freeverb
+- TooB Phaser
 - TooB Delay,
 - TooB CE-2 Chorus
 - TooB BF-2 Flanger (mono and stereo)
 - TooB Tuner
 - TooB Noise Gate
-- TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
+- TooB 4Looper (4 channel looper)
+- TooB One-Button Looper (for use with MIDI footswitches)
+- TooB CabSim (lightweight cab modeler)
 - TooB Input Stage (all-in-one noise gate, volume control, and EQ)
 - Utility plugins (TooB Spectrum Analyzer, TooB Input Recorder, TooB Volume, TooB Mix).
 
@@ -254,18 +257,37 @@ If you are building the plugins for use with a host other than PiPedal, you shou
     https://rerdavies.github.io/pipedal/RTThreadPriority.htm
 
 # Releases Notes
+
+### v1.2.69
+
+New in this release:
+
+- TooB Neural Amp Modeler: Calibration. 
+- TooB Convolution Reverb: Predelay, Stretch and Decay controls allow adjustments of impulse/response characteristics.
+- TooB Convolution Reverb, Freeverb: New "Tails" control, which allows reverb tails to continue after bypassing the effect.
+- TooB Parametric EQ: New plugin providing a 4-band parametric EQ.
+- TooB 3 Band EQ: New plugin providing a simple 3-band EQ.
+- TooB CE-2 Chorus, TooB BF-2 Flanger: TooB  Phaser: New "Wet/Dry" controls. 
+
+
 ### v1.1.67
+
 Fix for stalling problems in TooB Neural AmpModeler.
 
 ### v1.1.66
+
 New in this release:
+
 - TooB Neural Amp Modeler: New "Threaded" control, which allows NAM to use multiple CPU cores for processing.
 - Dynamically load a76-optimized plugin code when running on a Raspberry 5. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins. 
 
 ### v1.1.64
+
 New in this release:
 - Fixes a minor memory leak.
+
 ### v1.1.63
+
 New in this release:
 - New Toob Player plugin, allows you to play audio files.
 - Added a Gain control to TooB Tonestack
