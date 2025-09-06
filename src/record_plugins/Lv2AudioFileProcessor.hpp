@@ -114,7 +114,8 @@ namespace toob
     {
         None = 0,
         SmallLoop = 1, // one loop buffer.
-        FfmpegLoop = 4, // ffmpeg does all the looping.
+        BigLoop = 2,  // streaming buffers
+        BigStartSmallLoop = 3, // streaming buffers, then switch to a loop buffer.
     };
 
     LoopType GetLoopType(const LoopParameters &loopParameters, float sampleRate);
@@ -192,6 +193,7 @@ namespace toob
             int channels,
             double sampleRate,
             const LoopControlInfo &loopControlInfo);
+        void PrepareLookaheadDecoderStream();
         toob::AudioFileBuffer *NextBuffer(
             toob::AudioFileBufferPool *bufferPool);
 

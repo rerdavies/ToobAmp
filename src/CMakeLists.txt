@@ -1066,6 +1066,7 @@ add_executable(ConvolutionReverbTest
     iir/PoleFilter.cpp
     WavReader.hpp WavReader.cpp
     WavWriter.hpp WavWriter.cpp
+    LsNumerics/Denorms.cpp LsNumerics/Denorms.hpp
 
 )
 

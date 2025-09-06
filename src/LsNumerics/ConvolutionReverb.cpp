@@ -24,6 +24,7 @@
 
 #include "ConvolutionReverb.hpp"
 #include "../ss.hpp"
+#include "Denorms.hpp"
 #include <memory>
 #include <cassert>
 #include <limits>
@@ -1325,6 +1326,7 @@ void DirectConvolutionSection::Execute(AudioThreadToBackgroundQueue &input, size
     auto writeCount = output.GetWriteCount();
 
 #endif
+    disable_denorms();
 
     {
         if (isStereo)
@@ -1403,6 +1405,7 @@ void BalancedConvolution::OnSynchronizedSingleReaderDelayLineReady()
 
 void BalancedConvolution::DirectSectionThread::Execute(AudioThreadToBackgroundQueue &inputDelayLine)
 {
+    disable_denorms();
 
     size_t tailPosition = inputDelayLine.GetReadTailPosition();
     while (true)
@@ -1429,6 +1432,8 @@ void BalancedConvolution::AssemblyThreadProc()
     buffer.resize(16);
     bufferRight.resize(16);
 
+    disable_denorms();
+    
     toob::SetThreadName("cr_assembly");
     try
     {

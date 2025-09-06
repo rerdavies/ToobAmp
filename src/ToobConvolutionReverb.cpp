@@ -22,6 +22,7 @@
  */
 #include "ToobConvolutionReverb.h"
 #include "lv2ext/filedialog.h"
+#include "LsNumerics/Denorms.hpp"
 
 #include "db.h"
 #include "ss.hpp"
@@ -44,6 +45,7 @@
 #endif
 
 using namespace toob;
+using namespace LsNumerics;
 
 constexpr float MIN_MIX_DB = -40;
 
@@ -282,7 +284,7 @@ void ToobConvolutionReverbBase::UpdateControls()
         fgMixOptions.width = *pWidth;
         mixOptionsChanged = true;
     }
-    bool bBypass = *pBypass != 0;
+    bool bBypass = pBypass? *pBypass != 0 : true;
     if (this->bypass != bBypass)
     {
         this->bypass = bBypass;
@@ -291,15 +293,12 @@ void ToobConvolutionReverbBase::UpdateControls()
             pConvolutionReverb->SetBypass(bBypass, false);
         }
     }
-    bool bTails = *pTails != 0;
-    if (this->tails != bTails)
+    bool bTails = pTails? *pTails != 0 : false;
+    if (pConvolutionReverb)
     {
-        this->tails = bTails;
-        if (pConvolutionReverb)
-        {
-            pConvolutionReverb->SetTails(bTails);
-        }
+        pConvolutionReverb->SetTails(bTails);
     }
+    
     if (pPan != nullptr && fgMixOptions.pan != *pPan)
     {
         fgMixOptions.pan = *pPan;
@@ -430,6 +429,7 @@ void ToobConvolutionReverbBase::Activate()
 
 void ToobConvolutionReverbBase::Run(uint32_t n_samples)
 {
+    fp_state_t savedDenorms = disable_denorms();
     BeginAtomOutput(this->controlOut);
     HandleEvents(this->controlIn);
     UpdateControls();
@@ -482,6 +482,8 @@ void ToobConvolutionReverbBase::Run(uint32_t n_samples)
 
     // absolutely ignore hosts that set *pLoadingState.
     *(pLoadingState) = this->loadingState;
+    restore_denorms(savedDenorms);
+
 }
 
 void ToobConvolutionReverbBase::CancelLoad()
@@ -1485,7 +1487,7 @@ void ToobConvolutionReverbBase::PublishResourceFiles(
     LV2_FileBrowser_Status status;
     if (IsConvolutionReverb())
     {
-        constexpr int RESOURCE_VERSION = 1;
+        constexpr int RESOURCE_VERSION = 2;
         status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle, RESOURCE_VERSION, "impulseFiles/reverb", "ReverbImpulseFiles");
     }
     else

@@ -1,3 +1,4 @@
+REV Lick fails in player at end of loop.
 
 Convert CRVB presets!
 Default presets.

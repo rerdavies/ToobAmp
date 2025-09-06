@@ -38,6 +38,8 @@ using namespace toob;
 namespace
 {
 
+    
+
     enum class MessageType
     {
         StartRecording,
@@ -126,17 +128,18 @@ namespace
     {
         UpdateLoopParametersCommand(
             uint64_t operationId,
-            const char *loopJson,
+            const char*loopJson,
             double seekPosSeconds,
-            double duration)
+            double duration
+        )
             : BufferMessage(MessageType::UpdateLoopParameters, sizeof(UpdateLoopParametersCommand)),
-              operationId(operationId),
+                operationId(operationId),
               seekPosSeconds(seekPosSeconds),
               duration(duration)
         {
             size_t len = strlen(loopJson) + 1;
             this->size = sizeof(UpdateLoopParametersCommand);
-            this->size = sizeof(UpdateLoopParametersCommand) - sizeof(this->loopJson) + len;
+            this->size = sizeof(UpdateLoopParametersCommand)-sizeof(this->loopJson) + len;
             if (this->size > sizeof(UpdateLoopParametersCommand))
             {
                 throw std::runtime_error("Command size exceeds structure size");
@@ -146,10 +149,10 @@ namespace
         }
 
         uint64_t operationId = (uint64_t)-1;
-        double seekPosSeconds = 0.0;
-        double duration = 0.0;
+        double seekPosSeconds = 0.0; 
+        double duration = 0.0; 
         char loopJson[1024] = {0};
-    };
+    };  
     struct ToobStartRecordingMessage : public BufferMessage
     {
         ToobStartRecordingMessage(const std::string &fileName, OutputFormat outputFormat)
@@ -206,15 +209,15 @@ namespace
     private:
         char buffer[1024];
     };
-    struct SetLoopParametersMessage : public BufferMessage
+struct SetLoopParametersMessage : public BufferMessage
     {
-        SetLoopParametersMessage(uint64_t operationId, const char *fileName, const char *loopJson)
+        SetLoopParametersMessage(uint64_t operationId, const char*fileName,const char *loopJson)
             : BufferMessage(MessageType::SetLoopParameters,
                             sizeof(SetLoopParametersMessage)),
               operationId(operationId)
         {
             size_t fileNameLen = strlen(fileName);
-            size_t jsonLen = strlen(loopJson);
+            size_t jsonLen  = strlen(loopJson);
 
             this->size = sizeof(SetLoopParametersMessage) - sizeof(this->buffer) + fileNameLen + 1 + jsonLen + 1;
 
@@ -223,9 +226,9 @@ namespace
                 throw std::runtime_error("Command size exceeds structure size");
             }
 
-            std::memcpy(this->buffer, fileName, fileNameLen + 1);
+            std::memcpy(this->buffer, fileName, fileNameLen+1);
             this->loopOffset = fileNameLen + 1;
-            std::memcpy(this->buffer + loopOffset, loopJson, jsonLen + 1);
+            std::memcpy(this->buffer+loopOffset, loopJson, jsonLen + 1);
 
             // Align to 4 bytes
             this->size = (size + 3) & (~3);
@@ -237,7 +240,7 @@ namespace
         }
         const char *getLoopJson() const
         {
-            return this->buffer + loopOffset;
+            return this->buffer+loopOffset;
         }
         uint64_t operationId = (uint64_t)-1;
 
@@ -285,7 +288,7 @@ namespace
             size_t seekPos,
             const LoopParameters &loopParameters,
             double duration,
-            const char *loopParameterJson)
+            const char* loopParameterJson)
             : BufferMessage(MessageType::CuePlaybackResponse,
                             sizeof(ToobCuePlaybackResponseMessage)),
               operationId(operationId),
@@ -297,7 +300,7 @@ namespace
             {
                 buffers[i] = nullptr;
             }
-            size = sizeof(ToobCuePlaybackResponseMessage) - sizeof(this->loopParameterJson) + strlen(loopParameterJson) + 1;
+            size = sizeof(ToobCuePlaybackResponseMessage)-sizeof(this->loopParameterJson) + strlen(loopParameterJson) + 1;
             if (size > sizeof(ToobCuePlaybackResponseMessage))
             {
                 throw std::runtime_error("Command size exceeds structure size");
@@ -393,7 +396,12 @@ LoopType toob::GetLoopType(const LoopParameters &loopParameters, float sampleRat
         {
             return LoopType::SmallLoop;
         }
-        return LoopType::FfmpegLoop;
+        if (loopParameters.loopEnd_ - loopParameters.loopStart_ < 10)
+
+        {
+            return LoopType::BigStartSmallLoop;
+        }
+        return LoopType::BigLoop;
     }
     return LoopType::None;
 }
@@ -467,7 +475,7 @@ void Lv2AudioFileProcessor::Activate()
                         {
 
                             SetLoopParametersMessage *setLoopCmd = (SetLoopParametersMessage *)cmd;
-                            bgSetLoopParameters(setLoopCmd->operationId, setLoopCmd->getFilename(), setLoopCmd->getLoopJson());
+                            bgSetLoopParameters(setLoopCmd->operationId, setLoopCmd->getFilename(),setLoopCmd->getLoopJson());
                             break;
                         }
 
@@ -681,9 +689,9 @@ void Lv2AudioFileProcessor::fgStopRecording()
     this->toBackgroundQueue.write_packet(sizeof(stopCmd), (uint8_t *)&stopCmd);
 }
 
-void Lv2AudioFileProcessor::fgSetLoopParameters(const std::string &fileName, const std::string &jsonLoopParameters)
+void Lv2AudioFileProcessor::fgSetLoopParameters(const std::string&fileName,const std::string &jsonLoopParameters)
 {
-    SetLoopParametersMessage cmd(++fgOperationId, fileName.c_str(), jsonLoopParameters.c_str());
+    SetLoopParametersMessage cmd(++fgOperationId, fileName.c_str(),jsonLoopParameters.c_str());
     this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
 }
 
@@ -887,7 +895,7 @@ void Lv2AudioFileProcessor::HandleMessages()
         }
         case MessageType::StopPlayback:
         {
-            // StopPlaybackMessage *stopCommand = (StopPlaybackMessage *)cmd;
+            //StopPlaybackMessage *stopCommand = (StopPlaybackMessage *)cmd;
             fgStopPlaying();
             SetState(ProcessorState::Idle);
             break;
@@ -948,6 +956,7 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
     toob::AudioFileBufferPool *bufferPool)
 {
 
+    using clock_t = std::chrono::high_resolution_clock;
 
     bufferPool->Reserve(PREROLL_BUFFERS + 1);
 
@@ -957,10 +966,67 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
         // No decoder stream and no test data, so we can't read anything.
         return nullptr;
     }
+    if (this->loopType == LoopType::BigLoop && this->readPos >= loopControlInfo.loopEnd_1)
+    {
+        // We have reached the end of the loop, so we need to reset the read position.
+        this->readPos -= loopControlInfo.loopSize + loopControlInfo.loopEnd_1 - loopControlInfo.loopEnd_0;
+
+        this->decoderStream.reset();
+
+#ifndef NDEBUG
+        auto start = clock_t::now();
+#endif
+        if (useTestData)
+        {
+            decoderStreamOpen(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
+        }
+        else
+        {
+            if (this->readPos != this->lookaheadPosition) {
+                throw std::logic_error("Read position does not match lookahead position.");
+            }
+            this->decoderStream = std::move(nextDecoderStream);
+            // next decode stream will cue up asynchronously
+            nextDecoderStream = std::make_unique<FfmpegDecoderStream>();
+            this->lookaheadPosition = this->readPos;
+            nextDecoderStream->open(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
+        }
+// print the time taken to open the decoder stream.
+#ifndef NDEBUG
+        auto end = clock_t::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        if (duration > 500)
+        {
+            std::cerr << "Warning: Decoder stream open took " << duration << " ms for file: " << this->filePath << std::endl;
+        }
+#endif
+    }
 
     try
     {
         size_t thisTime = bufferPool->GetBufferSize();
+        if (this->loopType == LoopType::BigLoop)
+        {
+            if (this->readPos + thisTime >= loopControlInfo.loopEnd_1)
+            {
+                thisTime = (this->loopControlInfo.loopEnd_1 - readPos);
+            }
+        }
+        else if (this->loopType == LoopType::BigStartSmallLoop)
+        {
+            if (readPos + thisTime >= loopControlInfo.loopStart)
+            {
+                thisTime = (this->loopControlInfo.loopStart - readPos);
+            }
+            if (thisTime == 0)
+            {
+                decoderStream.reset();
+                useTestData = false;
+                this->testdataL.clear();
+                this->testdataR.clear();
+                return nullptr; // no more streamed data.
+            }
+        }
 
         buffer = bufferPool->TakeBuffer();
         float *buffers[2];
@@ -975,20 +1041,33 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             buffers[0] = buffer->GetChannel(0);
             buffers[1] = nullptr; // mono file, so we can just read the data directly.
         }
-#ifndef NDEBUG
-        using clock_t = std::chrono::high_resolution_clock;
         auto start = clock_t::now();
-#endif
 
         size_t nRead = this->decoderStreamRead(buffers, thisTime);
 
-#ifndef NDEBUG
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count();
+
         if (elapsed > 2000)
         {
+            // xxx: DELETE ME.
             std::cerr << "Warning: Decoder stream read took " << elapsed << " ms for file: " << this->filePath << std::endl;
         }
-#endif
+        if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
+        {
+            if (nRead < thisTime && nRead > 0)
+            {
+                // metatdata duration may not be accurate. supply missing samples if neccessary.
+                for (size_t i = nRead; i < thisTime; ++i)
+                {
+                    buffers[0][i] = 0.0f;
+                    if (buffers[1])
+                    {
+                        buffers[1][i] = 0.0f;
+                    }
+                }
+                nRead = thisTime;
+            }
+        }
         if (nRead == 0)
         {
             bufferPool->PutBuffer(buffer);
@@ -1084,9 +1163,9 @@ static void PreCacheFile(const std::filesystem::path &path)
 
 void Lv2AudioFileProcessor::bgUpdateForegroundLoopParameters(
     uint64_t operationId,
-    const char *loopJson,
+    const char*loopJson,
     double seekPosSeconds,
-    double duration)
+    double duration )
 {
     if (operationId != fgOperationId)
     {
@@ -1097,23 +1176,23 @@ void Lv2AudioFileProcessor::bgUpdateForegroundLoopParameters(
         operationId,
         loopJson,
         seekPosSeconds,
-        duration};
+        duration
+    };
     this->fromBackgroundQueue.write_packet(
         cmd.size,
         (uint8_t *)&cmd);
 }
 
-void Lv2AudioFileProcessor::bgSetLoopParameters(uint64_t operationId, const char *fileName, const char *loopJson)
+void  Lv2AudioFileProcessor::bgSetLoopParameters(uint64_t operationId, const char*fileName,const char *loopJson)
 {
     this->bgOperationId = operationId;
 
-    if (host)
-    {
+    if (host) {
         host->bgSaveLoopJson(
             fileName,
             loopJson);
     }
-    bgReader.loopParameterJson = loopJson;
+    bgReader.loopParameterJson = loopJson;    
     bgCuePlayback(
         operationId,
         fileName,
@@ -1146,9 +1225,7 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         else if (this->host)
         {
             bgReader.loopParameterJson = this->host->bgGetLoopJson(filename);
-        }
-        else
-        {
+        } else {
             bgReader.loopParameterJson = "";
         }
         if (!bgReader.loopParameterJson.empty())
@@ -1166,7 +1243,7 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                 ss << "Failed to parse loop settings: " << e.what();
                 throw std::runtime_error(ss.str());
             }
-        }
+        } 
         // get file into memory cache in order to reduce dropouts while playing.
 
         if (bgReader.useTestData)
@@ -1251,13 +1328,14 @@ void Lv2AudioFileProcessor::bgCuePlayback(
 
         size_t startSample = (size_t)std::round(seekPosSeconds * this->sampleRate);
         ToobCuePlaybackResponseMessage responseCommand{
-            operationId,
-            startSample,
-            bgReader.loopParameters,
-            duration,
+            operationId, 
+            startSample, 
+            bgReader.loopParameters, 
+            duration, 
             bgReader.loopParameterJson.c_str()};
 
-        if (loopType == LoopType::SmallLoop)
+        if (loopType == LoopType::SmallLoop ||
+            loopType == LoopType::BigStartSmallLoop)
         {
             AudioFileBuffer::ptr loopBuffer = bgReader.ReadLoopBuffer(
                 filename,
@@ -1286,7 +1364,8 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         }
 
         if (loopType == LoopType::None ||
-            loopType == LoopType::FfmpegLoop)
+            loopType == LoopType::BigLoop ||
+            loopType == LoopType::BigStartSmallLoop)
         {
             // generate pre-roll buffers.
             if (bgOperationId != fgOperationId)
@@ -1323,6 +1402,11 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                 {
                     responseCommand.bufferCount++;
                 }
+            }
+            // if we are playing a big loop, cue up the next decoder stream, so it can initialize asynchronously.
+            if (loopType == LoopType::BigLoop)
+            {
+                bgReader.PrepareLookaheadDecoderStream();
             }
 
             bool cancelled = operationId != fgOperationId;
@@ -1397,6 +1481,8 @@ void Lv2AudioFileProcessor::OnFgError(const char *message)
     fgResetPlaybackQueue();
     SetState(ProcessorState::Error);
 }
+
+
 
 void Lv2AudioFileProcessor::SetState(ProcessorState newState)
 {
@@ -1495,9 +1581,28 @@ LoopControlInfo::LoopControlInfo(const LoopParameters &loopParameters, double sa
         }
         this->loopBufferSize = loopEnd_1 - loopOffset;
     }
+    else if (this->loopType == LoopType::BigStartSmallLoop)
+    {
+        this->loopOffset = loopStart; // for the loop only. start data is streamed.
+        // may need a little extra data at he beginning of the loop to perform blending.
+        if (loopOffset < blendLength)
+        {
+            this->loopOffset = 0;
+        }
+        else
+        {
+            this->loopOffset -= blendLength;
+        }
+        this->loopBufferSize = loopEnd_1 - loopOffset;
+    }
+    else
+    {
+        this->loopOffset = 0;
+        this->loopBufferSize = maxSample;
+    }
 }
 
-void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char *loopJson, double seekPosSeconds, double duration)
+void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char * loopJson, double seekPosSeconds,double duration)
 {
     // Update the loop parameters in the background thread.
     this->playPosition = (size_t)std::round(seekPosSeconds * this->sampleRate);
@@ -1515,7 +1620,8 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
     const LoopParameters &loopParameters,
     size_t seekPos,
     float duration,
-    const char *loopParameterJson)
+    const char* loopParameterJson
+)
 {
     AudioFileBuffer::ptr loopBuffer;
     loopBuffer.attach(loopBuffer_);
@@ -1554,6 +1660,21 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
         else
         {
             SetState(ProcessorState::Playing);
+        }
+        // deal with the corner case where blend buffers won't be filled on the first loop.
+        if (fgLoopControlInfo.loopType == LoopType::BigLoop)
+        {
+            if (playPosition > fgLoopControlInfo.loopEnd_0 &&
+                playPosition < fgLoopControlInfo.loopEnd_1)
+            {
+                bgReader.blendBufferL.resize(fgLoopControlInfo.loopEnd_1 - fgLoopControlInfo.loopEnd_0);
+                bgReader.blendBufferR.resize(fgLoopControlInfo.loopEnd_1 - fgLoopControlInfo.loopEnd_0);
+                for (size_t i = 0; i < bgReader.blendBufferL.size(); ++i)
+                {
+                    bgReader.blendBufferL[i] = 0.0f;
+                    bgReader.blendBufferR[i] = 0.0f;
+                }
+            }
         }
         if (host)
         {
@@ -1663,7 +1784,7 @@ void Lv2AudioFileProcessor::Play(float *dst, size_t n_samples)
                 }
             }
         }
-        else if (fgLoopType == LoopType::FfmpegLoop)
+        else if (fgLoopType == LoopType::BigLoop)
         {
             if (fgLoopBuffer.Get() != nullptr)
             {
@@ -1702,15 +1823,20 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
         while (ix < n_samples)
         {
             LoopType loopType = this->fgLoopType;
-
+            if (loopType == LoopType::BigStartSmallLoop)
+            {
+                if (playPosition >= this->fgLoopControlInfo.loopStart)
+                {
+                    loopType = LoopType::SmallLoop;
+                }
+            }
             if (loopType == LoopType::None)
             {
                 if (this->fgPlaybackQueue.empty())
                 {
                     OnUnderrunError();
                     return;
-                }
-                else
+                } else 
                 {
                     auto buffer = this->fgPlaybackQueue.front();
                     float *playDataL = buffer->GetChannel(0);
@@ -1793,7 +1919,7 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                     }
                 }
             }
-            else if (loopType == LoopType::FfmpegLoop)
+            else if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
             {
                 if (this->fgPlaybackQueue.empty())
                 {
@@ -1808,6 +1934,10 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                 {
                     float vLeft, vRight;
 
+                    if (playPosition == fgLoopControlInfo.loopStart && loopType == LoopType::BigStartSmallLoop)
+                    {
+                        break; // switch over to small loop processing.
+                    }
                     if (fgPlaybackIndex == buffer->GetBufferSize())
                     {
                         fgPlaybackIndex = 0;
@@ -1831,6 +1961,10 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                         {
                             // loop point reached.
                             playPosition = playPosition - fgLoopControlInfo.loopSize;
+                            if (playPosition >= fgLoopControlInfo.loopEnd_0)
+                            {
+                                throw std::logic_error("Play position out of bounds.");
+                            }
                             if (playPosition >= fgLoopControlInfo.loopEnd_0)
                             {
                                 throw std::logic_error("Play position out of bounds.");
@@ -1984,13 +2118,13 @@ void Lv2AudioFileProcessor::SetPath(const char *path)
     }
 }
 
-void Lv2AudioFileProcessor::SetLoopParameters(const std::string &path, const std::string &jsonLoopParameters)
+void Lv2AudioFileProcessor::SetLoopParameters(const std::string& path,const std::string &jsonLoopParameters)
 {
     if (activated)
     {
         fgStopPlaying();
         this->filePath = path;
-        fgSetLoopParameters(path, jsonLoopParameters);
+        fgSetLoopParameters(path,jsonLoopParameters);
         SetState(ProcessorState::CuePlayingThenPause);
     }
     else
@@ -1998,6 +2132,7 @@ void Lv2AudioFileProcessor::SetLoopParameters(const std::string &path, const std
         throw std::logic_error("Cannot set loop parameters when not activated.");
     }
 }
+
 
 void Lv2AudioFileProcessor::CuePlayback()
 {
@@ -2087,6 +2222,7 @@ void Lv2AudioFileProcessor::TestCuePlayback(
     this->playPosition = seekPos;
 }
 
+
 void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
 {
     if (this->dbVolume == db && this->pan == pan && !immediate)
@@ -2120,6 +2256,26 @@ void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
     volumeDezipperR.To(afRight, slew);
 }
 
+void BgFileReader::PrepareLookaheadDecoderStream()
+{
+    if (loopControlInfo.loopType != LoopType::BigLoop) 
+    {
+        throw std::logic_error("PrepareLookaheadDecoderStream called with invalid loop type.");
+    }
+    // prepare the next stream, so that  it cues up asynchronously.
+    if (!useTestData)
+    {
+        nextDecoderStream = std::make_unique<FfmpegDecoderStream>();
+        this->lookaheadPosition = this->loopControlInfo.loopEnd_1 -
+                this->loopControlInfo.loopSize -
+                (this->loopControlInfo.loopEnd_1 - this->loopControlInfo.loopEnd_0);
+        nextDecoderStream->open(
+            this->filePath, 
+            this->channels, 
+            this->sampleRate,
+            lookaheadPosition / sampleRate);
+    }
+}
 
 void BgFileReader::Init(
     const std::filesystem::path &filename,
@@ -2156,7 +2312,11 @@ void BgFileReader::Init(
 
         decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds);
     }
-    else if (loopType == LoopType::FfmpegLoop)
+    else if (loopType == LoopType::SmallLoop)
+    {
+        throw std::logic_error("Shouldn't get here.");
+    }
+    else if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
     {
 
         if (loopParameters.start_ > 0 && seekPosSeconds < loopParameters.start_)
@@ -2165,12 +2325,6 @@ void BgFileReader::Init(
             seekPosSeconds = loopParameters_.start_;
         }
         this->readPos = (size_t)std::round(seekPosSeconds * sampleRate);
-
-        decoderStream = std::make_unique<FfmpegDecoderStream>();
-        decoderStream->openLoop(
-            filePath, channels, 
-            sampleRate, this->loopControlInfo.start,
-            this->loopControlInfo.loopStart, this->loopControlInfo.loopEnd_1);
 
         decoderStreamOpen(filename, channels, (uint32_t)sampleRate, seekPosSeconds);
     }
