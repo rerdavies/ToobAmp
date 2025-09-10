@@ -236,6 +236,8 @@ add_library(ToobAmpArch SHARED
     Filters/PeakingFilter2.cpp Filters/PeakingFilter2.h
     Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
     ParametricEq.cpp ParametricEq.hpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
     ToobParametricEq.cpp ToobParametricEq.h 
 
     NoiseGate.cpp NoiseGate.h
