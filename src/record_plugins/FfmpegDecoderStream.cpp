@@ -655,4 +655,3 @@ double toob::GetAudioFileDuration(const std::filesystem::path &path)
     return md.getDuration();
 }
 
-// ffmpeg -i 01\ Eighty-One\ \(1\).m4a -c copy  -metadata title="xxx"   tmp.m4a

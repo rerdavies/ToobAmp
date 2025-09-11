@@ -124,7 +124,7 @@ void NamBackgroundProcessor::ThreadProc()
             }
             backgroundInputTailPosition += length;
 
-            size_t chunkSize = this->frameSize >= 64 ? this->frameSize : 64;
+            size_t chunkSize = this->frameSize > 32 ? this->frameSize : 64;
             if (backgroundInputTailPosition >= chunkSize)
             {
                 // Two cases: (1) where a long frame has been assembled out of smaller pieces. i.e. Buffers are 256x3, and we've been receiving frame 128 at a time.
@@ -256,7 +256,7 @@ bool NamBackgroundProcessor::fgRead(float *samples, size_t nFrames)
             }
             return false;
         }
-        // std::cout << "xxx: read wait." << std::endl;
+        // std::cout << "xxy: read wait." << std::endl;
         fgProcessMessage(true);
     }
 }
@@ -401,7 +401,7 @@ NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
             dsp->GetModelOutputLevelDBu() - calibrationSettings.calibrationDbu);
         break;
     }
-    std::cout << "xxx: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
+    // std::cout << "xxy: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
     return result;
 }
 void NamBackgroundProcessor::SetBgVolumes()

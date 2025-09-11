@@ -1280,7 +1280,7 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
             }
             else
             {
-                if (numFrames < 64)
+                if (numFrames <= 32)
                 {
                     const float *restrict pIn = input;
                     float *restrict pOut = fgSendBuffer.data() + fgSendIx;
@@ -1317,7 +1317,7 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
             }
             else
             {
-                if (numFrames < 64)
+                if (numFrames <= 32)
                 {
                     const float *restrict pIn = input;
                     float *restrict pOut = fgSendBuffer.data() + fgSendIx;
