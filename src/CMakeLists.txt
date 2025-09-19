@@ -130,6 +130,10 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMix.cpp ToobMix.hpp
 
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
+    ToobTremolo.cpp ToobTremolo.hpp
+
+
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
     ToobGraphicEq.cpp ToobGraphicEq.hpp
@@ -440,6 +444,44 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMix.ttl
     generate_lv2c_plugin_info
 )
+
+configure_file(ToobAmp.lv2/ttl.in/ToobTremolo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTremolo.ttl)
+
+add_custom_command(
+    OUTPUT ToobTremoloInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-tremolo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
+    --class ToobTremoloInfo
+    --namespace tremolo_plugin
+    --ui-base-class ToobTremoloUiBase
+    --plugin-base-class ToobTremoloBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTremolo.ttl
+    generate_lv2c_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobTremoloMono.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTremoloMono.ttl)
+
+add_custom_command(
+    OUTPUT ToobTremoloMonoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-tremolo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloMonoInfo.hpp
+    --class ToobTremoloMonoInfo
+    --namespace tremolo_plugin
+    --ui-base-class ToobTremoloMonoUiBase
+    --plugin-base-class ToobTremoloMonoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTremoloMono.ttl
+    generate_lv2c_plugin_info
+)
+
+
 
 
 
@@ -804,6 +846,14 @@ if(TOOB_BUILD_UI)
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMixUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
+        ToobTremoloUi.cpp
+
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloMonoInfo.hpp
+        ToobTremoloMonoUi.cpp
+
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobGraphicEqInfo.hpp
         ToobGraphicEqUi.cpp
@@ -1236,6 +1286,13 @@ else()
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     )
 endif()
+
+add_executable(VactrolTest
+
+    VactrolTest.cpp
+    LsNumerics/Vactrol.hpp
+    VactrolDsp.hpp
+)    
 
 add_executable(BufferPoolTest
     BufferPoolTest.cpp
