@@ -14,3 +14,5 @@ cd ..
 
 time cmake --build ./build --target all  --config Release -- -j 3
 
+./makePackage.sh
+
