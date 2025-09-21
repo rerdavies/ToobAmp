@@ -184,7 +184,7 @@ void ToobTremolo::RunHarmonicStereo(uint32_t n_samples)
         float lVal = inL[i];
         float rVal = inR[i];
         outL[i] = dry * lVal + volL * lowPass.Tick(lVal) + volR * highPass.Tick(lVal);
-        outR[i] = dry * rVal + volL * lowPass.TickR(rVal) + volL * highPass.TickR(rVal);
+        outR[i] = dry * rVal + volR * lowPass.TickR(rVal) + volL * highPass.TickR(rVal);
     }
 }
  void ToobTremolo::RunHarmonicMono(uint32_t n_samples)
