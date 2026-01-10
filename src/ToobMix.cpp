@@ -22,7 +22,7 @@
 ToobMix::ToobMix(double rate,
                  const char *bundle_path,
                  const LV2_Feature *const *features)
-    : ToobMixBase(rate,bundle_path,features)
+    : ToobMixBase(rate, bundle_path, features)
 {
     zipLL.SetSampleRate(rate);
     zipLR.SetSampleRate(rate);
@@ -34,63 +34,67 @@ ToobMix::~ToobMix()
 {
 }
 
-static void applyPan(float pan, float vol, float&left,float&right)
+static inline void applyPan(float pan, float vol, float &left, float &right, float phase)
 {
     // hard pan law.
-    if (pan < 0) {
-        left = vol*1.0f; 
-        right =  vol * (1.0f+pan);
-    } else {
-        left = vol * (1.0-pan);
-        right = vol*1.0f;
+    if (pan < 0)
+    {
+        left = vol * 1.0f * phase;
+        right = vol * (1.0f + pan) * phase;
+    }
+    else
+    {
+        left = vol * (1.0 - pan) * phase;
+        right = vol * 1.0f * phase;
     }
 }
 
 void ToobMix::Mix(uint32_t n_samples)
 {
-    const float* inL = this->inl.Get();
-    const float* inR = this->inr.Get();
+    const float *inL = this->inl.Get();
+    const float *inR = this->inr.Get();
     float *outL = this->outl.Get();
     float *outR = this->outr.Get();
 
     float ll, lr;
     float rl, rr;
-    applyPan(this->panL.GetValue(),this->trimL.GetAf(),ll,lr);
-    applyPan(this->panR.GetValue(),this->trimR.GetAf(),rl,rr);
+    float phaseL = this->phaseL.GetValue() > 0? 1: -1;
+    float phaseR = this->phaseR.GetValue() > 0? 1: -1;;
+    applyPan(this->panL.GetValue(), this->trimL.GetAf(), ll, lr, phaseL);
+    applyPan(this->panR.GetValue(), this->trimR.GetAf(), rl, rr, phaseR);
     constexpr float DEZIP_DELAY_S = 0.1; // tick < 10hz.
-    zipLL.To(ll,DEZIP_DELAY_S);
-    zipLR.To(lr,DEZIP_DELAY_S);
-    zipRL.To(rl,DEZIP_DELAY_S);
-    zipRR.To(rr,DEZIP_DELAY_S);
+    zipLL.To(ll, DEZIP_DELAY_S);
+    zipLR.To(lr, DEZIP_DELAY_S);
+    zipRL.To(rl, DEZIP_DELAY_S);
+    zipRR.To(rr, DEZIP_DELAY_S);
 
     for (size_t i = 0; i < n_samples; ++i)
     {
-        outL[i] = zipLL.Tick() *inL[i] + zipRL.Tick()*inR[i];
-        outR[i] = zipLR.Tick()*inL[i] + zipRR.Tick()*inR[i];
+        outL[i] = zipLL.Tick() * inL[i] + zipRL.Tick() * inR[i];
+        outR[i] = zipLR.Tick() * inL[i] + zipRR.Tick() * inR[i];
     }
 }
 
-void ToobMix::Run(uint32_t n_samples) {
+void ToobMix::Run(uint32_t n_samples)
+{
     Mix(n_samples);
 }
 
-void ToobMix::Activate() 
+void ToobMix::Activate()
 {
     float ll, lr;
     float rl, rr;
-    applyPan(this->panL.GetValue(),this->trimL.GetAf(),ll,lr);
-    applyPan(this->panR.GetValue(),this->trimR.GetAf(),rl,rr);
-    zipLL.To(ll,0);
-    zipLR.To(lr,0);
-    zipRL.To(rl,0);
-    zipRR.To(rr,0);
-
+    float phaseL = this->phaseL.GetValue() > 0? 1: -1;
+    float phaseR = this->phaseR.GetValue() > 0 ? 1: -1;
+    applyPan(this->panL.GetValue(), this->trimL.GetAf(), ll, lr, phaseL);
+    applyPan(this->panR.GetValue(), this->trimR.GetAf(), rl, rr, phaseR);
+    zipLL.To(ll, 0);
+    zipLR.To(lr, 0);
+    zipRL.To(rl, 0);
+    zipRR.To(rr, 0);
 }
-void ToobMix::Deactivate() 
+void ToobMix::Deactivate()
 {
-
 }
-
-
 
 REGISTRATION_DECLARATION PluginRegistration<ToobMix> toobMixRegistration(ToobMix::URI);

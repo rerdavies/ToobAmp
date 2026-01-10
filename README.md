@@ -1,5 +1,9 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
+### v1.2.72
+- Increase TooB Delay maximum delay to 3s.
+- Add phase controls to TooB Mix.
+
 ### v1.2.71
 
 The ToobAmp Project provides 26 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
@@ -60,15 +64,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.71/toobamp_1.2.71_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.71/toobamp_1.2.71_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.71/toobamp_1.2.71_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.72/toobamp_1.2.72_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.72/toobamp_1.2.72_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.72/toobamp_1.2.72_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.2.71_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.2.72_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`.
@@ -278,7 +282,7 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 
 # Releases Notes
 
-### v1.2.71
+### v1.2.72
 
 - New Toob Tremolo plugin. Provides normal and harmonic tremolo effects, in mono and stereo. Harmonic tremolo is a type of tremolo that applies tremolo to the high- and low-frequency components of the input signal using separate LFOs of opposite phase. This emulates the harmonic tremolo effect found on Bandmaster and many other vintage and modern Fender amps. Harmonic tremolo is considered smoother than normal tremolo, and provides an intersting artificat that sounds pleasantly like a very light phaser effect. Make a point of trying the stereo version, which is particularly lush and pretty.
 
