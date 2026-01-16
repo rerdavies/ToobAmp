@@ -158,12 +158,13 @@ void Toob3BandEq::Run(uint32_t n_samples)
     }
     float *inputs[1];
     inputs[0] = output;
-    toneStack.Process(inputs,1,n_samples);
+    float**outputs = toneStack.Process(inputs,1,n_samples);
+
 
 
     for (size_t i = 0; i < n_samples; ++i)
     {
-        output[i] *= gainDezipper.Tick();
+        output[i] = outputs[0][i]*gainDezipper.Tick();
     }
 
 	frameTime += n_samples;

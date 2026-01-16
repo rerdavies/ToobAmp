@@ -1,10 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
 ### v1.2.72
-- Increase TooB Delay maximum delay to 3s.
-- Add phase controls to TooB Mix.
-
-### v1.2.71
 
 The ToobAmp Project provides 26 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
@@ -283,6 +279,10 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 # Releases Notes
 
 ### v1.2.72
+- Increase TooB Delay maximum delay to 3s.
+- Add phase controls to TooB Mix.
+
+### v1.2.71
 
 - New Toob Tremolo plugin. Provides normal and harmonic tremolo effects, in mono and stereo. Harmonic tremolo is a type of tremolo that applies tremolo to the high- and low-frequency components of the input signal using separate LFOs of opposite phase. This emulates the harmonic tremolo effect found on Bandmaster and many other vintage and modern Fender amps. Harmonic tremolo is considered smoother than normal tremolo, and provides an intersting artificat that sounds pleasantly like a very light phaser effect. Make a point of trying the stereo version, which is particularly lush and pretty.
 

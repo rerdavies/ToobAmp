@@ -270,15 +270,18 @@ const char *ToobPlayer::OnGetPatchPropertyValue(LV2_URID propertyUrid)
     return nullptr;
 }
 
-void ToobPlayer::SetFilePath(const char *filename)
+bool ToobPlayer::SetFilePath(const char *filename)
 {
     if (strcmp(filename, this->filePath.c_str()) == 0)
-        return;
+    {
+        return false;
+    }
     this->filePath = filename;
     if (activated)
     {
         this->PutPatchPropertyPath(0, this->audioFile_urid, filename);
     }
+    return true;
 }
 
 

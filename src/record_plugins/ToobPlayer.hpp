@@ -158,7 +158,7 @@ private:
     std::string filePath;
     bool activated = false;
     size_t pausingDelay = 0;
-    void SetFilePath(const char *filename);
+    bool SetFilePath(const char *filename);
 
     ControlDezipper zipInL, zipInR;
 

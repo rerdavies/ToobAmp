@@ -881,7 +881,7 @@ static double CalculateResponse(AudioData &data)
         }
         double rms = std::sqrt(sumsq);
         double mag = rms;
-        std::cout << "Mag: " << LsNumerics::Af2Db(mag) << "dB" << std::endl;
+        // std::cout << "Mag: " << LsNumerics::Af2Db(mag) << "dB" << std::endl;
         if (mag > maxMag)
         {
             maxMag = mag;
