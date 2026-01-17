@@ -109,6 +109,9 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case MonoReverbPortId::PREDELAY_NEW:
             this->pPredelayNew = (float *)data;
             break;
+        case MonoReverbPortId::START:
+            this->pStartOffset = (float*)data;
+            break;
         case MonoReverbPortId::STRETCH:
             this->pStretch = (float *)data;
             break;
@@ -166,6 +169,9 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
 
         case StereoReverbPortId::PREDELAY_NEW:
             this->pPredelayNew = (float *)data;
+            break;
+        case StereoReverbPortId::START:
+            this->pStartOffset = (float*)data;
             break;
         case StereoReverbPortId::STRETCH:
             this->pStretch = (float *)data;
@@ -307,6 +313,10 @@ void ToobConvolutionReverbBase::UpdateControls()
     if (pPredelayNew != nullptr && fgMixOptions.predelayNew != *pPredelayNew)
     {
         fgMixOptions.predelayNew = *pPredelayNew;
+        mixOptionsChanged = true;
+    }
+    if (pStartOffset != nullptr && fgMixOptions.startOffset != *pStartOffset) {
+        fgMixOptions.startOffset = *pStartOffset;
         mixOptionsChanged = true;
     }
     if (pPredelayObsolete) // now used as a version marker.
@@ -1135,6 +1145,40 @@ static void AdjustPredelay(AudioData &data, float predelaySeconds)
         data.Erase(insertPosition, endPosition);
     }
 }
+static void AdjustStart(AudioData &data, float startOffsetSeconds)
+{
+
+    uint64_t samplesToRemove = (uint64_t)(data.getSampleRate() * startOffsetSeconds);
+    if (samplesToRemove == 0)
+    {
+        return;
+    }
+
+    if ((size_t)samplesToRemove > data.getSize())
+    {
+        samplesToRemove = data.getSize();
+    }
+    data.Erase(0, samplesToRemove);
+    // de-pop the transition.
+    constexpr double BLEND_S = 0.002;
+    size_t blendSamples = (size_t)(BLEND_S * data.getSampleRate());
+    if (blendSamples > data.getSize())
+    {
+        blendSamples = data.getSize();
+    }
+    if (blendSamples != 0) 
+    {
+        for (size_t i = 0; i < blendSamples; ++i)
+        {
+            float blend = i / (float)(blendSamples);
+            for (size_t c = 0; c < data.getChannelCount(); ++c)
+            {
+                data[c][i] *= blend;
+            }
+        }   
+    }
+}
+
 
 static void ApplyDecay(AudioData &data, float decay)
 {
@@ -1252,6 +1296,10 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
     if (this->bgMixOptions.isReverb)
     {
 
+        if (this->bgMixOptions.startOffset > 1) 
+        {
+            AdjustStart(data,this->bgMixOptions.startOffset * 0.001);
+        }
         if (this->bgMixOptions.predelayNew > 1)
         {
             AdjustPredelay(data, this->bgMixOptions.predelayNew * 0.001);

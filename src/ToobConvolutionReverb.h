@@ -58,6 +58,7 @@ namespace toob
         bool isReverb = false;
         float predelayObsolete = 0;
         float predelayNew = 0;
+		float startOffset = 0;
         float stretch = -999;
         float decay = 0;
         float width = -999;
@@ -76,6 +77,7 @@ namespace toob
 			REVERB_MIX,
 			PREDELAY_OBSOLETE, // For backward compatibility
             PREDELAY_NEW,
+			START,
             STRETCH,
             DECAY,
             TAILS,
@@ -98,6 +100,7 @@ namespace toob
 
 			PREDELAY_OBSOLETE, // For backward compatibility
             PREDELAY_NEW,
+            START,
             STRETCH,
             DECAY,
             TAILS,
@@ -370,6 +373,7 @@ namespace toob
 		const float *pPredelayObsolete = nullptr;
 
 		const float *pPredelayNew = nullptr;
+		const float *pStartOffset = nullptr;
 		const float *pStretch = nullptr;
 		const float *pDecay = nullptr;
 		const float *pTails = nullptr;
