@@ -279,6 +279,8 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 # Releases Notes
 
 ### v1.2.73
+- TooB Convolution Reverbs: new Start Offset control
+- Bug fix: Toob 3 Band Eq has no effect.
 
 ### v1.2.72
 - Increase TooB Delay maximum delay to 3s.
