@@ -237,7 +237,10 @@ bool ToobPlayer::OnPatchPathSet(LV2_URID propertyUrid, const char *value)
 {
     if (propertyUrid == this->audioFile_urid)
     {
-        SetFilePath(value);
+        if (!SetFilePath(value))
+        {
+            return true;
+        }
         if (loopJson != defaultLoopJson) 
         {
             loopJson = defaultLoopJson;
