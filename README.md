@@ -274,7 +274,7 @@ Debian packages don't conflict with each other.
 
 If you are building the plugins for use with a host other than PiPedal, you should read this:
 
-    https://rerdavies.github.io/pipedal/RTThreadPriority.htm
+    https://rerdavies.github.io/pipedal/RTThreadPriority.html
 
 # Releases Notes
 
