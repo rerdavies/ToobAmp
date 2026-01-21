@@ -40,6 +40,7 @@ private:
     
     // State variables for filtering
     double x1, x2, y1, y2;
+    double xR1, xR2, yR1, yR2;
     
     // Filter parameters
     double sampleRate;
@@ -51,7 +52,8 @@ public:
     BellFilter(double fs = 44100.0) 
         : sampleRate(fs), centerFreq(1000.0), gainDB(0.0), bandwidth(1.0),
           b0(1.0), b1(0.0), b2(0.0), a1(0.0), a2(0.0),
-          x1(0.0), x2(0.0), y1(0.0), y2(0.0) {}
+          x1(0.0), x2(0.0), y1(0.0), y2(0.0),
+          xR1(0.0), xR2(0.0), yR1(0.0), yR2(0.0) {}
 
     void  SetSampleRate(double fs) 
     {
@@ -100,10 +102,23 @@ public:
         
         return output;
     }
+    double TickR(double input) 
+    {
+        double output = b0 * input + b1 * xR1 + b2 * xR2 - a1 * yR1 - a2 * yR2;
+        
+        // Update state variables
+        xR2 = xR1;
+        xR1 = input;
+        yR2 = yR1;
+        yR1 = output;
+        
+        return output;
+    }
     
     
     void Reset() {
         x1 = x2 = y1 = y2 = 0.0;
+        xR1 = xR2 = yR1 = yR2 = 0.0;
     }
     
     // Get frequency response at a given frequency
@@ -129,6 +144,7 @@ namespace toob {
         
         void SetSampleRate(double sampleRate);
 
+
         HighPassFilter lowCut;
         LowPassFilter highCut;
 
@@ -147,6 +163,20 @@ namespace toob {
                         highShelf.Tick(
                             lmf.Tick(
                                 hmf.Tick(value)
+                            )
+                        )
+                    )
+                )
+            );
+        }
+        float TickR(float value)
+        {
+            return lowCut.TickR(
+                highCut.TickR(
+                    lowShelf.TickR(
+                        highShelf.TickR(
+                            lmf.TickR(
+                                hmf.TickR(value)
                             )
                         )
                     )

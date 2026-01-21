@@ -702,30 +702,32 @@ add_custom_command(
 )
 
 configure_file(ToobAmp.lv2/ttl.in/Toob3BandEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEq.ttl)
+configure_file(ToobAmp.lv2/ttl.in/Toob3BandEqStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEqStereo.ttl)
 add_custom_command(
     OUTPUT Toob3BandEqInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info
-    http://two-play.com/plugins/toob-three-band-eq
+    http://two-play.com/plugins/toob-three-band-eq-stereo
     --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
     --out ${CMAKE_CURRENT_BINARY_DIR}/Toob3BandEqInfo.hpp
     --class Toob3BandEqPluginInfo
     DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEq.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/Toob3BandEqStereo.ttl
     generate_lv2c_plugin_info
 )
 configure_file(ToobAmp.lv2/ttl.in/ToobParametricEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEq.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobParametricEqStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEqStereo.ttl)
 add_custom_command(
     OUTPUT ToobParametricEqInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
     COMMAND generate_lv2c_plugin_info
-    http://two-play.com/plugins/toob-parametric-eq
+    http://two-play.com/plugins/toob-parametric-eq-stereo
     --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
     --out ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
     --class ToobParametricEqPluginInfo
     --plugin-base-class ToobParametricEqBase
     DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEq.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobParametricEqStereo.ttl
     generate_lv2c_plugin_info
 )
 

@@ -20,6 +20,8 @@ public:
     mSampleRate = sampleRate;
     mMaxBlockSize = maxBlockSize;
   };
+
+
   
 protected:
   double GetSampleRate() const { return mSampleRate; };
@@ -47,6 +49,9 @@ public:
   DSP_SAMPLE** Process(DSP_SAMPLE** inputs, const int numChannels, const int numFrames) override;
   void Reset(const double sampleRate, const int maxBlockSize) override;
   // :param val: Assumed to be between 0 and 10, 5 is "noon"
+
+  void PrepareBuffers(size_t numChannels, size_t numFrames);
+  
   void SetParam(Param param, const double val);
 
   double GetFrequencyResponse(float w);

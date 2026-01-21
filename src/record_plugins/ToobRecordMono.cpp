@@ -597,5 +597,8 @@ void ToobRecordMono::RequestLoad(const char *filename)
     this->loadRequested = true;
 }
 
-REGISTRATION_DECLARATION PluginRegistration<ToobRecordMono> toobMonoregistration(ToobRecordMono::URI);
-REGISTRATION_DECLARATION PluginRegistration<ToobRecordStereo> toobStereoRegistration(ToobRecordStereo::URI);
+REGISTRATION_DECLARATION 
+PluginRegistration<ToobRecordMono> toobMonoregistration(ToobRecordMono::URI);
+
+REGISTRATION_DECLARATION 
+PluginRegistration<ToobRecordStereo> toobStereoRegistration(ToobRecordStereo::URI);

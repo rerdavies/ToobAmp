@@ -30,7 +30,8 @@ using namespace toob;
 #include "Toob3BandEqInfo.hpp"
 
 #define PLUGIN_CLASS Toob3BandEqUI
-#define PLUGIN_UI_URI "http://two-play.com/plugins/toob-three-band-eq-ui"
+#define PLUGIN_UI_URI_MONO "http://two-play.com/plugins/toob-three-band-eq-ui"
+#define PLUGIN_UI_URI_STEREO "http://two-play.com/plugins/toob-three-band-eq-ui-stereo"
 #define PLUGIN_INFO_CLASS Toob3BandEqPluginInfo
 
 
@@ -57,6 +58,9 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 // Make the plugin visible to LV2 hosts.
 
 int linkToob3BandEqUi = 0; // link target to include the .o file in the final .so.
-static Lv2UIRegistration<PLUGIN_CLASS> 
-registration { PLUGIN_UI_URI};
+static REGISTRATION_DECLARATION Lv2UIRegistration<PLUGIN_CLASS> 
+registrationMono { PLUGIN_UI_URI_MONO};
 
+
+static REGISTRATION_DECLARATION Lv2UIRegistration<PLUGIN_CLASS> 
+registrationStereo { PLUGIN_UI_URI_STEREO};

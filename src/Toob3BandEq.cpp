@@ -54,7 +54,8 @@ using namespace LsNumerics;
 
 const int MAX_UPDATES_PER_SECOND = 10;
 
-const char* Toob3BandEq::URI= TOOB_3_BAND_EQU_URI;
+const char* Toob3BandEq::URI_MONO= TOOB_3_BAND_EQU_URI_MONO;
+const char* Toob3BandEq::URI_STEREO= TOOB_3_BAND_EQU_URI_STEREO;
 
 
 
@@ -74,6 +75,9 @@ Toob3BandEq::Toob3BandEq(double _rate,
 	lv2_atom_forge_init(&forge, map);
 
     this->toneStack.Reset(rate, 2048);
+
+	size_t nChannels = this->stereoConnected ? 2 : 1;
+	this->toneStack.PrepareBuffers(nChannels, 2048);
 
 	this->updateSampleDelay = (int)(_rate/MAX_UPDATES_PER_SECOND);
 	this->updateMsDelay = (1000/MAX_UPDATES_PER_SECOND);
@@ -116,6 +120,12 @@ void Toob3BandEq::ConnectPort(uint32_t port, void* data)
 	case PortId::NOTIFY_OUT:
 		this->notifyOut = (LV2_Atom_Sequence*)data;
 		break;
+		case PortId::AUDIO_INR:
+		this->inputR = (const float*)data;
+		break;
+	case PortId::AUDIO_OUTR:
+		this->outputR = (float*)data;
+		break;
 	}
 }
 
@@ -124,7 +134,10 @@ void Toob3BandEq::Activate()
 	
 	responseChanged = true;
 	frameTime = 0;
+	this->stereoConnected = this->inputR != nullptr;
     this->toneStack.Reset(getRate(),2048);
+	size_t nChannels = this->stereoConnected ? 2 : 1;
+	this->toneStack.PrepareBuffers(nChannels, 2048);
     gainDezipper.Reset(Gain.GetValue());
 }
 void Toob3BandEq::Deactivate()
@@ -152,19 +165,26 @@ void Toob3BandEq::Run(uint32_t n_samples)
 		this->responseChanged = true;
 	}
 
+    float *inputs[2];
+	float *myOutputs[2];
+
+
+    inputs[0] = const_cast<float*>(this->input);
+	inputs[1] = const_cast<float*>(this->inputR);
+	myOutputs[0] = this->output;
+	myOutputs[1] = this->outputR;
+	int numChannels = this->stereoConnected ? 2 : 1;
+
+    float**outputs = toneStack.Process(inputs,numChannels,n_samples);
+
+
     for (size_t i = 0; i < n_samples; ++i)
     {
-        output[i] = input[i];
-    }
-    float *inputs[1];
-    inputs[0] = output;
-    float**outputs = toneStack.Process(inputs,1,n_samples);
-
-
-
-    for (size_t i = 0; i < n_samples; ++i)
-    {
-        output[i] = outputs[0][i]*gainDezipper.Tick();
+		float zipperValue = gainDezipper.Tick();
+		for (int c = 0; c < numChannels; ++c) 
+		{
+        	myOutputs[c][i] = outputs[c][i]*zipperValue;
+		}
     }
 
 	frameTime += n_samples;
@@ -304,3 +324,9 @@ void Toob3BandEq::OnPatchGet(LV2_URID propertyUrid)
 
 }
 
+
+REGISTRATION_DECLARATION PluginRegistration<Toob3BandEq>
+threeBandEqRegistrationMono(TOOB_3_BAND_EQU_URI_MONO);
+
+REGISTRATION_DECLARATION 
+PluginRegistration<Toob3BandEq> threeBandEqRegistrationStereo(TOOB_3_BAND_EQU_URI_STEREO);

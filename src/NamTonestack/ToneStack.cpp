@@ -1,17 +1,23 @@
 #include "ToneStack.h"
 
-DSP_SAMPLE** tonestack_dsp::tone_stack::BasicNamToneStack::Process(DSP_SAMPLE** inputs, const int numChannels,
-                                                         const int numFrames)
+DSP_SAMPLE **tonestack_dsp::tone_stack::BasicNamToneStack::Process(DSP_SAMPLE **inputs, const int numChannels,
+                                                                   const int numFrames)
 {
-  DSP_SAMPLE** bassPointers = mToneBass.Process(inputs, numChannels, numFrames);
-  DSP_SAMPLE** midPointers = mToneMid.Process(bassPointers, numChannels, numFrames);
-  DSP_SAMPLE** treblePointers = mToneTreble.Process(midPointers, numChannels, numFrames);
+  DSP_SAMPLE **bassPointers = mToneBass.Process(inputs, numChannels, numFrames);
+  DSP_SAMPLE **midPointers = mToneMid.Process(bassPointers, numChannels, numFrames);
+  DSP_SAMPLE **treblePointers = mToneTreble.Process(midPointers, numChannels, numFrames);
   return treblePointers;
 }
 
 void tonestack_dsp::tone_stack::BasicNamToneStack::Reset(const double sampleRate, const int maxBlockSize)
 {
   tonestack_dsp::tone_stack::AbstractToneStack::Reset(sampleRate, maxBlockSize);
+
+  // Pre-allocate buffers before we start running realtime.
+
+  mToneBass.PrepareBuffers(2, maxBlockSize);
+  mToneMid.PrepareBuffers(2, maxBlockSize);
+  mToneTreble.PrepareBuffers(2, maxBlockSize);
 
   // Refresh the params!
   SetParam(Param::Bass, mBassVal);
@@ -62,9 +68,16 @@ void tonestack_dsp::tone_stack::BasicNamToneStack::SetParam(Param param, const d
 
 double tonestack_dsp::tone_stack::BasicNamToneStack::GetFrequencyResponse(float frequency)
 {
-    double result = 1.0;
-    result = this->mToneBass.GetFrequencyResponse(frequency);
-    result *= this->mToneMid.GetFrequencyResponse(frequency);
-    result *= this->mToneTreble.GetFrequencyResponse(frequency);
-    return result;
+  double result = 1.0;
+  result = this->mToneBass.GetFrequencyResponse(frequency);
+  result *= this->mToneMid.GetFrequencyResponse(frequency);
+  result *= this->mToneTreble.GetFrequencyResponse(frequency);
+  return result;
+}
+
+void tonestack_dsp::tone_stack::BasicNamToneStack::PrepareBuffers(size_t numChannels, size_t numFrames)
+{
+  mToneBass.PrepareBuffers(numChannels, numFrames);
+  mToneMid.PrepareBuffers(numChannels, numFrames);
+  mToneTreble.PrepareBuffers(numChannels, numFrames);
 }

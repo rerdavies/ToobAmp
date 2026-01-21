@@ -1,5 +1,5 @@
 ﻿/*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2026 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -61,7 +61,8 @@ class ToobParametricEq : public ToobParametricEqBase {
         using super = ToobParametricEqBase;
 
     public:
-        static constexpr const char *URI = "http://two-play.com/plugins/toob-parametric-eq";
+        static constexpr const char *MONO_URI = "http://two-play.com/plugins/toob-parametric-eq";
+        static constexpr const char *STEREO_URI = "http://two-play.com/plugins/toob-parametric-eq-stereo";
 
 
 		LV2_Atom_Sequence* controlIn = NULL;
@@ -123,14 +124,18 @@ class ToobParametricEq : public ToobParametricEqBase {
 
 	private:
         DbDezipper gainDezipper;
-        
+
+	protected:
+		bool isStereo = false;
         ParametricEq eq;
+
 
 		bool UpdateControls();
 
 		float CalculateFrequencyResponse(float f);
 
 		void WriteFrequencyResponse();
+
 	protected:
 		double getRate() { return rate; }
 
@@ -148,6 +153,14 @@ class ToobParametricEq : public ToobParametricEqBase {
 			const char* bundle_path,
 			const LV2_Feature* const* features
 		);
+	protected:
+		ToobParametricEq(double rate,
+			const char* bundle_path,
+			const LV2_Feature* const* features, 
+			bool isStereo
+		);
+
+	public:
 		virtual ~ToobParametricEq();
 
 	protected:

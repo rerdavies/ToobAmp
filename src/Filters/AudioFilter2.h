@@ -73,6 +73,10 @@ namespace toob {
 			this->prototype = prototype;
 			this->referenceFrequency = referenceFreqency;
 		}
+
+		void CopyFilterValues(const AudioFilter2& other)
+		{
+		}
 		bool UpdateControls()
 		{
 			if (Frequency.HasChanged())

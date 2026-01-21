@@ -47,7 +47,8 @@
 #include "NamTonestack/ToneStack.h"
 
 
-#define TOOB_3_BAND_EQU_URI "http://two-play.com/plugins/toob-three-band-eq"
+#define TOOB_3_BAND_EQU_URI_MONO "http://two-play.com/plugins/toob-three-band-eq"
+#define TOOB_3_BAND_EQU_URI_STEREO "http://two-play.com/plugins/toob-three-band-eq-stereo"
 #ifndef TOOB_URI
 #define TOOB_URI "http://two-play.com/plugins/toob"
 #endif
@@ -68,14 +69,19 @@ namespace toob {
 			AUDIO_OUT,
 			CONTROL_IN,
 			NOTIFY_OUT,
+			AUDIO_INR,
+			AUDIO_OUTR,
 		};
 
 		double rate;
 		std::string bundle_path;
 
 
+		bool stereoConnected = false;
 		const float* input = NULL;
+		const float* inputR = NULL;
 		float* output = NULL;
+		float *outputR = NULL;
 
 		LV2_Atom_Sequence* controlIn = NULL;
 		LV2_Atom_Sequence* notifyOut = NULL;
@@ -99,7 +105,6 @@ namespace toob {
 		public:
 			void Map(Lv2Plugin* plugin)
 			{
-				pluginUri = plugin->MapURI(TOOB_3_BAND_EQU_URI);
 
 				atom_Path = plugin->MapURI(LV2_ATOM__Path);
 				atom__float = plugin->MapURI(LV2_ATOM__Float);
@@ -118,13 +123,12 @@ namespace toob {
 				param_gain = plugin->MapURI(LV2_PARAMETERS__gain);
 				units__Frame = plugin->MapURI(LV2_UNITS__frame);
 				param_frequencyResponseVector = plugin->MapURI(TOOB_URI  "#frequencyResponseVector");
-				param_uiState = plugin->MapURI(TOOB_3_BAND_EQU_URI  "#uiState");
+				param_uiState = plugin->MapURI(TOOB_3_BAND_EQU_URI_MONO  "#uiState");
 			}
 			LV2_URID patch_accept;
 
 			LV2_URID frequencyResponseUri;
 			LV2_URID units__Frame;
-			LV2_URID pluginUri;
 			LV2_URID atom__float;
 			LV2_URID atom_Int;
 			LV2_URID atom_Path;
@@ -189,7 +193,8 @@ namespace toob {
 		virtual ~Toob3BandEq();
 
 	public:
-		static const char* URI;
+		static const char* URI_MONO;
+		static const char* URI_STEREO;
 	protected:
 		virtual void ConnectPort(uint32_t port, void* data);
 		virtual void Activate();

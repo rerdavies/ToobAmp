@@ -279,6 +279,9 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 # Releases Notes
 
 ### v1.2.73
+- Added TooB 3 Band EQ (Stereo)
+- Added TooB Parametric EQ (Stereo)
+- TooB Convolution Reverbs: Default mix is Direct: 0dB, Reverb: -12dB
 - TooB Convolution Reverbs: new Start Offset control
 - Bug fix: Toob 3 Band Eq has no effect.
 

@@ -37,6 +37,14 @@ public:
   // But, use this name :)
   // virtual void SetParams(Params* params) = 0;
 
+  // rerd: Added to allow preparation of buffers on non-realtime thread.
+  // Prepare internal buffers for the given numChannels and numFrames. numFrames
+  // should be the maximum block size that will be used in Process().
+  virtual void PrepareBuffers(const size_t numChannels, const size_t numFrames)
+  {
+    this->_PrepareBuffers(numChannels, numFrames);
+  };
+
 protected:
   // Methods
 
