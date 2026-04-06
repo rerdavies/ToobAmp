@@ -273,7 +273,7 @@ bool ToobParametricEq::UpdateControls()
     return changed;
 }
 
-float ToobParametricEq::CalculateFrequencyResponse(float f)
+inline float ToobParametricEq::CalculateFrequencyResponse(float f)
 {
     return eq.GetFrequencyResponse(f);
 }

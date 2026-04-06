@@ -285,7 +285,7 @@ static void ProfileModel(const std::string &model, ostream *outputFile)
     {
         throw std::runtime_error(SS(profileCmd << " not found. Build the rerdavies/pipedal project, and run ./install.sh"));
     }
-    WritePreset(model, "./Toob Nam.preset", "/tmp/namPreset.preset");
+    WritePreset(model, "src/Toob Nam.preset", "/tmp/namPreset.preset");
 
 
     std::string tmpName = toob::TemporaryFilename();

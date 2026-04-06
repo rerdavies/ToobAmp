@@ -33,9 +33,9 @@
 
 <http://two-play.com/plugins/toob-graphiceq>
         a lv2:Plugin ,
-                lv2:EQPlugin ;
-        doap:name "TooB GE-7 Graphic Eq" ,
-                "TooB GE-7 Graphic Eq"@en-gb 
+                lv2:MultiEQPlugin ;
+        doap:name "TooB Graphic Eq" ,
+                "TooB Graphic Eq"@en-gb 
                 ;
         uiext:ui <http://two-play.com/plugins/toob-graphiceq-ui> ;
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
@@ -47,7 +47,7 @@ A 7 octave graphic equalizer, with frequencies chosen to be useful for EQ-ing gu
 """ ;
 
         mod:brand "TooB";
-        mod:label "GE-7 Graphic Eq";
+        mod:label "Graphic Eq";
         lv2:optionalFeature lv2:hardRTCapable;
 
     lv2:port [

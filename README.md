@@ -1,8 +1,8 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.2.73
+### v1.2.74
 
-The ToobAmp Project provides 26 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
+The ToobAmp Project provides 28 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
 with the [PiPedal](https://github.com/rerdavies/pipedal) project; but they also provide native X11/Cairo
 user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs too.
@@ -15,9 +15,13 @@ user-interfaces that allow them to be used with other LV2 plugin hosts and DAWs 
 
 - TooB Convolution Reverb (mono and stereo)
 
-- TooB Parameteric EQ
+- TooB Parameteric EQ (mono and stereo)
 
-- TooB 3 Band EQ
+- TooB 3 Band EQ (mono and stereo)
+
+- TooB Tone (mono and stereo)
+
+- TooB Graphic EQ
 
 - TooB Tone Stack (Fender, Marshall, and Baxandal tone stack)
 
@@ -55,20 +59,20 @@ https://github.com/user-attachments/assets/c9763757-cfd8-43ac-af1c-2c1140152e09
 
 Do NOT install ToobAmp over an existing PiPedal install. PiPedal install packages include the latest and best versions of PiPedal plugins already.
 
-ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 on amd64/x64, and aarch64, but should be compatible
-with other Debian-based Linux distributions.
+ToobAmp has been tested with Raspberry Pi OS Bookworm, and with Ubuntu 22.04 and 24.04 on amd64/x64, and aarch64, but should be compatible
+with other Debian-based Linux distributions. 
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.73/toobamp_1.2.73_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.73/toobamp_1.2.73_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.73/toobamp_1.2.73_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.74/toobamp_1.2.74_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.74/toobamp_1.2.74_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.74/toobamp_1.2.74_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.2.73_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.2.74_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`.
@@ -121,6 +125,49 @@ The ToobAmp package includes the following plugins.
 
     &nbsp;
 
+*   **TooB Freeverb**
+
+    A particularly well-balanced digital reverb, based on the famous Freeverb algorithm. Flexible controls, low coloration, low CPU usage.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Freeverb UI](docs/img/freeverb-sshot.png)
+
+    &nbsp;
+
+*   **TooB Parametric EQ**
+
+    A flexible 5-band parametric EQ, with independent control of frequency, gain and Q for each band. Available in mono and stereo versions.
+
+    &nbsp;
+
+*   **TooB 3 Band EQ**
+
+    A simple parametric 3-band
+
+    &nbsp;
+
+*   **TooB Tone**
+
+    A simple one-knob tone control.
+
+    &nbsp;
+
+*   **TooB Graphic EQ**
+
+    A seven band graphic EQ.
+
+    &nbsp;
+
+*   **TooB Tone Stack**
+
+    Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
+
+    &nbsp;
+
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-sshot.png)
+
+    &nbsp;
 
 *   **TooB BF-2 Flanger**
 
@@ -150,26 +197,6 @@ The ToobAmp package includes the following plugins.
 
     A flexible Noise Gate, than provide both Noise Gate and
     Slow Gear effects.
-
-*   **TooB Freeverb**
-
-    A particularly well-balanced reverb, based on the famous Freeverb algorithm. Flexible controls, low coloration, low CPU usage.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![TooB Freeverb UI](docs/img/freeverb-sshot.png)
-
-    &nbsp;
-
-*   **TooB Tone Stack**
-
-    Guitar amplifier tone stack. Select a Fender Bassman, Marshal JCM800, or Baxandall tone stack.
-
-    &nbsp;
-
-    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;![](docs/img/ToneStack-sshot.png)
-
-    &nbsp;
 
 *   **TooB Tuner**
 
@@ -343,7 +370,7 @@ New in this release:
 New in this release:
 
 - TooB Phaser
-- TooB GE-7 Graphics Equalizer
+- TooB Graphics Equalizer
 
 ### v1.1.61
 New in this release:

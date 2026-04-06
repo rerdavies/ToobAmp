@@ -1,0 +1,2 @@
+8 - 1.1.50 Release - 40s
+Model: "NeuralAmpModels/Fender Twin Pack/Tim R Fender TwinVerb Vibrato Bright.nam"

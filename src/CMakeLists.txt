@@ -143,6 +143,11 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobVolumeInfo.hpp
     ToobVolume.cpp ToobVolume.hpp
 
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobToneInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobToneStereoInfo.hpp
+    ToobTone.cpp ToobTone.hpp
+
+
     record_plugins/ToobLoopers.cpp record_plugins/ToobLoopers.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperFourInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobLooperOneInfo.hpp
@@ -389,6 +394,41 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobVolume.ttl
     generate_lv2c_plugin_info
 )
+
+configure_file(ToobAmp.lv2/ttl.in/ToobTone.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTone.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobToneStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobToneStereo.ttl)
+
+add_custom_command(
+    OUTPUT ToobToneInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-tone
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobToneInfo.hpp
+    --class ToobToneInfo
+    --namespace tone_plugin
+    --ui-base-class ToobToneUiBase
+    --plugin-base-class ToobToneBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobTone.ttl
+    generate_lv2c_plugin_info
+)
+add_custom_command(
+    OUTPUT ToobToneStereoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-tone-stereo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobToneStereoInfo.hpp
+    --class ToobToneStereoInfo
+    --namespace tone_plugin
+    --ui-base-class ToobToneStereoUiBase
+    --plugin-base-class ToobToneStereoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobToneStereo.ttl
+    generate_lv2c_plugin_info
+)
+
 
 configure_file(ToobAmp.lv2/ttl.in/ToobGraphicEq.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobGraphicEq.ttl)
 
@@ -851,6 +891,13 @@ if(TOOB_BUILD_UI)
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
         ToobTremoloUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobToneInfo.hpp
+        ToobToneUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobToneStereoInfo.hpp
+        ToobToneStereoUi.cpp
+
 
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloMonoInfo.hpp
