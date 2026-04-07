@@ -254,10 +254,12 @@ ToobAmp currently builds for Raspberry Pi OS, and Ubuntu 21.x; but it should be 
 Run the following commands to install prerequisites:
 
      sudo apt update
-     sudo apt install -y build-essential cmake ninja-build git
+     sudo apt install -y build-essential cmake ninja-build git 
      sudo apt install -y lv2-dev libboost-iostreams-dev libflac++-dev zlib1g-dev libdbus-1-dev \
-        libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev
-     
+        libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev \
+        libboost-iostreams-dev catch2 librsvg2-dev
+
+     Fi
 
 
 Clone the repository to your local machine.
@@ -292,18 +294,36 @@ After a full build, run the following command to install ToobAmp:
 
     ./install.sh
 	
-To build the debian package, run
+To build the debian package, for debug or personal use, run
 
     ./makePackage
+
+See the Release Builds section below for information about building publishable package.
 
 Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that
 Debian packages don't conflict with each other.
 
 If you are building the plugins for use with a host other than PiPedal, you should read this:
 
-    https://rerdavies.github.io/pipedal/RTThreadPriority.htm
+    https://rerdavies.github.io/pipedal/RTThreadPriority.html
+
+
+#### Release Builds
+
+The ARM64 Release build of ToobAmp contain binaries that are optimized for either ARM A72 (Raspberry Pi 4), or ARM A76 (Raspberry Pi 5). The 
+release build procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full ARM64 release package, run 
+
+    ./build-march.sh
+
+To build the AMD64/x64 release package, run 
+
+    ./build-amd64.sh
+
+Note that both scripts run clean builds, so they will take a while to complete; and both scripts leave the state of the CMake build directory in a state that is not suitable for development builds. You should run `./config.sh` (or Ctrl+Shift+P/"CMake: delete cache and reconfigure", from Visual Studio Code) after running either of the release build scripts to get back to a state where you can do development builds. 
 
 # Releases Notes
+### v1.2.74
+- Added TooB Tone plugin -- a simple one-knob tone control.
 
 ### v1.2.73
 - Added TooB 3 Band EQ (Stereo)

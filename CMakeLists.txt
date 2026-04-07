@@ -2,7 +2,7 @@
 # CMakeList.txt : Top-level CMake project file, do global configuration
 # and include sub-projects here.
 #
-cmake_minimum_required (VERSION 3.9)
+cmake_minimum_required (VERSION 3.10)
 set(VERBOSE true)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
