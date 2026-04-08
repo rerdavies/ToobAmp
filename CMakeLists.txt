@@ -6,7 +6,7 @@ cmake_minimum_required (VERSION 3.10)
 set(VERBOSE true)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-project(ToobAmp VERSION 1.2.74 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
+project(ToobAmp VERSION 1.2.75 DESCRIPTION "TooB LV2 Guitar Effects Plugins")
 # Semantic Version release type. e.g. "-alpha", "-beta3" or "" for a release.
 set(PROJECT_RELEASE_QUALIFIER "")
 
