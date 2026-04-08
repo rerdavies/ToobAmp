@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <memory>
+#include <mutex>
 
 #include "dsp_ex.h"
 #include "json.hpp"
