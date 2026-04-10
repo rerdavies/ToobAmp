@@ -696,7 +696,12 @@ void ToobLooperFour::HandleTriggers()
 
 
         // recalculate just in case the length has changed.
-        loop_offset = (current_plugin_sample - time_zero) % loops[0].length;
+        if (has_time_zero && loops[0].length != 0)
+        {
+            loop_offset = (current_plugin_sample - time_zero) % loops[0].length;
+        } else {
+            loop_offset = 0;
+        }
 
         if (this->record2.IsTriggered())
         {
