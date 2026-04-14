@@ -84,7 +84,7 @@ folder artwork files that have a .jpg file extension.
         mod:label "File Player";
 
         # ONLY works in PiPedal
-        lv2:requiredFeature "http://github.com/rerdavies/pipedal#host" ;
+        lv2:requiredFeature <http://github.com/rerdavies/pipedal#host> ;
 
         lv2:optionalFeature lv2:hardRTCapable,state::freePath, state:makePath, state:mapPath, work:schedule ;
         lv2:extensionData state:interface, work:interface;

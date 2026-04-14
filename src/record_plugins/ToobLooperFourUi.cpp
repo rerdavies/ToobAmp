@@ -39,8 +39,8 @@ public:
 ToobLooperFourUiPlugin::ToobLooperFourUiPlugin() 
 : super(
     ToobLooperFourUiBase::Create(),
-    Lv2cSize(836,584),
-    Lv2cSize(836,584),
+    Lv2cSize(836,760),
+    Lv2cSize(836,760),
     "LooperFourLogo.svg"
 
     )
