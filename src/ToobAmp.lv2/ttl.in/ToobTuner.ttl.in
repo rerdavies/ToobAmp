@@ -150,6 +150,7 @@ TooB Tuner is a chromatic guitar tuner.
 
     lv2:extensionData uiext::idle ;
     lv2:extensionData uiext:resize ;
+    lv2:extensionData uiext:showInterface ;
     lv2:extensionData uiext:idleInterface;
     lv2:requiredFeature uiext:idleInterface ;
     .

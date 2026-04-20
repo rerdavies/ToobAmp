@@ -795,7 +795,7 @@ public:
     {
         std::set<std::string> usedLicenses;
 
-        outputStream << "© 2020-2023, Robin E. R. Davies  " << endl;
+        outputStream << "© 2020-2026, Robin E. R. Davies  " << endl;
         outputStream << "  " << endl;
         auto toobLicense = this->licenseMap.find("Expat");
         

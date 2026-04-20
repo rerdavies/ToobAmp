@@ -1,4 +1,4 @@
-© 2020-2023, Robin E. R. Davies  
+© 2020-2026, Robin E. R. Davies  
   
 The MIT License
 
@@ -187,7 +187,7 @@ granted, provided the above notices are retained, and a notice that
 the code was modified is included with the above copyright notice.
 
 ---
-
+    
 © 2008-2019, Gael Guennebaud &lt;gael.guennebaud@inria.fr>  
 © 2006-2011, Benoit Jacob &lt;jacob.benoit.1@gmail.com>  
 © 2014-2016, Benoit Steiner &lt;benoit.steiner.goog@gmail.com>  
@@ -198,7 +198,7 @@ the code was modified is included with the above copyright notice.
 © 2008-2016, Konstantinos Margaritis &lt;markos@freevec.org>  
 © 2012-2013, Chen-Pang He &lt;jdh8@ms63.hinet.net>  
 © 2012-2013, Desire Nuentsa &lt;desire.nuentsa_wakam@inria.fr>  
-© 2020, Arm Limited and Contributors  
+© 2020-2026, Arm Limited and Contributors  
 © 2014,2016, Benoit Steiner (benoit.steiner.goog@gmail.com)  
 © 2015-2016, Eugene Brevdo &lt;ebrevdo@gmail.com>  
 © 2009-2013, Hauke Heibel &lt;hauke.heibel@gmail.com>  

@@ -31,7 +31,7 @@ using namespace toob;
 
 #define PLUGIN_CLASS Toob3BandEqUI
 #define PLUGIN_UI_URI_MONO "http://two-play.com/plugins/toob-three-band-eq-ui"
-#define PLUGIN_UI_URI_STEREO "http://two-play.com/plugins/toob-three-band-eq-ui-stereo"
+#define PLUGIN_UI_URI_STEREO "http://two-play.com/plugins/toob-three-band-eq-stereo-ui"
 #define PLUGIN_INFO_CLASS Toob3BandEqPluginInfo
 
 
@@ -49,7 +49,7 @@ PLUGIN_CLASS::PLUGIN_CLASS()
     PLUGIN_INFO_CLASS::Create(),
     Lv2cSize(731,238), // default window size.
     Lv2cSize(470,200),
-    "ToobToob3BandEqLogo.svg"
+    "Toob3BandEqLogo.svg"
     )
 {
  

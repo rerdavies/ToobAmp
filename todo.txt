@@ -1,4 +1,6 @@
-
+- Verify 3-Band EQ (stereo) UI exists.
+- Verify 3-band EQ svg file ref works.
+Check bypass control attributes in .ttl.in
 
 Filename for copy ?
 
