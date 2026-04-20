@@ -8,3 +8,6 @@
 [submodule "modules/libsamplerate"]
 	path = modules/libsamplerate
 	url = https://github.com/rerdavies/libsamplerate.git
+[submodule "modules/NeuralAmpModelerCore"]
+	path = modules/NeuralAmpModelerCore
+	url = https://github.com/rerdavies/NeuralAmpModelerCore.git
