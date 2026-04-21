@@ -78,7 +78,7 @@ void NamBackgroundProcessor::ThreadProc()
         {
             SetDspMessage *m = (SetDspMessage *)message;
             bgDsp = nullptr;
-            this->bgDsp = std::unique_ptr<ToobNamDsp>(m->dsp);
+            this->bgDsp = std::unique_ptr<NeuralAudioDsp>(m->dsp);
             this->bgCalibrationSettings = m->calibrationSettings;
             SetBgVolumes();
             this->backgroundInputTailPosition = 0;
@@ -181,7 +181,7 @@ void NamBackgroundProcessor::ThreadProc()
         }
         case NamBgMessageType::StopBackgroundProcessing:
         {
-            // return the currently ative ToobNamDsp to the foreground.
+            // return the currently ative NeuralAudioDsp to the foreground.
             StopBackgroundProcessingReplyMessage msg{this->bgDsp.release()};
             bgToFgQueue.write(&msg, sizeof(msg));
             this->bgDsp = nullptr;
@@ -358,7 +358,7 @@ void NamBackgroundProcessor::fgClose()
 }
 
 NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
-    ToobNamDsp *dsp,
+    NeuralAudioDsp *dsp,
     const NamCalibrationSettings &calibrationSettings)
 {
     NamVolumeAdjustments result;

@@ -39,6 +39,10 @@ SOFTWARE.
 #undef __ARM_NEON__
 #undef __AVX__
 #endif
+#ifndef NAM_SAMPLE_FLOAT
+#define NAM_SAMPLE_FLOAT 1
+#endif
+
 
 #include <Eigen/Core>
 #include <algorithm> // std::clamp
@@ -121,7 +125,7 @@ private:
 class NamFreeMessage : public NamMessage
 {
 public:
-    NamFreeMessage(ToobNamDsp *dsp)
+    NamFreeMessage(NeuralAudioDsp *dsp)
         : NamMessage(NamMessageType::FreeLoad),
           dsp(dsp)
     {
@@ -133,7 +137,7 @@ public:
     }
 
 private:
-    ToobNamDsp *dsp;
+    NeuralAudioDsp *dsp;
 };
 
 class NamLoadMessage : public NamMessage
@@ -177,12 +181,12 @@ class NamLoadResponseMessage : public NamLoadMessage
 public:
     NamLoadResponseMessage(
         const char *modelFileName,
-        ToobNamDsp *modelObject)
+        NeuralAudioDsp *modelObject)
         : NamLoadMessage(NamMessageType::LoadResponse, modelFileName),
           modelObject(modelObject)
     {
     }
-    ToobNamDsp *modelObject;
+    NeuralAudioDsp *modelObject;
 };
 
 NeuralAmpModeler::NeuralAmpModeler(
@@ -330,7 +334,7 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
     try
     {
         this->mNAMPath = modelFileName;
-        std::unique_ptr<ToobNamDsp> dspResult;
+        std::unique_ptr<NeuralAudioDsp> dspResult;
         if (modelFileName.length() != 0)
         {
             dspResult = _GetNAM(modelFileName);
@@ -405,7 +409,7 @@ void NeuralAmpModeler::SetModel()
 
         if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
         {
-            ToobNamDsp *dsp = this->mNAM.release();
+            NeuralAudioDsp *dsp = this->mNAM.release();
             backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
             this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
             fgSendIx = 0;
@@ -465,7 +469,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
     case NamMessageType::Load:
     {
         std::string dspFilename = "";
-        std::unique_ptr<ToobNamDsp> dspResult;
+        std::unique_ptr<NeuralAudioDsp> dspResult;
         std::string irFilename = "";
 
 #ifdef __clang__
@@ -518,9 +522,9 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
     case NamMessageType::LoadResponse:
     {
         NamLoadResponseMessage *loadResponse = (NamLoadResponseMessage *)response;
-        ToobNamDsp *oldModel = this->mNAM.release();
+        NeuralAudioDsp *oldModel = this->mNAM.release();
 
-        this->mNAM = std::unique_ptr<ToobNamDsp>(loadResponse->modelObject);
+        this->mNAM = std::unique_ptr<NeuralAudioDsp>(loadResponse->modelObject);
         if (oldModel != nullptr)
         {
             const LV2_Worker_Schedule *schedule = this->GetLv2WorkerSchedule();
@@ -804,6 +808,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
     switch (this->toneStackType)
     {
+
     case ToneStackType::Bassman:
     case ToneStackType::Jcm8000:
         toneStackFilter.Process(nFrames, triggerOutput[0], mToneStackPointer);
@@ -896,14 +901,14 @@ void NeuralAmpModeler::_FallbackDSP(const nam_float_t *input, nam_float_t *outpu
     }
 }
 
-std::unique_ptr<ToobNamDsp> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
+std::unique_ptr<NeuralAudioDsp> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
 {
     if (modelPath.length() == 0)
     {
         return nullptr;
     }
     auto dspPath = std::filesystem::path(modelPath);
-    std::unique_ptr<ToobNamDsp> nam = get_dsp_ex(dspPath,
+    std::unique_ptr<NeuralAudioDsp> nam = get_dsp_ex(dspPath,
                                                  (uint32_t)getRate(),
                                                  (int)(this->GetBuffSizeOptions().minBlockLength),
                                                  (int)(this->GetBuffSizeOptions().maxBlockLength));
@@ -1227,9 +1232,9 @@ void NeuralAmpModeler::HandleBackgroundProcessorEvents()
     backgroundProcessor.fgProcessMessage(false);
 }
 
-void NeuralAmpModeler::onStopBackgroundProcessingReply(ToobNamDsp *dsp)
+void NeuralAmpModeler::onStopBackgroundProcessingReply(NeuralAudioDsp *dsp)
 {
-    this->mNAM = std::unique_ptr<ToobNamDsp>(dsp); // re-attach to a unique_ptr!
+    this->mNAM = std::unique_ptr<NeuralAudioDsp>(dsp); // re-attach to a unique_ptr!
     UpdateCalibrationFactors();
     this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
 }

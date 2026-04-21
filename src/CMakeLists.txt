@@ -106,12 +106,39 @@ set(NAM_SOURCES
     namFixes/NamDSP.cpp
     namFixes/NamDSP.h
     namFixes/dsp_ex.cpp namFixes/dsp_ex.h
-    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.cpp
-    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h
-    # ../modules/NeuralAmpModelerCore/dsp/Resample.h
-    # ../modules/NeuralAmpModelerCore/dsp/wav.cpp
-    # ../modules/NeuralAmpModelerCore/dsp/wav.h
 
+
+    ../modules/NeuralAmpModelerCore/NAM/model_config.h
+    ../modules/NeuralAmpModelerCore/NAM/slimmable.h
+    ../modules/NeuralAmpModelerCore/NAM/conv1d.h
+    ../modules/NeuralAmpModelerCore/NAM/film.h
+    ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
+    ../modules/NeuralAmpModelerCore/NAM/ring_buffer.cpp
+    ../modules/NeuralAmpModelerCore/NAM/wavenet
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.h
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/detail.h
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/model.cpp
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.cpp
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/model.h
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/params.h
+    ../modules/NeuralAmpModelerCore/NAM/lstm.h
+    ../modules/NeuralAmpModelerCore/NAM/util.h
+    ../modules/NeuralAmpModelerCore/NAM/gating_activations.h
+    ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
+    ../modules/NeuralAmpModelerCore/NAM/convnet.h
+    ../modules/NeuralAmpModelerCore/NAM/conv1d.cpp
+    ../modules/NeuralAmpModelerCore/NAM/container.h
+    ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
+    ../modules/NeuralAmpModelerCore/NAM/registry.h
+    ../modules/NeuralAmpModelerCore/NAM/ring_buffer.h
+    ../modules/NeuralAmpModelerCore/NAM/container.cpp
+    ../modules/NeuralAmpModelerCore/NAM/util.cpp
+    ../modules/NeuralAmpModelerCore/NAM/activations.cpp
+    ../modules/NeuralAmpModelerCore/NAM/version.h
+    ../modules/NeuralAmpModelerCore/NAM/dsp.h
+    ../modules/NeuralAmpModelerCore/NAM/activations.h
+    ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
+    ../modules/NeuralAmpModelerCore/NAM/get_dsp.h
 )
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.

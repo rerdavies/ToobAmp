@@ -171,7 +171,7 @@ namespace toob
         size_t fgSendIx = 0;
         size_t fgReturnIx = 0;
 
-        virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) override;
+        virtual void onStopBackgroundProcessingReply(NeuralAudioDsp *dsp) override;
         virtual void onBackgroundProcessingComplete() override;
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
@@ -320,7 +320,7 @@ namespace toob
         size_t _GetBufferNumFrames() const;
         // Gets a new Neural Amp Model
         // Throws an exception on error.
-        std::unique_ptr<ToobNamDsp> _GetNAM(const std::string &dspFile);
+        std::unique_ptr<NeuralAudioDsp> _GetNAM(const std::string &dspFile);
 
         bool _HaveModel() const { return this->mNAM != nullptr; };
         // Prepare the input & output buffers
@@ -329,7 +329,7 @@ namespace toob
         void _PrepareIOPointers(const size_t nChans);
         // Copy the input buffer to the object, applying input level.
         // :param nChansIn: In from external
-        // :param nChansOut: Out to the internal of the ToobNamDsp routine
+        // :param nChansOut: Out to the internal of the NeuralAudioDsp routine
         void _ProcessInput(const float_t **input, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
         // Copy the output to the output buffer, applying output level.
         // :param nChansIn: In from internal
@@ -359,7 +359,7 @@ namespace toob
         dsp::noise_gate::Gain mNoiseGateGain;
 
         // The Neural Amp Model (NAM) actually being used:
-        std::unique_ptr<ToobNamDsp> mNAM;
+        std::unique_ptr<NeuralAudioDsp> mNAM;
         nam_impl::NamCalibrationSettings fgCalibrationSettings;
         nam_impl::NamVolumeAdjustments fgCalibrationFactors;
         NamModelMetadata fgModelMetadata;

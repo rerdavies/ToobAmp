@@ -71,7 +71,7 @@ namespace toob::nam_impl
         float input;
         float output;
     };
-    NamVolumeAdjustments CalculateNamVolumeAdjustments(ToobNamDsp*dsp, const NamCalibrationSettings&calibrationSettings);
+    NamVolumeAdjustments CalculateNamVolumeAdjustments(NeuralAudioDsp*dsp, const NamCalibrationSettings&calibrationSettings);
 
 
 
@@ -220,7 +220,7 @@ namespace toob::nam_impl
     };
     struct SetDspMessage : public NamMessage
     {
-        SetDspMessage(uint64_t instanceId, ToobNamDsp *dsp, const NamCalibrationSettings &calibrationSettings)
+        SetDspMessage(uint64_t instanceId, NeuralAudioDsp *dsp, const NamCalibrationSettings &calibrationSettings)
             : NamMessage(NamBgMessageType::SetDsp),
               instanceId(instanceId),
               dsp(dsp),
@@ -228,7 +228,7 @@ namespace toob::nam_impl
         {
         }
 
-        ToobNamDsp *dsp;
+        NeuralAudioDsp *dsp;
         uint64_t instanceId;
         NamCalibrationSettings calibrationSettings;
     };
@@ -240,11 +240,11 @@ namespace toob::nam_impl
     {
         FadeOutProcessingMessage() : NamMessage(NamBgMessageType::FadeOut) {}
     };
-    // give me back my ToobNamDsp!
+    // give me back my NeuralAudioDsp!
     struct StopBackgroundProcessingReplyMessage : public NamMessage
     {
-        StopBackgroundProcessingReplyMessage(ToobNamDsp *dsp) : NamMessage(NamBgMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
-        ToobNamDsp *dsp;
+        StopBackgroundProcessingReplyMessage(NeuralAudioDsp *dsp) : NamMessage(NamBgMessageType::StopBackgroundProcessingReply), dsp(dsp) {}
+        NeuralAudioDsp *dsp;
     };
     static constexpr size_t MAX_DATA_MESSAGE_SAMPLES = 256;
     struct SampleDataMessage : public NamMessage
@@ -298,7 +298,7 @@ namespace toob::nam_impl
     class NamBackgroundProcessorListener
     {
     public:
-        virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) = 0;
+        virtual void onStopBackgroundProcessingReply(NeuralAudioDsp *dsp) = 0;
         virtual void onBackgroundProcessingComplete() = 0;
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) = 0;
     };
@@ -356,7 +356,7 @@ namespace toob::nam_impl
         {
             this->listener = listener;
         }
-        void fgSetModel(ToobNamDsp *model, const NamCalibrationSettings&calibrationSettings)
+        void fgSetModel(NeuralAudioDsp *model, const NamCalibrationSettings&calibrationSettings)
         {
             if (!thread)
             {
@@ -427,7 +427,7 @@ namespace toob::nam_impl
         uint64_t bgInstanceId = 0;
         std::atomic<uint64_t> fgInstanceId = 0;
 
-        std::unique_ptr<ToobNamDsp> bgDsp;
+        std::unique_ptr<NeuralAudioDsp> bgDsp;
         NamCalibrationSettings bgCalibrationSettings;
         NamQueue fgToBgQueue{8 * 1024};
         NamQueue bgToFgQueue{8 * 1024};
