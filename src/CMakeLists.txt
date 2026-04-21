@@ -343,7 +343,11 @@ add_library(ToobAmpArch SHARED
     LsNumerics/PitchDetector.cpp
 
 )
-
+# Eigen headers give deprecated-enum-enum-conversion error with GCC 12 and 13. 
+target_compile_options(ToobAmpArch
+    PUBLIC
+    -Wno-deprecated-enum-enum-conversion
+    )
 
 if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     if(A76_OPTIMIZATION)
