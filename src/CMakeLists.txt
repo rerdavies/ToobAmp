@@ -1295,32 +1295,6 @@ add_test(PitchDetectorTest PitchDetectorTest)
 
 add_test(LinkageTest linkageTest)
 
-# add_executable(ProfileNeuralAmpModeler 
-#     ProfileNeuralAmpModeler.cpp
-#     CommandLineParser.hpp
-# ) 
-
-
-# Can't access ToobAmp.so exports anymore. Use the pipedal plugin profiling tool instead.
-# target_include_directories(ProfileNeuralAmpModeler PRIVATE
-# ../modules/NeuralAmpModelerCore/Dependencies/eigen
-# ../modules/NeuralAmpModelerCore/Dependencies/nlohmann
-# ../modules    
-# )
-
-# if(PROFILER)
-#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler ${FLAC_LIBS})
-#     target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
-# else()
-#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp ${FLAC_LIBS})
-# endif()
-
-
-
-# set_target_properties(ToobAmp PROPERTIES VERSION ${PROJECT_VERSION})
-
-# set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
-
 
 
 
