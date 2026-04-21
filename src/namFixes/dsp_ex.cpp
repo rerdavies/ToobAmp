@@ -36,6 +36,142 @@ namespace toob
         static std::mutex ndspMutex;
 
     };
+
+    
+    NeuralAudioDsp::NeuralAudioDsp(::NeuralAudio::NeuralModel *model)
+    {
+        neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(model);
+    }
+
+    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, size_t maxBlockSize)
+    {
+        namDsp = std::move(model);
+
+        namInputBuffer.resize(maxBlockSize);
+        namOutputBuffer.resize(maxBlockSize);
+
+        namInputBufferPointers.resize(namDsp->NumInputChannels() + 1); // +1 to include an extra nullptr as a guard.
+        namInputBufferPointers[0] = namInputBuffer.data();
+        if (namDsp->NumInputChannels() > 1)
+        {
+            namExtraInputBuffers.resize(namDsp->NumInputChannels() - 1);
+            for (int i = 1; i < namDsp->NumInputChannels(); ++i)
+            {
+                namExtraInputBuffers[i - 1].resize(maxBlockSize);
+                namInputBufferPointers[i] = namExtraInputBuffers[i - 1].data();
+            }
+        }
+
+        namOutputBuffersPointers.resize(namDsp->NumOutputChannels() + 1); // +1 to include an extra nullptr as a guard.
+        namOutputBuffersPointers[0] = namOutputBuffer.data();
+        if (namDsp->NumOutputChannels() > 1)
+        {
+            namExtraInputBuffers.resize(namDsp->NumOutputChannels() - 1);
+            for (int i = 1; i < namDsp->NumOutputChannels(); ++i)
+            {
+                namExtraOutputBuffers[i - 1].resize(maxBlockSize);
+                namInputBufferPointers[i] = namExtraOutputBuffers[i - 1].data();
+            }
+        }
+        namDsp->prewarm();
+    }
+
+    bool NeuralAudioDsp::HasModelGainDB()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->HasModelGainDB();
+        }
+        return false;
+    }
+
+    float NeuralAudioDsp::GetModelGainDB()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->GetModelGainDB();
+        }
+        return 0;
+    }
+
+    bool NeuralAudioDsp::HasModelLoudnessDB()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->HasModelLoudnessDB();
+        }
+        if (namDsp)
+        {
+            return namDsp->HasLoudness();
+        }
+        return false;
+    }
+
+    float NeuralAudioDsp::GetModelLoudnessDB()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->GetModelLoudnessDB();
+        }
+        if (namDsp)
+        {
+            return namDsp->GetLoudness();
+        }
+        return 0;
+    }
+
+    bool NeuralAudioDsp::HasModelInputLevelDBu()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->HasModelInputLevelDBu();
+        }
+        if (namDsp)
+        {
+            return namDsp->GetInputLevel();
+        }
+        return false;
+    }
+
+    float NeuralAudioDsp::GetModelInputLevelDBu()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->GetModelInputLevelDBu();
+        }
+        if (namDsp)
+        {
+            return namDsp->GetInputLevel();
+        }
+        return 0;
+    }
+
+    bool NeuralAudioDsp::HasModelOutputLevelDBu()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->HasModelOutputLevelDBu();
+        }
+        if (namDsp)
+        {
+            return namDsp->HasOutputLevel();
+        }
+        return false;
+    }
+
+    float NeuralAudioDsp::GetModelOutputLevelDBu()
+    {
+        if (neuralAudioModel)
+        {
+            return neuralAudioModel->GetModelOutputLevelDBu();
+        }
+        if (namDsp)
+        {
+            return namDsp->GetOutputLevel();
+        }
+        return 0;
+    }
+
     std::unique_ptr<NeuralAudioDsp> get_dsp_ex(
         const std::filesystem::path config_filename,
         uint32_t sampleRate,
