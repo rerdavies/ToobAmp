@@ -48,10 +48,9 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Rele
     add_compile_options("-Ofast")
     if (A76_OPTIMIZATION)
         message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-        add_compile_options("-DA76_OPTIMIZATION=1 -mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+        add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
     else ()
-        message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-        add_compile_options("-mcpu=cortex-a72 -mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
+        add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
     endif()
 endif()
 
