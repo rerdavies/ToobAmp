@@ -67,10 +67,12 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         # set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
     endif()
 
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder ") # --param=max-vartrack-size=400000
-    else() # if GCC
-        set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder -Wno-restrict ") # --param=max-vartrack-size=400000
+    if (!TOOBAMP_PERMISSIVE_COMPILE)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder ") 
+        else() # if GCC
+            set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder -Wno-restrict ") 
+        endif()
     endif()
 
     if(WARNINGS_ARE_ERRORS)

@@ -14,16 +14,16 @@ set(PROJECT_RELEASE_QUALIFIER "")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
+option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" ON)
+option(NATIVE_X64_OPTIONS "Optimize native processor options (x86_64 builds only)" OFF)
+option(AVX_X64_OPTIONS "Optimize for processor with AVXprocessor options (x86_64 builds only)" ON)
+option(TOOBAMP_PERMISSIVE_COMPILE "Enable permissive compile options (warnings are not errors)" OFF) 
+
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
 option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
-option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" ON)
-option(NATIVE_X64_OPTIONS "Optimize native processor options (x86_64 builds only)" ON)
-option(AVX_X64_OPTIONS "Optimize for processor with AVXprocessor options (x86_64 builds only)" OFF)
 
 option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
 option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.
-
-message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
