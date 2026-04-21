@@ -27,7 +27,7 @@
 #include <iostream>
 #include <stdexcept>
 
-bool DEBUG_FORCE_NAM_MODEL = true;
+bool DEBUG_FORCE_NAM_MODEL = false;
 
 namespace toob
 {
