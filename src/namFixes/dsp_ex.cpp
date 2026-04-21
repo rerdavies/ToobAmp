@@ -189,9 +189,9 @@ namespace toob
             if (neuralAudioModel)
             {
                 #ifdef A76_OPTIMIZATION
-                std::cout << "Using NAM Core backend (A76)" << std::end;
+                std::cout << "Using NAM Core backend (A76)" << std::endl;
                 #else 
-                std::cout << "Using NAM Core backend (A76)" << std::end;
+                std::cout << "Using NAM Core backend (A76)" << std::endl;
                 #endif
                 neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
                 return std::make_unique<NeuralAudioDsp>(neuralAudioModel);
@@ -202,9 +202,9 @@ namespace toob
         if (namDsp)
         {
             #ifdef A76_OPTIMIZATION
-            std::cout << "Using NAM Core backend (A76)" << std::end;
+            std::cout << "Using NAM Core backend (A76)" << std::endl;
             #else
-            std::cout << "Using NAM Core backend." << std::end;
+            std::cout << "Using NAM Core backend." << std::endl;
             #endif
             return std::make_unique<NeuralAudioDsp>(std::move(namDsp),(size_t)maxBlockSize);
         }
