@@ -55,12 +55,11 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
         if (A76_OPTIMIZATION)
             message(STATUS "src: Using Cortex-A76 optimizations.")
-            set(CXX_ARCH_FLAGS "-mcpu=cortex-a76 -mtune=cortex-a76 -DEIGEN_DEFAULT_L1_CACHE_SIZE=65536" ) # HUGE% compared to no option# raspberry pi 4. cortex-a76
+            set(CXX_ARCH_FLAGS "-DA76_OPTIMIZATION=1 -mcpu=cortex-a76 -mtune=cortex-a76 -DEIGEN_DEFAULT_L1_CACHE_SIZE=65536" ) # HUGE% compared to no option# raspberry pi 4. cortex-a76
         else()
             message(STATUS "src: Using Cortex-A72 optimizations.")
             set(CXX_ARCH_FLAGS "-mcpu=cortex-a72 -mtune=cortex-a72  -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a76
         endif()
-        set(CXX_ARCH_FLAGS "-DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # 
     else()
         # MMX, SSE, SSE2 are enabled by default.
 
