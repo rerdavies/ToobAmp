@@ -49,13 +49,14 @@ message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     add_compile_options("-Ofast")
+
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64") 
         if (A76_OPTIMIZATION)
             message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-            add_compile_options("-DA76_OPTIMIZATION=1 -mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+            add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
         else ()
             message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-            add_compile_options("-mcpu=cortex-a72 -mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
+            add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
         endif()
     elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
 
