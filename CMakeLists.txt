@@ -15,6 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
+
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
 option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
 option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" OFF)
@@ -25,6 +26,10 @@ message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
 
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
+
+# NueralAmpModelerCore has a more recent version of Eigen than NeuralAudio does, so 
+# force usage of the NeuralAmpModelerCore version of Eigen. 
+include_directories("${PROJECT_SOURCE_DIR}/modules/NeuralAmpModelerCore/Dependencies/eigen")
 
 
 set(TOOBAMP_SEMANTIC_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}${PROJECT_RELEASE_QUALIFIER}")
