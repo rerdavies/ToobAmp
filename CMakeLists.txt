@@ -13,12 +13,10 @@ set(PROJECT_RELEASE_QUALIFIER "")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-message(STATUS "A76_OPTIMIZATION: ${A76_OPTIMIZATION}")
-
 
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
 option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
-option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" OFF)
+option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" ON)
 option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
 option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.
 
@@ -46,14 +44,14 @@ execute_process(COMMAND
 
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelMinDependency"))
-    add_compile_options("-ffast-math")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo"))
+    add_compile_options("-Ofast")
     if (A76_OPTIMIZATION)
         message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-        add_compile_options("-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+        add_compile_options("-DA76_OPTIMIZATION=1 -mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
     else ()
         message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-        add_compile_options("-march=armv8-a" "-mtune=cortex-a72")
+        add_compile_options("-mcpu=cortex-a72 -mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
     endif()
 endif()
 

@@ -27,7 +27,7 @@
 #include <iostream>
 #include <stdexcept>
 
-bool DEBUG_FORCE_NAM_MODEL = false;
+bool DEBUG_FORCE_NAM_MODEL = true;
 
 namespace toob
 {
@@ -189,9 +189,9 @@ namespace toob
             if (neuralAudioModel)
             {
                 #ifdef A76_OPTIMIZATION
-                std::cout << "Using NAM Core backend (A76)" << std::endl;
+                std::cout << "Using NeuralAudio backend (A76)" << std::endl;
                 #else 
-                std::cout << "Using NAM Core backend (A76)" << std::endl;
+                std::cout << "Using NeuralAudio backend." << std::endl;
                 #endif
                 neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
                 return std::make_unique<NeuralAudioDsp>(neuralAudioModel);
