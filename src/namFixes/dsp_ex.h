@@ -22,7 +22,7 @@ namespace toob
     {
     public:
         NeuralAudioDsp(::NeuralAudio::NeuralModel *model);
-        NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, size_t maxBlockSize);
+        NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, double sampleRate,size_t maxBlockSize);
 
         void Process(const float *input, float *output, size_t numSamples);
 

@@ -15,8 +15,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 
 option(A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" ON)
-option(NATIVE_X64_OPTIONS "Optimize native processor options (x86_64 builds only)" OFF)
-option(AVX_X64_OPTIONS "Optimize for processor with AVXprocessor options (x86_64 builds only)" ON)
+option(NATIVE_X64_OPTIONS "Optimize native processor options (x86_64 builds only)" ON)
+option(AVX_X64_OPTIONS "Optimize for processor with AVXprocessor options (x86_64 builds only)" OFF)
 option(TOOBAMP_PERMISSIVE_COMPILE "Enable permissive compile options (warnings are not errors)" OFF) 
 
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
@@ -56,7 +56,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDeb
             add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
         else ()
             message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-            add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
+            add_compile_options("-mcpu=cortex-a72" "-march=armv8-a" "-mtune=cortex-a72")
         endif()
     elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
 

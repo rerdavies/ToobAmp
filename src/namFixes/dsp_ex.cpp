@@ -43,7 +43,7 @@ namespace toob
         neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(model);
     }
 
-    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, size_t maxBlockSize)
+    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, double sampleRate, size_t maxBlockSize)
     {
         namDsp = std::move(model);
 
@@ -73,7 +73,7 @@ namespace toob
                 namInputBufferPointers[i] = namExtraOutputBuffers[i - 1].data();
             }
         }
-        namDsp->prewarm();
+        namDsp->ResetAndPrewarm(sampleRate,(int)maxBlockSize);
     }
 
     bool NeuralAudioDsp::HasModelGainDB()
@@ -206,7 +206,7 @@ namespace toob
             #else
             std::cout << "Using NAM Core backend." << std::endl;
             #endif
-            return std::make_unique<NeuralAudioDsp>(std::move(namDsp),(size_t)maxBlockSize);
+            return std::make_unique<NeuralAudioDsp>(std::move(namDsp),(double)sampleRate, (size_t)maxBlockSize);
         }
 
         throw std::runtime_error("Invalid file format, or unsupported version.");
