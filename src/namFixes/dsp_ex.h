@@ -22,7 +22,7 @@ namespace toob
     {
     public:
         NeuralAudioDsp(::NeuralAudio::NeuralModel *model);
-        NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, double sampleRate,size_t maxBlockSize);
+        NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, const nam::dspData &dspData,double sampleRate,size_t maxBlockSize);
 
         void Process(const float *input, float *output, size_t numSamples);
 
@@ -35,7 +35,12 @@ namespace toob
         bool HasModelOutputLevelDBu();
         float GetModelOutputLevelDBu();
 
+        bool HasSlimmableSizes();
+        const std::vector<double>&  GetSlimmableSizes() const;
+        void SetSlimmableSize(double value);
+
     private:
+        void LoadNamCoreMetadata(const nam::dspData &dspData);
         std::unique_ptr<::NeuralAudio::NeuralModel> neuralAudioModel;
         std::unique_ptr<nam::DSP> namDsp;
 
@@ -45,6 +50,17 @@ namespace toob
         std::vector<std::vector<float>> namExtraOutputBuffers;
         std::vector<float *> namInputBufferPointers;
         std::vector<float *> namOutputBuffersPointers;
+        std::vector<double> slimmableSizes;
+
+        bool hasModelGainDb = false;
+        float modelGainDb = 0;
+        bool hasModelLoundessDB = false;
+        float modelLoudnessDB = 0;
+        bool hasModelInputLevelDBu = false;
+        float modelInputLevelDBu = 0;
+        bool hasModelOutputLevelDBu = false;
+        float modelOutputLevelDBu = 0;
+
     };
 
     std::unique_ptr<NeuralAudioDsp> get_dsp_ex(
