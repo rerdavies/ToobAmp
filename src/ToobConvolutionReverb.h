@@ -242,20 +242,39 @@ namespace toob
 			bool IsIdle() const { return this->state == State::Idle || this->state == State::Error || this->state == State::NotLoaded; }
 			bool IsChanging() const { return Changed() || !IsIdle(); };
 
-			void Tick()
+			void Tick(size_t nSamples)
 			{ // on audio thread. Don't start loading unless audio is actually running.
 				if (IsIdle())
 				{
-					if (Changed())
-					{
-						changed = false;
-                        fgMixOptionsChanged = false;
-						Request();
-					}
+                    if (throttleCounter == 0)
+                    {
+                        if (Changed())
+                        {
+                            changed = false;
+                            fgMixOptionsChanged = false;
+                            Request();
+
+                            throttleCounter = throttleRate; // throttle maximum update rate.
+                        }
+                    } else {
+                        throttleCounter -= nSamples;
+                        if (throttleCounter < 0)
+                        {
+                            throttleCounter = 0;
+                        }
+                    }
 				}
 			}
 
 		private:
+
+            int64_t throttleRate = 0;
+            int64_t throttleCounter = 0;
+
+        bool IsThrottled() { 
+            return throttleCounter == 0;
+        }
+
 			void SetState(State state);
 			void Request();
 			virtual void OnWork();
@@ -364,6 +383,7 @@ namespace toob
 
 		double sampleRate = 0;
 		bool activated = false;
+
         const float *pBypass = nullptr;
 		const float *pTime = nullptr;
 		const float *pDirectMix = nullptr;

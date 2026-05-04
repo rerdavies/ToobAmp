@@ -459,7 +459,7 @@ void ToobConvolutionReverbBase::Run(uint32_t n_samples)
             if ((!pConvolutionReverb) || (!pConvolutionReverb->IsDezipping()))
             {
                 preChangeVolumeZip = false;
-                loadWorker.Tick();
+                loadWorker.Tick(n_samples);
             }
         }
         if (pConvolutionReverb)
@@ -650,13 +650,19 @@ ToobConvolutionReverbBase::LoadWorker::LoadWorker(Lv2Plugin *pPlugin)
 
 void ToobConvolutionReverbBase::LoadWorker::Initialize(size_t sampleRate, ToobConvolutionReverbBase *pReverb)
 {
+    constexpr double MAX_UPDATE_RATE_MS = 1000/15;
+    this->throttleRate = (int64_t)(MAX_UPDATE_RATE_MS*sampleRate/1000.0);
+
     this->sampleRate = sampleRate;
     size_t bufferSize = pReverb->GetBuffSizeOptions().nominalBlockLength;
     if (bufferSize == 0 || bufferSize == (size_t)-1)
         bufferSize = 256;
     if (bufferSize > 1024)
         bufferSize = 1024;
-
+    if (bufferSize < 64)
+    {
+        bufferSize = 64;
+    }
     this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
 }
@@ -1283,7 +1289,7 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
         this->tailScale = 0;
 
         // Ignore old maxTime parameter. Just truncate anthing over 30 seconds.
-        size_t maxSize = (size_t)std::ceil(30 * pReverb->getSampleRate());
+        size_t maxSize = (size_t)std::ceil(20 * pReverb->getSampleRate());
         if (maxSize < data.getSize())
         {
             data.setSize(maxSize);
