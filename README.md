@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.2.76
+### v1.2.77
 
 The ToobAmp Project provides 28 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
@@ -64,15 +64,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.76/toobamp_1.2.76_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.76/toobamp_1.2.76_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.76/toobamp_1.2.76_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.77/toobamp_1.2.77_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.77/toobamp_1.2.77_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.77/toobamp_1.2.77_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.2.76_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.2.77_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`.
@@ -322,8 +322,14 @@ To build the AMD64/x64 release package, run
 Note that both scripts run clean builds, so they will take a while to complete; and both scripts leave the state of the CMake build directory in a state that is not suitable for development builds. You should run `./config.sh` (or Ctrl+Shift+P/"CMake: delete cache and reconfigure", from Visual Studio Code) after running either of the release build scripts to get back to a state where you can do development builds. 
 
 # Releases Notes
+
+### v1.2.77
+- Fixes for ALSA crashes when using TooB Cab IR, or TooB Convolution Reverb with buffer sizes smaller than 64 samples.
+- Minor layout adjustments for Native UI layouts.
+- Support for Neural Amp Modeler A2 models (alpha state, pending final general release of upstream A2 models).
+
 ### v1.2.76
-- Fixes for X11-Wayland compatibility.
+- Fixes for X11-Wayland Native UI. 
 - TooB Tone parameter tweaks.
 
 
