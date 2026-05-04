@@ -38,11 +38,11 @@ namespace toob
 
     };
 
-    
     NeuralAudioDsp::NeuralAudioDsp(::NeuralAudio::NeuralModel *model)
     {
         neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(model);
-        if (model->HasModelGainDB()) {
+        if (model->HasModelGainDB())
+        {
             this->hasModelGainDb = true;
             this->modelGainDb = model->GetModelGainDB();
         }
@@ -63,9 +63,8 @@ namespace toob
         }
     }
 
-
-
-    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, const nam::dspData &dspData,double sampleRate, size_t maxBlockSize)
+    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, const nam::dspData &dspData, double sampleRate, size_t maxBlockSize, const std::vector<double>&slimmableSizes)
+    : slimmableSizes(slimmableSizes)
     {
         namDsp = std::move(model);
 
@@ -97,24 +96,28 @@ namespace toob
         }
 
         LoadNamCoreMetadata(dspData);
-        if (HasSlimmableSizes())
-        {
-            namDsp->ResetAndPrewarm(sampleRate,(int)maxBlockSize);
-            std::cout << "Using Slimmable model (0.5)" << std::endl;
-            SetSlimmableSize(0.5);
-        } else {
-            namDsp->ResetAndPrewarm(sampleRate,(int)maxBlockSize);
-        }
+
+        namDsp->ResetAndPrewarm(sampleRate, (int)maxBlockSize);
     }
 
     void NeuralAudioDsp::LoadNamCoreMetadata(const nam::dspData &dspData)
     {
-        if (dspData.metadata)
+        if (namDsp->HasLoudness())
         {
-            
+            this->hasModelLoundessDB = true;
+            this->modelLoudnessDB = namDsp->GetLoudness();
+        }
+        if (namDsp->HasInputLevel())
+        {
+            this->hasModelInputLevelDBu = true;
+            this->modelInputLevelDBu = namDsp->GetInputLevel();
+        }
+        if (namDsp->HasOutputLevel())
+        {
+            this->hasModelOutputLevelDBu = true;
+            this->modelOutputLevelDBu = namDsp->GetOutputLevel();
         }
     }
-
 
     bool NeuralAudioDsp::HasModelGainDB()
     {
@@ -172,27 +175,64 @@ namespace toob
             ::NeuralAudio::NeuralModel *neuralAudioModel = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
             if (neuralAudioModel)
             {
-                #ifdef A76_OPTIMIZATION
+#ifdef A76_OPTIMIZATION
                 std::cout << "Using NeuralAudio backend (A76)" << std::endl;
-                #else 
+#else
                 std::cout << "Using NeuralAudio backend." << std::endl;
-                #endif
+#endif
                 neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
                 return std::make_unique<NeuralAudioDsp>(neuralAudioModel);
             }
         }
 
+        if (!std::filesystem::exists(config_filename))
+            throw std::runtime_error("Config file doesn't exist!\n");
+        std::ifstream i(config_filename);
+        nlohmann::json j;
+        i >> j;
+
+
+        
+        // If using submodules, select the submodule.
+        nlohmann::json *actualModel = &j;
+
+        constexpr double modelWeight = 0.5;
+
+
+
+        std::string architecture = j["architecture"].get<std::string>();
+
+        std::vector<double> slimmableSizes;
+
+        if (architecture == "SlimmableContainer")
+        {
+            auto &config = j["config"];
+
+            auto &submodels_json = config["submodels"];
+            if (submodels_json.is_array())
+            {
+                for (auto &entry : submodels_json)
+                {
+                    double max_val = entry.at("max_value").get<double>();
+                    slimmableSizes.push_back(max_val);
+                    if (max_val <= modelWeight)
+                    {
+                        actualModel = &entry.at("model");
+                    }
+                }
+            }
+        } 
         nam::dspData dspData;
-        std::unique_ptr<nam::DSP> namDsp = nam::get_dsp(config_filename,dspData);
+        std::unique_ptr<nam::DSP> namDsp = nam::get_dsp(*actualModel, dspData);
         if (namDsp)
         {
-            #ifdef A76_OPTIMIZATION
+#ifdef A76_OPTIMIZATION
             std::cout << "Using NAM Core backend (A76)" << std::endl;
-            #else
+#else
             std::cout << "Using NAM Core backend." << std::endl;
-            #endif
+#endif
 
-            return std::make_unique<NeuralAudioDsp>(std::move(namDsp),dspData, (double)sampleRate, (size_t)maxBlockSize);
+            return std::make_unique<NeuralAudioDsp>(std::move(namDsp), dspData, (double)sampleRate, (size_t)maxBlockSize, slimmableSizes);
         }
 
         throw std::runtime_error("Invalid file format, or unsupported version.");
@@ -202,8 +242,9 @@ namespace toob
     {
         if (neuralAudioModel)
         {
-            neuralAudioModel->Process(const_cast<float*>(input),output,numSamples);
-        } else if (namDsp)
+            neuralAudioModel->Process(const_cast<float *>(input), output, numSamples);
+        }
+        else if (namDsp)
         {
 
             for (size_t i = 0; i < numSamples; ++i)
@@ -216,7 +257,9 @@ namespace toob
             {
                 output[i] = namOutputBuffer[i];
             }
-        } else {
+        }
+        else
+        {
             for (size_t i = 0; i < numSamples; ++i)
             {
                 output[i] = 0;
@@ -228,12 +271,12 @@ namespace toob
     {
         if (namDsp)
         {
-            nam::container::ContainerModel*pContainer = dynamic_cast<nam::container::ContainerModel*>(namDsp.get());
+            nam::container::ContainerModel *pContainer = dynamic_cast<nam::container::ContainerModel *>(namDsp.get());
             return pContainer != nullptr;
         }
         return false;
     }
-    const std::vector<double>& NeuralAudioDsp::GetSlimmableSizes() const
+    const std::vector<double> &NeuralAudioDsp::GetSlimmableSizes() const
     {
         return slimmableSizes;
     }
@@ -241,13 +284,12 @@ namespace toob
     {
         if (namDsp)
         {
-            nam::container::ContainerModel*pContainer = dynamic_cast<nam::container::ContainerModel*>(namDsp.get());
+            nam::container::ContainerModel *pContainer = dynamic_cast<nam::container::ContainerModel *>(namDsp.get());
             if (pContainer)
             {
                 pContainer->SetSlimmableSize(value);
             }
         }
-
     }
 
 }
