@@ -326,7 +326,7 @@ Note that both scripts run clean builds, so they will take a while to complete; 
 ### v1.2.77
 - Fixes for ALSA crashes when using TooB Cab IR, or TooB Convolution Reverb with buffer sizes smaller than 64 samples.
 - Minor layout adjustments for Native UI layouts.
-- Support for Neural Amp Modeler A2 models (alpha state, pending final general release of upstream A2 models).
+- Preliminary support for Neural Amp Modeler A2 models (alpha state, pending final general release of upstream NAM A2 models).
 
 ### v1.2.76
 - Fixes for X11-Wayland Native UI. 
