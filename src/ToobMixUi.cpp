@@ -38,7 +38,7 @@ public:
 
 ToobMixUi::ToobMixUi() : super(
     ToobMixUiBase::Create(),
-    Lv2cSize(500,223), // default window size.
+    Lv2cSize(500,318), // default window size.
     Lv2cSize(500,223), // default window size.)
     "ToobMixLogo.svg"
     )

@@ -31,6 +31,7 @@ using namespace toob;
 
 #define PLUGIN_CLASS ToobParametricEqUI
 #define PLUGIN_UI_URI "http://two-play.com/plugins/toob-parametric-eq-ui"
+#define STEREO_PLUGIN_UI_URI "http://two-play.com/plugins/toob-parametric-eq-stereo-ui"
 #define PLUGIN_INFO_CLASS ToobParametricEqPluginInfo
 
 
@@ -46,7 +47,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(731,238), // default window size.
+    Lv2cSize(731,576), // default window size.
     Lv2cSize(470,200),
     "ToobParametricEqLogo.svg"
     )
@@ -58,5 +59,11 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 
 int linkToobParametricEqUi = 0; // link target to include the .o file in the final .so.
 static Lv2UIRegistration<PLUGIN_CLASS> 
-registration { PLUGIN_UI_URI};
+parametricEqUiRegistration { PLUGIN_UI_URI};
+
+
+static Lv2UIRegistration<PLUGIN_CLASS> 
+stereoParametricEqUiRegistration { STEREO_PLUGIN_UI_URI};
+
+
 

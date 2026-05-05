@@ -51,7 +51,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(510,210), // default window size.
+    Lv2cSize(610,210), // default window size.
     Lv2cSize(470,320), // default help window size.
     "ToobFlangerLogo.svg"
     )

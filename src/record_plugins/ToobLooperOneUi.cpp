@@ -42,7 +42,7 @@ public:
 ToobLooperOneUiPlugin::ToobLooperOneUiPlugin() 
 : super(
     ToobLooperOneUiBase::Create(),
-    Lv2cSize(623,409),
+    Lv2cSize(623,578),
     Lv2cSize(623,409),
     "LooperOneLogo.svg"
     )

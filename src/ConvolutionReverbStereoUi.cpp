@@ -49,7 +49,7 @@ PLUGIN_CLASS::PLUGIN_CLASS()
 : super(
     PLUGIN_INFO_CLASS::Create(),
     Lv2cCreateWindowParameters {
-        .size= Lv2cSize(848,208), // default window size.
+        .size= Lv2cSize(648,318), // default window size.
         .minSize= Lv2cSize(420,200) // wide logo requires extra space.
     },
     Lv2cSize(470,800),

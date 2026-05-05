@@ -53,7 +53,7 @@ protected:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(320,200), // default window size.
+    Lv2cSize(420,200), // default window size.
     Lv2cSize(470,120), // default help window size.
     "ToobChorusLogo.svg"
     )
