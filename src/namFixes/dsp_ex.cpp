@@ -36,35 +36,36 @@ namespace toob
     {
         static std::mutex ndspMutex;
 
+        static std::vector<float> ReadSlimmableSizes(nlohmann::json &jsonModel)
+        {
+            std::string architecture = jsonModel["architecture"].get<std::string>();
+
+            std::vector<float> slimmableSizes;
+
+            if (architecture == "SlimmableContainer")
+            {
+                auto &config = jsonModel["config"];
+
+                auto &submodels_json = config["submodels"];
+                if (submodels_json.is_array())
+                {
+                    for (auto &entry : submodels_json)
+                    {
+                        float max_val = entry.at("max_value").get<float>();
+                        slimmableSizes.push_back(max_val);
+                    }
+                }
+            }
+            return slimmableSizes;
+        }
+
     };
 
-    NeuralAudioDsp::NeuralAudioDsp(::NeuralAudio::NeuralModel *model)
-    {
-        neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(model);
-        if (model->HasModelGainDB())
-        {
-            this->hasModelGainDb = true;
-            this->modelGainDb = model->GetModelGainDB();
-        }
-        if (model->HasModelLoudnessDB())
-        {
-            this->hasModelLoundessDB = true;
-            this->modelLoudnessDB = model->GetModelLoudnessDB();
-        }
-        if (model->HasModelInputLevelDBu())
-        {
-            this->hasModelInputLevelDBu = true;
-            this->modelInputLevelDBu = model->GetModelInputLevelDBu();
-        }
-        if (model->HasModelOutputLevelDBu())
-        {
-            this->hasModelOutputLevelDBu = true;
-            this->modelOutputLevelDBu = model->GetModelOutputLevelDBu();
-        }
-    }
-
-    NeuralAudioDsp::NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, const nam::dspData &dspData, double sampleRate, size_t maxBlockSize, const std::vector<double>&slimmableSizes)
-    : slimmableSizes(slimmableSizes)
+    void NeuralAudioDsp::InitNamCoreModel(
+        std::unique_ptr<nam::DSP> &&model,
+        const nam::dspData &dspData,
+        double sampleRate,
+        size_t maxBlockSize)
     {
         namDsp = std::move(model);
 
@@ -169,70 +170,60 @@ namespace toob
             std::lock_guard lock{ndspMutex};
             NeuralAudio::NeuralModel::SetDefaultMaxAudioBufferSize(maxBlockSize);
         }
+        return std::make_unique<NeuralAudioDsp>(
+            config_filename,
+            sampleRate,
+            minBlockSize,
+            maxBlockSize
+
+        );
+    }
+
+    NeuralAudioDsp::NeuralAudioDsp(
+        const std::filesystem::path &config_filename,
+        uint32_t sampleRate,
+        int minBlockSize,
+        int maxBlockSize)
+    {
+
+        if (!std::filesystem::exists(config_filename))
+            throw std::runtime_error("Config file doesn't exist!\n");
+        std::ifstream i(config_filename);
+        nlohmann::json jsonModel;
+        i >> jsonModel;
+
+        this->slimmableSizes = ReadSlimmableSizes(jsonModel);
 
         if (!DEBUG_FORCE_NAM_MODEL)
         {
             ::NeuralAudio::NeuralModel *neuralAudioModel = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
             if (neuralAudioModel)
             {
-// #ifdef A76_OPTIMIZATION
-//                 std::cout << "Using NeuralAudio backend (A76)" << std::endl;
-// #else
-//                 std::cout << "Using NeuralAudio backend." << std::endl;
-// #endif
+#ifdef A76_OPTIMIZATION
+                std::cout << "Using NeuralAudio backend (A76)" << std::endl;
+#else
+                std::cout << "Using NeuralAudio backend." << std::endl;
+#endif
+                this->neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(neuralAudioModel);
                 neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
-                return std::make_unique<NeuralAudioDsp>(neuralAudioModel);
+                LoadNamCoreMetadata(jsonModel);
+                return;
             }
         }
 
-        if (!std::filesystem::exists(config_filename))
-            throw std::runtime_error("Config file doesn't exist!\n");
-        std::ifstream i(config_filename);
-        nlohmann::json j;
-        i >> j;
-
-
-        
-        // If using submodules, select the submodule.
-        nlohmann::json *actualModel = &j;
-
-        constexpr double modelWeight = 0.5;
-
-
-
-        std::string architecture = j["architecture"].get<std::string>();
-
-        std::vector<double> slimmableSizes;
-
-        if (architecture == "SlimmableContainer")
-        {
-            auto &config = j["config"];
-
-            auto &submodels_json = config["submodels"];
-            if (submodels_json.is_array())
-            {
-                for (auto &entry : submodels_json)
-                {
-                    double max_val = entry.at("max_value").get<double>();
-                    slimmableSizes.push_back(max_val);
-                    if (max_val <= modelWeight)
-                    {
-                        actualModel = &entry.at("model");
-                    }
-                }
-            }
-        } 
         nam::dspData dspData;
-        std::unique_ptr<nam::DSP> namDsp = nam::get_dsp(*actualModel, dspData);
+        std::unique_ptr<nam::DSP> namDsp = nam::get_dsp(jsonModel, dspData);
         if (namDsp)
         {
-// #ifdef A76_OPTIMIZATION
-//             std::cout << "Using NAM Core backend (A76)" << std::endl;
-// #else
-//             std::cout << "Using NAM Core backend." << std::endl;
-// #endif
+            #ifdef A76_OPTIMIZATION
+                        std::cout << "Using NAM Core backend (A76)" << std::endl;
+            #else
+                        std::cout << "Using NAM Core backend." << std::endl;
+            #endif
 
-            return std::make_unique<NeuralAudioDsp>(std::move(namDsp), dspData, (double)sampleRate, (size_t)maxBlockSize, slimmableSizes);
+            InitNamCoreModel(std::move(namDsp), dspData, (double)sampleRate, (size_t)maxBlockSize);
+            LoadNamCoreMetadata(jsonModel);
+            return;
         }
 
         throw std::runtime_error("Invalid file format, or unsupported version.");
@@ -276,7 +267,8 @@ namespace toob
         }
         return false;
     }
-    const std::vector<double> &NeuralAudioDsp::GetSlimmableSizes() const
+
+    const std::vector<float> &NeuralAudioDsp::GetSlimmableSizes() const
     {
         return slimmableSizes;
     }
@@ -292,4 +284,29 @@ namespace toob
         }
     }
 
+    static void LoadMetadataEntry(nlohmann::json &json, const std::string &name, bool &hasValue, float &value)
+    {
+        if (json.is_number())
+        {
+            hasValue = true;
+            value = json.get<float>();
+        }
+        else
+        {
+            hasValue = false;
+        }
+    }
+
+    void NeuralAudioDsp::LoadNamCoreMetadata(nlohmann::json &jsonModel)
+    {
+
+        auto &metadata = jsonModel["metadata"];
+        if (metadata.is_object())
+        {
+            LoadMetadataEntry(metadata, "gain", this->hasModelGainDb, this->modelGainDb);
+            LoadMetadataEntry(metadata, "loudness", this->hasModelLoundessDB, this->modelLoudnessDB);
+            LoadMetadataEntry(metadata, "input_level_dbu", this->hasModelInputLevelDBu, this->modelInputLevelDBu);
+            LoadMetadataEntry(metadata, "output_level_dbu", this->hasModelInputLevelDBu, this->modelOutputLevelDBu);
+        }
+    }
 }

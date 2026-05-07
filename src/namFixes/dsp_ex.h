@@ -21,8 +21,11 @@ namespace toob
     class NeuralAudioDsp
     {
     public:
-        NeuralAudioDsp(::NeuralAudio::NeuralModel *model);
-        NeuralAudioDsp(std::unique_ptr<nam::DSP> &&model, const nam::dspData &dspData,double sampleRate,size_t maxBlockSize, const std::vector<double>&slimmableSizes);
+        NeuralAudioDsp(
+            const std::filesystem::path&path, 
+            uint32_t sampleRate,
+            int minBlockSize,
+            int maxBlockSize);
 
         void Process(const float *input, float *output, size_t numSamples);
 
@@ -36,11 +39,19 @@ namespace toob
         float GetModelOutputLevelDBu();
 
         bool HasSlimmableSizes();
-        const std::vector<double>&  GetSlimmableSizes() const;
+        const std::vector<float>&  GetSlimmableSizes() const;
         void SetSlimmableSize(double value);
 
     private:
+        void InitNamCoreModel(
+            std::unique_ptr<nam::DSP> &&model, 
+            const nam::dspData &dspData, 
+            double sampleRate, 
+            size_t maxBlockSize);
+
+
         void LoadNamCoreMetadata(const nam::dspData &dspData);
+        void LoadNamCoreMetadata(nlohmann::json& jsonModel);
         std::unique_ptr<::NeuralAudio::NeuralModel> neuralAudioModel;
         std::unique_ptr<nam::DSP> namDsp;
 
@@ -50,7 +61,7 @@ namespace toob
         std::vector<std::vector<float>> namExtraOutputBuffers;
         std::vector<float *> namInputBufferPointers;
         std::vector<float *> namOutputBuffersPointers;
-        std::vector<double> slimmableSizes;
+        std::vector<float> slimmableSizes;
 
         bool hasModelGainDb = false;
         float modelGainDb = 0;
