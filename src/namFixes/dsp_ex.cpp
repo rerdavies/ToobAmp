@@ -61,9 +61,26 @@ namespace toob
 
     };
 
+    static float GetClosestSlimmableWeight(const std::vector<float> &slimmableSizes, float modelWeight)
+    {
+        float  bestDifference = std::numeric_limits<float>::max();
+        float  bestValue = 1.0f;
+        if (modelWeight == -1) modelWeight = 1.0f; // default selection is Standard.
+        for (double slimmableSize: slimmableSizes)
+        {
+            double dx = std::abs(slimmableSize-modelWeight);
+            if (dx < bestDifference)
+            {
+                bestDifference = dx;
+                bestValue = slimmableSize;
+            }
+        }
+        return bestValue;
+    }
     void NeuralAudioDsp::InitNamCoreModel(
         std::unique_ptr<nam::DSP> &&model,
         const nam::dspData &dspData,
+        float modelWeight,
         double sampleRate,
         size_t maxBlockSize)
     {
@@ -95,14 +112,29 @@ namespace toob
                 namInputBufferPointers[i] = namExtraOutputBuffers[i - 1].data();
             }
         }
+        
 
         LoadNamCoreMetadata(dspData);
 
-        namDsp->ResetAndPrewarm(sampleRate, (int)maxBlockSize);
+        if (HasSlimmableSizes())
+        {
+            modelWeight = GetClosestSlimmableWeight(this->GetSlimmableSizes(),modelWeight);
+            SetSlimmableSize(modelWeight);
+            this->modelWeight = modelWeight;
+        } else {
+            this->modelWeight = 1.0;
+            namDsp->ResetAndPrewarm(sampleRate, (int)maxBlockSize);
+        }
+    }
+    namespace {
+        nam::Version A2_Version = nam::ParseVersion("0.7.0");
     }
 
     void NeuralAudioDsp::LoadNamCoreMetadata(const nam::dspData &dspData)
     {
+        nam::Version dspVersion = nam::ParseVersion(dspData.version);
+        isA2Model = !(dspVersion < A2_Version);
+
         if (namDsp->HasLoudness())
         {
             this->hasModelLoundessDB = true;
@@ -155,6 +187,15 @@ namespace toob
         return hasModelOutputLevelDBu;
     }
 
+    float NeuralAudioDsp::GetModelWeight() {
+        return this->modelWeight;
+    }
+
+    bool NeuralAudioDsp::IsA2Model()
+    {
+        return this->isA2Model;
+    }
+
     float NeuralAudioDsp::GetModelOutputLevelDBu()
     {
         return modelOutputLevelDBu;
@@ -162,6 +203,7 @@ namespace toob
 
     std::unique_ptr<NeuralAudioDsp> get_dsp_ex(
         const std::filesystem::path config_filename,
+        float modelWeight,
         uint32_t sampleRate,
         int minBlockSize,
         int maxBlockSize)
@@ -172,6 +214,7 @@ namespace toob
         }
         return std::make_unique<NeuralAudioDsp>(
             config_filename,
+            modelWeight,
             sampleRate,
             minBlockSize,
             maxBlockSize
@@ -181,6 +224,7 @@ namespace toob
 
     NeuralAudioDsp::NeuralAudioDsp(
         const std::filesystem::path &config_filename,
+        float modelWeight,
         uint32_t sampleRate,
         int minBlockSize,
         int maxBlockSize)
@@ -207,6 +251,7 @@ namespace toob
                 this->neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(neuralAudioModel);
                 neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
                 LoadNamCoreMetadata(jsonModel);
+                this->modelWeight = -1;
                 return;
             }
         }
@@ -221,7 +266,7 @@ namespace toob
                         std::cout << "Using NAM Core backend." << std::endl;
             #endif
 
-            InitNamCoreModel(std::move(namDsp), dspData, (double)sampleRate, (size_t)maxBlockSize);
+            InitNamCoreModel(std::move(namDsp), dspData, modelWeight,(double)sampleRate, (size_t)maxBlockSize);
             LoadNamCoreMetadata(jsonModel);
             return;
         }
@@ -286,10 +331,11 @@ namespace toob
 
     static void LoadMetadataEntry(nlohmann::json &json, const std::string &name, bool &hasValue, float &value)
     {
-        if (json.is_number())
+        auto&prop = json[name];
+        if (prop.is_number())
         {
             hasValue = true;
-            value = json.get<float>();
+            value = prop.get<float>();
         }
         else
         {
@@ -306,7 +352,7 @@ namespace toob
             LoadMetadataEntry(metadata, "gain", this->hasModelGainDb, this->modelGainDb);
             LoadMetadataEntry(metadata, "loudness", this->hasModelLoundessDB, this->modelLoudnessDB);
             LoadMetadataEntry(metadata, "input_level_dbu", this->hasModelInputLevelDBu, this->modelInputLevelDBu);
-            LoadMetadataEntry(metadata, "output_level_dbu", this->hasModelInputLevelDBu, this->modelOutputLevelDBu);
+            LoadMetadataEntry(metadata, "output_level_dbu", this->hasModelOutputLevelDBu, this->modelOutputLevelDBu);
         }
     }
 }

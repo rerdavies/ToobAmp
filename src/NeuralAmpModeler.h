@@ -67,6 +67,16 @@ namespace toob
         float gain = 0;
         float input_level_dbu = 0;
         float output_level_dbu = 0;
+        bool isA2 = false;
+        float model_weight;
+        size_t slimmable_weights_size = 0;
+        static constexpr size_t MAX_WEIGHTS_SIZE = 16;
+        float slimmable_sizes[MAX_WEIGHTS_SIZE];
+
+        float getSlimmableWeight(size_t index) {
+            if (index > slimmable_weights_size) return 1.0;
+            return slimmable_sizes[index];
+        }
     };
 
 
@@ -118,12 +128,15 @@ namespace toob
 
             kPresetVersion,
 
+            kModelType,  
+            kModelWeight, 
+
             kAudioIn,
             kAudioOut,
             kControlIn,
             kControlOut
         };
-        bool LoadModel(const std::string&filename); // (for tests)
+        bool LoadModel(const std::string&filename, float modelWeight = 1.0f); // (for tests)
 
     private:
         bool requestModelMetdataNotification = false;
@@ -131,10 +144,14 @@ namespace toob
         struct Urids
         {
             void Initialize(NeuralAmpModeler &this_);
-            uint32_t nam__ModelFileName;
+            uint32_t nam__ModelFile;
+            uint32_t nam__ModelFileWithWeight;
+            uint32_t nam__ModelWeight;
+            uint32_t nam__modelSize;
             uint32_t nam__FrequencyResponse;
             uint32_t atom__Path;
             uint32_t atom__String;
+            uint32_t atom__Object;
 
 			LV2_URID patch;
 			LV2_URID patch__Get;
@@ -142,8 +159,8 @@ namespace toob
 			LV2_URID patch__property;
 			LV2_URID patch__value;
 			LV2_URID atom__URID;
-			LV2_URID atom__float;
-			LV2_URID atom__int;
+			LV2_URID atom__Float;
+			LV2_URID atom__Int;
 			LV2_URID units__Frame;
             LV2_URID toob_nam__model_metadata;
 
@@ -176,7 +193,7 @@ namespace toob
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
 
-        void SetModelVolumes_();
+        void SetModelVolumes();
         void SendModelMetadataNotification();
         bool frameSizeErrorGiven = false;
 
@@ -254,8 +271,13 @@ namespace toob
         BooleanInputPort cInputCalibrationMode;
         enum class OutputCalbrationMode { Normalized=0,Calibrated=1,Raw=2};
         EnumeratedInputPort cOutputCalibrationMode { 3};
+
         RangedInputPort cCalibrationValue { -40,+40}; 
         RangedInputPort cPresetVersion { 0, 1000};
+
+        enum class OutputModelType { None=0, A1=1,A2=2};
+        OutputPort cModelType {(float)OutputModelType::None};
+        OutputPort cModelWeight {1.0};
 
         enum ToneStackType {
             Bassman = 0, // matches enum values in .ttl file.
@@ -287,12 +309,12 @@ namespace toob
         int gateOutputUpdateCount = 0;
         bool isActivated = false;
         bool requestFileUpdate = true;
+        bool requestModelWeightUpdate = true;
 
 
         FilterResponse filterResponse;
 
         bool responseGet = false;
-        bool sendFileName = false;
         int64_t responseDelaySamplesMax = 0;
         int64_t responseDelaySamples = 0;
 
@@ -300,7 +322,7 @@ namespace toob
         void HandleBackgroundProcessorEvents();
 
         void HandleBufferChange();
-        void RequestLoad(const char *fileName);
+        void RequestLoad(const char *fileName,float modelWeight);
         // Update tone stack filter designs.
         void UpdateToneStack();
         // Write frequency response for UI.
@@ -320,7 +342,7 @@ namespace toob
         size_t _GetBufferNumFrames() const;
         // Gets a new Neural Amp Model
         // Throws an exception on error.
-        std::unique_ptr<NeuralAudioDsp> _GetNAM(const std::string &dspFile);
+        std::unique_ptr<NeuralAudioDsp> GetNAM(const std::string &dspFile, float modelWeight);
 
         bool _HaveModel() const { return this->mNAM != nullptr; };
         // Prepare the input & output buffers
@@ -360,12 +382,19 @@ namespace toob
 
         // The Neural Amp Model (NAM) actually being used:
         std::unique_ptr<NeuralAudioDsp> mNAM;
+        float mNamModelWeight;
+        void SetForegoundModelWeight(float weight) {
+            mNamModelWeight = weight;
+            cModelWeight.SetValue(weight);
+            this->requestModelWeightUpdate = true;
+        }
         nam_impl::NamCalibrationSettings fgCalibrationSettings;
         nam_impl::NamVolumeAdjustments fgCalibrationFactors;
         NamModelMetadata fgModelMetadata;
 
         // Path to model's config.json or model.nam
         std::string mNAMPath;
+        float mRequestedModelWeight = -1;
 
         std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
     };

@@ -28,6 +28,8 @@ option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # In
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
 
+add_compile_definitions(NAM_ENABLE_A2_FAST)
+
 # NueralAmpModelerCore has a more recent version of Eigen than NeuralAudio does, so 
 # force usage of the NeuralAmpModelerCore version of Eigen. 
 include_directories("${PROJECT_SOURCE_DIR}/modules/NeuralAmpModelerCore/Dependencies/eigen")

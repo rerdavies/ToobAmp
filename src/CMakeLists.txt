@@ -119,6 +119,8 @@ set(NAM_SOURCES
     ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.h
     ../modules/NeuralAmpModelerCore/NAM/wavenet/detail.h
     ../modules/NeuralAmpModelerCore/NAM/wavenet/model.cpp
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.h
+    ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.cpp
     ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.cpp
     ../modules/NeuralAmpModelerCore/NAM/wavenet/model.h
     ../modules/NeuralAmpModelerCore/NAM/wavenet/params.h

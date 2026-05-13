@@ -23,6 +23,7 @@ namespace toob
     public:
         NeuralAudioDsp(
             const std::filesystem::path&path, 
+            float modelWeight,
             uint32_t sampleRate,
             int minBlockSize,
             int maxBlockSize);
@@ -38,6 +39,8 @@ namespace toob
         bool HasModelOutputLevelDBu();
         float GetModelOutputLevelDBu();
 
+        float GetModelWeight();
+        bool IsA2Model();
         bool HasSlimmableSizes();
         const std::vector<float>&  GetSlimmableSizes() const;
         void SetSlimmableSize(double value);
@@ -46,6 +49,7 @@ namespace toob
         void InitNamCoreModel(
             std::unique_ptr<nam::DSP> &&model, 
             const nam::dspData &dspData, 
+            float modelSize,
             double sampleRate, 
             size_t maxBlockSize);
 
@@ -63,6 +67,8 @@ namespace toob
         std::vector<float *> namOutputBuffersPointers;
         std::vector<float> slimmableSizes;
 
+        float modelWeight = -1;
+        bool isA2Model = false;
         bool hasModelGainDb = false;
         float modelGainDb = 0;
         bool hasModelLoundessDB = false;
@@ -76,6 +82,7 @@ namespace toob
 
     std::unique_ptr<NeuralAudioDsp> get_dsp_ex(
         const std::filesystem::path config_filename,
+        float modelSize,
         uint32_t sampleRate,
         int minBlockSize,
         int maxBlockSize);
