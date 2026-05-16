@@ -56,7 +56,7 @@ AudioFileBufferPool::AudioFileBufferPool(size_t channels, size_t bufferSize, siz
 
 static void DBG_ASSERT(const std::string &&message)
 {
-#ifdef DEBUG
+#ifndef NDEBUG
     throw std::runtime_error(message);
 #else
     std::cerr << message << std::endl;

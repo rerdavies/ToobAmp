@@ -52,97 +52,94 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
-    if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        # if (A76_OPTIMIZATION)
-        #     message(STATUS "src: Using Cortex-A76 optimizations.")
-        #     set(CXX_ARCH_FLAGS "-DA76_OPTIMIZATION=1 -mcpu=cortex-a76 -mtune=cortex-a76 -DEIGEN_DEFAULT_L1_CACHE_SIZE=65536" ) # HUGE% compared to no option# raspberry pi 4. cortex-a76
-        # else()
-        #     message(STATUS "src: Using Cortex-A72 optimizations.")
-        #     set(CXX_ARCH_FLAGS "-mcpu=cortex-a72 -mtune=cortex-a72  -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a76
-        # endif()
-    else()
-        # MMX, SSE, SSE2 are enabled by default.
-
-        # Minimum architecture for AVX: May exclude pentium4 mini-pcs, and core2 machines.
-        # set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
-    endif()
-
-    if (!TOOBAMP_PERMISSIVE_COMPILE)
+    set(TOOBAMP_GCC_EXTRA_FLAGS)
+    if(!TOOBAMP_PERMISSIVE_COMPILE)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder ") 
+            set(TOOBAMP_GCC_EXTRA_FLAGS "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder")
         else() # if GCC
-            set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder -Wno-restrict ") 
+            set(TOOBAMP_GCC_EXTRA_FLAGS "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder" "-Wno-restrict")
         endif()
     endif()
+    set(TOOBAMP_GCC_EXTRA_FLAGS ${TOOBAMP_GCC_EXTRA_FLAGS} "-Wno-deprecated-enum-enum-conversion")
 
-    if(WARNINGS_ARE_ERRORS)
-        set(GCC_EXTRA_FLAGS "-Werror ${GCC_EXTRA_FLAGS}")
+
+    # if(TOOBAMP_WARNINGS_ARE_ERRORS)
+    #     set(TOOBAMP_GCC_EXTRA_FLAGS -Werror" ${TOOBAMP_GCC_EXTRA_FLAGS})
+    # endif()
+
+    set(TOOBAMP_CXX_FLAGS_RELEASE ${CXX_ARCH_FLAGS} "-flto=auto" "-fno-fat-lto-objects" "-fvisibility=hidden" "-O3" "-Ofast")
+    set(TOOBAMP_CXX_FLAGS_RELWITHDEBINFO "-DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden -O3 -Ofast")
+    set(TOOBAMP_CXX_FLAGS_DEBUG "-g -Og -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_RELEASE})
+    elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_RELWITHDEBINFO})
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_DEBUG})
     endif()
 
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden ")
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    endif()
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
 
 
+    set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS} ${TOOBAMP_GCC_EXTRA_FLAGS})
 endif()
 
-message(STATUS "src: CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
-message(STATUS "src: CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "src: CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "TOOBAMP_CXX_FLAGS: ${TOOBAMP_CXX_FLAGS}")
 
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions("DEBUG")
+if(USE_NEURAL_MODELER_NAM_CORE)
+    set(NAM_SOURCES
+        namFixes/NoiseGate.cpp
+        namFixes/NoiseGate.h
+        namFixes/NamDSP.cpp
+        namFixes/NamDSP.h
+        namFixes/dsp_ex.cpp namFixes/dsp_ex.h
+
+    )
+else()
+
+    set(NAM_SOURCES
+        namFixes/NoiseGate.cpp
+        namFixes/NoiseGate.h
+        namFixes/NamDSP.cpp
+        namFixes/NamDSP.h
+        namFixes/dsp_ex.cpp namFixes/dsp_ex.h
+
+
+        ../modules/NeuralAmpModelerCore/NAM/model_config.h
+        ../modules/NeuralAmpModelerCore/NAM/slimmable.h
+        ../modules/NeuralAmpModelerCore/NAM/conv1d.h
+        ../modules/NeuralAmpModelerCore/NAM/film.h
+        ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
+        ../modules/NeuralAmpModelerCore/NAM/ring_buffer.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/detail.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/model.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/model.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/params.h
+        ../modules/NeuralAmpModelerCore/NAM/lstm.h
+        ../modules/NeuralAmpModelerCore/NAM/util.h
+        ../modules/NeuralAmpModelerCore/NAM/gating_activations.h
+        ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
+        ../modules/NeuralAmpModelerCore/NAM/convnet.h
+        ../modules/NeuralAmpModelerCore/NAM/conv1d.cpp
+        ../modules/NeuralAmpModelerCore/NAM/container.h
+        ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
+        ../modules/NeuralAmpModelerCore/NAM/registry.h
+        ../modules/NeuralAmpModelerCore/NAM/ring_buffer.h
+        ../modules/NeuralAmpModelerCore/NAM/container.cpp
+        ../modules/NeuralAmpModelerCore/NAM/util.cpp
+        ../modules/NeuralAmpModelerCore/NAM/activations.cpp
+        ../modules/NeuralAmpModelerCore/NAM/version.h
+        ../modules/NeuralAmpModelerCore/NAM/dsp.h
+        ../modules/NeuralAmpModelerCore/NAM/activations.h
+        ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
+        ../modules/NeuralAmpModelerCore/NAM/get_dsp.h
+    )
 endif()
-
-
-
-set(NAM_SOURCES
-    namFixes/NoiseGate.cpp
-    namFixes/NoiseGate.h
-    namFixes/NamDSP.cpp
-    namFixes/NamDSP.h
-    namFixes/dsp_ex.cpp namFixes/dsp_ex.h
-
-
-    ../modules/NeuralAmpModelerCore/NAM/model_config.h
-    ../modules/NeuralAmpModelerCore/NAM/slimmable.h
-    ../modules/NeuralAmpModelerCore/NAM/conv1d.h
-    ../modules/NeuralAmpModelerCore/NAM/film.h
-    ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
-    ../modules/NeuralAmpModelerCore/NAM/ring_buffer.cpp
-    ../modules/NeuralAmpModelerCore/NAM/wavenet
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.h
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/detail.h
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/model.cpp
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.h
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.cpp
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.cpp
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/model.h
-    ../modules/NeuralAmpModelerCore/NAM/wavenet/params.h
-    ../modules/NeuralAmpModelerCore/NAM/lstm.h
-    ../modules/NeuralAmpModelerCore/NAM/util.h
-    ../modules/NeuralAmpModelerCore/NAM/gating_activations.h
-    ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
-    ../modules/NeuralAmpModelerCore/NAM/convnet.h
-    ../modules/NeuralAmpModelerCore/NAM/conv1d.cpp
-    ../modules/NeuralAmpModelerCore/NAM/container.h
-    ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
-    ../modules/NeuralAmpModelerCore/NAM/registry.h
-    ../modules/NeuralAmpModelerCore/NAM/ring_buffer.h
-    ../modules/NeuralAmpModelerCore/NAM/container.cpp
-    ../modules/NeuralAmpModelerCore/NAM/util.cpp
-    ../modules/NeuralAmpModelerCore/NAM/activations.cpp
-    ../modules/NeuralAmpModelerCore/NAM/version.h
-    ../modules/NeuralAmpModelerCore/NAM/dsp.h
-    ../modules/NeuralAmpModelerCore/NAM/activations.h
-    ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
-    ../modules/NeuralAmpModelerCore/NAM/get_dsp.h
-)
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking ")
@@ -270,14 +267,14 @@ add_library(ToobAmpArch SHARED
     NamTonestack/tonestack_dsp.cpp NamTonestack/tonestack_dsp.h
     NamTonestack/ToneStack.cpp NamTonestack/ToneStack.h
     NamTonestack/RecursiveLinearFilter.cpp NamTonestack/RecursiveLinearFilter.h
-    Toob3BandEq.cpp Toob3BandEq.h 
+    Toob3BandEq.cpp Toob3BandEq.h
 
     Filters/PeakingFilter2.cpp Filters/PeakingFilter2.h
     Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
     ParametricEq.cpp ParametricEq.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
-    ToobParametricEq.cpp ToobParametricEq.h 
+    ToobParametricEq.cpp ToobParametricEq.h
 
     NoiseGate.cpp NoiseGate.h
     GainStage.cpp GainStage.h
@@ -350,10 +347,11 @@ add_library(ToobAmpArch SHARED
 target_compile_options(ToobAmpArch
     PUBLIC
     -Wno-deprecated-enum-enum-conversion
-    )
+    ${TOOBAMP_CXX_FLAGS}
+)
 
 if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-    if(A76_OPTIMIZATION)
+    if(TOOBAMP_A76_OPTIMIZATION)
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a76")
     else()
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a72")
@@ -1043,9 +1041,9 @@ if(TOOB_BUILD_UI)
     )
 
     install(TARGETS ToobAmpUI
-    LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-)
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    )
 
 endif()
 # Requires update of wavnet_t.hpp to synch with latest NAM Core fork.
@@ -1349,7 +1347,7 @@ add_executable(VactrolTest
     VactrolTest.cpp
     LsNumerics/Vactrol.hpp
     VactrolDsp.hpp
-)    
+)
 
 add_executable(BufferPoolTest
     BufferPoolTest.cpp
