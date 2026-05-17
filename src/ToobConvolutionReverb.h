@@ -64,6 +64,7 @@ namespace toob
         float width = -999;
         float pan = -9999;
         float maxTime = 30.0;
+        int normalizationType = 0; // 0 = RMS, 1 = Peak
     };
 
 	class ToobConvolutionReverbBase : public Lv2PluginWithState
@@ -123,6 +124,7 @@ namespace toob
 			TIME,
 			DIRECT_MIX,
 			PREDELAY,
+			NORMALIZATION_TYPE,
 			LOADING_STATE,
 			AUDIO_INL,
 			AUDIO_OUTL,
@@ -373,6 +375,7 @@ namespace toob
 		const float *pPredelayObsolete = nullptr;
 
 		const float *pPredelayNew = nullptr;
+		const float *pNormalizationType = nullptr;
 		const float *pStartOffset = nullptr;
 		const float *pStretch = nullptr;
 		const float *pDecay = nullptr;
