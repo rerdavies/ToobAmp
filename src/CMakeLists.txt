@@ -52,24 +52,26 @@ message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
-    set(TOOBAMP_GCC_EXTRA_FLAGS)
-    if(!TOOBAMP_PERMISSIVE_COMPILE)
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            set(TOOBAMP_GCC_EXTRA_FLAGS "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder")
-        else() # if GCC
-            set(TOOBAMP_GCC_EXTRA_FLAGS "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder" "-Wno-restrict")
-        endif()
+    set(TOOBAMP_GCC_ERROR_CONFIG)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        set(TOOBAMP_GCC_ERROR_CONFIG "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder" 
+          "-Wno-deprecated-enum-enum-conversion")
+    else() # if GCC
+        set(TOOBAMP_GCC_ERROR_CONFIG "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder"
+            "-Wno-restrict" "-Wno-deprecated-enum-enum-conversion")
     endif()
-    set(TOOBAMP_GCC_EXTRA_FLAGS ${TOOBAMP_GCC_EXTRA_FLAGS} "-Wno-deprecated-enum-enum-conversion")
+    if(!TOOBAMP_PERMISSIVE_COMPILE)
+        set(TOOBAMP_GCC_ERROR_CONFIG ${TOOBAMP_GCC_ERROR_CONFIG} "-Werror")
+    endif()
 
 
     # if(TOOBAMP_WARNINGS_ARE_ERRORS)
-    #     set(TOOBAMP_GCC_EXTRA_FLAGS -Werror" ${TOOBAMP_GCC_EXTRA_FLAGS})
+    #     set(TOOBAMP_GCC_ERROR_CONFIG -Werror" ${TOOBAMP_GCC_ERROR_CONFIG})
     # endif()
 
-    set(TOOBAMP_CXX_FLAGS_RELEASE ${CXX_ARCH_FLAGS} "-flto=auto" "-fno-fat-lto-objects" "-fvisibility=hidden" "-O3" "-Ofast")
-    set(TOOBAMP_CXX_FLAGS_RELWITHDEBINFO "-DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden -O3 -Ofast")
-    set(TOOBAMP_CXX_FLAGS_DEBUG "-g -Og -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
+    set(TOOBAMP_CXX_FLAGS_RELEASE ${CXX_ARCH_FLAGS} "-fvisibility=hidden")
+    set(TOOBAMP_CXX_FLAGS_RELWITHDEBINFO "-DRELWITHDEBINFO --fvisibility=hidden")
+    set(TOOBAMP_CXX_FLAGS_DEBUG "")
     if(CMAKE_BUILD_TYPE STREQUAL "Release")
         set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_RELEASE})
     elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
@@ -78,9 +80,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_DEBUG})
     endif()
 
-
-
-    set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS} ${TOOBAMP_GCC_EXTRA_FLAGS})
+    set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS} ${TOOBAMP_GCC_ERROR_CONFIG})
 endif()
 
 message(STATUS "TOOBAMP_CXX_FLAGS: ${TOOBAMP_CXX_FLAGS}")
@@ -346,7 +346,6 @@ add_library(ToobAmpArch SHARED
 # Eigen headers give deprecated-enum-enum-conversion error with GCC 12 and 13. 
 target_compile_options(ToobAmpArch
     PUBLIC
-    -Wno-deprecated-enum-enum-conversion
     ${TOOBAMP_CXX_FLAGS}
 )
 

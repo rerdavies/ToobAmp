@@ -55,38 +55,46 @@ add_compile_options("-DDISABLE_DENORMALS")
 set(USE_NEURAL_MODELER_NAM_CORE ON)
 set(TOOBAMP_COMPILE_OPTIONS "")
 
+# Force all submodules to use the same optimization settings. 
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options("-O0" "-g" "-DNDEBUG")
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    add_compile_options("-O3" "-Ofast" "-DNDEBUG")
+endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+    add_compile_options("-g" "-O3" "-Ofast" "-DNDEBUG")
+endif()
+
 # Force architecture for all submodule builds.
-if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    #RelWithDebugInfo is -Oe
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO TYPE STRING FORCE VALUE -O3 -Ofast -g -DNDEBUG)
 
-    # Match NeuralAudio compile options
-    set(TOOBAMP_COMPILE_OPTIONS "-flto=auto -fno-fat-lto-objects -O3 -Ofast")
+# Match NeuralAudio compile options
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set(CMAKE_LINKER_FLAG)
+    if(TOOBAMP_NATIVE_AARCH_OPTIMIZATION)
+        add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
+    elseif(TOOBAMP_A76_OPTIMIZATION)
+        message(STATUS "Using Cortex-A76/Pi 5 optimizations")
+        add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+    else()
+        message(STATUS "Using Cortex-A72/Pi 4 optimizations")
+        add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
+    endif()
+elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
 
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-        set(CMAKE_LINKER_FLAG)
-        if(TOOBAMP_NATIVE_AARCH_OPTIMIZATION)
-            add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
-        elseif(TOOBAMP_A76_OPTIMIZATION)
-            message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-            add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
-        else()
-            message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-            add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
-        endif()
-    elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
-
-        if(TOOBAMP_NATIVE_X64_OPTIMIZATIONS)
-            message(STATUS "Using Native x86-64 optimizations")
-            add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
-        elseif(TOOBAMP_AVX_X64_OPTIMIZATIONS)
-            message(STATUS "Using AVX x86-64 optimizations")
-            add_compile_options(-march=x86-64-v3)
-        else()
-            message(STATUS "Not using AVX x86-64 optimizations")
-            add_compile_options(-march=x86-64-v2)
-        endif()
+    if(TOOBAMP_NATIVE_X64_OPTIMIZATIONS)
+        message(STATUS "Using Native x86-64 optimizations")
+        add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
+    elseif(TOOBAMP_AVX_X64_OPTIMIZATIONS)
+        message(STATUS "Using AVX x86-64 optimizations")
+        add_compile_options("-march=x86-64-v3")
+    else()
+        message(STATUS "Not using AVX x86-64 optimizations")
+        add_compile_options("-march=x86-64-v2")
     endif()
 endif()
 
