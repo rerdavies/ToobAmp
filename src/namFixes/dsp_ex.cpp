@@ -126,6 +126,9 @@ namespace toob
 
             loadNeuralAudioMetadata();
 
+            #ifdef TOOB_OPTIMIZATION_FLAGS
+            std::cout << TOOB_OPTIMIZATION_FLAGS << " ";
+            #endif
             std::cout << 
                 "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio");
             if (neuralAudioModel->HasQualityScaling())

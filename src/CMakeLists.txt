@@ -152,6 +152,8 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 add_library(ToobAmpArch SHARED
     ${NAM_SOURCES}
 
+    ProcessorCheck.hpp ProcessorCheck.cpp 
+
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
     ToobNoiseGate.cpp ToobNoiseGate.hpp
 

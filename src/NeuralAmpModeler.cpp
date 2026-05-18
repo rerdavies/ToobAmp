@@ -57,6 +57,7 @@ SOFTWARE.
 #include "LsNumerics/Denorms.hpp"
 #include <Eigen/Dense>
 #include <filesystem>
+#include "ProcessorCheck.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -213,6 +214,7 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
+    ProcessorCheck();
     CheckValid();
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);

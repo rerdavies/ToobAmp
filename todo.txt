@@ -1,4 +1,4 @@
-Sort out AVX/AVX512 build options.
+- Runtime load for X64 CPUs. 
 
 
 Followup on A2 missing calibration metadata in A2 models.

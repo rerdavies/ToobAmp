@@ -1,84 +1,54 @@
-A2 Profiling Round
----
+Model Benchmark results (Processing 100s of audio)
 
-AMD RYZEN Mike's NAM "-march=x86-64-v2"
+Results are about +/- 0.1.
 
-2026-05-18 16:14:57.849 INF: Updater: Next update check at 2026-05-18 16:35:24
+
+---------------- AMD Rizen AVX -march=x86-64-v3 -------------------------------------------
+
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v3 Load mode: NAM Core A2 weight=1
+Ellapsed time: 4.274s
+
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v3 Load mode: NAM Core A2 weight=0
+Ellapsed time: 5.061s
+
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v3 Load mode: NeuralAudio A1
+Ellapsed time: 3.797s
+
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-Ellapsed time: 6.982s
+x86-64-v3 Mike's NAM A1
+Ellapsed time: 3.793s
 
-AMD RYZEN Mike's NAM "-march=x86-64-v3"
+---------------- AMD Rizen SSE 4.2 -march=x86-64-v2 -------------------------------------------
 
-2026-05-18 16:03:35.378 INF: Updater: Next update check at 2026-05-18 16:35:24
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-Ellapsed time: 3.698s
+x86-64-v2 Mike's NAM A1
+Ellapsed time: 7.296s
 
-AMD RYZEN Mike's NAM "-march=native"
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v2 Load mode: NAM Core A2 weight=0
+Ellapsed time: 5.444s
 
-2026-05-18 16:06:48.618 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v2 Load mode: NAM Core A2 weight=1
+Ellapsed time: 6.972s
+
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v2 Load mode: NeuralAudio A1
+Ellapsed time: 6.997s
+
+----------------- Mike's NAM with default project optimizations  --------------------
+
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-Ellapsed time: 3.781s
-
-AMD RYZEN Mike's NAM "-march=native" "-mtune=native"
-
-2026-05-18 16:09:31.955 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-Ellapsed time: 3.744s
+x86_64 Mike's NAM A1 Model
+Ellapsed time: 7.119s
 
 
-AMD RYZEN "-mcpu=native" "-march=native" "-mtune=native" (AVX512?)
-
-2026-05-18 15:44:01.042 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NAM Core A2 weight=1
-Ellapsed time: 4.823s
-
-2026-05-18 15:39:23.308 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NAM Core A2 weight=0
-Ellapsed time: 4.806s
-
-2026-05-18 15:42:23.238 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NeuralAudio
-Ellapsed time: 3.826s
 
 
-AMD RYZEN Native (AVX no 512) -march=x86-64-v3
-
-2026-05-18 15:50:12.216 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NAM Core A2 weight=1
-Ellapsed time: 4.236s
-
-2026-05-18 15:53:13.645 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NAM Core A2 weight=0
-Ellapsed time: 4.69s
-
-2026-05-18 15:54:03.125 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NeuralAudio
-Ellapsed time: 3.682s
-
-
-AMD Ryzen
-
-2026-05-18 14:04:05.299 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-Ellapsed time: 6.989s
-
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NeuralAudio
-Ellapsed time: 6.412s
-
-2026-05-18 14:07:06.747 INF: Updater: Next update check at 2026-05-18 16:35:24
-uri: http://two-play.com/plugins/toob-nam
-Load mode: NAM
-Ellapsed time: 6.785s
-
-
-Pi 4
+---------------- Pi 4 --------------------------------------------------------
 
     2026-05-15 01:33:22.531 INF: Updater: Next update check at 2026-05-15 08:05:37
     uri: http://two-play.com/plugins/toob-nam (A2 Large)

@@ -16,8 +16,22 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(TOOBAMP_NATIVE_AARCH_OPTIMIZATION "Optimize for native AARCH" OFF)
 option(TOOBAMP_A76_OPTIMIZATION "Optimize for cortex-a76 (arm64 builds only)" OFF)
-option(TOOBAMP_NATIVE_X64_OPTIMIZATIONS "Optimize native processor options (x86_64 builds only)" ON)
-option(TOOBAMP_AVX_X64_OPTIMIZATIONS "Optimize for processor with AVXprocessor options (x86_64 builds only)" OFF)
+set(TOOB_AMD_OPTIMIZATIONS "AVX" CACHE STRING "AMD/x86 optimization profile: DEFAULT, SSE42, AVX, AVX-512")
+
+# TOOB_AMD_OPTIMIZATIONS: 
+#  "DEFAULT" All x64-capable machines.
+#  "SSE42" for maximum compatibility. Intel since 2009; AMD since 2012.
+#   "AVX" for best performance on modern AMD CPUs. Intel since 2015, AMD and Atom processors since 2017.
+#   "AVX-512" is not currently recommended, as it often performs less well than AVX.
+set_property(CACHE TOOB_AMD_OPTIMIZATIONS PROPERTY STRINGS "DEFAULT" "SSE42" "AVX" "AVX-512")
+set(_TOOB_AMD_OPT_VALUES "DEFAULT" "SSE42" "AVX" "AVX-512") 
+list(FIND _TOOB_AMD_OPT_VALUES "${TOOB_AMD_OPTIMIZATIONS}" _TOOB_AMD_OPT_INDEX)
+if(_TOOB_AMD_OPT_INDEX EQUAL -1)
+    message(FATAL_ERROR "Invalid TOOB_AMD_OPTIMIZATIONS='${TOOB_AMD_OPTIMIZATIONS}'. Allowed values: DEFAULT, SSE42, AVX, AVX-512")
+endif()
+unset(_TOOB_AMD_OPT_VALUES)
+unset(_TOOB_AMD_OPT_INDEX)
+
 option(TOOBAMP_PERMISSIVE_COMPILE "Enable permissive compile options (warnings are not errors)" OFF)
 
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
@@ -28,6 +42,8 @@ option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # In
 
 
 add_compile_definitions(NAM_SAMPLE_FLOAT=1)
+
+set_property(CACHE TOOB_AMD_OPTIMIZATIONS PROPERTY STRINGS "DEFAULT" "SSE42" "AVX" "AVX-512")
 
 add_compile_definitions(NAM_ENABLE_A2_FAST)
 
@@ -85,21 +101,33 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
         elseif(TOOBAMP_A76_OPTIMIZATION)
             message(STATUS "Using Cortex-A76/Pi 5 optimizations")
             add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"cortex-a76\")
         else()
             message(STATUS "Using Cortex-A72/Pi 4 optimizations")
             add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"cortex-a72\")
         endif()
     elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
 
-        if(TOOBAMP_NATIVE_X64_OPTIMIZATIONS)
-            message(STATUS "Using Native x86-64 optimizations")
-            add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
-        elseif(TOOBAMP_AVX_X64_OPTIMIZATIONS)
+        if(TOOB_AMD_OPTIMIZATIONS STREQUAL "SSE42")
+            message(STATUS "Using SSE4.2 x86-64 optimizations")
+            add_compile_options("-march=x86-64-v2")
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"x86-64-v2\")
+        elseif(TOOB_AMD_OPTIMIZATIONS STREQUAL "AVX")
             message(STATUS "Using AVX x86-64 optimizations")
             add_compile_options("-march=x86-64-v3")
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"x86-64-v3\")
+        elseif(TOOB_AMD_OPTIMIZATIONS STREQUAL "AVX-512")
+            message(STATUS "Using AVX-512 x86-64 optimizations")
+            add_compile_options("-march=x86-64-v4")
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"x86-64-v4\")
+        elseif(TOOB_AMD_OPTIMIZATIONS STREQUAL "DEFAULT")
+            message(STATUS "Using default x86-64 optimizations")
+             # default compile options = -march="x86-64": SSE, and SSE2 only
+            add_compile_definitions(TOOB_OPTIMIZATION_FLAGS=\"default\")
+             
         else()
-            message(STATUS "Not using AVX x86-64 optimizations")
-            add_compile_options("-march=x86-64-v2")
+            message(FATAL_ERROR "Invalid TOOB_AMD_OPTIMIZATIONS='${TOOB_AMD_OPTIMIZATIONS}'. Allowed values: DEFAULT, SSE42, AVX, AVX-512")
         endif()
     endif()
 endif()
