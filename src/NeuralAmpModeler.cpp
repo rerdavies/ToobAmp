@@ -205,7 +205,7 @@ NeuralAmpModeler::NeuralAmpModeler(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2PluginWithState(rate, bundle_path, features),
+    : super(rate, bundle_path, features),
       rate(rate),
       mInputPointers(nullptr),
       mOutputPointers(nullptr),
@@ -213,6 +213,7 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
+    CheckValid();
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);
 #if NAM_RMS_METER
@@ -221,7 +222,9 @@ NeuralAmpModeler::NeuralAmpModeler(
 
     mNAMPath.reserve(MAX_NAM_FILENAME + 1);
 
-    urids.Initialize(*this);
+    CheckValid();
+    namUris.Initialize(*this);
+    CheckValid();
 
     this->mNoiseGateTrigger.AddListener(&mNoiseGateGain);
     // update gate output 15 times a second.
@@ -245,8 +248,6 @@ void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
     atom__String = this_.MapURI(LV2_ATOM__String);
     atom__Object = this_.MapURI(LV2_ATOM__Object);
     nam__ModelFile = this_.MapURI("http://two-play.com/plugins/toob-nam#modelFile");
-    nam__ModelFileWithWeight = this_.MapURI("http://two-play.com/plugins/toob-nam#modelFileWithWeight");
-    nam__ModelWeight = this_.MapURI("http://two-play.com/plugins/toob-nam#modelFileWeight");
     nam__modelSize = this_.MapURI("http://two-play.com/plugins/toob-nam#modelSize");
     nam__FrequencyResponse = this_.MapURI("http://two-play.com/plugins/toob-nam#FrequencyResponse");
     patch = this_.MapURI(LV2_PATCH_URI);
@@ -341,8 +342,7 @@ NeuralAmpModeler::OnSaveLv2State(
         return LV2_State_Status::LV2_STATE_SUCCESS; // not-set => "". Avoids assuming that hosts can handle a "" path.
     }
     std::string abstractPath = this->UnmapFilename(features, this->mNAMPath.c_str());
-    store(handle, this->urids.nam__ModelFile, abstractPath.c_str(), abstractPath.length() + 1, urids.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
-    store(handle, this->urids.nam__ModelWeight, &mRequestedModelWeight, sizeof(mRequestedModelWeight), urids.atom__Float, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    store(handle, this->namUris.nam__ModelFile, abstractPath.c_str(), abstractPath.length() + 1, namUris.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
@@ -428,30 +428,14 @@ void NeuralAmpModeler::SetModel()
         {
             fgModelMetadata.output_level_dbu = 0;
         }
-        fgModelMetadata.isA2 = mNAM->IsA2Model();
-        for (size_t i = 0; i < fgModelMetadata.MAX_WEIGHTS_SIZE; ++i)
-        {
-            fgModelMetadata.slimmable_sizes[i] = 0;
-        }
-        if (mNAM->HasSlimmableSizes())
-        {
-            fgModelMetadata.slimmable_weights_size = mNAM->GetSlimmableSizes().size();
-            size_t length = mNAM->GetSlimmableSizes().size();
-            if (length > fgModelMetadata.MAX_WEIGHTS_SIZE) {
-                length = fgModelMetadata.MAX_WEIGHTS_SIZE;
-            }
-            for (size_t i = 0; i < length; ++i)
-            {
-                fgModelMetadata.slimmable_sizes[i] = mNAM->GetSlimmableSizes()[i];
-            }
-        } else {
-            fgModelMetadata.slimmable_weights_size = 0;
-        }
-
-
-        cModelType.SetValue((float)(fgModelMetadata.isA2 ? OutputModelType::A2: OutputModelType::A1));
+        fgModelMetadata.hasSlimmableSizes = mNAM? mNAM->HasSlimmableSizes(): false;
+        fgModelMetadata.model_type = (OutputModelType)(int)(mNAM->GetModelType());
         fgModelMetadata.model_weight = mNAM->GetModelWeight();
-        cModelWeight.SetValue(fgModelMetadata.model_weight);
+
+        cCurrentModelWeight.SetValue(fgModelMetadata.model_weight);
+        cModelType.SetValue((float)fgModelMetadata.model_type);
+        fgModelMetadata.model_weight = mNAM->GetModelWeight();
+        cCurrentModelWeight.SetValue(fgModelMetadata.model_weight);
 
         if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
         {
@@ -485,34 +469,30 @@ NeuralAmpModeler::OnRestoreLv2State(
     const LV2_Feature *const *features)
 {
     std::string modelFileName;
-    float modelFileWeight = 1.0f;
+    //float modelFileWeight = 1.0f;
 
     {
         size_t size;
         uint32_t type;
         uint32_t flags;
 
-        const void *data = (*retrieve)(handle, urids.nam__ModelFile, &size, &type, &flags);
+        const void *data = (*retrieve)(handle, namUris.nam__ModelFile, &size, &type, &flags);
         if (data)
         {
-            if (type != this->urids.atom__Path && type != this->urids.atom__String)
+            if (type != this->namUris.atom__Path && type != this->namUris.atom__String)
             {
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             modelFileName = MapFilename(features, (const char *)data, nullptr);
         }
-        data = (*retrieve)(handle, urids.nam__ModelWeight, &size, &type, &flags);
-        if (data)
-        {
-            if (type != this->urids.atom__Float)
-            {
-                return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
-            }
-            modelFileWeight = *(float*)data;
-        }
         if (modelFileName.length() != 0)
         {
-            RequestLoad(modelFileName.c_str(),modelFileWeight); 
+            float weight = -1;
+            if (this->isActivated)
+            {
+                weight = cQuality.GetValue();
+            }
+            RequestLoad(modelFileName.c_str(),weight); 
         }
     }
 
@@ -623,6 +603,13 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
     case EParams::kOutputGain:
         cOutputGain.SetData(data);
         break;
+    case EParams::kModelWeight:
+        cQuality.SetData(data);
+        break;
+    case EParams::kCurrentModelWeight:
+        cCurrentModelWeight.SetData(data);
+        break;
+
     case EParams::kNoiseGateThreshold:
         cNoiseGateThreshold.SetData(data);
         break;
@@ -659,9 +646,6 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
 
     case EParams::kModelType:
         cModelType.SetData(data);
-        break;
-    case EParams::kModelWeight:
-        cModelWeight.SetData(data);
         break;
 
 
@@ -724,6 +708,7 @@ void NeuralAmpModeler::Activate()
         this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
     }
 
+    this->mRequestedModelWeight = cQuality.GetValue();
     LoadModel(this->mNAMPath,this->mRequestedModelWeight);
 }
 void NeuralAmpModeler::Run(uint32_t n_samples)
@@ -736,14 +721,7 @@ void NeuralAmpModeler::Run(uint32_t n_samples)
     if (requestFileUpdate)
     {
         requestFileUpdate = false;
-        this->PutPatchPropertyPath(0, urids.nam__ModelFile, mNAMPath.c_str());
-    }
-    if (requestModelWeightUpdate) 
-    {
-        requestModelWeightUpdate = false;
-        {
-            this->PutPatchProperty(0, urids.nam__ModelWeight,mNamModelWeight);
-        }
+        this->PutPatchPropertyPath(0, namUris.nam__ModelFile, mNAMPath.c_str());
     }
     if (requestModelMetdataNotification)
     {
@@ -988,6 +966,7 @@ std::unique_ptr<NeuralAudioDsp> NeuralAmpModeler::GetNAM(const std::string &mode
                                                  (uint32_t)getRate(),
                                                  (int)(this->GetBuffSizeOptions().minBlockLength),
                                                  (int)(this->GetBuffSizeOptions().maxBlockLength));
+    nam->SetSlimmableSize(modelWeight);
     return nam;
 }
 
@@ -1128,55 +1107,23 @@ void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, c
 void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 {
 
-    if (propertyUrid == urids.nam__ModelFile && (value->type == urids.atom__Path || value->type == urids.atom__String))
+    if (propertyUrid == namUris.nam__ModelFile && (value->type == namUris.atom__Path || value->type == namUris.atom__String))
     {
         const char *modelFileName = ((const char *)value) + sizeof(LV2_Atom);
-        RequestLoad(modelFileName, -1.0);
-    }
-    else if (propertyUrid == urids.nam__ModelWeight  && (value->type == urids.atom__Float))
-    {
-        float modelWeight = ((const LV2_Atom_Float*)value)->body;
-        RequestLoad(mNAMPath.c_str() , modelWeight);
-    }
-    else if (propertyUrid == urids.nam__ModelFileWithWeight && (value->type == urids.atom__Object))
-    {
-        const LV2_Atom_Object *obj = (const LV2_Atom_Object *)value;
-        const char *modelFileName = nullptr;
-        float modelSize = 1.0f;
-
-        LV2_ATOM_OBJECT_FOREACH(obj, prop)
-        {
-            if (prop->key == urids.nam__ModelFile &&
-                (prop->value.type == urids.atom__Path || prop->value.type == urids.atom__String))
-            {
-                modelFileName = (const char *)(&prop->value + 1);
-            }
-            if (prop->key == (prop->value.type == urids.atom__Path || prop->value.type == urids.atom__Path))
-            {
-                modelFileName = (const char *)(&prop->value + 1);
-            }
-            else if (prop->key == urids.nam__modelSize && prop->value.type == urids.atom__Float)
-            {
-                modelSize = ((const LV2_Atom_Float *)&prop->value)->body;
-            }
-        }
-        if (modelFileName)
-        {
-            RequestLoad(modelFileName, modelSize);
-        }
+        RequestLoad(modelFileName, cQuality.GetValue());
     }
 }
 void NeuralAmpModeler::OnPatchGet(LV2_URID propertyUrid)
 {
-    if (propertyUrid == this->urids.nam__ModelFile)
+    if (propertyUrid == this->namUris.nam__ModelFile)
     {
         this->requestFileUpdate = true;
     }
-    else if (propertyUrid == this->urids.nam__FrequencyResponse)
+    else if (propertyUrid == this->namUris.nam__FrequencyResponse)
     {
         this->responseGet = true;
     }
-    else if (propertyUrid == this->urids.toob_nam__model_metadata)
+    else if (propertyUrid == this->namUris.toob_nam__model_metadata)
     {
         this->requestModelMetdataNotification = true;
     }
@@ -1209,14 +1156,14 @@ void NeuralAmpModeler::WriteFrequencyResponse()
     lv2_atom_forge_frame_time(&outputForge, 0);
 
     LV2_Atom_Forge_Frame objectFrame;
-    lv2_atom_forge_object(&outputForge, &objectFrame, 0, urids.patch__Set);
+    lv2_atom_forge_object(&outputForge, &objectFrame, 0, namUris.patch__Set);
 
-    lv2_atom_forge_key(&outputForge, urids.patch__property);
-    lv2_atom_forge_urid(&outputForge, urids.nam__FrequencyResponse);
-    lv2_atom_forge_key(&outputForge, urids.patch__value);
+    lv2_atom_forge_key(&outputForge, namUris.patch__property);
+    lv2_atom_forge_urid(&outputForge, namUris.nam__FrequencyResponse);
+    lv2_atom_forge_key(&outputForge, namUris.patch__value);
 
     LV2_Atom_Forge_Frame vectorFrame;
-    lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), urids.atom__Float);
+    lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), namUris.atom__Float);
     if (this->toneStackType == ToneStackType::Baxandall)
     {
         lv2_atom_forge_float(&outputForge, 30.0f);
@@ -1259,7 +1206,6 @@ void NeuralAmpModeler::RequestLoad(const char *fileName, float modelWeight)
     this->mNAMPath = fileName;
     mRequestedModelWeight = modelWeight;
     this->requestFileUpdate = true;
-    this->requestModelWeightUpdate = true;
     if (schedule)
     {
 
@@ -1527,15 +1473,9 @@ void NeuralAmpModeler::SendModelMetadataNotification()
     values[TOOB_NAM_METADATA_OFFSETS::loudness] = fgModelMetadata.loudness;
     values[TOOB_NAM_METADATA_OFFSETS::input_level_dbu] = fgModelMetadata.input_level_dbu;
     values[TOOB_NAM_METADATA_OFFSETS::output_level_dbu] = fgModelMetadata.output_level_dbu;
-    values[TOOB_NAM_METADATA_OFFSETS::is_a2] = fgModelMetadata.isA2 ? 1.0f:0.0f;
-    values[TOOB_NAM_METADATA_OFFSETS::model_weight] = fgModelMetadata.model_weight;
-    values[TOOB_NAM_METADATA_OFFSETS::slimmable_weights_size] = (float)(fgModelMetadata.slimmable_weights_size);
+    values[TOOB_NAM_METADATA_OFFSETS::has_slimmable_sizes] = fgModelMetadata.hasSlimmableSizes ? 1.0f:0.0f;
+    values[TOOB_NAM_METADATA_OFFSETS::current_model_weight] = fgModelMetadata.model_weight;
+    values[TOOB_NAM_METADATA_OFFSETS::model_type] = (float)(int)fgModelMetadata.model_type;
 
-
-    for (size_t i = 0; i < fgModelMetadata.slimmable_weights_size; ++i)
-    {
-        values[TOOB_NAM_METADATA_OFFSETS::slimmable_weights+i] = fgModelMetadata.slimmable_sizes[i];
-    }
-
-    this->PutPatchProperty(0, this->urids.toob_nam__model_metadata, values.size(), values.data());
+    this->PutPatchProperty(0, this->namUris.toob_nam__model_metadata, values.size(), values.data());
 }

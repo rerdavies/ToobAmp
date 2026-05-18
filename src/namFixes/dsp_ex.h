@@ -11,13 +11,18 @@
 #include <memory>
 
 #include "NeuralAudio/NeuralModel.h"
-#include "NeuralAmpModelerCore/Dependencies/nlohmann/json.hpp"
-#include "NeuralAmpModelerCore/NAM/dsp.h"
 
 namespace toob
 {
 
 
+    enum class NamModelType 
+    {
+        None = 0, 
+        A1 = 1,
+        A2 = 2,
+        AidaX = 3,
+    };
     class NeuralAudioDsp
     {
     public:
@@ -38,40 +43,25 @@ namespace toob
         float GetModelInputLevelDBu();
         bool HasModelOutputLevelDBu();
         float GetModelOutputLevelDBu();
-
+        NamModelType GetModelType();
         float GetModelWeight();
-        bool IsA2Model();
         bool HasSlimmableSizes();
-        const std::vector<float>&  GetSlimmableSizes() const;
         void SetSlimmableSize(double value);
+        void Prewarm();
 
     private:
-        void InitNamCoreModel(
-            std::unique_ptr<nam::DSP> &&model, 
-            const nam::dspData &dspData, 
-            float modelSize,
-            double sampleRate, 
-            size_t maxBlockSize);
+        void loadMetadataProperty(const char*name, bool &hasValue, float &value);
+        void loadNeuralAudioMetadata();
 
-
-        void LoadNamCoreMetadata(const nam::dspData &dspData);
-        void LoadNamCoreMetadata(nlohmann::json& jsonModel);
         std::unique_ptr<::NeuralAudio::NeuralModel> neuralAudioModel;
-        std::unique_ptr<nam::DSP> namDsp;
 
-        std::vector<float> namInputBuffer;
-        std::vector<std::vector<float>> namExtraInputBuffers;
-        std::vector<float> namOutputBuffer;
-        std::vector<std::vector<float>> namExtraOutputBuffers;
-        std::vector<float *> namInputBufferPointers;
-        std::vector<float *> namOutputBuffersPointers;
-        std::vector<float> slimmableSizes;
 
+        NamModelType modelType = NamModelType::None;
         float modelWeight = -1;
-        bool isA2Model = false;
+        bool hasSlimmableSizes = false;
         bool hasModelGainDb = false;
         float modelGainDb = 0;
-        bool hasModelLoundessDB = false;
+        bool hasModelLoudnessDB = false;
         float modelLoudnessDB = 0;
         bool hasModelInputLevelDBu = false;
         float modelInputLevelDBu = 0;

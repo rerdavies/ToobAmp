@@ -33,7 +33,11 @@
 
 #include "../LsNumerics/LsMath.hpp"
 
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
+
 using namespace toob;
+
 
 namespace
 {
@@ -87,7 +91,7 @@ namespace
     {
         RecordingStoppedMessage(const char *filename) : BufferMessage(MessageType::RecordingStopped, sizeof(StopRecordingMessage))
         {
-            strncpy(this->filename, filename, sizeof(this->filename));
+            strncpy(this->filename, filename, sizeof(this->filename)-1);
             this->size = sizeof(RecordingStoppedMessage) + strlen(filename) - sizeof(filename) + 1;
             this->size = (this->size + 3) & (~3);
         }
@@ -164,7 +168,7 @@ namespace
             {
                 throw std::runtime_error("Filename too long.");
             }
-            std::strncpy(this->filename, fileName.c_str(), sizeof(filename));
+            std::strncpy(this->filename, fileName.c_str(), sizeof(filename)-1);
             this->size = sizeof(ToobStartRecordingMessage) + fileName.length() - sizeof(filename) + 1;
             this->size = (size + 3) & (~3);
         }
@@ -538,7 +542,7 @@ void Lv2AudioFileProcessor::Activate()
             bgStopPlaying();
             bgCloseTempFile();
 
-            FinishedMessage finishedCommand;
+            FinishedMessage finishedCommand {};
             this->fromBackgroundQueue.write_packet(sizeof(FinishedMessage), (uint8_t *)&finishedCommand);
         });
 }

@@ -46,26 +46,6 @@ toobNam:modelFile
 	mod:fileTypes "nam,nammodel";
     rdfs:range atom:Path.
 
-toobNam:modelFileWithWeight
-        a lv2:Parameter;
-        rdfs:label "Model";
-	    mod:fileTypes "nam,nammodel";
-        rdfs:range [
-            a atom:Object ;
-            lv2:property [
-                lv2:symbol "modelFile" ;
-                rdfs:range atom:Path
-            ] , [
-                lv2:symbol "modelSize" ;
-                rdfs:range atom:Float
-            ]
-        ].
-
-toobNam:modelWeight
-        a lv2:Parameter;
-        rdfs:label "Model Size";
-	    mod:fileTypes "nam,nammodel";
-        rdfs:range  atom:Float.
 
 
 toobNam:eqGroup
@@ -219,9 +199,9 @@ under the following license.
         lv2:optionalFeature lv2:hardRTCapable;
 
         patch:readable 
-                toobNam:modelFile, toobNam:modelWeight;
+                toobNam:modelFile;
         patch:writable 
-                toobNam:modelFile, toobNam:modelWeight,toobNam:modelFileWithWeight;
+                toobNam:modelFile;
 
         lv2:extensionData state:interface,
                 work:interface;
@@ -260,6 +240,18 @@ under the following license.
                 lv2:ControlPort ;
 
                 lv2:index 2;
+                lv2:symbol "modelSize" ;
+                lv2:name "Quality";
+                lv2:default 0.0 ;
+                lv2:minimum 0.0;
+                lv2:maximum 1.0;
+                rdfs:comment "Model quality for NAM A2 models that support slimmable model sizes.";
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 3;
                 lv2:symbol "outputGain" ;
                 lv2:name "Output Gain";
                 lv2:default 0.0 ;
@@ -273,7 +265,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 3;
+                lv2:index 4;
                 lv2:symbol "gate" ;
                 lv2:name "Noise Gate";
                 lv2:default -120.0 ;
@@ -292,7 +284,7 @@ under the following license.
                 a lv2:OutputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 4;
+                lv2:index 5;
                 lv2:symbol "gateOut" ;
                 lv2:name "\u00A0";
                 lv2:default 0.0;
@@ -306,7 +298,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 5;
+                lv2:index 6;
                 lv2:symbol "buffer" ;
                 lv2:name "Threaded";
                 lv2:default 0.0 ;
@@ -323,7 +315,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 6 ;
+                lv2:index 7 ;
                 lv2:symbol "toneStack" ;
                 lv2:name "Type";
                 lv2:default 3.0 ;
@@ -352,7 +344,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 7;
+                lv2:index 8;
                 lv2:symbol "bass" ;
                 lv2:name "Bass";
                 lv2:default 5.0;
@@ -366,7 +358,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 8;
+                lv2:index 9;
                 lv2:symbol "mid" ;
                 lv2:name "Mid";
                 lv2:default 5.0;
@@ -379,13 +371,13 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 9;
+                lv2:index 10;
                 lv2:symbol "treble" ;
                 lv2:name "Treble";
                 lv2:default 5.0;
                 lv2:minimum 0.0;
                 lv2:maximum 10.0;
-                rdfs:comment "Bass";
+                rdfs:comment "Treble";
                 pg:group toobNam:eqGroup ;
         ],
 
@@ -395,7 +387,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 10 ;
+                lv2:index 11 ;
                 lv2:symbol "inputCalibrationMode" ;
                 lv2:name "Input Calibration";
                 lv2:default 1.0 ;
@@ -417,7 +409,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 11 ;
+                lv2:index 12 ;
                 lv2:symbol "calibration" ;
                 lv2:name "Value";
                 lv2:default -6.0 ;
@@ -432,7 +424,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 12;
+                lv2:index 13;
                 lv2:symbol "outputCalibration" ;
                 lv2:name "Output Calibration";
                 lv2:default 0.0;
@@ -459,7 +451,7 @@ under the following license.
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 13 ;
+                lv2:index 14 ;
                 lv2:symbol "version" ;
                 lv2:name "Preset Version";
                 lv2:default 1.0 ;
@@ -471,15 +463,15 @@ under the following license.
                 a lv2:OutputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 14 ;
+                lv2:index 15 ;
                 lv2:symbol "modelType" ;
-                lv2:name "Model Type";
+                lv2:name "";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0 ;
-                lv2:maximum 1.0; 
+                lv2:maximum 4.0; 
                 lv2:portProperty lv2:enumeration ;
                  lv2:scalePoint [
-                        rdfs:label "None" ;
+                        rdfs:label "" ;
                         rdf:value 0.0
                 ] , [
                         rdfs:label "A1" ;
@@ -487,6 +479,12 @@ under the following license.
                 ] , [
                         rdfs:label "A2" ;
                         rdf:value 2.0
+                ] , [
+                        rdfs:label "AidaX" ;
+                        rdf:value 3.0
+                ] , [
+                        rdfs:label "Other" ;
+                        rdf:value 4.0
                 ];   
 
         ],
@@ -494,41 +492,26 @@ under the following license.
                 a lv2:OutputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 15 ;
-                lv2:symbol "modelSize" ;
-                lv2:name "Model Size";
-                lv2:portProperty epp:notOnGUI;
-                lv2:default -1.0 ;
-                lv2:minimum 1.0 ;
+                lv2:index 16 ;
+                lv2:symbol "currentModelWeight" ;
+                lv2:name "";
+                lv2:default 0.0 ;
+                lv2:minimum 0.0 ;
                 lv2:maximum 1.0; 
-                lv2:portProperty lv2:enumeration ;
-                 lv2:scalePoint [
-                        rdfs:label "-" ;
-                        rdf:value -1.0
-                ] , [
-                        rdfs:label "Lite" ;
-                        rdf:value 0.5
-                ] , [
-                        rdfs:label "Standard" ;
-                        rdf:value 1.0
-                ];   
-
-
+                lv2:portProperty epp:notOnGUI;
         ],
-
-
 
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 16 ;
+                lv2:index 17 ;
                 lv2:symbol "in" ;
                 lv2:name "In"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 17 ;
+                lv2:index 18 ;
                 lv2:symbol "out" ;
                 lv2:name "Out"
         ],
@@ -540,7 +523,7 @@ under the following license.
                 lv2:designation lv2:control ;
                 atom:supports patch:Message ;
 
-                lv2:index 18 ;
+                lv2:index 19 ;
                 lv2:symbol "control" ;
                 lv2:name "Control" ;
                 rdfs:comment "Control" ;
@@ -550,7 +533,7 @@ under the following license.
                 atom:bufferType atom:Sequence ;
                 # atom:supports patch:Message;
                 lv2:designation lv2:control ;
-                lv2:index 19;
+                lv2:index 20;
                 lv2:symbol "notify" ;
                 lv2:name "Notify" ;
                 rdfs:comment "Notification" ;
@@ -597,7 +580,7 @@ toobNam:ui
         pipedal_ui:frequencyPlot 
         [
                 pipedal_ui:patchProperty toobNam:FrequencyResponse;
-                lv2:index 10 ;
+                lv2:index 11 ;
                 pg:group toobNam:eqGroup ;
                 pipedal_ui:width: 120.0 ;
         ]

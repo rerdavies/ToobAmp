@@ -65,7 +65,7 @@ namespace toob {
 	protected:
 		void AddFeature(const LV2_Feature* feature)
 		{
-			if (pFeatures -= NULL)
+			if (pFeatures == nullptr)
 			{
 				throw Lv2Exception("Features must be added during construction, before the first call to GetFeatures().");
 			}

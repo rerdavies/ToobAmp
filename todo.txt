@@ -1,4 +1,11 @@
+Sort out AVX/AVX512 build options.
+
+
 Followup on A2 missing calibration metadata in A2 models.
+
+
+
+Need an Expensive flag on Toob NAM Model weight control (no preview)
 
 - Verify 3-Band EQ (stereo) UI exists.
 - Verify 3-band EQ svg file ref works.

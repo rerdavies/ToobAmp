@@ -42,7 +42,6 @@ namespace pipedal
         bool operator!=(const json_null &other) const { return (!((*this) == other)); }
 
     private:
-        int value = 0;
     };
 
     class json_object;
@@ -66,7 +65,7 @@ namespace pipedal
 
     private:
     public:
-        ~json_variant();
+        virtual ~json_variant();
         json_variant();
         json_variant(json_reader &reader);
         json_variant(json_variant &&);
@@ -231,9 +230,19 @@ namespace pipedal
     public:
         using ptr = std::shared_ptr<json_array>;
 
-        json_array() { ++allocation_count_; }
+        json_array(){
+#ifndef NDEBUG
+            ++allocation_count_;
+#endif
+
+        }
         json_array(json_array &&other);
-        ~json_array() { --allocation_count_; }
+        virtual ~json_array()
+        {
+#ifndef NDEBUG
+            --allocation_count_;
+#endif
+        }
 
         json_variant &at(size_t index);
         const json_variant &at(size_t index) const;
@@ -258,7 +267,11 @@ namespace pipedal
         // Strictly for testing purposes. Not thread-safe.
         static int64_t allocation_count()
         {
+#ifndef NDEBUG
             return allocation_count_;
+#else
+            return 0;
+#endif
         }
         using iterator = std::vector<json_variant>::iterator;
         using const_iterator = std::vector<json_variant>::const_iterator;
@@ -287,7 +300,7 @@ namespace pipedal
 
         json_object() { ++allocation_count_; }
         json_object(json_object &&other);
-        ~json_object() { --allocation_count_; }
+        virtual ~json_object() { --allocation_count_; }
 
         size_t size() const { return values.size(); }
         json_variant &at(const std::string &index);

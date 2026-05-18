@@ -21,7 +21,7 @@ option(TOOBAMP_AVX_X64_OPTIMIZATIONS "Optimize for processor with AVXprocessor o
 option(TOOBAMP_PERMISSIVE_COMPILE "Enable permissive compile options (warnings are not errors)" OFF)
 
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
-option(WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
+option(TOOBAMP_WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
 
 option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
 option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.
@@ -51,6 +51,9 @@ execute_process(COMMAND
 message(STATUS "CMAKE_SYSTEM_PROCESSOR: ${CMAKE_SYSTEM_PROCESSOR}")
 
 add_compile_options("-DDISABLE_DENORMALS")
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    add_compile_options("-Wno-nan-infinity-disabled")        
+endif()
 
 set(USE_NEURAL_MODELER_NAM_CORE ON)
 set(TOOBAMP_COMPILE_OPTIONS "")
@@ -73,29 +76,36 @@ endif()
 
 # Match NeuralAudio compile options
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set(CMAKE_LINKER_FLAG)
-    if(TOOBAMP_NATIVE_AARCH_OPTIMIZATION)
-        add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
-    elseif(TOOBAMP_A76_OPTIMIZATION)
-        message(STATUS "Using Cortex-A76/Pi 5 optimizations")
-        add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
-    else()
-        message(STATUS "Using Cortex-A72/Pi 4 optimizations")
-        add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
-    endif()
-elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
+if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
-    if(TOOBAMP_NATIVE_X64_OPTIMIZATIONS)
-        message(STATUS "Using Native x86-64 optimizations")
-        add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
-    elseif(TOOBAMP_AVX_X64_OPTIMIZATIONS)
-        message(STATUS "Using AVX x86-64 optimizations")
-        add_compile_options("-march=x86-64-v3")
-    else()
-        message(STATUS "Not using AVX x86-64 optimizations")
-        add_compile_options("-march=x86-64-v2")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+        set(CMAKE_LINKER_FLAG)
+        if(TOOBAMP_NATIVE_AARCH_OPTIMIZATION)
+            add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
+        elseif(TOOBAMP_A76_OPTIMIZATION)
+            message(STATUS "Using Cortex-A76/Pi 5 optimizations")
+            add_compile_options("-DA76_OPTIMIZATION=1" "-mcpu=cortex-a76" "-march=armv8.2-a" "-mtune=cortex-a76")
+        else()
+            message(STATUS "Using Cortex-A72/Pi 4 optimizations")
+            add_compile_options("-mcpu=cortex-a72" "-mtune=cortex-a72")
+        endif()
+    elseif((CMAKE_SYSTEM_PROCESSOR MATCHES "amd64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64") OR (CMAKE_SYSTEM_PROCESSOR MATCHES "AMD64"))
+
+        if(TOOBAMP_NATIVE_X64_OPTIMIZATIONS)
+            message(STATUS "Using Native x86-64 optimizations")
+            add_compile_options("-mcpu=native" "-march=native" "-mtune=native")
+        elseif(TOOBAMP_AVX_X64_OPTIMIZATIONS)
+            message(STATUS "Using AVX x86-64 optimizations")
+            add_compile_options("-march=x86-64-v3")
+        else()
+            message(STATUS "Not using AVX x86-64 optimizations")
+            add_compile_options("-march=x86-64-v2")
+        endif()
     endif()
+endif()
+
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    add_compile_options("-Wno-unknown-warning-option")
 endif()
 
 

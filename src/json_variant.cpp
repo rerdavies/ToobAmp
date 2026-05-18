@@ -45,10 +45,10 @@ void json_variant::free()
         memString().std::string::~string();
         break;
     case ContentType::Object:
-        memObject().std::shared_ptr<json_object>::~shared_ptr();
+        memObject().std::shared_ptr<json_object>::~shared_ptr<json_object>();
         break;
     case ContentType::Array:
-        memArray().std::shared_ptr<json_array>::~shared_ptr();
+        memArray().std::shared_ptr<json_array>::~shared_ptr<json_array>();
         break;
     default:
         break;
@@ -490,11 +490,11 @@ json_variant &json_variant::operator=(json_variant &&value)
         break;
     case ContentType::Object:
         new (content.mem) std::shared_ptr<json_object>(std::move(value.memObject()));
-        value.memObject().std::shared_ptr<json_object>::~shared_ptr();
+        value.memObject().std::shared_ptr<json_object>::~shared_ptr<json_object>();
         break;
     case ContentType::Array:
         new (content.mem) std::shared_ptr<json_array>(std::move(value.memArray()));
-        value.memArray().std::shared_ptr<json_array>::~shared_ptr();
+        value.memArray().std::shared_ptr<json_array>::~shared_ptr<json_array>();
         break;
     default:
         // undifferentiated copy of POD types.

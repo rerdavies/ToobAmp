@@ -61,22 +61,18 @@ namespace toob
 {
 
 
+    enum class OutputModelType { None=0, A1=1,A2=2, AidaX = 3, Other = 4};
+
     struct NamModelMetadata {
         int32_t flags = 0;
         float loudness = 0;
         float gain = 0;
         float input_level_dbu = 0;
         float output_level_dbu = 0;
-        bool isA2 = false;
+        bool hasSlimmableSizes = false;
         float model_weight;
-        size_t slimmable_weights_size = 0;
-        static constexpr size_t MAX_WEIGHTS_SIZE = 16;
-        float slimmable_sizes[MAX_WEIGHTS_SIZE];
+        OutputModelType model_type;
 
-        float getSlimmableWeight(size_t index) {
-            if (index > slimmable_weights_size) return 1.0;
-            return slimmable_sizes[index];
-        }
     };
 
 
@@ -112,6 +108,7 @@ namespace toob
         {
             kInputGain = 0,
             kInputLevelOut,
+            kModelWeight, 
             kOutputGain,
             kNoiseGateThreshold,
             kGateOut,
@@ -129,7 +126,7 @@ namespace toob
             kPresetVersion,
 
             kModelType,  
-            kModelWeight, 
+            kCurrentModelWeight, 
 
             kAudioIn,
             kAudioOut,
@@ -145,8 +142,6 @@ namespace toob
         {
             void Initialize(NeuralAmpModeler &this_);
             uint32_t nam__ModelFile;
-            uint32_t nam__ModelFileWithWeight;
-            uint32_t nam__ModelWeight;
             uint32_t nam__modelSize;
             uint32_t nam__FrequencyResponse;
             uint32_t atom__Path;
@@ -169,7 +164,7 @@ namespace toob
 
 
 
-        Urids urids;
+        Urids namUris;
 
         enum class BackgroundProcessorState {
             ForegroundProcessing,
@@ -255,6 +250,7 @@ namespace toob
 
         RangedDbInputPort cInputGain{-40, 40};
         RangedDbInputPort cOutputGain{-40, 40};
+        RangedInputPort cQuality{0,1};
         #if NAM_RMS_METER
         RmsMeterPort cInputLevelOut;
         #else
@@ -275,9 +271,8 @@ namespace toob
         RangedInputPort cCalibrationValue { -40,+40}; 
         RangedInputPort cPresetVersion { 0, 1000};
 
-        enum class OutputModelType { None=0, A1=1,A2=2};
         OutputPort cModelType {(float)OutputModelType::None};
-        OutputPort cModelWeight {1.0};
+        OutputPort cCurrentModelWeight {0};
 
         enum ToneStackType {
             Bassman = 0, // matches enum values in .ttl file.
@@ -289,8 +284,6 @@ namespace toob
 		ToneStackFilter toneStackFilter;
 		BaxandallToneStack baxandallToneStack;
 
-        float inputCalibrationFactor = 1.0f;
-        float outputCalbrationFactor = 1.0f;
         
         void UpdateCalibrationFactors();
 
@@ -309,7 +302,6 @@ namespace toob
         int gateOutputUpdateCount = 0;
         bool isActivated = false;
         bool requestFileUpdate = true;
-        bool requestModelWeightUpdate = true;
 
 
         FilterResponse filterResponse;
@@ -385,12 +377,12 @@ namespace toob
         float mNamModelWeight;
         void SetForegoundModelWeight(float weight) {
             mNamModelWeight = weight;
-            cModelWeight.SetValue(weight);
-            this->requestModelWeightUpdate = true;
+            cCurrentModelWeight.SetValue(weight);
         }
         nam_impl::NamCalibrationSettings fgCalibrationSettings;
         nam_impl::NamVolumeAdjustments fgCalibrationFactors;
         NamModelMetadata fgModelMetadata;
+
 
         // Path to model's config.json or model.nam
         std::string mNAMPath;

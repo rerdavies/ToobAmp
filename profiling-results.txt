@@ -1,6 +1,83 @@
 A2 Profiling Round
 ---
 
+AMD RYZEN Mike's NAM "-march=x86-64-v2"
+
+2026-05-18 16:14:57.849 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+Ellapsed time: 6.982s
+
+AMD RYZEN Mike's NAM "-march=x86-64-v3"
+
+2026-05-18 16:03:35.378 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+Ellapsed time: 3.698s
+
+AMD RYZEN Mike's NAM "-march=native"
+
+2026-05-18 16:06:48.618 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+Ellapsed time: 3.781s
+
+AMD RYZEN Mike's NAM "-march=native" "-mtune=native"
+
+2026-05-18 16:09:31.955 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+Ellapsed time: 3.744s
+
+
+AMD RYZEN "-mcpu=native" "-march=native" "-mtune=native" (AVX512?)
+
+2026-05-18 15:44:01.042 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NAM Core A2 weight=1
+Ellapsed time: 4.823s
+
+2026-05-18 15:39:23.308 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NAM Core A2 weight=0
+Ellapsed time: 4.806s
+
+2026-05-18 15:42:23.238 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NeuralAudio
+Ellapsed time: 3.826s
+
+
+AMD RYZEN Native (AVX no 512) -march=x86-64-v3
+
+2026-05-18 15:50:12.216 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NAM Core A2 weight=1
+Ellapsed time: 4.236s
+
+2026-05-18 15:53:13.645 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NAM Core A2 weight=0
+Ellapsed time: 4.69s
+
+2026-05-18 15:54:03.125 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NeuralAudio
+Ellapsed time: 3.682s
+
+
+AMD Ryzen
+
+2026-05-18 14:04:05.299 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+Ellapsed time: 6.989s
+
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NeuralAudio
+Ellapsed time: 6.412s
+
+2026-05-18 14:07:06.747 INF: Updater: Next update check at 2026-05-18 16:35:24
+uri: http://two-play.com/plugins/toob-nam
+Load mode: NAM
+Ellapsed time: 6.785s
+
+
 Pi 4
 
     2026-05-15 01:33:22.531 INF: Updater: Next update check at 2026-05-15 08:05:37

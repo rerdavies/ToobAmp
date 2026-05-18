@@ -75,14 +75,14 @@ protected:
         LV2_State_Retrieve_Function retrieve,
         LV2_State_Handle handle,
         uint32_t flags,
-        const LV2_Feature *const *features);
+        const LV2_Feature *const *features) override;
 
     LV2_State_Status
     OnSaveLv2State(
         LV2_State_Store_Function store,
         LV2_State_Handle handle,
         uint32_t flags,
-        const LV2_Feature *const *features);
+        const LV2_Feature *const *features) override;
     std::string UnmapFilename(const LV2_Feature *const *features, const std::string &fileName);
     std::string MapFilename(
         const LV2_Feature *const *features,
@@ -157,7 +157,6 @@ private:
     
     std::string filePath;
     bool activated = false;
-    size_t pausingDelay = 0;
     bool SetFilePath(const char *filename);
 
     ControlDezipper zipInL, zipInR;

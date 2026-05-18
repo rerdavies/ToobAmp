@@ -30,7 +30,6 @@ using namespace toob;
 using namespace toob::nam_impl;
 using namespace LsNumerics;
 
-static constexpr float FADE_LENGTH_SEC = 0.1;
 
 static void bufferScale4(float *restrict buffer, float scale, size_t size)
 

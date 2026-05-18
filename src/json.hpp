@@ -379,7 +379,7 @@ namespace pipedal
         void write (const std::chrono::system_clock::time_point &time);
 
     private:
-        static void throw_encoding_error();
+        [[noreturn]] static void throw_encoding_error();
 
         static uint32_t continuation_byte(std::string_view::iterator &p, std::string_view::const_iterator end);
         void write_utf16_char(uint16_t uc);
