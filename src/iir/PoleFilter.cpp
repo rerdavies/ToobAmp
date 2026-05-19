@@ -50,8 +50,9 @@ static bool is_infinity(complex_t c)
 static const char cutoffError[] = "The cutoff frequency needs to be below the Nyquist frequency.";
 static const char cutoffNeg[] = "Cutoff frequency is negative.";
 
-complex_t LowPassTransform::transform (complex_t c)
+complex_t LowPassTransform::transform (const complex_t& c_)
 {
+  complex_t c = c_;
   if (is_infinity(c))
     return complex_t (-1, 0);
 
@@ -97,8 +98,9 @@ LowPassTransform::LowPassTransform (double fc,
 
 //------------------------------------------------------------------------------
 
-complex_t HighPassTransform::transform (complex_t c)
+complex_t HighPassTransform::transform (const complex_t&c_)
 {
+  complex_t c = c_;
   if (is_infinity(c))
     return complex_t (1, 0);
 
@@ -198,8 +200,9 @@ BandPassTransform::BandPassTransform (double fc,
 			   analog.getNormalGain());
 }
 
-ComplexPair BandPassTransform::transform (complex_t c)
+ComplexPair BandPassTransform::transform (const complex_t& c_)
 {
+    complex_t c = c_;
 	if (is_infinity(c))
 		return ComplexPair (-1, 1);
 	
@@ -284,8 +287,9 @@ BandStopTransform::BandStopTransform (double fc,
 		digital.setNormal (0, analog.getNormalGain());
 }
 
-ComplexPair BandStopTransform::transform (complex_t c)
+ComplexPair BandStopTransform::transform (const complex_t &c_)
 {
+    complex_t c = c_;
 	if (is_infinity(c))
 		c = -1;
 	else

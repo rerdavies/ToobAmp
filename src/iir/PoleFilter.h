@@ -56,7 +56,7 @@ namespace Iir {
 /**
  * Factored implementations to reduce template instantiations
  **/
-class DllExport PoleFilterBase2 : public Cascade
+class PoleFilterBase2 : public Cascade
 {
 public:
   // This gets the poles/zeros directly from the digital
@@ -86,7 +86,7 @@ protected:
  * and the digital pole/zero layout.
  **/
 template <class AnalogPrototype>
-class DllExport PoleFilterBase : public PoleFilterBase2
+class PoleFilterBase : public PoleFilterBase2
 {
 protected:
   void setPrototypeStorage (const LayoutBase& analogStorage,
@@ -141,7 +141,7 @@ private:
 /** 
  * low pass to low pass 
  **/
-class DllExport LowPassTransform
+class LowPassTransform
 {
 public:
   LowPassTransform (double fc,
@@ -149,7 +149,7 @@ public:
                     LayoutBase const& analog);
 
 private:
-  complex_t transform (complex_t c);
+  complex_t transform (const complex_t& c);
 
   double f;
 };
@@ -159,7 +159,7 @@ private:
 /**
  * low pass to high pass
  **/
-class DllExport HighPassTransform
+class HighPassTransform
 {
 public:
   HighPassTransform (double fc,
@@ -167,7 +167,7 @@ public:
                      LayoutBase const& analog);
 
 private:
-  complex_t transform (complex_t c);
+  complex_t transform (const complex_t& c);
 
   double f;
 };
@@ -177,7 +177,7 @@ private:
 /**
  * low pass to band pass transform
  **/
-class DllExport BandPassTransform
+class BandPassTransform
 {
 
 public:
@@ -187,7 +187,7 @@ public:
                      LayoutBase const& analog);
 
 private:
-  ComplexPair transform (complex_t c);
+  ComplexPair transform (const complex_t& c);
 
   double wc;
   double wc2;
@@ -204,7 +204,7 @@ private:
 /** 
  * low pass to band stop transform
  **/
-class DllExport BandStopTransform
+class BandStopTransform
 {
 public:
   BandStopTransform (double fc,
@@ -213,7 +213,7 @@ public:
                      LayoutBase const& analog);
 
 private:
-  ComplexPair transform (complex_t c);
+  ComplexPair transform (const complex_t& c);
 
   double wc;
   double wc2;
