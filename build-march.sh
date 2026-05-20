@@ -7,19 +7,20 @@ rm -rf build-a76
 # Build for ToobAmp-a76.so
 mkdir -p build-a76
 cd build-a76
-cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOBAMP_A76_OPTIMIZATION=ON -D TOOB_MULTI_ARCH_BUILD=OFF -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja 
+cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOB_AARCH_OPTIMIZATIONS=A76 -D TOOB_MULTI_ARCH_BUILD=OFF -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja 
 cd ..
 
 # Build only the A76 version of the librar, to be used in the multi-arch build.
 time cmake --build ./build-a76 --target ToobAmpArch  --config Release -G Ninja
 
 
-# Configure main build to do an a72+a76 build
+# Configure main build to do an a72 build and an a72+a76 package (a76 binaries are in ./build-a76)
+echo Configuring MARCH Build
 mkdir -p build
 cd build
-time cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOBAMP_A72_OPTIMIZATION=ON -D TOOB_MULTI_ARCH_BUILD=ON -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja  
+time cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOB_AARCH_OPTIMIZATIONS=A72 -D TOOB_MULTI_ARCH_BUILD=ON -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja  
 cd ..
-
+echo Run MARCH Build
 time cmake --build ./build --target all --config Release -- -j 6
 
 

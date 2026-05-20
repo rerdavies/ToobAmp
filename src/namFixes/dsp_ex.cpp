@@ -130,7 +130,7 @@ namespace toob
             std::cout << TOOB_OPTIMIZATION_FLAGS << " ";
             #endif
             std::cout << 
-                "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio");
+                "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio A1");
             if (neuralAudioModel->HasQualityScaling())
             {
                 std::cout << " A2 weight=" << modelWeight;;

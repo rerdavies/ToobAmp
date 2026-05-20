@@ -1,3 +1,4 @@
+- 20% performance penalty for updated eigen lib?
 - Runtime load for X64 CPUs. 
 
 

@@ -1305,6 +1305,7 @@ void NeuralAmpModeler::onSamplesOut(uint64_t instanceId, float *data, size_t len
 {
 }
 
+
 void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output, size_t numFrames)
 {
     switch (this->backgroundProcessorState)
@@ -1318,7 +1319,9 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
             {
                 input[i] *= fgInputVolume;
             }
+
             mNAM->Process(const_cast<float *>(input), output, numFrames);
+
             for (size_t i = 0; i < numFrames; ++i)
             {
                 output[i] *= fgOutputVolume;

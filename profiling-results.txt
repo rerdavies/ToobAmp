@@ -18,13 +18,13 @@ x86-64-v3 Load mode: NeuralAudio A1
 Ellapsed time: 3.797s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-x86-64-v3 Mike's NAM A1
+x86-64-v3 Mike's NAM pre-a2 A1
 Ellapsed time: 3.793s
 
 ---------------- AMD Rizen SSE 4.2 -march=x86-64-v2 -------------------------------------------
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-x86-64-v2 Mike's NAM A1
+x86-64-v2 Mike's NAM pre-a2 A1
 Ellapsed time: 7.296s
 
 uri: http://two-play.com/plugins/toob-nam
@@ -39,29 +39,44 @@ uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NeuralAudio A1
 Ellapsed time: 6.997s
 
------------------ Mike's NAM with default project optimizations  --------------------
+----------------- Mike's NAM pre-a2 with default project optimizations  --------------------
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-x86_64 Mike's NAM A1 Model
+x86_64 Mike's NAM pre-a2 A1 Model
 Ellapsed time: 7.119s
 
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+cortex-a72 Pre-A2 A1
+Ellapsed time: 33.079s
+
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+default Post-A2 A1
+Ellapsed time: 38.04s
+
+
+ri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+"-mcpu=cortex-a72" "-mtune=cortex-a72" A1
+Ellapsed time: 33.357s
+
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+"-march=armv8-a" "-mtune=cortex-a72" A1
+Ellapsed time: 33.481s
 
 
 
----------------- Pi 4 --------------------------------------------------------
+---------------- Pi 4 (cortex-a72) --------------------------------------------------------
 
-    2026-05-15 01:33:22.531 INF: Updater: Next update check at 2026-05-15 08:05:37
-    uri: http://two-play.com/plugins/toob-nam (A2 Large)
-    Using NeuralAudio backend.
-    Ellapsed time: 39.982s
+uri: http://two-play.com/plugins/toob-nam
+cortex-a72 Load mode: NeuralAudio A1
+Ellapsed time: 37.522s
 
-    2026-05-15 01:30:34.905 INF: Updater: Next update check at 2026-05-15 08:05:37
-    uri: http://two-play.com/plugins/toob-nam
-    Using NAM Core backend.
-    Ellapsed time: 42.716s
+cortex-a72 Load mode: NAM Core A2 weight=1
+Ellapsed time: 41.896s
 
-    // Release Build
-    2026-05-15 02:22:16.473 INF: Updater: Next update check at 2026-05-15 08:05:37
-    uri: http://two-play.com/plugins/toob-nam
-    Using NeuralAudio backend.
-    Ellapsed time: 37.403s
+uri: http://two-play.com/plugins/toob-nam
+cortex-a72 Load mode: NAM Core A2 weight=0
+Ellapsed time: 23.035s
+
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+cortex-a72 A1
+Ellapsed time: 34.079s
