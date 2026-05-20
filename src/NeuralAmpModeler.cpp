@@ -968,7 +968,6 @@ std::unique_ptr<NeuralAudioDsp> NeuralAmpModeler::GetNAM(const std::string &mode
                                                  (uint32_t)getRate(),
                                                  (int)(this->GetBuffSizeOptions().minBlockLength),
                                                  (int)(this->GetBuffSizeOptions().maxBlockLength));
-    nam->SetSlimmableSize(modelWeight);
     return nam;
 }
 

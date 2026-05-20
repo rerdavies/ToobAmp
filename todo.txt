@@ -1,3 +1,168 @@
+
+Between NAM Core, and NeuralAmpModelerCore, prewarm() gets called 7 times before TooB NAM gets a usable NAM 
+instance, with the model weight that was saved in a preset. 
+
+Prewarming is compute-intensive, and problematic because it typically runs on a high-priority worker thread. And 
+if the worker thread (or threds) pin for significant amounts of time, they can destabilize the entire system. 
+
+Furthermore, most of the prewarm calls get made on the larger of the two submodels. So even if a user stacks up 
+their preset with light models, prewarming time is still going to be a problem. 
+
+In a preset that runs uses at a significant percentage of realtime, this can end up pinning worker threads for up
+to 4 seconds, or completely pinning all CPUs for the better part of a second (depending on how worker thread 
+are implemented in the plugin host. 
+
+PiPedal can run stably at 90% of realtime. So whether that's 2 or 3 instances on a Pi 4, 5 or 6 on a Pi 5 or a modest
+NUC or laptop, or 10 or 15 instances on a capable laptop or desktop, the outcome is the same: a 4 second delay to 
+load a heavy preset. (Because users WILL use as many NAM instances as their computer allows for). 
+
+## 3 prewarm calls in NAM Core get_dsp().
+
+NAM Core causes prewarm() to be called three times before get_dsp() returns: twice on the larger model, and once 
+on the lighter model. All of these prewarm calls are made with 4k buffer sizes (not really a big deal), because 
+the consumer has not had a chance to set a buffer size; and all of these calls get made before the consumer 
+has had a chance to actual select a submodel. 
+
+So, potentially, two more prewarm()s if the caller actually wants to call Reset(sampleRate,bufferSize), or SetSlimmableSize();
+
+
+While loading a slimmable model, get_dsp() causes prewarm() to be called for each of the submodels at:
+
+       std::unique_ptr<DSP> create_dsp(std::unique_ptr<ModelConfig> config, std::vector<float> weights,
+                                const ModelMetadata& metadata)
+        {
+            ....
+            // "pre-warm" the model to settle initial conditions
+            // Can this be removed now that it's part of Reset()?
+            out->prewarm();
+        }
+
+Container::prewarm() then calls prewarm() again, on the active submodel -- the larger of the two, by default, because 
+nobody has had a chance to call SetSlimmableSize yet.  
+
+    void ContainerModel::prewarm()
+    {
+    const size_t active_index = _active_index.load(std::memory_order_acquire);
+    _submodels[active_index].model->prewarm();
+    }
+
+
+## Two or three prewarm() calls from NeuralAudio
+
+NamModel.h: 
+    bool LoadFromJson(const nlohmann::json& modelJson)
+    {
+        ...
+        if (slim != nullptr)
+        {
+            isSlimmable = true;
+
+            slim->SetSlimmableSize(slimmableSize);
+        }
+
+        SetMaxAudioBufferSize(defaultMaxAudioBufferSize);
+
+        return true;
+    }
+
+slimmableSize contains the value, as most recently set by
+
+    static NeuralAudio::NeuralModel::SetDefaultQualityScaleFactor(scaleFactor);
+
+It's 1.0 by default, which does not cause a call to prewarm(), only because get_dsp has selected the larger
+of the two submodels. 
+
+However, if NAM Core changes its default behavior at some point in the future, or if SetDefaultQualityScaleFactor has been called with a 
+value other than 1.0, then it will cause a call to prewarm(). 
+
+Then NamModel::SetSlimmableSize calls nam::SlimmableModel::SetSlimmableSize, which, if the selected model changes,
+calls Reset on the selected model, which, in turn calls prewarm() again. 
+
+NamModel::SetMaxAudioBufferSize calls nam::ContainerModel::Reset(sampleRate,bufferSize), calls Reset on the
+active submodel, which in turn calls prewarm().
+
+Finally, 
+
+	NeuralModel* NeuralModel::CreateFromStream(std::basic_istream<char>& jsonStream, std::filesystem::path extension)
+	{
+        ....
+		if (newModel != nullptr)
+		{
+			newModel->Prewarm();
+		}
+        return newModel
+    }
+
+The Prewarm() call causes yet another prewarm() call on the active submodel in nam::Container::Prewarm(). 
+
+## And the TooB NAM causes two calls to prewarm().
+
+At this point, TooB NAM gets its first chance to select a submodel, which in turn causes a 7th call to prewarm(). 
+And arguably has a chance to select the ACTUAL buffer size, which will cause another prewarm() call. 
+
+Note, that if loading a model from a preset, the selected slimmable size will probably not be either zero or one,
+but whatever value the users selected with the Quality dial. 
+
+## Analysis
+
+As implemented, SetSlimmableSize cannot be called on a realtime thread, because it may call prewarm(). 
+In practice, this means that every time the Size/Quality dial changes, the plugin must make a background request 
+to create a new model instance (since it cannot reuse the realtime instance). 
+
+There are two reasonable solutions. 
+
+SetSlimmableSize can be called on the realtime thread. get_dsp() calls prewarm() twice (once for each model, but not for the 
+Container), which allows SetSlimmableSize to NOT call prewarm(), or Reset(). Container::prewarm() must no longer call 
+prewarm() on the active submodel. And SetSlimmableSize can be called either during model creation, or on the 
+realtime thread without further consequence. I don't think you really need the realtime synchronization code.
+Under any reasonble circumstance, SetSlimmableSize is going to be called EITHER from the realtime thread, or
+from the background worker thread (or from the main thread, when first creating the instance). But all of these 
+calls are going to be made serially, not concurrently. 
+
+SetSlimmableSize cannot be called on the realtime thread. Any change to SetSlimmableSize() needs to be done on a fresh
+instance on the main thread or a worker thread. This allows ONE AND ONLY ONE prearm() call to be made. 
+
+In both cases, it seems to me that the sensible sequence is to call (smart pointers ommitted for clarity)
+
+    nam::DSP *mNam = get_dsp(...);
+    SlimmableModel *slim = dynamic_cast<SlimmableModel*>(mNam);
+    if (slim) 
+    {
+        slim->SetSlimmableSize();
+    }
+    mNam->ResetAndPrewarm(sampleRate, bufferSize);
+
+And that neither SetSlimmableSize(), nor Reset() should cause a prewarm(). And that any valid creation 
+sequence must include a Prewarm() call. 
+
+## Pros and cons. 
+
+SetSlimmableSize on the realtime thread: 
+
+Pros: 
+
+- Makes handling of snapshots and Size control changes SO much easier, not having to go to a service thread everytime the slimmableSize
+changes.
+- SlimmableSize control changes do not need to be throttled. The user gets to audition changes while dragging the SlimmableSize control in the UI.
+
+Cons: 
+
+- essentially 3x the prewarm overhead for users that stack up their presets with small models.
+- Potentially much worse in the future, if there are more than two slimmable sizes in the container.
+
+No SetSlimmableSize on the realtime thread:
+
+Pros:
+- Prewarm only what you use! Only one actual prewarm() per model load.
+
+Cons:
+- Any change in a size control requires a reload of the model, since there's no way to know what the SlimmableSize breakpoints are.
+- Size controls have to be marked as "Expensive" controls. No preview while dragging a knob. 
+
+It would be really nice to have access to the slimmableSize breakpoints.
+
+
+
 - 20% performance penalty for updated eigen lib?
 - Runtime load for X64 CPUs. 
 

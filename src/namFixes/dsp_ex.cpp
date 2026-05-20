@@ -174,14 +174,19 @@ namespace toob
 
     void NeuralAudioDsp::loadMetadataProperty(const char*name, bool &hasValue, float &value)
     {
-        double result;
-        if (neuralAudioModel->GetMetadata(name,result))
+        hasValue = false;
+        std::string metadata = neuralAudioModel->GetMetadata(name);
+        if (metadata.empty())
         {
-            hasValue = true;
-            value = (float)result;
-        } else {
-            hasValue = false;
+            return;
         }
+        try {
+            value = std::stof(metadata);
+        } catch (const std::exception&e)
+        {
+            return;
+        }
+        hasValue = true;
     }
 
     void NeuralAudioDsp::loadNeuralAudioMetadata()
@@ -195,18 +200,7 @@ namespace toob
 
             if (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::RTNeural)
             {
-                this->modelType = NamModelType::AidaX;
-                double value;
-                if (neuralAudioModel->GetMetadata("in_gain",value))
-                {
-                    hasModelInputLevelDBu = true;
-                    modelInputLevelDBu = (float)value;
-                }
-                if (neuralAudioModel->GetMetadata("out_gain",value))
-                {
-                    hasModelLoudnessDB = true;
-                    modelLoudnessDB = -18-(float)value;
-                }
+                throw std::runtime_error("NeuralAudio::EModelLoadMode::RTNeural Not implemented.");
             } else {
                 switch (neuralAudioModel->GetLoadMode()) {
                     case NeuralAudio::EModelLoadMode::Internal:

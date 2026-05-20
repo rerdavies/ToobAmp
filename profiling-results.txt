@@ -21,6 +21,10 @@ uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 x86-64-v3 Mike's NAM pre-a2 A1
 Ellapsed time: 3.793s
 
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v3 Load mode: NeuralAudio A1 POST A2 with Rollback for f0f3b8accf1e832d710309a6fe9d156d699541a2
+Ellapsed time: 2.641s
+
 ---------------- AMD Rizen SSE 4.2 -march=x86-64-v2 -------------------------------------------
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
@@ -38,6 +42,11 @@ Ellapsed time: 6.972s
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NeuralAudio A1
 Ellapsed time: 6.997s
+
+uri: http://two-play.com/plugins/toob-nam
+x86-64-v2 Load mode: NeuralAudio A1 w/rollback
+Ellapsed time: 6.919s
+
 
 ----------------- Mike's NAM pre-a2 with default project optimizations  --------------------
 
