@@ -7,89 +7,94 @@ Results are about +/- 0.1.
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v3 Load mode: NAM Core A2 weight=1
-Ellapsed time: 4.274s
+Elapsed time: 4.274s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v3 Load mode: NAM Core A2 weight=0
-Ellapsed time: 5.061s
+Elapsed time: 5.061s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v3 Load mode: NeuralAudio A1
-Ellapsed time: 3.797s
+Elapsed time: 3.797s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 x86-64-v3 Mike's NAM pre-a2 A1
-Ellapsed time: 3.793s
+Elapsed time: 3.793s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v3 Load mode: NeuralAudio A1 POST A2 with Rollback for f0f3b8accf1e832d710309a6fe9d156d699541a2
-Ellapsed time: 2.641s
+Elapsed time: 2.641s
 
 ---------------- AMD Rizen SSE 4.2 -march=x86-64-v2 -------------------------------------------
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 x86-64-v2 Mike's NAM pre-a2 A1
-Ellapsed time: 7.296s
+Elapsed time: 7.296s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NAM Core A2 weight=0
-Ellapsed time: 5.444s
+Elapsed time: 5.444s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NAM Core A2 weight=1
-Ellapsed time: 6.972s
+Elapsed time: 6.972s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NeuralAudio A1
-Ellapsed time: 6.997s
+Elapsed time: 6.997s
 
 uri: http://two-play.com/plugins/toob-nam
 x86-64-v2 Load mode: NeuralAudio A1 w/rollback
-Ellapsed time: 6.919s
+Elapsed time: 6.919s
 
 
 ----------------- Mike's NAM pre-a2 with default project optimizations  --------------------
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 x86_64 Mike's NAM pre-a2 A1 Model
-Ellapsed time: 7.119s
+Elapsed time: 7.119s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 cortex-a72 Pre-A2 A1
-Ellapsed time: 33.079s
+Elapsed time: 33.079s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 default Post-A2 A1
-Ellapsed time: 38.04s
+Elapsed time: 38.04s
 
 
 ri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 "-mcpu=cortex-a72" "-mtune=cortex-a72" A1
-Ellapsed time: 33.357s
+Elapsed time: 33.357s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 "-march=armv8-a" "-mtune=cortex-a72" A1
-Ellapsed time: 33.481s
+Elapsed time: 33.481s
 
 
 
 ---------------- Pi 4 (cortex-a72) --------------------------------------------------------
 
-uri: http://two-play.com/plugins/toob-nam
-cortex-a72 Load mode: NeuralAudio A1
-Ellapsed time: 37.522s
+ri: http://two-play.com/plugins/toob-nam
+armv8-a Load mode: NeuralAudio A1
+Elapsed time: 32.504s
+L1 Cache Misses: 368535585
 
 cortex-a72 Load mode: NAM Core A2 weight=1
-Ellapsed time: 41.896s
+Elapsed time: 41.896s
 
 uri: http://two-play.com/plugins/toob-nam
 cortex-a72 Load mode: NAM Core A2 weight=0
-Ellapsed time: 23.035s
+Elapsed time: 23.035s
+
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
-cortex-a72 A1
-Ellapsed time: 34.079s
+Default A1 -fnoloop-unroll
+Elapsed time: 32.445s 32.431s 33.21s
 
+hri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+efault A1 -fnoloop-unroll "-march=armv8-a" "-mtune=cortex-a72"
+Elapsed time: 32.673s
 
 
 ---- nearal-amp-modeler-lv2
@@ -97,4 +102,4 @@ Ellapsed time: 34.079s
 
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 aarch64 neural-amp-modeler-lv2 pre-a2 A1  
-Ellapsed time: 33.62s
+Elapsed time: 33.62s
