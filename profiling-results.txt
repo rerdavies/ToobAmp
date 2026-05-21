@@ -89,3 +89,12 @@ Ellapsed time: 23.035s
 uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
 cortex-a72 A1
 Ellapsed time: 34.079s
+
+
+
+---- nearal-amp-modeler-lv2
+
+
+uri: http://github.com/mikeoliphant/neural-amp-modeler-lv2
+aarch64 neural-amp-modeler-lv2 pre-a2 A1  
+Ellapsed time: 33.62s
