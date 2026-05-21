@@ -109,6 +109,7 @@ namespace toob
         {
             std::lock_guard lock{ndspMutex};
             NeuralAudio::NeuralModel::SetDefaultMaxAudioBufferSize(maxBlockSize);
+            NeuralAudio::NeuralModel::SetDefaultQualityScaleFactor(-1.0f);
         }
 
         ::NeuralAudio::NeuralModel *neuralAudioModel = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
@@ -169,6 +170,7 @@ namespace toob
         if (neuralAudioModel)
         {
             neuralAudioModel->SetQualityScaleFactor(value);
+            
         }
     }
 
