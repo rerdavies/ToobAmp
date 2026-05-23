@@ -18,7 +18,7 @@ time cmake --build ./build-avx --target ToobAmpArch  --config Release -- -j 6
 echo Configuring MARCH Build
 mkdir -p build
 cd build
-time cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOB_AARCH_OPTIMIZATIONS=A72 -D TOOB_MULTI_ARCH_BUILD=ON -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja  
+time cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOB_AMD_OPTIMIZATIONS=DEFAULT -D TOOB_MULTI_ARCH_BUILD=ON -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja  
 cd ..
 echo Run MARCH Build
 time cmake --build ./build --target all --config Release -- -j 6

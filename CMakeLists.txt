@@ -56,7 +56,6 @@ unset(_TOOB_AARCH_OPT_INDEX)
 option(TOOBAMP_PERMISSIVE_COMPILE "Enable permissive compile options (warnings are not errors)" OFF)
 
 option(TOOB_BUILD_UI "Build the X11 UI" ON) # Build the UI Plugin..
-option(TOOBAMP_WARNINGS_ARE_ERRORS "Treat warnings as errors." ON)
 
 option(TOOB_MULTI_ARCH_BUILD "Install both a72 and a76 Toob plugins in the same package." OFF)
 option(INSTALL_LV2CAIRO_TEST_PLUGIN "Install the Lv2Cairo Test Plugin" OFF) # Install the lv2cairo test plugin.

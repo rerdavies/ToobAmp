@@ -298,6 +298,9 @@ To build the debian package, for debug or personal use, run
 
     ./makePackage
 
+but see instructions below for building actual release packages, which require multi-step CMake builds.
+
+
 See the Release Builds section below for information about building publishable package.
 
 Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that
@@ -307,6 +310,28 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 
     https://rerdavies.github.io/pipedal/RTThreadPriority.html
 
+#### CMake Build Options
+
+ToobAmp provides a number of CMake build options that can be used to customize the build. The most important of these are:
+
+- `TOOB_AMD_OPTIMIZATIONS`: Defaults to `AVX'. Values are:
+    - `AVX512`: Build with AVX-512 optimizations. Not recommended. Yeilds degraded performance on a AMD processors, and many Intel processors as well.
+    - `AVX`: Build with AVX optimizations. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with AVX support.
+    - `SSE42`: Build with SSE4.2 optimizations enabled. Not recommended. Does not provide significant performance improvements over `DEFAULT`.
+    - `DEFAULT`: Build with default x86-64 optimizations. Provides compatibility with all x86-64 machines, but does not provide the performance benefits of AVX optimizations.
+
+- `TOOB_AARCH_OPTIMIZATIONS`: Defaults to `A72`. Values are:
+    - `A72`: Build with optimizations for ARM A72 processors. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with ARM A72 processors (Raspberry Pi 4).
+    - `A76`: Build with optimizations for ARM A76 processors. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with ARM A76 processors (Raspberry Pi 5).
+    - `DEFAULT`: Build with default ARM64 optimizations. Provides compatibility with all ARM64 machines, but does not provide the performance benefits of A72 or A76 optimizations. 
+
+
+- `TOOBAMP_PERMISSIVE_COMPILE`: Defaults to `OFF`. When set to `OFF`, all compiler warnings are treated as errors (GCC -Werror option). This is recommended for development builds. If you are building for unofficial platforms or compilers, you may need to turn this ON in order to allow builds to succeed.
+
+- `TOOB_BUILD_UI`: Defaults to `ON`. When set to `ON`, builds native X11/Cairo UI plugin. When set to OFF, TooB Amp is built with only default LV2 user interface. Disabling UI builds, significantly improves compile times during development. 
+
+- `TOOB_MULTI_ARCH_BUILD`: Defaults to `OFF`. When set to `ON`, builds and packages provide runtime dual-version optimized versions of TooB dynamic library. Use of this option is complicated. Just use the build-march.sh and build-march-x64.sh scripts described below to make dual-binary packages. 
+
 
 #### Release Builds
 
@@ -315,9 +340,9 @@ release build procedure builds both binaries, and the correct .so is loaded at r
 
     ./build-march.sh
 
-To build the AMD64/x64 release package, run 
+The AMD64 Release build of ToobAmp contain binaries that are optimized for either x86_64_v3 (Processors with AVX support), and x864_64_v1 (all x86_64 processors). The x64 procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full x86_64/AMD64 release package, run 
 
-    ./build-amd64.sh
+    ./build-march-x64.sh
 
 Note that both scripts run clean builds, so they will take a while to complete; and both scripts leave the state of the CMake build directory in a state that is not suitable for development builds. You should run `./config.sh` (or Ctrl+Shift+P/"CMake: delete cache and reconfigure", from Visual Studio Code) after running either of the release build scripts to get back to a state where you can do development builds. 
 
