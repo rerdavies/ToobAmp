@@ -92,11 +92,13 @@ are constantly coming up with new and ingenious applications for NAM models.
 .nam model files can be donwloaded from the internet. There are many online sources for .nam model files, both free, and commercial. Foremost among these is the 
 http://tone3000.com website, which provides a vast collection of free .nam models files that have been developed and uploaded by a large online community of NAM users. 
 
-Loading .nam model files into PiPedal is a two-step process. First, download model files to your local computer, or your phone or tablet, using a
-web browser. Then upload the model files to the PiPedal server using the PiPedal web interface. You can find an "Upload" button in
-the file browser when you click on the "Model" control in the plugin's user interface  within the PiPedal web interface.
+To upload Tone3000 models directly to the PiPedal server, click on the Model control, and then click on the "DOWNLOAD MODEL FILES FROM TONE3000" button at the bottom 
+of the browser dialog. This will bring up a browser window for Tone3000 NAM models. When you select a tone bundle, the bundle will be uploaded diretly to the PiPedal server.
 
-If you are not using PiPedal, just click on the Model control, and use the file browser to select the .nam file directly on your local system.
+If you obtain .nam models from other source (e.g. commercial tone bundles), you can upload .nam models, or .zip files containing bundles of .nam modesl to 
+the pipedal server by tapping the "UPLOAD" button found at the bottom of the model file browser dialog. 
+
+If you are not using PiPedal, just click on the Model control, and use the host application's file browser to select .nam files directly on your local system.
 
 TooB Neural Amp Modeler supports a much wider range of amp models than ToobML, but usually uses more CPU. 
 You will need at least a Pi 4 to use Toob Neural Amp Modeler, and you may need to increase your audio buffer sizes to prevent overruns. 
@@ -124,6 +126,24 @@ what the threshold is; but the effect on performance is pretty obvious when heat
 Note that heat throttling is done to protect your processor from permanent damage due to overheating; but there's no real risk of actual 
 damage, since heat throttling thresholds are set well below the point at which damage occurs. 
 
+TooB NAM now supports NAM A2 models, but supports the older NAM A1 format as well. Models downloaded through TooB NAM's "DOWNLOAD MODEL FILES FROM TONE3000" button will usually 
+be A2 models. Currently, tone bundles downloaded from the Tone3000 website directly will be A1 models. Model bundles that you obtain from other sources may also 
+be A1 or A2 models. 
+
+A2 models generally offer better audio quality and lower CPU use than comparable A1 models.
+
+One of the key new features introduced in NAM A2 is support for "Slimmable" models. A Slimmable model 
+is a single model file that contains multiple quality tiers, allowing you to interactively trade off 
+audio quality against CPU usage at runtime. When you load a Slimmable A2 model, a new "Slim" dial 
+appears in the TooB NAM controls. Turn it down to use a lighter, lower-quality tier that saves CPU; 
+turn it up to use a higher-quality tier at greater CPU cost.
+
+The number of quality tiers available depends on how the model was trained. Tone3000 A2 models 
+currently provide two tiers: a Slim weight of 0.5, and a Slim weight of 1.0. The lighter tier (0.5) 
+delivers quality comparable to a typical A1 model but at noticeably lower CPU cost. The heavier tier 
+(1.0) delivers significantly better quality than comparable A1 models, with only a modest increase in 
+CPU use. Future A2 models may provide more flexible Slimmable weight settings.
+
 ---
 
 TooB Neural Amp Modeler uses code from the Neural Amp Modeler Core project (https://www.neuralampmodeler.com/). The TooB team wishes 
@@ -133,7 +153,7 @@ Modeler core project is provided under the following license:
 
 MIT License
 
-Copyright (c) 2026 Steven Atkinson
+Copyright (c) Steven Atkinson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -157,7 +177,7 @@ SOFTWARE.
 ---
 
 TooB Neural Amp Modeler uses code from the NeuralAudio project (https://github.com/mikeoliphant/NeuralAudio). The Neural Audio project provides highly 
-optimized implementations of Neural Amp models. The TooB team wishes to express gratitude to Mike Oliphant for 
+optimized code for executing NAM A1 models. The TooB team wishes to express gratitude to Mike Oliphant for 
 making his optimizations work available as open-source code. 
 
 Steve and Mike have done all of the hard work that was required to make NAM technology available through TooB Neural Amp Modeler. They 
@@ -169,7 +189,7 @@ under the following license.
 
 MIT License
 
-Copyright (c) 2024, 2025 Mike Oliphant
+Copyright (c) Mike Oliphant
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -189,8 +209,6 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Code from the the NeuralAmpModelerCore project (https://github.com/sdatkinson/NeuralAmpModelerCore) is provided 
-under the following license. 
 
 """ ;
 
@@ -246,7 +264,7 @@ under the following license.
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;
                 lv2:portProperty epp:expensive;
-                rdfs:comment "Model quality for NAM A2 models that support slimmable model sizes.";
+                rdfs:comment "Model quality for NAM A2 models that support slimmable models.";
         ],
         [
                 a lv2:InputPort ,
@@ -402,6 +420,7 @@ under the following license.
                         rdfs:label "Calibrated" ;
                         rdf:value 1.0
                 ];   
+                rdfs:comment "Calibration method for audio input.";
 
 
                 pg:group toobNam:calibrationGroup ;
@@ -431,7 +450,7 @@ under the following license.
                 lv2:default 0.0;
                 lv2:minimum 0.0;
                 lv2:maximum 2.0;
-                rdfs:comment "Scaling applied to model output";
+                rdfs:comment "Calbration method for audio output";
 
                 lv2:portProperty lv2:enumeration ;
                  lv2:scalePoint [
