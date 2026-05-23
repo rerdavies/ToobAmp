@@ -44,14 +44,6 @@
 #  pragma warning (disable: 4100)
 #endif
 
-// This exports the classes/structures to the windows DLL
-#ifdef _WIN32
-#define DllExport   __declspec( dllexport )
-#define _CRT_SECURE_NO_WARNINGS
-#else
-#define DllExport
-#endif
-
 #include <stdlib.h>
 
 #include <cassert>
