@@ -329,6 +329,8 @@ New in this release
 
 - TooB Neural Amp Modeler:  supports NAM A2 models.
 
+- AVX Optimizations for x86-64 machines, providing major performance improvements for TooB Neural Amp Modeler, and other plugins.
+
 - New TooB Tone plugin: a simple one-knob tone control.
 
 Bug Fixes
