@@ -152,7 +152,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 add_library(ToobAmpArch SHARED
     ${NAM_SOURCES}
 
-    ProcessorCheck.hpp ProcessorCheck.cpp 
+    X86ProcessorCheck.hpp X86ProcessorCheck.cpp 
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
     ToobNoiseGate.cpp ToobNoiseGate.hpp
@@ -358,6 +358,8 @@ if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     else()
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a72")
     endif()
+elseif(CMAKE_DEB_HOST_ARCH STREQUAL "amd64")
+    set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME ${TOOBAMP_SO_VERSIONED_OUTPUT_NAME})
 else()
     set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp")
 endif()
@@ -1314,6 +1316,20 @@ if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
 endif()
 
 
+if(CMAKE_DEB_HOST_ARCH STREQUAL "amd64")
+
+    add_library(ToobAmpArchShim SHARED
+        lv2-shim-amd64.cpp
+        X86ProcessorCheck.cpp X86ProcessorCheck.hpp
+    )
+
+
+    set_target_properties(ToobAmpArchShim PROPERTIES OUTPUT_NAME "ToobAmp")
+    set_target_properties(ToobAmpArchShim PROPERTIES PREFIX "")
+endif()
+
+
+
 
 include(GNUInstallDirs)
 
@@ -1338,10 +1354,22 @@ if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     endif()
 
 else()
-    install(TARGETS ToobAmpArch
+    install(TARGETS ToobAmpArchShim
         LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     )
+    install(TARGETS ToobAmpArch
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+
+    )
+    if(TOOB_MULTI_ARCH_BUILD)
+        # Previously built with AVX optimizations. See build-march-x64.sh.
+        install(FILES ${PROJECT_SOURCE_DIR}/build-avx/src/ToobAmp-x86-64-avx.so
+            DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        )
+    endif()
 endif()
 
 add_executable(VactrolTest

@@ -23,18 +23,21 @@
 
 #pragma once 
 
+#ifdef __x86_64__
+
 namespace toob {
+
 
     enum class CpuLevel
     {
-        V0,
-        V1,
-        V2,
-        V3,
-        V4,
+        V1 = 0,
+        V2 = 1,
+        V3 = 2,
+        V4 = 3,
     };
 
-    CpuLevel GetCpuLevel();
-    void ProcessorCheck(); // throws on error.
+    CpuLevel GetX86CpuLevel();
+    void X86ProcessorCheck(); // throws on error.
 
 }
+#endif

@@ -51,13 +51,14 @@ SOFTWARE.
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <semaphore>
+#include <thread>
 #include "lv2ext/filedialog.h"
 #include "ss.hpp"
 #include <cfenv>
 #include "LsNumerics/Denorms.hpp"
 #include <Eigen/Dense>
 #include <filesystem>
-#include "ProcessorCheck.hpp"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -90,6 +91,23 @@ const int INPUT_LEVEL_MAX=10;
 // #include "architecture.hpp"
 
 const char NeuralAmpModeler::URI[] = "http://two-play.com/plugins/toob-nam";
+
+static constexpr std::ptrdiff_t MAX_CONCURRENT_MODEL_LOADS = 4;
+
+static std::ptrdiff_t concurrentModelLoads()
+{
+    std::ptrdiff_t cpuCores = (std::ptrdiff_t)(std::thread::hardware_concurrency());
+    
+    // we want 1 concurrent loads for 4 cores. 
+    // we want maybe 4 concurrent loads for 12 or more cores. 
+
+    cpuCores = std::min(cpuCores/4,MAX_CONCURRENT_MODEL_LOADS);
+
+    if (cpuCores == 0) cpuCores = 1; // fallback if value is not well-defined
+    return (int)std::min(cpuCores, MAX_CONCURRENT_MODEL_LOADS);
+}
+
+static std::counting_semaphore<MAX_CONCURRENT_MODEL_LOADS> modelLoadSemaphore(concurrentModelLoads());
 
 // Because intern Noisegate calculation is incorrect.
 static inline float ToNoiseGateThreshold(float db)
@@ -214,7 +232,6 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
-    ProcessorCheck();
     CheckValid();
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);
@@ -235,7 +252,7 @@ NeuralAmpModeler::NeuralAmpModeler(
     // frequecy response out latency
     // frequency response variables.
     constexpr double UPDATE_RATE = (1.0 / 15.0); // 15 times a second.
-    responseDelaySamplesMax = (int64_t)(UPDATE_RATE * rate);
+    throttleDelaySamples = (int64_t)(UPDATE_RATE * rate);
 
     this->toneStackFilter.SetSampleRate(rate);
     this->baxandallToneStack.SetSampleRate(rate);
@@ -527,8 +544,17 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
             std::filesystem::path filename = pLoadMessage->ModelFileName();
             try
             {
-
-                dspResult = GetNAM(filename,pLoadMessage->ModelWeight());
+                modelLoadSemaphore.acquire(); // limit the number of concurrent threads of execution.
+                try
+                {
+                    dspResult = GetNAM(filename,pLoadMessage->ModelWeight());
+                }
+                catch (...)
+                {
+                    modelLoadSemaphore.release();
+                    throw;
+                }
+                modelLoadSemaphore.release();
                 dspFilename = filename;
                 if (!dspResult)
                 {
@@ -580,6 +606,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
 
         SetModel();
         SetForegoundModelWeight(loadResponse->ModelWeight());
+        this->modelLoadOutstanding = false;
     }
     break;
     default:
@@ -833,6 +860,26 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
             this->backgroundProcessor.fgSetCalibrationSettings(fgCalibrationSettings);
         }
     }
+    if (cQuality.HasChanged() || this->qualityUpdateDelaySamples != 0)
+    {
+        if (qualityUpdateDelaySamples == 0) // throttle request rate!
+        {
+            RequestLoad(mNAMPath.c_str(),cQuality.GetValue());
+            qualityUpdateDelaySamples = throttleDelaySamples;
+        } else {
+            this->qualityUpdateDelaySamples -= nFrames;
+            if (this->qualityUpdateDelaySamples < 0)
+            {
+                this->qualityUpdateDelaySamples = 0;
+                RequestLoad(mNAMPath.c_str(),cQuality.GetValue());
+            }
+
+        }
+
+    }
+    if (this->modelRequestPending && !this->modelLoadOutstanding) {
+        RequestLoad(mNAMPath.c_str(),mRequestedModelWeight);
+    }
 
     if (cBass.HasChanged() || cMid.HasChanged() || cTreble.HasChanged() || cToneStackType.HasChanged())
     {
@@ -840,7 +887,7 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         // generate a throttled patch_Set
         if (responseDelaySamples == 0)
         {
-            responseDelaySamples = responseDelaySamplesMax;
+            responseDelaySamples = throttleDelaySamples;
         }
     }
     if (cBuffer.HasChanged())
@@ -1111,7 +1158,10 @@ void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
     if (propertyUrid == namUris.nam__ModelFile && (value->type == namUris.atom__Path || value->type == namUris.atom__String))
     {
         const char *modelFileName = ((const char *)value) + sizeof(LV2_Atom);
-        RequestLoad(modelFileName, cQuality.GetValue());
+        if (strcmp(this->mNAMPath.c_str(),modelFileName) != 0)
+        {
+            RequestLoad(modelFileName, cQuality.GetValue());
+        }
     }
 }
 void NeuralAmpModeler::OnPatchGet(LV2_URID propertyUrid)
@@ -1191,6 +1241,8 @@ void NeuralAmpModeler::WriteFrequencyResponse()
 
 void NeuralAmpModeler::RequestLoad(const char *fileName, float modelWeight)
 {
+    this->qualityUpdateDelaySamples = 0;
+
     this->mNAMPath = fileName;
     this->mRequestedModelWeight = modelWeight;
     this->requestFileUpdate = true;
@@ -1200,6 +1252,7 @@ void NeuralAmpModeler::RequestLoad(const char *fileName, float modelWeight)
         this->mNAMPath = fileName;
         this->mRequestedModelWeight = modelWeight;
         this->requestFileUpdate = true;
+        this->qualityUpdateDelaySamples = 0;
         return;
     }
 
@@ -1209,7 +1262,11 @@ void NeuralAmpModeler::RequestLoad(const char *fileName, float modelWeight)
     this->requestFileUpdate = true;
     if (schedule)
     {
-
+        if (modelLoadOutstanding) {
+            modelRequestPending = true;
+            return;
+        }
+        modelLoadOutstanding = true;
         NamLoadMessage loadMessage(fileName,modelWeight);
 
         schedule->schedule_work(

@@ -37,40 +37,9 @@ SOFTWARE.
 #include "lv2/core/lv2.h"
 #include <dlfcn.h>
 #include <memory.h>
+#include "X86ProcessorCheck.hpp"
 
-
-// a list of known arm8.1a processors.
-static std::vector<std::string> arm82aProcessorIds  = {
-    "0xd0a", // a75
-    "0xd0b", // a76
-    "0xd0e", // a76AE
-    "0xd0d", // a77
-    "0xd41", // a78
-    "0xd4a", // neoverse-e1
-    "0xd0c", // Neoverse-n1
-    "0xd40", // Neoverse-V1 (8.4)
-};
-
-static bool isA76OrBetter()
-{
-    std::ifstream cpuinfo("/proc/cpuinfo");
-    std::string line;
-    
-    while (std::getline(cpuinfo, line))
-    {
-        if (line.find("CPU part") != std::string::npos)
-        {
-            for (const auto &processor : arm82aProcessorIds)
-            {
-                if (line.find(processor) != std::string::npos)
-                {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
+using namespace toob;
 
 typedef const LV2_Descriptor *
 EntryPointT(uint32_t index);
@@ -80,32 +49,47 @@ static EntryPointT *arch_lv2_descriptor = nullptr;
 
 void findArchEntryPoint()
 {
-
     if (arch_lv2_descriptor != nullptr)
     {
         return;
     }
-    std::string soName = "ToobAmp-a72.so";
-    if (isA76OrBetter())
-    {
-        soName = "ToobAmp-a76.so";
-    }
+
+    CpuLevel cpuLevel = GetX86CpuLevel();
+
     // Get the directory of the current .so library
     Dl_info dl_info;
     memset(&dl_info,0,sizeof(dl_info));
-    if (dladdr((void *)isA76OrBetter, &dl_info) == 0 || dl_info.dli_fname == nullptr)
+    if (dladdr((void *)findArchEntryPoint, &dl_info) == 0 || dl_info.dli_fname == nullptr)
     {
         return;
     }
     std::filesystem::path libPath = dl_info.dli_fname;
-    libPath = libPath.parent_path() / "bin" / soName;
-    if (!std::filesystem::exists(libPath)) {
-        libPath = dl_info.dli_fname;
-        libPath = libPath.parent_path() / "bin" / "ToobAmp-a72.so";
+
+    // not static, because C++ runtime may not be fully initialized.
+    std::vector<std::string> soNames {
+        "ToobAmp-x86-64.so",
+        "ToobAmp-x86-64-sse42.so",
+        "ToobAmp-x86-64-avx.so",
+        "ToobAmp-x86-64-avx512.so",
+
+    };
+    std::filesystem::path dynamicLibPath;
+    while (true) 
+    {
+        std::string soName = soNames[(size_t)cpuLevel];
+        dynamicLibPath = libPath.parent_path() / "bin" / soName;
+        if (std::filesystem::exists(dynamicLibPath)) 
+        {
+            break;
+        }
+        if (cpuLevel == CpuLevel::V1)
+        {
+            break;
+        }
+        cpuLevel = (CpuLevel)((int)cpuLevel-1);
     }
 
-
-    dlHandle = dlopen(libPath.c_str(), RTLD_LAZY);
+    dlHandle = dlopen(dynamicLibPath.c_str(), RTLD_LAZY);
     if (!dlHandle)
     {
         std::cout << "Cannot load library: " << dlerror() << std::endl;

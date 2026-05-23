@@ -241,10 +241,11 @@ under the following license.
 
                 lv2:index 2;
                 lv2:symbol "modelSize" ;
-                lv2:name "Quality";
+                lv2:name "Slim";
                 lv2:default 0.0 ;
                 lv2:minimum 0.0;
                 lv2:maximum 1.0;
+                lv2:portProperty epp:expensive;
                 rdfs:comment "Model quality for NAM A2 models that support slimmable model sizes.";
         ],
         [

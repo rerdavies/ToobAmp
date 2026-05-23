@@ -21,7 +21,7 @@
  *   SOFTWARE.
  */
 
-#include "ProcessorCheck.hpp"
+#include "X86ProcessorCheck.hpp"
 #include <string.h>
 #include <array>
 #include <stdexcept>
@@ -146,7 +146,7 @@ static CpuFeatures detect_cpu_features()
     return f;
 }
 
-CpuLevel toob::GetCpuLevel()
+CpuLevel toob::GetX86CpuLevel()
 {
     CpuFeatures f = detect_cpu_features();
     // x86-64-v4 requires all of v3 + AVX-512 subset
@@ -215,9 +215,9 @@ CpuLevel toob::GetCpuLevel()
 //     std::cout << "  AVX-512VL : " << ok(f.avx512vl) << "\n";
 // }
 
-void toob::ProcessorCheck()
+void toob::X86ProcessorCheck()
 {
-    CpuLevel cpuLevel = GetCpuLevel();
+    CpuLevel cpuLevel = GetX86CpuLevel();
 
     bool valid;
     if (strcmp(TOOB_OPTIMIZATION_FLAGS, "x86-64-v2") == 0)
@@ -247,7 +247,7 @@ void toob::ProcessorCheck()
 
 #ifdef __aarch64__
 
-void toob::ProcessorCheck()
+void toob::X86ProcessorCheck()
 {
 }
 

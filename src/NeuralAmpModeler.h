@@ -303,12 +303,16 @@ namespace toob
         bool isActivated = false;
         bool requestFileUpdate = true;
 
+        bool modelRequestPending = false;
+        bool modelLoadOutstanding = false;
+
 
         FilterResponse filterResponse;
 
         bool responseGet = false;
-        int64_t responseDelaySamplesMax = 0;
+        int64_t throttleDelaySamples = 0;
         int64_t responseDelaySamples = 0;
+        int64_t qualityUpdateDelaySamples = 0;
 
     private:
         void HandleBackgroundProcessorEvents();
