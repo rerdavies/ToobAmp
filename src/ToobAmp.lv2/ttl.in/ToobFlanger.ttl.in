@@ -48,7 +48,7 @@ Emulation of a Boss BF-2 Flanger, based on circuit analysis and simulation of th
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB BF-2";
+        mod:label "TooB Flanger";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port
