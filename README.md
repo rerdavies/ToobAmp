@@ -338,7 +338,7 @@ ToobAmp provides a number of CMake build options that can be used to customize t
 The ARM64 Release build of ToobAmp contain binaries that are optimized for either ARM A72 (Raspberry Pi 4), or ARM A76 (Raspberry Pi 5). The 
 release build procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full ARM64 release package, run 
 
-    ./build-march.sh
+    ./build-march-aarch64.sh
 
 The AMD64 Release build of ToobAmp contain binaries that are optimized for either x86_64_v3 (Processors with AVX support), and x864_64_v1 (all x86_64 processors). The x64 procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full x86_64/AMD64 release package, run 
 

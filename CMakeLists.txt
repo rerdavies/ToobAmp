@@ -110,8 +110,6 @@ endif()
 
 # Force architecture for all submodule builds.
 
-# Match NeuralAudio compile options
-
 
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
@@ -198,6 +196,14 @@ else()
     include_directories("/usr/local/include")
 endif()
 
+
+if(DEFINED A76_OPTIMIZATION)
+    message(ERROR "A76_OPTIMIZATION is no longer supported. Please use TOOB_AARCH_OPTIMIZATIONS instead.")
+endif()
+
+if(DEFINED A72_OPTIMIZATION)
+    message(ERROR "A72_OPTIMIZATION is no longer supported. Please use TOOB_AARCH_OPTIMIZATIONS instead.")
+endif()
 
 
 # Include submodules
