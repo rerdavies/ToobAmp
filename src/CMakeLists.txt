@@ -44,7 +44,7 @@ endif()
 
 
 
-set(FLAC_LIBS FLAC++.a FLAC.a ogg.a)
+set(FLAC_LIBS FLAC++.so FLAC.so ogg.so)
 
 
 
