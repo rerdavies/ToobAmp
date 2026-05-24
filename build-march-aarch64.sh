@@ -10,8 +10,8 @@ cd build-a76
 cmake .. -D CMAKE_BUILD_TYPE=Release  -D TOOB_AARCH_OPTIMIZATIONS=A76 -D TOOB_MULTI_ARCH_BUILD=OFF -D CMAKE_VERBOSE_MAKEFILE=ON -G Ninja 
 cd ..
 
-# Build only the A76 version of the librar, to be used in the multi-arch build.
-time cmake --build ./build-a76 --target ToobAmpArch  --config Release -G Ninja
+# Build only the A76 version of the library, to be used in the multi-arch build.
+time cmake --build ./build-a76 --target ToobAmpArch  --config Release -- -j 3
 
 
 # Configure main build to do an a72 build and an a72+a76 package (a76 binaries are in ./build-a76)

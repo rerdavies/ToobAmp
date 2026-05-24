@@ -21,6 +21,8 @@
  *   SOFTWARE.
  */
 
+ #ifdef __x86_64__
+
 #include "X86ProcessorCheck.hpp"
 #include <string.h>
 #include <array>
@@ -32,7 +34,6 @@
 #endif
 using namespace toob;
 
-#ifdef __x86_64__
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -245,10 +246,3 @@ void toob::X86ProcessorCheck()
 
 #endif
 
-#ifdef __aarch64__
-
-void toob::X86ProcessorCheck()
-{
-}
-
-#endif
