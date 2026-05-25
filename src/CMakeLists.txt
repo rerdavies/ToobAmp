@@ -348,7 +348,7 @@ target_compile_options(ToobAmpArch
 )
 
 if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-    if(TOOBAMP_A76_OPTIMIZATION)
+    if(TOOB_AARCH_OPTIMIZATIONS STREQUAL "A76")
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a76")
     else()
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a72")
