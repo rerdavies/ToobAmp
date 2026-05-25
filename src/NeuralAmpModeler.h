@@ -352,7 +352,7 @@ namespace toob
         // Copy the output to the output buffer, applying output level.
         // :param nChansIn: In from internal
         // :param nChansOut: Out to external
-        void _ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
+        void _ApplyOutputGain(nam_float_t **inputs, float_t **outputs, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
 
         // Member data
 

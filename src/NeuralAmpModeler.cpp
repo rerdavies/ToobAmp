@@ -843,7 +843,6 @@ void NeuralAmpModeler::UpdateNoiseGateParams()
 void NeuralAmpModeler::ProcessBlock(int nFrames)
 {
 
-    constexpr size_t numChannelsInternal = 1;
     const size_t numFrames = (size_t)nFrames;
 
     // Disable floating point denormals
@@ -908,7 +907,16 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     if (noiseGateActive)
     {
         triggerOutput = this->mNoiseGateTrigger.Process(mInputPointers, 1, numFrames);
-        noiseGateOut = (float)(this->mNoiseGateTrigger.GetGainReduction()[0][0]);
+
+        const float * restrict pGateValues = this->mNoiseGateTrigger.GetGainReduction()[0].data();
+
+        noiseGateOut = pGateValues[0];
+        float * restrict pData = mInputPointers[0];
+        // apply noise gate BEFORE nam.
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pData[i] *= pGateValues[i];
+        }
     }
 
     nam_float_t **toneStackOutput = triggerOutput;
@@ -931,14 +939,10 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
     ProcessNam(toneStackOutput[0], this->mOutputPointers[0], nFrames);
 
-    // Apply the noise gate
-    nam_float_t **gateGainOutput = noiseGateActive
-                                       ? this->mNoiseGateGain.Process(this->mOutputPointers, numChannelsInternal, numFrames)
-                                       : this->mOutputPointers;
 
     // Let's get outta here
     // This is where we exit mono for whatever the output requires.
-    this->_ProcessOutput(gateGainOutput, &(this->audioOut), numFrames, 1, 1);
+    this->_ApplyOutputGain(mOutputPointers, &(this->audioOut), numFrames, 1, 1);
     // * Output of input leveling (inputs -> mInputPointers),
     // * Output of output leveling (mOutputPointers -> outputs)
 
@@ -1133,7 +1137,7 @@ void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrame
 #endif
 }
 
-void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
+void NeuralAmpModeler::_ApplyOutputGain(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
                                       const size_t nChansIn, const size_t nChansOut)
 {
     const float gain = this->cOutputGain.GetAf();
@@ -1144,12 +1148,7 @@ void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, c
     const size_t cin = 0;
     for (size_t cout = 0; cout < nChansOut; cout++)
         for (size_t s = 0; s < nFrames; s++)
-#ifdef APP_API // Ensure valid output to interface
-            outputs[cout][s] = std::clamp(gain * inputs[cin][s], -1.0, 1.0);
-#else // In a DAW, other things may come next and should be able to handle large
-      // values.
             outputs[cout][s] = gain * inputs[cin][s];
-#endif
 }
 
 void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
