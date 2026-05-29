@@ -243,8 +243,8 @@ namespace toob
         double rate = 44100;
         std::string bundle_path;
 
-        float fgInputVolume = 1.0;
-        float fgOutputVolume = 1.0;
+        float fgCalibratedInputVolume = 1.0;
+        float fgCalibratedOutputVolume = 1.0;
 
         //const int kNumPresets = 1;
 
@@ -293,8 +293,8 @@ namespace toob
 
         bool noiseGateActive = false;
         OutputPort cGateOutput;
-        const float *audioIn = nullptr;
-        float *audioOut = nullptr;
+        const float *lv2AudioIn = nullptr;
+        float *lv2AudioOut = nullptr;
         LV2_Atom_Sequence *controlIn = nullptr;
         LV2_Atom_Sequence *controlOut = nullptr;
 
@@ -345,14 +345,11 @@ namespace toob
         void _PrepareBuffers(const size_t numFrames);
         // Manage pointers
         void _PrepareIOPointers(const size_t nChans);
-        // Copy the input buffer to the object, applying input level.
-        // :param nChansIn: In from external
-        // :param nChansOut: Out to the internal of the NeuralAudioDsp routine
-        void _ProcessInput(const float_t **input, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
-        // Copy the output to the output buffer, applying output level.
-        // :param nChansIn: In from internal
-        // :param nChansOut: Out to external
-        void _ApplyOutputGain(nam_float_t **inputs, float_t **outputs, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
+
+        void ApplyNoiseGate(const size_t nFrames);
+
+        void ApplyInputTrim(const size_t nFrames);
+        void ApplyOutputTrim(size_t nFrames);
 
         // Member data
 

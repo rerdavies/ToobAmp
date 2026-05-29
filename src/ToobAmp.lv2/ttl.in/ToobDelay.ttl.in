@@ -48,7 +48,7 @@ A straightforward no-frills digital delay.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Delay";
+        mod:label "Delay";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port

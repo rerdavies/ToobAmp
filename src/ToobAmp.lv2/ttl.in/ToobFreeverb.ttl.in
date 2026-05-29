@@ -52,7 +52,7 @@ The TooB implementation is ported from the Synthesis Toolkit in C++ (STK), by Pe
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Freeverb";
+        mod:label "Freeverb";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port

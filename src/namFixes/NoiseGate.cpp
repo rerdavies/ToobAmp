@@ -129,7 +129,7 @@ nam_float_t** dsp::noise_gate::Trigger::Process(nam_float_t** inputs, const size
             this->mLastGainReductionDB[c] = maxGainReduction;
           }
         }
-        if (this->mLastGainReductionDB[c] < MINIMUM_LOUDNESS_DB)
+        if (this->mLastGainReductionDB[c] <= MINIMUM_LOUDNESS_DB)
         {
           this->mGainReduction[c][s] = 0; // avoid denorms.
         } else {

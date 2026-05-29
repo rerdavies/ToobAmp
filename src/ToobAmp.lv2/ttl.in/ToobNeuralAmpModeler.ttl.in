@@ -213,7 +213,7 @@ SOFTWARE.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB NAM";
+        mod:label "NAM";
         lv2:optionalFeature lv2:hardRTCapable;
 
         patch:readable 

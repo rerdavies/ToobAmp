@@ -70,6 +70,7 @@ namespace toob::nam_impl
     struct NamVolumeAdjustments {
         float input;
         float output;
+        float expectedModelInputLevelDbU;
     };
     NamVolumeAdjustments CalculateNamVolumeAdjustments(NeuralAudioDsp*dsp, const NamCalibrationSettings&calibrationSettings);
 

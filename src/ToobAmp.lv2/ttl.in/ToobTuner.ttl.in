@@ -19,6 +19,7 @@
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 @prefix pipedalui: <http://github.com/rerdavies/pipedal/ui#> .
+@prefix mod:   <http://moddevices.com/ns/mod#> .
 
 @prefix toobtuner: <http://two-play.com/plugins/toob-tuner#> .
 
@@ -35,6 +36,9 @@
         a lv2:Plugin ,
                 lv2:AnalyserPlugin ;
         doap:name "TooB Tuner";
+        mod:brand "TooB";
+        mod:label "Tuner";
+
         uiext:ui <http://two-play.com/plugins/toob-tuner-ui>;
 
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;

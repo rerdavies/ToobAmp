@@ -109,7 +109,7 @@ static std::ptrdiff_t concurrentModelLoads()
 
 static std::counting_semaphore<MAX_CONCURRENT_MODEL_LOADS> modelLoadSemaphore(concurrentModelLoads());
 
-// Because intern Noisegate calculation is incorrect.
+// Because intern NoiseGate calculation is incorrect.
 static inline float ToNoiseGateThreshold(float db)
 {
     // *2 because Internal value is RMS^2
@@ -682,10 +682,10 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
     //     cOutNorm.SetData(data);
     //     break;
     case EParams::kAudioIn:
-        audioIn = (const float *)data;
+        lv2AudioIn = (const float *)data;
         break;
     case EParams::kAudioOut:
-        audioOut = (float *)data;
+        lv2AudioOut = (float *)data;
         break;
     case EParams::kControlIn:
         controlIn = (LV2_Atom_Sequence *)data;
@@ -893,44 +893,41 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     {
         HandleBufferChange();
     }
-
-    // Input is collapsed to mono in preparation for the NAM.
-    this->_ProcessInput(&this->audioIn, numFrames, 1, 1);
-
-    // Noise gate trigger
-    nam_float_t **triggerOutput = mInputPointers;
     if (cNoiseGateThreshold.HasChanged())
     {
         UpdateNoiseGateParams();
     }
-    float noiseGateOut = 1;
-    if (noiseGateActive)
+
+    // Copy lv2 input to our own working buffer so that we can modify audio data.
     {
-        triggerOutput = this->mNoiseGateTrigger.Process(mInputPointers, 1, numFrames);
+        const float * restrict pIn = this->lv2AudioIn;
+        float *restrict pOut = this->mInputPointers[0];
 
-        const float * restrict pGateValues = this->mNoiseGateTrigger.GetGainReduction()[0].data();
-
-        noiseGateOut = pGateValues[0];
-        float * restrict pData = mInputPointers[0];
-        // apply noise gate BEFORE nam.
-        for (size_t i = 0; i < numFrames; ++i)
+        size_t n = (size_t)nFrames;
+        for (size_t i = 0; i < n; ++i)
         {
-            pData[i] *= pGateValues[i];
+            pOut[i] = pIn[i];
         }
     }
+    // Input is collapsed to mono in preparation for the NAM.
 
-    nam_float_t **toneStackOutput = triggerOutput;
+    this->ApplyNoiseGate(numFrames);
+    this->ApplyInputTrim(numFrames);
+
+    // Noise gate trigger
+
+    nam_float_t **toneStackOutput = mInputPointers;
 
     switch (this->toneStackType)
     {
 
     case ToneStackType::Bassman:
     case ToneStackType::Jcm8000:
-        toneStackFilter.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        toneStackFilter.Process(nFrames, mInputPointers[0], mToneStackPointer);
         toneStackOutput = &this->mToneStackPointer;
         break;
     case ToneStackType::Baxandall:
-        baxandallToneStack.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        baxandallToneStack.Process(nFrames, mInputPointers[0], mToneStackPointer);
         toneStackOutput = &this->mToneStackPointer;
         break;
     case ToneStackType::Bypass:
@@ -940,17 +937,17 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
     ProcessNam(toneStackOutput[0], this->mOutputPointers[0], nFrames);
 
 
-    // Let's get outta here
-    // This is where we exit mono for whatever the output requires.
-    this->_ApplyOutputGain(mOutputPointers, &(this->audioOut), numFrames, 1, 1);
-    // * Output of input leveling (inputs -> mInputPointers),
-    // * Output of output leveling (mOutputPointers -> outputs)
+    this->ApplyOutputTrim(numFrames);
 
-    this->gateOutputUpdateCount += numFrames;
-    if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
+
+    // Copy processed output to lv2 audio buffers.
     {
-        this->gateOutputUpdateCount = 0;
-        this->cGateOutput.SetValue(1 - noiseGateOut);
+        const float * restrict pIn = this->mOutputPointerMemory[0];
+        float *restrict pOut = this->lv2AudioOut;
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pOut[i] = pIn[i];
+        }
     }
 
     if (responseDelaySamples != 0)
@@ -981,6 +978,88 @@ void NeuralAmpModeler::OnIdle()
 }
 
 // Private methods ============================================================
+
+
+inline void NeuralAmpModeler::ApplyNoiseGate(const size_t numFrames)
+{
+    float noiseGateOut = 0;
+    if (noiseGateActive)
+    {
+        this->mNoiseGateTrigger.Process(mInputPointers, 1, numFrames);
+
+        const float * restrict pGateValues = this->mNoiseGateTrigger.GetGainReduction()[0].data();
+        float * restrict pData = mInputPointers[0];
+        // apply noise gate BEFORE nam.
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pData[i] *= pGateValues[i];
+        }
+        noiseGateOut = pGateValues[0] == 0 ? 0.0f: 1.01f;
+    }
+
+    this->gateOutputUpdateCount += numFrames;
+    if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
+    {
+        this->gateOutputUpdateCount = 0;
+        this->cGateOutput.SetValue(1 - noiseGateOut);
+    }
+
+}
+
+inline void NeuralAmpModeler::ApplyOutputTrim(size_t nFrames)
+{
+    const float gain = this->cOutputGain.GetAf();
+    float *pData = this->mOutputPointers[0];
+    for (size_t s = 0; s < nFrames; s++) 
+    {
+        pData[s] *= gain;
+    }
+
+}
+
+
+inline void NeuralAmpModeler::ApplyInputTrim(const size_t nFrames)
+{
+    const double gain = this->cInputGain.GetAf();
+
+    float *pAudioBuffer = this->mInputPointers[0];
+
+    float vuMagnitude = this->vuValue;
+    for (size_t i = 0; i < nFrames; ++i)
+    {
+        float v = pAudioBuffer[i] * gain;
+
+        pAudioBuffer[i] = v;
+        float vAbs = std::fabs(v);
+        if (vAbs > vuMagnitude) 
+        {
+            vuMagnitude = vAbs;
+        }
+    }
+    this->vuValue = vuMagnitude;
+
+    this->vuSampleCount += nFrames;
+    if (this->vuSampleCount >= this->vuMaxSampleCount)
+    {
+        float vuDb;
+        if (this->vuValue == 0)
+        {
+            vuDb = INPUT_LEVEL_MIN;
+        }
+        else
+        {
+            vuDb = Af2Db(this->vuValue);
+            if (vuDb > INPUT_LEVEL_MAX)
+                vuDb = INPUT_LEVEL_MAX;
+            if (vuDb < INPUT_LEVEL_MIN)
+                vuDb = INPUT_LEVEL_MIN;
+        }
+        cInputLevelOut.SetValue(vuDb);
+        this->vuSampleCount = 0;
+        this->vuValue = 0;
+    }
+}
+
 
 void NeuralAmpModeler::_FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels,
                                     const size_t numFrames)
@@ -1070,86 +1149,6 @@ void NeuralAmpModeler::_PrepareIOPointers(const size_t numChannels)
     this->mOutputPointers = numChannels == 0 ? nullptr : &(mOutputPointerMemory[0]);
 }
 
-void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrames, const size_t nChansIn,
-                                     const size_t nChansOut)
-{
-    // We'll assume that the main processing is mono for now. We'll handle dual amps later.
-    // See also: this->mNUM_INTERNAL_CHANNELS
-    if (nChansOut != 1)
-    {
-        std::stringstream ss;
-        ss << "Expected mono output, but " << nChansOut << " output channels are requested!";
-        throw std::runtime_error(ss.str());
-    }
-
-    // On the standalone, we can probably assume that the user has plugged into only one input and they expect it to be
-    // carried straight through. Don't apply any division over nCahnsIn because we're just "catching anything out there."
-    // However, in a DAW, it's probably something providing stereo, and we want to take the average in order to avoid
-    // doubling the loudness.
-    const double gain = this->cInputGain.GetAf() / nChansIn;
-
-    // Assume _PrepareBuffers() was already called
-    if (nChansIn > 0)
-    {
-        for (size_t s = 0; s < nFrames; s++)
-        {
-            this->mInputArray[0][s] = gain * inputs[0][s];
-        }
-    }
-    for (size_t c = 1; c < nChansIn; c++)
-    {
-        for (size_t s = 0; s < nFrames; s++)
-        {
-            this->mInputArray[0][s] += gain * inputs[c][s];
-        }
-    }
-#if NAM_RMS_METER
-    cInputLevelOut.Tick(this->mInputArray[0].data(),nFrames);
-#else
-    float vuValue = this->vuValue;
-    for (size_t i = 0; i < nFrames; ++i)
-    {
-        float v = std::abs(this->mInputArray[0][i]);
-        if (v > vuValue)
-            vuValue = v;
-    }
-    this->vuValue = vuValue;
-    this->vuSampleCount += nFrames;
-    if (this->vuSampleCount >= this->vuMaxSampleCount)
-    {
-        float vuDb;
-        if (this->vuValue == 0)
-        {
-            vuDb = INPUT_LEVEL_MIN;
-        }
-        else
-        {
-            vuDb = Af2Db(this->vuValue);
-            if (vuDb > INPUT_LEVEL_MAX)
-                vuDb = INPUT_LEVEL_MAX;
-            if (vuDb < INPUT_LEVEL_MIN)
-                vuDb = INPUT_LEVEL_MIN;
-        }
-        cInputLevelOut.SetValue(vuDb);
-        this->vuSampleCount = 0;
-        this->vuValue = 0;
-    }
-#endif
-}
-
-void NeuralAmpModeler::_ApplyOutputGain(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
-                                      const size_t nChansIn, const size_t nChansOut)
-{
-    const float gain = this->cOutputGain.GetAf();
-    // Assume _PrepareBuffers() was already called
-    if (nChansIn != 1)
-        throw std::runtime_error("Plugin is supposed to process in mono.");
-    // Broadcast the internal mono stream to all output channels.
-    const size_t cin = 0;
-    for (size_t cout = 0; cout < nChansOut; cout++)
-        for (size_t s = 0; s < nFrames; s++)
-            outputs[cout][s] = gain * inputs[cin][s];
-}
 
 void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 {
@@ -1372,14 +1371,14 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
         {
             for (size_t i = 0; i < numFrames; ++i)
             {
-                input[i] *= fgInputVolume;
+                input[i] *= fgCalibratedInputVolume;
             }
 
             mNAM->Process(const_cast<float *>(input), output, numFrames);
 
             for (size_t i = 0; i < numFrames; ++i)
             {
-                output[i] *= fgOutputVolume;
+                output[i] *= fgCalibratedOutputVolume;
             }
         }
         else
@@ -1500,13 +1499,13 @@ void NeuralAmpModeler::SetModelVolumes()
     if (mNAM)
     {
         NamVolumeAdjustments adjustments = CalculateNamVolumeAdjustments(mNAM.get(), fgCalibrationSettings);
-        fgInputVolume = adjustments.input;
-        fgOutputVolume = adjustments.output;
+        fgCalibratedInputVolume = adjustments.input;
+        fgCalibratedOutputVolume = adjustments.output;
     }
     else
     {
-        fgInputVolume = 0.0;
-        fgOutputVolume = 0.0;
+        fgCalibratedInputVolume = 0.0;
+        fgCalibratedOutputVolume = 0.0;
     }
 }
 

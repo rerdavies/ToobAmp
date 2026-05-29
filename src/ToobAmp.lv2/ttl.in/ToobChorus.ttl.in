@@ -47,7 +47,7 @@ Emulation of a Boss CE-2 Chorus.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Chorus";
+        mod:label "Chorus";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port

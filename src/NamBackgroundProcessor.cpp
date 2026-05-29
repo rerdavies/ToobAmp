@@ -30,7 +30,6 @@ using namespace toob;
 using namespace toob::nam_impl;
 using namespace LsNumerics;
 
-
 static void bufferScale4(float *restrict buffer, float scale, size_t size)
 
 {
@@ -356,6 +355,9 @@ void NamBackgroundProcessor::fgClose()
     }
 }
 
+static float baseInputAdjustment = Af2Db(6);  // users are asked to gainstage to -6dBU.
+static float baseOutputAdjustment = Af2Db(6); // users are asked to gainstage to -6dBU.
+
 NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
     NeuralAudioDsp *dsp,
     const NamCalibrationSettings &calibrationSettings)
@@ -363,20 +365,27 @@ NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
     NamVolumeAdjustments result;
     if (dsp == nullptr)
     {
-        return {0.0f, 0.0f};
+        return {1.0f, 1.0f};
     }
-    result.input = 1.0f; // calbration goes here later.
+
+    // INPUT LEVELS
+
+    result.input = baseInputAdjustment; // calbration goes here later. //yyy: Default value should probably be +6dB.
+    float dbIn;
     if (calibrationSettings.calibrateInput && dsp->HasModelInputLevelDBu())
     {
-        float modelAdjustment = dsp->GetModelInputLevelDBu();
-        result.input = Db2Af(calibrationSettings.calibrationDbu - modelAdjustment);
+        dbIn = calibrationSettings.calibrationDbu - dsp->GetModelInputLevelDBu();
     }
     else
     {
-        result.input = 1.0f;
+        dbIn = -6; // Users are instructed to gainstage to -6dB. Models w/o metadata appear to be ROUGHLY expecting -12dbU.
     }
+    result.input = Db2Af(dbIn + 6); // +6 to make up for our instructions to gainstage to -6dB.
+
+    // OUTPUT LEVELS
+
     auto outputCalibration = calibrationSettings.outputCalbration;
-    if (outputCalibration == OutputCalibrationMode::Calibrated && !dsp->HasModelOutputLevelDBu())
+    if (outputCalibration == OutputCalibrationMode::Calibrated && !(dsp->HasModelOutputLevelDBu() && dsp->HasModelInputLevelDBu()))
     {
         outputCalibration = OutputCalibrationMode::Normalized;
     }
@@ -384,23 +393,40 @@ NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
     {
         outputCalibration = OutputCalibrationMode::Raw;
     }
+    float dbOut;
     switch (outputCalibration)
     {
-    case OutputCalibrationMode::Raw:
-        result.output = 1.0;
-        break;
     case OutputCalibrationMode::Normalized:
     {
-        float adjustment = -18 - dsp->GetModelLoudnessDB();
-        result.output = Db2Af(adjustment, -200);
+        // NB: This is an RMS adjustment (hence the magic 18.0)
+        const float targetLoudness = -18;
+        float gainDB = targetLoudness - dsp->GetModelLoudnessDB();
+
+        dbOut = gainDB + 6; // +6 determined empirically. loudness values are not completely reliable.
         break;
     }
     case OutputCalibrationMode::Calibrated:
-        result.output = Db2Af(
-            dsp->GetModelOutputLevelDBu() - calibrationSettings.calibrationDbu);
+    {
+        const float inputLevel = calibrationSettings.calibrationDbu;
+        const float outputLevel = dsp->GetModelOutputLevelDBu();
+        dbOut = -(outputLevel - inputLevel);
         break;
     }
-    // std::cout << "xxy: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
+    default:
+    case OutputCalibrationMode::Raw:
+        dbOut = 0; 
+        break;
+    }
+    result.output = Db2Af(dbOut - 6, -200); // -6dB to get back to our recommened -6dB gainstaging.
+
+    std::cout << "yyy: Model loudness: " << (dsp->HasModelLoudnessDB() ? dsp->GetModelLoudnessDB() : -1) << 
+        " inputLevelDBU: " << (dsp->HasModelInputLevelDBu() ? dsp->GetModelInputLevelDBu() : -1) << 
+        " outputLevelDBU: " << (dsp->HasModelOutputLevelDBu() ? dsp->GetModelOutputLevelDBu() : -1) << 
+        " calibrationDBU: " << calibrationSettings.calibrationDbu <<
+        std::endl
+        ;
+
+    std::cout << "xxy: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
     return result;
 }
 void NamBackgroundProcessor::SetBgVolumes()

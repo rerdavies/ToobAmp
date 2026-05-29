@@ -75,7 +75,7 @@ like guitar.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Noise Gate";
+        mod:label "Noise Gate";
         lv2:optionalFeature lv2:hardRTCapable;
 
 
