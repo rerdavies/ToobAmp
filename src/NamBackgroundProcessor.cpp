@@ -419,14 +419,14 @@ NamVolumeAdjustments toob::nam_impl::CalculateNamVolumeAdjustments(
     }
     result.output = Db2Af(dbOut - 6, -200); // -6dB to get back to our recommened -6dB gainstaging.
 
-    std::cout << "yyy: Model loudness: " << (dsp->HasModelLoudnessDB() ? dsp->GetModelLoudnessDB() : -1) << 
-        " inputLevelDBU: " << (dsp->HasModelInputLevelDBu() ? dsp->GetModelInputLevelDBu() : -1) << 
-        " outputLevelDBU: " << (dsp->HasModelOutputLevelDBu() ? dsp->GetModelOutputLevelDBu() : -1) << 
-        " calibrationDBU: " << calibrationSettings.calibrationDbu <<
-        std::endl
-        ;
+    // std::cout << "yyy: Model loudness: " << (dsp->HasModelLoudnessDB() ? dsp->GetModelLoudnessDB() : -1) << 
+    //     " inputLevelDBU: " << (dsp->HasModelInputLevelDBu() ? dsp->GetModelInputLevelDBu() : -1) << 
+    //     " outputLevelDBU: " << (dsp->HasModelOutputLevelDBu() ? dsp->GetModelOutputLevelDBu() : -1) << 
+    //     " calibrationDBU: " << calibrationSettings.calibrationDbu <<
+    //     std::endl
+    //     ;
 
-    std::cout << "xxy: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
+    // std::cout << "xxy: Calibration: in = " << Af2Db(result.input) << " out = " << Af2Db(result.output) << std::endl;
     return result;
 }
 void NamBackgroundProcessor::SetBgVolumes()
