@@ -1208,11 +1208,7 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
     // using clock_t = std::chrono::steady_clock;
     // clock_t::time_point start = clock_t::now();
 
-    if (!this->bgMixOptions.isReverb)
-    {
-        // Do NOT normalize IRs. Authors know what they are doing.
-    }
-    else if (this->bgMixOptions.version >= CrvbVersion::V2)
+    if (this->bgMixOptions.version >= CrvbVersion::V2)
     {
         NormalizeConvolution(data);
     }
