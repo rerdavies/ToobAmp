@@ -155,6 +155,12 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMix.cpp ToobMix.hpp
 
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+    ToobMultiEcho.cpp ToobMultiEcho.hpp
+
+
     ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
     ToobTremolo.cpp ToobTremolo.hpp
 
@@ -513,6 +519,40 @@ add_custom_command(
     DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMix.ttl
+    generate_lv2c_plugin_info
+)
+
+configure_file(ToobAmp.lv2/ttl.in/ToobMultiEcho.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEcho.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobMultiEchoStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEchoStereo.ttl)
+
+add_custom_command(
+    OUTPUT ToobMultiEchoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-multi-echo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+    --class ToobMultiEchoInfo
+    --namespace multi_echo_plugin
+    --ui-base-class ToobMultiEchoUiBase
+    --plugin-base-class ToobMultiEchoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEcho.ttl
+    generate_lv2c_plugin_info
+)
+add_custom_command(
+    OUTPUT ToobMultiEchoStereoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-multi-echo-stereo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+    --class ToobMultiEchoStereoInfo
+    --namespace multi_echo_plugin
+    --ui-base-class ToobMultiEchoStereoUiBase
+    --plugin-base-class ToobMultiEchoStereoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEchoStereo.ttl
     generate_lv2c_plugin_info
 )
 
@@ -919,6 +959,13 @@ if(TOOB_BUILD_UI)
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMixUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+        ToobMultiEchoUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+        ToobMultiEchoStereoUi.cpp
+
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
         ToobTremoloUi.cpp
