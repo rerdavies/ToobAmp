@@ -28,6 +28,7 @@
 #include "ToobMultiEchoStereoInfo.hpp"
 #include "ControlDezipper.h"
 #include "restrict.hpp"
+#include "DbDezipper.h"
 
 using namespace lv2c::lv2_plugin;
 using namespace multi_echo_plugin;
@@ -100,6 +101,8 @@ protected:
 	virtual void Activate() override;
 	virtual void Deactivate() override;
 private:
+    float GetDirectDb() const;
+
     void UpdateControls();
 
     void UpdateStereoDelays(
@@ -112,13 +115,17 @@ private:
     );
 
     double sampleRate = 44100;
-    bool enable = true;
     float directLevel = 1.0;
-    float masterLevel = 1.0;
+    float masterDb = -96.0f;
 
+    std::vector<float> inputBufferL;
+    std::vector<float> inputBufferR;
     std::array<ToobMultiEchoDelayUnit, 4> leftDelays;
     std::array<ToobMultiEchoDelayUnit, 4> rightDelays;
-    bool enabled = false;
+    bool enabled = true;
+    DbDezipper inputLevelDezipper;
+    DbDezipper echoLevelDezipper;
+    DbDezipper directLevelDezipper;
     bool isStereo = false;
 
 };
