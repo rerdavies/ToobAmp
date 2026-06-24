@@ -97,7 +97,7 @@ Gain settings between 0.25 and 0.5 produce increasing amounts of THD (Total Harm
 
 For comparison, a particularly warm studio mixer pre-amp might have between 0.1% and 2% THD. 
 
-The Shape control selects either atan waveshaping, or a wave shape that approximates the output response of triode. Results when 
+The Shape control selects either atan waveshaping, or a wave shape that approximates the output response of a triode. Results when 
 using the triode waveshape are relatively unexplored. Feel free to play. 
 
 The tone controls subtly affect the sound of the overdrive stage. Cutting low frequency response, particularly, 
