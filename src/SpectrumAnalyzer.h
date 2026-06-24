@@ -65,7 +65,8 @@ namespace toob {
 			NOTIFY_OUT,
 			MIN_F,
 			MAX_F,
-			LEVEL
+			LEVEL,
+            SCALE
 		};
 		static constexpr size_t MAX_BUFFER_SIZE = 16*1024;
 		static constexpr size_t FFT_SIZE = 16*1024;
@@ -73,6 +74,7 @@ namespace toob {
 		RangedInputPort minF = RangedInputPort(10.0f, 400.0f);
 		RangedInputPort maxF = RangedInputPort(1000.0f,22000.0f);
 		RangedInputPort level = RangedInputPort(-30,30);
+		RangedInputPort scale = RangedInputPort(50,100);
 
 		bool svgPathReady = false;
 		const std::string *pSvgPath = nullptr;
@@ -102,7 +104,11 @@ namespace toob {
 			size_t blockSize;
 			float minFrequency;
 			float maxFrequency;
+            float logMin;
+            float logMax;
 			float dbLevel;
+            float dbScale;
+
 			bool resetHoldValues = true;
 
 			std::vector<float> captureBuffer;
@@ -114,8 +120,8 @@ namespace toob {
 				pThis(pThis)
 			{
 			}
-			void Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency,float dbLevel);
-			void Reinitialize(float minFrequency, float maxFrequency, float dbLevel);
+			void Initialize(double sampleRate, size_t blockSize, float minFrequency,float maxFrequency,float dbLevel, float dbScale);
+			void Reinitialize(float minFrequency, float maxFrequency, float dbLevel, float dbScale);
 			void Reset();
 			void Deactivate();
 			void SetEnabled(bool enabled);
@@ -156,7 +162,7 @@ namespace toob {
 			}
 		protected:
 			void OnWork() {
-				backgroundTask.CalculateSvgPaths(blockSize,minFrequency,maxFrequency,dbLevel);
+				backgroundTask.CalculateSvgPaths(blockSize,minFrequency,maxFrequency,dbLevel, dbScale);
 			}
 			void OnResponse()
 			{
@@ -169,9 +175,9 @@ namespace toob {
 			private:
 				std::vector<float> *pCaptureBuffer;
 				size_t capturePosition;
-				std::vector<float> fftValues;
-				std::vector<float> fftHoldValues;
-				std::vector<int64_t> fftHoldTimes;
+				std::vector<float> binnedValues;
+				std::vector<float> binnedHoldValues;
+				std::vector<int64_t> binnedHoldTimes;
 				std::vector<std::complex<double>> fftResult;
 				size_t samplesPerUpdate = 0;
 
@@ -185,9 +191,16 @@ namespace toob {
 
 				float minFrequency = 0;
 				float maxFrequency = 0;
+                float logMin = 0;
+                float logMax = 0;
+
+                float dbLevel;
+                float dbScale;
 
 				LsNumerics::StagedFft fft {4};
 				std::vector<double> fftWindow;
+
+                size_t sampleBinToFftBin(size_t ix);
 
 			public:
 				std::string svgPath;
@@ -197,8 +210,8 @@ namespace toob {
 				// convenient way to make sure we don't accidentally share state with audio thread.
 				void CaptureData(FftWorker *fftWorker);
 				void CopyFromCaptureBuffer();
-				void CalculateSvgPaths(size_t blockSize,float minF, float maxF, float dbLevel);
-				std::string FftToSvg(const std::vector<float>& fft);
+				void CalculateSvgPaths(size_t blockSize,float minF, float maxF, float dbLevel, float dbScale);
+				std::string FftToSvg(std::vector<float>& binnedValues);
 			};
 
 			BackgroundTask backgroundTask;
