@@ -4,6 +4,10 @@
 @prefix tpset: <http://two-play.com/plugins/preset#> .
 
 
+<http://two-play.com/plugins/toob-warmer> a lv2:Plugin ;
+     lv2:binary <ToobAmp.so> ;
+     rdfs:seeAlso <ToobWarmer.ttl> .
+
 
 <http://two-play.com/plugins/toob-tone-stack> a lv2:Plugin ;
      lv2:binary <ToobAmp.so> ;

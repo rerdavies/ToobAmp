@@ -97,6 +97,59 @@ void GainSection::UpdateControls(
     }
 }
 
+
+void GainSection::UpdateControls(
+    RangedDbInputPort &Trim,
+    RangedInputPort &Gain,
+    RangedInputPort &LoCut,
+    RangedInputPort &HiCut,
+    RangedInputPort &Bias,
+    RangedInputPort &Shape
+
+)
+{
+    if (LoCut.HasChanged())
+    {
+        float f = LoCut.GetValue();
+        if (f == LoCut.GetMinValue())
+        {
+            hpFilter.Disable();
+        }
+        else
+        {
+            hpFilter.SetCutoffFrequency(f);
+        }
+    }
+    if (HiCut.HasChanged())
+    {
+        float f = HiCut.GetValue();
+        if (f == HiCut.GetMaxValue())
+        {
+            lpFilter.Disable();
+        }
+        else
+        {
+            lpFilter.SetCutoffFrequency(f);
+        }
+    }
+    if (Gain.HasChanged())
+    {
+        gain.SetGain(Gain.GetValue());
+    }
+    if (Trim.HasChanged())
+    {
+        trimVolume.SetTarget(Trim.GetDb());
+    }
+    if (Shape.HasChanged())
+    {
+        gain.SetShape((GainStage::EShape)(int)(Shape.GetValue()));
+    }
+    if (Bias.HasChanged())
+    {
+        gain.SetBias(Bias.GetValue());
+    }
+}
+
 void GainSection::WriteShapeCurve(
     LV2_Atom_Forge *forge,
     LV2_URID propertyUrid)

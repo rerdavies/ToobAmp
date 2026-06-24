@@ -160,6 +160,9 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
     ToobMultiEcho.cpp ToobMultiEcho.hpp
 
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+    ToobWarmer.cpp ToobWarmer.hpp
+
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
     ToobTremolo.cpp ToobTremolo.hpp
@@ -521,6 +524,24 @@ add_custom_command(
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMix.ttl
     generate_lv2c_plugin_info
 )
+configure_file(ToobAmp.lv2/ttl.in/ToobWarmer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobWarmer.ttl)
+
+add_custom_command(
+    OUTPUT ToobWarmerInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-warmer
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+    --class ToobWarmerInfo
+    --namespace warmer_plugin
+    --ui-base-class ToobWarmerUiBase
+    --plugin-base-class ToobWarmerBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobWarmer.ttl
+    generate_lv2c_plugin_info
+)
+
 
 configure_file(ToobAmp.lv2/ttl.in/ToobMultiEcho.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEcho.ttl)
 configure_file(ToobAmp.lv2/ttl.in/ToobMultiEchoStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEchoStereo.ttl)
@@ -966,6 +987,8 @@ if(TOOB_BUILD_UI)
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
         ToobMultiEchoStereoUi.cpp
 
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+        ToobWarmerUi.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
         ToobTremoloUi.cpp

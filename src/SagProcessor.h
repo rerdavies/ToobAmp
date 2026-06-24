@@ -84,6 +84,30 @@ namespace toob{
                 powerFilter.SetCutoffFrequency(val);
             }
         }
+        void UpdateControls(
+            RangedInputPort Sag,
+            RangedInputPort SagD,
+            RangedInputPort SagF
+        )
+        {
+            if (Sag.HasChanged())
+            {
+                float val = Sag.GetValue();
+                float dbSag = val * 30;
+                sagAf = Db2Af(dbSag);
+            }
+            if (SagD.HasChanged())
+            {
+                float val = SagD.GetValue();
+                float dbSagD = val*30;
+                sagDAf = Db2Af(dbSagD); 
+            }
+            if (SagF.HasChanged())
+            {
+                float val = SagF.GetValue();
+                powerFilter.SetCutoffFrequency(val);
+            }
+        }
         inline float GetSagDValue() 
         {
             return currentSagD;
