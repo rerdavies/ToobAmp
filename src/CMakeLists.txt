@@ -1338,7 +1338,7 @@ add_executable(Ce2ChorusTest
 
     LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
     LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
-    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter
+    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter.h
     iir/Biquad.cpp
     iir/Biquad.h
     iir/Cascade.h
