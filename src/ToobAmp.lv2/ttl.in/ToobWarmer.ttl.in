@@ -85,14 +85,14 @@ to 1.0 produces virtually square output.
 
 Gain settings between 0.25 and 0.5 produce increasing amounts of THD (Total Harmonic Distortion):
 ```
-| Gain | THD   |
-| ---- | ----- |
-| 0.25 | 0.06% |
-| 0.30 | 0.20% |
-| 0.35 | 0.63% |
-| 0.40 | 1.61% |
-| 0.45 | 4.15% |
-| 0.50 | 11.0% |
+     | Gain | THD   |
+     | ---- | ----- |
+     | 0.25 | 0.06% |
+     | 0.30 | 0.20% |
+     | 0.35 | 0.63% |
+     | 0.40 | 1.61% |
+     | 0.45 | 4.15% |
+     | 0.50 | 11.0% |
 ```
 
 For comparison, a particularly warm studio mixer pre-amp might have between 0.1% and 2% THD. 
