@@ -157,10 +157,10 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMix.cpp ToobMix.hpp
 
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
-    ToobCompressor.cpp ToobCompressor.hpp
+    #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+    #ToobCompressor.cpp ToobCompressor.hpp
 
-    OtaCompressor.cpp OtaCompressor.hpp
+    #OtaCompressor.cpp OtaCompressor.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
@@ -531,24 +531,25 @@ add_custom_command(
     generate_lv2c_plugin_info
 )
 
-configure_file(ToobAmp.lv2/ttl.in/ToobCompressor.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl)
+if (NO)
+    configure_file(ToobAmp.lv2/ttl.in/ToobCompressor.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl)
 
-add_custom_command(
-    OUTPUT ToobCompressorInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
-    COMMAND generate_lv2c_plugin_info
-    http://two-play.com/plugins/toob-compressor
-    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
-    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
-    --class ToobCompressorInfo
-    --namespace compressor_plugin
-    --ui-base-class ToobCompressorUiBase
-    --plugin-base-class ToobCompressorBase
-    DEPENDS
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
-    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl
-    generate_lv2c_plugin_info
-)
-
+    add_custom_command(
+        OUTPUT ToobCompressorInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+        COMMAND generate_lv2c_plugin_info
+        http://two-play.com/plugins/toob-compressor
+        --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+        --out ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+        --class ToobCompressorInfo
+        --namespace compressor_plugin
+        --ui-base-class ToobCompressorUiBase
+        --plugin-base-class ToobCompressorBase
+        DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl
+        generate_lv2c_plugin_info
+    )
+endif()
 
 
 configure_file(ToobAmp.lv2/ttl.in/ToobWarmer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobWarmer.ttl)
@@ -1008,8 +1009,8 @@ if(TOOB_BUILD_UI)
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMixUi.cpp
 
-        ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
-        ToobCompressorUi.cpp
+        #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+        #ToobCompressorUi.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
         ToobMultiEchoUi.cpp
