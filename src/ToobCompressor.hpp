@@ -31,61 +31,9 @@ using namespace lv2c::lv2_plugin;
 using namespace compressor_plugin;
 using namespace toob;
 
-#include "Filters/LowPassFilter.h"
-#include "Filters/HighPassFilter.h"
-#include "Filters/ShelvingFilter.h"
 
-struct StereoResult {
-    float left;
-    float right;
-};
-
-class CompressorEnvelope 
-{
-public: 
-    void Initialize(double sampleRate);
-    void UpdateControls(double attackTime, double releaseTime);
-    void Reset();
-
-    float Tick(float value);
-private: 
-    static constexpr double DEFAULT_VOLTAGE = 9.0f;
-    static constexpr double DIODE_DROP_VOLTAGE = 0.4f;
-    double attackRate = 1.0;
-    double releaseRate = 1.0;
-    double vEnvelope = DEFAULT_VOLTAGE;
-
-};
-// handles emulated overdrive of the OTA.
-class CompressorOta {
-
-public:
-    void Initialize(double sampleRate) { }
-    float Tick(float value, float gain) {
-        return gain*value;
-    }
-};
-class CompressorChannel {
-public:
-    void Initialize(double sampleRate);
-
-    void Reset();
-
-    float Tick(float value);
-    StereoResult Tick(float left, float right);
-private:
-
-    HighPassFilter lowCut;
-    HighPassFilter lowCut2;
-    ShelvingFilter highShelf2;
-
-    float otaGain = 1.0;
-    CompressorOta compressorOta;
-
-    CompressorEnvelope compressorEnvelope;
-
-};
-
+#include "OtaCompressor.hpp"
+using namespace ota_compressor;
 class ToobCompressor : public compressor_plugin::ToobCompressorBase
 {
 public:
@@ -114,6 +62,6 @@ protected:
 	virtual void Activate() override;
 	virtual void Deactivate() override;
 private:
-    CompressorChannel compressor;
+    OtaCompressor compressor;
 };
 

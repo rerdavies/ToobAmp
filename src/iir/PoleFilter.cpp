@@ -1,3 +1,7 @@
+/*
+ *   Copyright (c) 2026 
+ *   All rights reserved.
+ */
 /**
  *
  * "A Collection of Useful C++ Classes for Digital Signal Processing"

@@ -31,6 +31,8 @@ else()
     find_package(Boost REQUIRED COMPONENTS iostreams)
 endif()
 
+find_package(Catch2 REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -158,7 +160,7 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
     ToobCompressor.cpp ToobCompressor.hpp
 
-
+    OtaCompressor.cpp OtaCompressor.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
@@ -1568,4 +1570,31 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lv2cairo/resources/ DESTINATION 
 install(FILES ${PROJECT_SOURCE_DIR}/MPL-2.0.md DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 
 
-# TODO: Add tests if needed.
+# Tests
+
+
+
+add_executable(toobAmpTest
+    test/main.cpp
+    test/ToobCompressorTests.cpp
+    OtaCompressor.cpp OtaCompressor.hpp
+
+    Filters/AudioFilter2.cpp Filters/AudioFilter2.h
+    Filters/AudioFilter3.cpp Filters/AudioFilter3.h
+    Filters/LowPassFilter.cpp Filters/LowPassFilter.h
+    Filters/HighPassFilter.cpp Filters/HighPassFilter.h
+    Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
+    Filters/AudioFilter.cpp Filters/AudioFilter.h
+
+)
+
+target_link_libraries(toobAmpTest PRIVATE Catch2::Catch2)
+
+if(Catch2_VERSION_MAJOR EQUAL 2)
+    target_compile_definitions(toobAmpTest PRIVATE TOOB_AMP_CATCH2)
+    
+elseif(Catch2_VERSION_MAJOR EQUAL 3)
+    target_compile_definitions(toobAmpTest PRIVATE TOOB_AMP_CATCH3)
+else()
+    message(FATAL_ERROR "Unsupported Catch2 version: ${Catch2_VERSION}")
+endif()

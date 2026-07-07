@@ -23,7 +23,6 @@
 #include "ToobConvolutionReverb.h"
 #include "lv2ext/filedialog.h"
 #include "LsNumerics/Denorms.hpp"
-
 #include "db.h"
 #include "ss.hpp"
 #include <thread>

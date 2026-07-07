@@ -31,20 +31,7 @@ ToobCompressor::~ToobCompressor()
 {
 }
 
-static inline void applyPan(float pan, float vol, float &left, float &right, float phase)
-{
-    // hard pan law.
-    if (pan < 0)
-    {
-        left = vol * 1.0f * phase;
-        right = vol * (1.0f + pan) * phase;
-    }
-    else
-    {
-        left = vol * (1.0 - pan) * phase;
-        right = vol * 1.0f * phase;
-    }
-}
+
 
 void ToobCompressor::Compressor(uint32_t n_samples)
 {
@@ -76,73 +63,5 @@ void ToobCompressor::Deactivate()
 {
 }
 
-
-inline float CompressorChannel::Tick(float value)
-{
-    double v2 = lowCut.Tick(value);
-    double v3 = lowCut2.Tick(v2);
-    double v4 = highShelf2.Tick(v3);
-    double v5 = compressorOta.Tick(v4, this->otaGain);
-    this->otaGain = compressorEnvelope.Tick(v5);
-    return v4;
-}
-
-void CompressorEnvelope::UpdateControls(double attackTime, double releaseTime)
-{
-  
-}
-
-float CompressorEnvelope::Tick(float value)
-{
-    float dv = 0;;
-    if (value > DIODE_DROP_VOLTAGE) 
-    {
-        dv = value-DIODE_DROP_VOLTAGE;
-    } else if (value < -DIODE_DROP_VOLTAGE) 
-    {
-        dv = -DIODE_DROP_VOLTAGE-value;
-    }
-    double result = (vEnvelope +attackRate*dv)*releaseRate;
-    if (result > DEFAULT_VOLTAGE) {
-        result = DEFAULT_VOLTAGE;
-    }
-    return result;
-
-}
-
-inline StereoResult CompressorChannel::Tick(float left, float right)
-{
-    StereoResult v2 { (float)lowCut.Tick(left), (float)lowCut.TickR(right)};
-    return v2;
-}
-
-void CompressorEnvelope::Initialize(double sampleRate) 
-{
-    Reset();
-}
-
-void CompressorEnvelope::Reset()
-{
-    vEnvelope = DEFAULT_VOLTAGE;
-}
-
-void CompressorChannel::Initialize(double sampleRate)
-{
-    lowCut.SetSampleRate(sampleRate);
-    lowCut.SetCutoffFrequency(3.1);    
-    lowCut2.SetSampleRate(sampleRate);
-    lowCut.SetCutoffFrequency(8.0);    
-    highShelf2.SetSampleRate(sampleRate);
-    highShelf2.SetHighShelf(24,3000);
-    compressorOta.Initialize(sampleRate);
-    compressorEnvelope.Initialize(sampleRate);
-}
-
-void CompressorChannel::Reset() {
-    lowCut.Reset();
-    lowCut2.Reset();
-    highShelf2.Reset();
-    compressorEnvelope.Reset();
-}
 
 REGISTRATION_DECLARATION PluginRegistration<ToobCompressor> toobCompressorRegistration(ToobCompressor::URI);
