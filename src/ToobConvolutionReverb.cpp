@@ -1468,7 +1468,7 @@ void ToobConvolutionReverbBase::PublishResourceFiles(
     LV2_FileBrowser_Status status;
     if (IsConvolutionReverb())
     {
-        constexpr int RESOURCE_VERSION = 2;
+        constexpr int RESOURCE_VERSION = 3;
         status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle, RESOURCE_VERSION, "impulseFiles/reverb", "ReverbImpulseFiles");
     }
     else
