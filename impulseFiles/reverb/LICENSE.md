@@ -20,7 +20,7 @@ By: Greg Hopkins, Hopkins Media Services
 This work is provided under a Creative Commons Attribution 4.0 International License.
 <https://creativecommons.org/licenses/by/4.0/>
 
-Source: <https://www.hopkinsmediaservices.com/ir>
+Source: <https://hopkinsmedia.services/ir>
 
 ---
 
