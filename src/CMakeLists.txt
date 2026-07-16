@@ -9,6 +9,8 @@ set(LV2C_INCLUDE_DIRS
     ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2_plugin/include
 )
 
+include_directories(${PROJECT_SOURCE_DIR}/modules)
+
 
 
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
@@ -47,6 +49,8 @@ endif()
 
 
 set(FLAC_LIBS FLAC++.a FLAC.a ogg.a)
+
+
 
 
 
@@ -224,6 +228,8 @@ add_library(ToobAmpArch SHARED
     lv2ext/filedialog.h
 
     FlacReader.cpp FlacReader.hpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
     LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
     util.hpp util.cpp
     SvgPathWriter.hpp
@@ -1231,6 +1237,8 @@ add_executable(PlayerTest
     WavReader.hpp
     WavReader.cpp
     FlacReader.hpp FlacReader.cpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
     WavWriter.hpp
     WavWriter.cpp
     WavGuid.hpp
@@ -1410,6 +1418,9 @@ add_executable(PitchDetectorTest
     LsNumerics/PitchDetectorTest.cpp
     LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
     FlacReader.cpp FlacReader.hpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
+
     WavGuid.cpp
 )
 target_link_libraries(PitchDetectorTest ${FLAC_LIBS})

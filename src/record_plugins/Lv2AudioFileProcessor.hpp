@@ -176,7 +176,7 @@ namespace toob
             size_t bufferSize);
         void Close();
 
-        void StartWavStream(const std::filesystem::path&filename, int channels,double sampleRate,const LoopParameters&loopParameters);        
+        bool StartWavStream(const std::filesystem::path&filename, int channels,double sampleRate,const LoopParameters&loopParameters);        
 
         toob::AudioFileBuffer::ptr ReadLoopBuffer(
             const std::string &filename,

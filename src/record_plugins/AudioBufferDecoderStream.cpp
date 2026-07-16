@@ -33,7 +33,7 @@ void AudioBufferDecoderStream::open(AudioData&&data_, int channelCount, double s
 
 {
     audioData = std::move(data_);
-    if (audioData.getChannelCount() > channelCount)
+    if (audioData.getChannelCount() > (size_t)channelCount)
     {
         audioData.setChannelCount(channelCount);
     }
@@ -137,7 +137,7 @@ size_t AudioBufferDecoderStream::read(float **buffers, size_t frames)
         {
             float* restrict dest = buffers[outputChannel] + outputOffset;
             float *restrict src;
-            if (outputChannel < audioData.getChannelCount()) 
+            if ((size_t)outputChannel < audioData.getChannelCount()) 
             {
                 src = audioData.getChannel(outputChannel).data()+ fileOffset;
             } else if (audioData.getChannelCount() == 1) {

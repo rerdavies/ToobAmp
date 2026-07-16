@@ -31,6 +31,7 @@
 #include "AudioBufferDecoderStream.hpp"
 #include "FfmpegDecoderStream.hpp"
 #include "../FlacReader.hpp"
+#include "../Mp3Reader.hpp"
 
 using namespace toob;
 
@@ -57,10 +58,17 @@ AudioDecoderStream::ptr AudioDecoderStream::create(const std::filesystem::path &
             std::move(data),
             channels,
             loopParameters);
+    } else if (Mp3Reader::IsMp3File(file))
+    {
+        AudioData data = Mp3Reader::Load(file);
+        result = AudioBufferDecoderStream::create(
+            std::move(data),
+            channels,
+            loopParameters);
     }
     else
     {
-        throw std::runtime_error("Invalid file.");
+        return nullptr;
     }
     if (result->getSampleRate() != sampleRate)
     {

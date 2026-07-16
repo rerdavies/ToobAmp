@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <memory>
 #include "../util.hpp"
+#include "../restrict.hpp"
 
 #include "AudioDecoderStream.hpp"
 #include "WavDecoderStream.hpp"
@@ -36,14 +37,10 @@
 
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
-
 using namespace toob;
-
 
 namespace
 {
-
-    
 
     enum class MessageType
     {
@@ -92,7 +89,7 @@ namespace
     {
         RecordingStoppedMessage(const char *filename) : BufferMessage(MessageType::RecordingStopped, sizeof(StopRecordingMessage))
         {
-            strncpy(this->filename, filename, sizeof(this->filename)-1);
+            strncpy(this->filename, filename, sizeof(this->filename) - 1);
             this->size = sizeof(RecordingStoppedMessage) + strlen(filename) - sizeof(filename) + 1;
             this->size = (this->size + 3) & (~3);
         }
@@ -133,18 +130,17 @@ namespace
     {
         UpdateLoopParametersCommand(
             uint64_t operationId,
-            const char*loopJson,
+            const char *loopJson,
             double seekPosSeconds,
-            double duration
-        )
+            double duration)
             : BufferMessage(MessageType::UpdateLoopParameters, sizeof(UpdateLoopParametersCommand)),
-                operationId(operationId),
+              operationId(operationId),
               seekPosSeconds(seekPosSeconds),
               duration(duration)
         {
             size_t len = strlen(loopJson) + 1;
             this->size = sizeof(UpdateLoopParametersCommand);
-            this->size = sizeof(UpdateLoopParametersCommand)-sizeof(this->loopJson) + len;
+            this->size = sizeof(UpdateLoopParametersCommand) - sizeof(this->loopJson) + len;
             if (this->size > sizeof(UpdateLoopParametersCommand))
             {
                 throw std::runtime_error("Command size exceeds structure size");
@@ -154,10 +150,10 @@ namespace
         }
 
         uint64_t operationId = (uint64_t)-1;
-        double seekPosSeconds = 0.0; 
-        double duration = 0.0; 
+        double seekPosSeconds = 0.0;
+        double duration = 0.0;
         char loopJson[1024] = {0};
-    };  
+    };
     struct ToobStartRecordingMessage : public BufferMessage
     {
         ToobStartRecordingMessage(const std::string &fileName, OutputFormat outputFormat)
@@ -169,7 +165,7 @@ namespace
             {
                 throw std::runtime_error("Filename too long.");
             }
-            std::strncpy(this->filename, fileName.c_str(), sizeof(filename)-1);
+            std::strncpy(this->filename, fileName.c_str(), sizeof(filename) - 1);
             this->size = sizeof(ToobStartRecordingMessage) + fileName.length() - sizeof(filename) + 1;
             this->size = (size + 3) & (~3);
         }
@@ -214,15 +210,15 @@ namespace
     private:
         char buffer[1024];
     };
-struct SetLoopParametersMessage : public BufferMessage
+    struct SetLoopParametersMessage : public BufferMessage
     {
-        SetLoopParametersMessage(uint64_t operationId, const char*fileName,const char *loopJson)
+        SetLoopParametersMessage(uint64_t operationId, const char *fileName, const char *loopJson)
             : BufferMessage(MessageType::SetLoopParameters,
                             sizeof(SetLoopParametersMessage)),
               operationId(operationId)
         {
             size_t fileNameLen = strlen(fileName);
-            size_t jsonLen  = strlen(loopJson);
+            size_t jsonLen = strlen(loopJson);
 
             this->size = sizeof(SetLoopParametersMessage) - sizeof(this->buffer) + fileNameLen + 1 + jsonLen + 1;
 
@@ -231,9 +227,9 @@ struct SetLoopParametersMessage : public BufferMessage
                 throw std::runtime_error("Command size exceeds structure size");
             }
 
-            std::memcpy(this->buffer, fileName, fileNameLen+1);
+            std::memcpy(this->buffer, fileName, fileNameLen + 1);
             this->loopOffset = fileNameLen + 1;
-            std::memcpy(this->buffer+loopOffset, loopJson, jsonLen + 1);
+            std::memcpy(this->buffer + loopOffset, loopJson, jsonLen + 1);
 
             // Align to 4 bytes
             this->size = (size + 3) & (~3);
@@ -245,7 +241,7 @@ struct SetLoopParametersMessage : public BufferMessage
         }
         const char *getLoopJson() const
         {
-            return this->buffer+loopOffset;
+            return this->buffer + loopOffset;
         }
         uint64_t operationId = (uint64_t)-1;
 
@@ -294,7 +290,7 @@ struct SetLoopParametersMessage : public BufferMessage
             size_t seekPos,
             const LoopParameters &loopParameters,
             double duration,
-            const char* loopParameterJson)
+            const char *loopParameterJson)
             : BufferMessage(MessageType::CuePlaybackResponse,
                             sizeof(ToobCuePlaybackResponseMessage)),
               operationId(operationId),
@@ -306,7 +302,7 @@ struct SetLoopParametersMessage : public BufferMessage
             {
                 buffers[i] = nullptr;
             }
-            size = sizeof(ToobCuePlaybackResponseMessage)-sizeof(this->loopParameterJson) + strlen(loopParameterJson) + 1;
+            size = sizeof(ToobCuePlaybackResponseMessage) - sizeof(this->loopParameterJson) + strlen(loopParameterJson) + 1;
             if (size > sizeof(ToobCuePlaybackResponseMessage))
             {
                 throw std::runtime_error("Command size exceeds structure size");
@@ -482,14 +478,14 @@ void Lv2AudioFileProcessor::Activate()
                         {
 
                             SetLoopParametersMessage *setLoopCmd = (SetLoopParametersMessage *)cmd;
-                            bgSetLoopParameters(setLoopCmd->operationId, setLoopCmd->getFilename(),setLoopCmd->getLoopJson());
+                            bgSetLoopParameters(setLoopCmd->operationId, setLoopCmd->getFilename(), setLoopCmd->getLoopJson());
                             break;
                         }
 
                         case MessageType::CuePlayback:
                         {
                             ToobCuePlaybackMessage *cueCmd = (ToobCuePlaybackMessage *)cmd;
-                            
+
                             bgCuePlayback(cueCmd->operationId, cueCmd->getFileName(), cueCmd->seekPos);
                             break;
                         }
@@ -546,7 +542,7 @@ void Lv2AudioFileProcessor::Activate()
             bgStopPlaying();
             bgCloseTempFile();
 
-            FinishedMessage finishedCommand {};
+            FinishedMessage finishedCommand{};
             this->fromBackgroundQueue.write_packet(sizeof(FinishedMessage), (uint8_t *)&finishedCommand);
         });
 }
@@ -697,9 +693,9 @@ void Lv2AudioFileProcessor::fgStopRecording()
     this->toBackgroundQueue.write_packet(sizeof(stopCmd), (uint8_t *)&stopCmd);
 }
 
-void Lv2AudioFileProcessor::fgSetLoopParameters(const std::string&fileName,const std::string &jsonLoopParameters)
+void Lv2AudioFileProcessor::fgSetLoopParameters(const std::string &fileName, const std::string &jsonLoopParameters)
 {
-    SetLoopParametersMessage cmd(++fgOperationId, fileName.c_str(),jsonLoopParameters.c_str());
+    SetLoopParametersMessage cmd(++fgOperationId, fileName.c_str(), jsonLoopParameters.c_str());
     this->toBackgroundQueue.write_packet(cmd.size, (uint8_t *)&cmd);
 }
 
@@ -903,7 +899,7 @@ void Lv2AudioFileProcessor::HandleMessages()
         }
         case MessageType::StopPlayback:
         {
-            //StopPlaybackMessage *stopCommand = (StopPlaybackMessage *)cmd;
+            // StopPlaybackMessage *stopCommand = (StopPlaybackMessage *)cmd;
             fgStopPlaying();
             SetState(ProcessorState::Idle);
             break;
@@ -967,7 +963,8 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
 
     toob::AudioFileBuffer *buffer = nullptr;
 
-    if (this->wavDecoderStream) {
+    if (this->wavDecoderStream)
+    {
         if (!this->wavDecoderStream->eof())
         {
             auto buffer = bufferPool->TakeBuffer();
@@ -977,14 +974,25 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             {
                 channelBuffers[0] = buffer->GetChannel(0);
                 channelBuffers[1] = buffer->GetChannel(1);
-            } else {
+            }
+            else
+            {
                 channelBuffers[0] = buffer->GetChannel(0);
                 channelBuffers[1] = nullptr;
             }
             buffer->SetFileOffset(wavDecoderStream->currentFrame());
-            this->wavDecoderStream->read(channelBuffers,bufferPool->GetBufferSize());
+            this->wavDecoderStream->read(channelBuffers, bufferPool->GetBufferSize());
+            if (wavDecoderStream->getChannelCount() == 1 && bufferPool->GetChannels() >= 2)
+            {
+                float *restrict src = channelBuffers[0];
+                float *restrict dest = channelBuffers[1];
+                for (size_t i = 0; i < bufferPool->GetBufferSize(); ++i)
+                {
+                    dest[i] = src[i];
+                }
+            }
             return buffer;
-        } 
+        }
         return nullptr;
     }
     if (!this->decoderStream && !useTestData)
@@ -1005,7 +1013,8 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
         }
         else
         {
-            if (this->readPos != this->lookaheadPosition) {
+            if (this->readPos != this->lookaheadPosition)
+            {
                 throw std::logic_error("Read position does not match lookahead position.");
             }
             this->decoderStream = std::move(nextDecoderStream);
@@ -1169,9 +1178,9 @@ static void PreCacheFile(const std::filesystem::path &path)
 
 void Lv2AudioFileProcessor::bgUpdateForegroundLoopParameters(
     uint64_t operationId,
-    const char*loopJson,
+    const char *loopJson,
     double seekPosSeconds,
-    double duration )
+    double duration)
 {
     if (operationId != fgOperationId)
     {
@@ -1182,23 +1191,23 @@ void Lv2AudioFileProcessor::bgUpdateForegroundLoopParameters(
         operationId,
         loopJson,
         seekPosSeconds,
-        duration
-    };
+        duration};
     this->fromBackgroundQueue.write_packet(
         cmd.size,
         (uint8_t *)&cmd);
 }
 
-void  Lv2AudioFileProcessor::bgSetLoopParameters(uint64_t operationId, const char*fileName,const char *loopJson)
+void Lv2AudioFileProcessor::bgSetLoopParameters(uint64_t operationId, const char *fileName, const char *loopJson)
 {
     this->bgOperationId = operationId;
 
-    if (host) {
+    if (host)
+    {
         host->bgSaveLoopJson(
             fileName,
             loopJson);
     }
-    bgReader.loopParameterJson = loopJson;    
+    bgReader.loopParameterJson = loopJson;
     bgCuePlayback(
         operationId,
         fileName,
@@ -1231,7 +1240,9 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         else if (this->host)
         {
             bgReader.loopParameterJson = this->host->bgGetLoopJson(filename);
-        } else {
+        }
+        else
+        {
             bgReader.loopParameterJson = "";
         }
         if (!bgReader.loopParameterJson.empty())
@@ -1249,7 +1260,7 @@ void Lv2AudioFileProcessor::bgCuePlayback(
                 ss << "Failed to parse loop settings: " << e.what();
                 throw std::runtime_error(ss.str());
             }
-        } 
+        }
         // get file into memory cache in order to reduce dropouts while playing.
 
         if (bgReader.useTestData)
@@ -1338,47 +1349,49 @@ void Lv2AudioFileProcessor::bgCuePlayback(
 
         ToobCuePlaybackResponseMessage responseCommand{
             isAudioStream,
-            operationId, 
-            startSample, 
-            bgReader.loopParameters, 
-            duration, 
+            operationId,
+            startSample,
+            bgReader.loopParameters,
+            duration,
             bgReader.loopParameterJson.c_str()};
 
-
-        if (WavReader::IsWavFile(filename))
         {
-            try {
-                bgReader.StartWavStream(filename, channels,sampleRate,bgReader.loopParameters);
-                isAudioStream = true;
-                responseCommand.isAudioStream = true;
-                for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
+            try
+            {
+                if (bgReader.StartWavStream(filename, channels, sampleRate, bgReader.loopParameters))
                 {
-                    auto buffer = this->bgReadDecoderBuffer();
-                    if (buffer) {
-                        responseCommand.buffers[i] = buffer;
-                        responseCommand.bufferCount++;
-                    }
-                }
-                responseCommand.isAudioStream = true;
-                responseCommand.duration = duration;
-                if (operationId != fgOperationId)
-                {
-                    // cancelled!
-                    for (size_t i = 0; i < responseCommand.bufferCount; ++i)
+                    isAudioStream = true;
+                    responseCommand.isAudioStream = true;
+                    for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
                     {
-                        if (responseCommand.buffers[i])
+                        auto buffer = this->bgReadDecoderBuffer();
+                        if (buffer)
                         {
-                            bufferPool->PutBuffer(responseCommand.buffers[i]);
+                            responseCommand.buffers[i] = buffer;
+                            responseCommand.bufferCount++;
                         }
                     }
-                    this->bgReader.Close();
+                    responseCommand.isAudioStream = true;
+                    responseCommand.duration = duration;
+                    if (operationId != fgOperationId)
+                    {
+                        // cancelled!
+                        for (size_t i = 0; i < responseCommand.bufferCount; ++i)
+                        {
+                            if (responseCommand.buffers[i])
+                            {
+                                bufferPool->PutBuffer(responseCommand.buffers[i]);
+                            }
+                        }
+                        this->bgReader.Close();
+                        return;
+                    }
+
+                    this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t *)&responseCommand);
                     return;
                 }
-
-
-                this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t *)&responseCommand);
-                return;
-            } catch (const std::exception&)
+            }
+            catch (const std::exception &)
             {
                 // fall through, and use legacy ffmpeg reader.
             }
@@ -1532,8 +1545,6 @@ void Lv2AudioFileProcessor::OnFgError(const char *message)
     SetState(ProcessorState::Error);
 }
 
-
-
 void Lv2AudioFileProcessor::SetState(ProcessorState newState)
 {
     if (state != newState)
@@ -1653,7 +1664,7 @@ LoopControlInfo::LoopControlInfo(bool isAudioStream, const LoopParameters &loopP
     }
 }
 
-void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char * loopJson, double seekPosSeconds,double duration)
+void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char *loopJson, double seekPosSeconds, double duration)
 {
     // Update the loop parameters in the background thread.
     this->playPosition = (size_t)std::round(seekPosSeconds * this->sampleRate);
@@ -1672,8 +1683,7 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
     const LoopParameters &loopParameters,
     size_t seekPos,
     float duration,
-    const char* loopParameterJson
-)
+    const char *loopParameterJson)
 {
     this->fgIsAudioStream = isAudioStream;
     AudioFileBuffer::ptr loopBuffer;
@@ -1691,10 +1701,10 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
 
         fgResetPlaybackQueue();
         this->fgLoopBuffer = std::move(loopBuffer);
-        this->fgLoopControlInfo = LoopControlInfo(false,loopParameters, this->sampleRate, duration);
+        this->fgLoopControlInfo = LoopControlInfo(false, loopParameters, this->sampleRate, duration);
 
         fgLoopParameters = loopParameters;
-        fgLoopControlInfo = LoopControlInfo(isAudioStream,loopParameters, this->sampleRate, duration);
+        fgLoopControlInfo = LoopControlInfo(isAudioStream, loopParameters, this->sampleRate, duration);
 
         this->playPosition = seekPos;
 
@@ -1770,28 +1780,131 @@ void Lv2AudioFileProcessor::fixStreamedLoopPosition()
     {
         while (this->playPosition >= this->fgLoopControlInfo.loopEnd)
         {
-            this->playPosition -= this->fgLoopControlInfo.loopEnd-this->fgLoopControlInfo.loopStart;
+            this->playPosition -= this->fgLoopControlInfo.loopEnd - this->fgLoopControlInfo.loopStart;
         }
     }
-
 }
-void Lv2AudioFileProcessor::Play(float *dst, size_t n_samples)
+void Lv2AudioFileProcessor::Play(float *dstL, size_t n_samples)
 {
     if (this->state == ProcessorState::Playing)
     {
-        if (this->fgLoopType == LoopType::None || this->fgLoopType == LoopType::AudioStream)
+        size_t ix = 0;
+        while (ix < n_samples)
         {
-            if (!this->fgPlaybackQueue.empty())
+            LoopType loopType = this->fgLoopType;
+            if (fgIsAudioStream)
             {
-
-                auto buffer = this->fgPlaybackQueue.front();
-                float *playData = buffer->GetChannel(0);
-
-                for (uint32_t i = 0; i < n_samples; ++i)
+                loopType = LoopType::AudioStream;
+            }
+            if (loopType == LoopType::BigStartSmallLoop)
+            {
+                if (playPosition >= this->fgLoopControlInfo.loopStart)
                 {
-                    dst[i] += playData[this->fgPlaybackIndex++] * volumeDezipperL.Tick();
+                    loopType = LoopType::SmallLoop;
+                }
+            }
+            if (loopType == LoopType::None || loopType == LoopType::AudioStream)
+            {
+                if (this->fgPlaybackQueue.empty())
+                {
+                    OnUnderrunError();
+                    return;
+                }
+                else
+                {
+                    auto buffer = this->fgPlaybackQueue.front();
+                    float *playDataL = buffer->GetChannel(0);
 
-                    ++this->playPosition;
+                    for (; ix < n_samples; ++ix)
+                    {
+                        dstL[ix] += playDataL[this->fgPlaybackIndex] * volumeDezipperL.Tick();
+                        this->fgPlaybackIndex++;
+
+                        ++this->playPosition;
+                        if (fgPlaybackIndex == buffer->GetBufferSize())
+                        {
+                            fgPlaybackIndex = 0;
+                            fgPlaybackQueue.pop_front();
+                            bufferPool->PutBuffer(buffer);
+                            if (fgPlaybackQueue.empty())
+                            {
+                                SetState(ProcessorState::Idle);
+                                CuePlayback();
+                                ix = n_samples;
+                                break;
+                            }
+                            buffer = fgPlaybackQueue.front();
+                            if (this->fgIsAudioStream)
+                            {
+                                this->playPosition = buffer->GetFileOffset();
+                            }
+                            playDataL = buffer->GetChannel(0);
+
+                            fgRequestNextPlayBuffer();
+                        }
+                    }
+                }
+                fixStreamedLoopPosition();
+            }
+            else if (loopType == LoopType::SmallLoop)
+            {
+                if (fgLoopBuffer.Get() != nullptr)
+                {
+                    float *playDataL = fgLoopBuffer->GetChannel(0);
+
+                    for (; ix < n_samples; ++ix)
+                    {
+                        float valueL;
+                        if (playPosition >= fgLoopControlInfo.loopEnd_0)
+                        {
+                            if (playPosition >= fgLoopControlInfo.loopEnd_1)
+                            {
+                                /// loop point reached.
+                                playPosition = playPosition - fgLoopControlInfo.loopSize;
+                                if (playPosition - fgLoopControlInfo.loopOffset >= fgLoopControlInfo.loopBufferSize)
+                                {
+                                    throw std::logic_error("Play position out of bounds.");
+                                }
+                                valueL = playDataL[playPosition - fgLoopControlInfo.loopOffset];
+                            }
+                            else
+                            {
+                                // blend data across the loop point.
+                                size_t blendIndex = playPosition - fgLoopControlInfo.loopEnd + fgLoopControlInfo.loopStart;
+                                float blendFactor = (float)(playPosition - fgLoopControlInfo.loopEnd_0) / (float)(fgLoopControlInfo.loopEnd_1 - fgLoopControlInfo.loopEnd_0);
+
+                                float v1L = playDataL[blendIndex - fgLoopControlInfo.loopOffset];
+                                float v0L = playDataL[playPosition - fgLoopControlInfo.loopOffset];
+                                valueL = v0L * (1.0f - blendFactor) + v1L * blendFactor;
+                            }
+                        }
+                        else
+                        {
+                            valueL = playDataL[playPosition - fgLoopControlInfo.loopOffset];
+                        }
+                        dstL[ix] += valueL * volumeDezipperL.Tick();
+                        ++this->playPosition;
+                    }
+                }
+            }
+            else if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
+            {
+                if (this->fgPlaybackQueue.empty())
+                {
+                    OnUnderrunError();
+                    return;
+                }
+                auto buffer = this->fgPlaybackQueue.front();
+                float *playDataL = buffer->GetChannel(0);
+
+                for (; ix < n_samples; ++ix)
+                {
+                    float vLeft;
+
+                    if (playPosition == fgLoopControlInfo.loopStart && loopType == LoopType::BigStartSmallLoop)
+                    {
+                        break; // switch over to small loop processing.
+                    }
                     if (fgPlaybackIndex == buffer->GetBufferSize())
                     {
                         fgPlaybackIndex = 0;
@@ -1799,89 +1912,78 @@ void Lv2AudioFileProcessor::Play(float *dst, size_t n_samples)
                         bufferPool->PutBuffer(buffer);
                         if (fgPlaybackQueue.empty())
                         {
-                            SetState(ProcessorState::Idle);
-                            CuePlayback();
-                            break;
+                            OnUnderrunError();
+                            return;
                         }
                         buffer = fgPlaybackQueue.front();
-                        if(this->fgIsAudioStream)
-                        {
-                            this->playPosition = buffer->GetFileOffset();
-                        }
-                        playData = buffer->GetChannel(0);
+                        playDataL = buffer->GetChannel(0);
 
                         fgRequestNextPlayBuffer();
                     }
-                }
-                fixStreamedLoopPosition();
 
-            }
-        }
-        else if (fgLoopType == LoopType::SmallLoop)
-        {
-            if (fgLoopBuffer.Get() != nullptr)
-            {
-                float *playData = fgLoopBuffer->GetChannel(0);
-
-                for (uint32_t i = 0; i < n_samples; ++i)
-                {
-                    float value;
                     if (playPosition >= fgLoopControlInfo.loopEnd_0)
                     {
                         if (playPosition >= fgLoopControlInfo.loopEnd_1)
                         {
                             // loop point reached.
                             playPosition = playPosition - fgLoopControlInfo.loopSize;
-                            value = playData[playPosition - fgLoopControlInfo.loopOffset];
-                            if (playPosition >= fgLoopControlInfo.loopBufferSize - fgLoopControlInfo.loopOffset)
+                            if (playPosition >= fgLoopControlInfo.loopEnd_0)
                             {
                                 throw std::logic_error("Play position out of bounds.");
                             }
+                            if (playPosition >= fgLoopControlInfo.loopEnd_0)
+                            {
+                                throw std::logic_error("Play position out of bounds.");
+                            }
+
+                            vLeft = playDataL[this->fgPlaybackIndex];
+                            this->fgPlaybackIndex++;
                         }
                         else
                         {
-                            // blend data across the loop point
-                            size_t blendIndex = playPosition - fgLoopControlInfo.loopSize;
-                            float v0 = playData[blendIndex - fgLoopControlInfo.loopOffset];
-                            float v1 = playData[playPosition - fgLoopControlInfo.loopOffset];
-                            size_t t = playPosition - fgLoopControlInfo.loopEnd_0;
-                            float blendFactor = (float)t / (float)(fgLoopControlInfo.loopEnd_1 - fgLoopControlInfo.loopEnd_0);
-                            value = v0 * (1.0f - blendFactor) + v1 * blendFactor;
-                        }
-                    }
-                    else
-                    {
-                        value = playData[playPosition - fgLoopControlInfo.loopOffset];
-                    }
-                    dst[i] += value * volumeDezipperL.Tick();
-                    ++this->playPosition;
-                }
-            }
-        }
-        else if (fgLoopType == LoopType::BigLoop)
-        {
-            if (fgLoopBuffer.Get() != nullptr)
-            {
-                float *playData = fgLoopBuffer->GetChannel(0);
+                            if (playPosition == fgLoopControlInfo.loopEnd_0)
+                            {
+                                // fill the blend buffers with the loop end data.
+                                bgReader.blendBufferL.resize(0);
+                                bgReader.blendBufferR.resize(0);
+                                for (size_t j = fgLoopControlInfo.loopEnd_0; j < fgLoopControlInfo.loopEnd_1; ++j)
+                                {
+                                    bgReader.blendBufferL.push_back(playDataL[this->fgPlaybackIndex]);
+                                    ++fgPlaybackIndex;
+                                    if (fgPlaybackIndex == buffer->GetBufferSize())
+                                    {
+                                        fgPlaybackIndex = 0;
+                                        fgPlaybackQueue.pop_front();
+                                        bufferPool->PutBuffer(buffer);
+                                        if (fgPlaybackQueue.empty())
+                                        {
+                                            OnUnderrunError();
+                                            return;
+                                        }
+                                        buffer = fgPlaybackQueue.front();
+                                        playDataL = buffer->GetChannel(0);
 
-                for (uint32_t i = 0; i < n_samples; ++i)
-                {
-                    float value;
-                    if (playPosition >= fgLoopControlInfo.loopEnd_1)
-                    {
-                        // loop point reached.
-                        playPosition = playPosition - fgLoopControlInfo.loopSize;
-                        value = playData[playPosition - fgLoopControlInfo.loopOffset];
-                        if (playPosition >= fgLoopControlInfo.loopBufferSize - fgLoopControlInfo.loopOffset)
-                        {
-                            throw std::logic_error("Play position out of bounds.");
+                                        fgRequestNextPlayBuffer();
+                                    }
+                                }
+                            }
+                            // blend data across the loop point.
+                            size_t blendIndex = playPosition - fgLoopControlInfo.loopEnd_0;
+                            float blendFactor = (float)(playPosition - fgLoopControlInfo.loopEnd_0) / (float)(fgLoopControlInfo.loopEnd_1 - fgLoopControlInfo.loopEnd_0);
+                            float v0L = bgReader.blendBufferL[blendIndex];
+                            float v1L = playDataL[this->fgPlaybackIndex];
+                            vLeft = v0L * (1.0f - blendFactor) + v1L * blendFactor;
+
+                            ++fgPlaybackIndex;
                         }
                     }
                     else
                     {
-                        value = playData[playPosition - fgLoopControlInfo.loopOffset];
+                        vLeft = playDataL[this->fgPlaybackIndex];
+                        this->fgPlaybackIndex++;
                     }
-                    dst[i] += value * volumeDezipperL.Tick();
+
+                    dstL[ix] += vLeft * volumeDezipperL.Tick();
                     ++this->playPosition;
                 }
             }
@@ -1914,7 +2016,8 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                 {
                     OnUnderrunError();
                     return;
-                } else 
+                }
+                else
                 {
                     auto buffer = this->fgPlaybackQueue.front();
                     float *playDataL = buffer->GetChannel(0);
@@ -2201,13 +2304,13 @@ void Lv2AudioFileProcessor::SetPath(const char *path)
     }
 }
 
-void Lv2AudioFileProcessor::SetLoopParameters(const std::string& path,const std::string &jsonLoopParameters)
+void Lv2AudioFileProcessor::SetLoopParameters(const std::string &path, const std::string &jsonLoopParameters)
 {
     if (activated)
     {
         fgStopPlaying();
         this->filePath = path;
-        fgSetLoopParameters(path,jsonLoopParameters);
+        fgSetLoopParameters(path, jsonLoopParameters);
         SetState(ProcessorState::CuePlayingThenPause);
     }
     else
@@ -2215,7 +2318,6 @@ void Lv2AudioFileProcessor::SetLoopParameters(const std::string& path,const std:
         throw std::logic_error("Cannot set loop parameters when not activated.");
     }
 }
-
 
 void Lv2AudioFileProcessor::CuePlayback()
 {
@@ -2305,7 +2407,6 @@ void Lv2AudioFileProcessor::TestCuePlayback(
     this->playPosition = seekPos;
 }
 
-
 void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
 {
     if (this->dbVolume == db && this->pan == pan && !immediate)
@@ -2341,7 +2442,7 @@ void Lv2AudioFileProcessor::SetDbVolume(float db, float pan, bool immediate)
 
 void BgFileReader::PrepareLookaheadDecoderStream()
 {
-    if (loopControlInfo.loopType != LoopType::BigLoop) 
+    if (loopControlInfo.loopType != LoopType::BigLoop)
     {
         throw std::logic_error("PrepareLookaheadDecoderStream called with invalid loop type.");
     }
@@ -2350,11 +2451,11 @@ void BgFileReader::PrepareLookaheadDecoderStream()
     {
         nextDecoderStream = std::make_unique<FfmpegDecoderStream>();
         this->lookaheadPosition = this->loopControlInfo.loopEnd_1 -
-                this->loopControlInfo.loopSize -
-                (this->loopControlInfo.loopEnd_1 - this->loopControlInfo.loopEnd_0);
+                                  this->loopControlInfo.loopSize -
+                                  (this->loopControlInfo.loopEnd_1 - this->loopControlInfo.loopEnd_0);
         nextDecoderStream->open(
-            this->filePath, 
-            this->channels, 
+            this->filePath,
+            this->channels,
             this->sampleRate,
             lookaheadPosition / sampleRate);
     }
@@ -2541,7 +2642,7 @@ void Lv2AudioFileProcessor::Play()
 
 void BgFileReader::Close()
 {
-    if (this->wavDecoderStream) 
+    if (this->wavDecoderStream)
     {
         this->wavDecoderStream->close();
         this->wavDecoderStream.reset();
@@ -2553,11 +2654,12 @@ void BgFileReader::Close()
     }
 }
 
-void BgFileReader::StartWavStream(const std::filesystem::path&filename, int channels,double sampleRate,const LoopParameters&loopParameters)
+bool BgFileReader::StartWavStream(const std::filesystem::path &filename, int channels, double sampleRate, const LoopParameters &loopParameters)
 {
     this->decoderStream.reset();
     this->nextDecoderStream.reset();
-    this->wavDecoderStream = AudioDecoderStream::create(filename, channels,sampleRate,loopParameters);
+    this->wavDecoderStream = AudioDecoderStream::create(filename, channels, sampleRate, loopParameters);
+    return wavDecoderStream != nullptr;
 }
 
 void BgFileReader::Test_SetFileData(
