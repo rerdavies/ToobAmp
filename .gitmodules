@@ -8,3 +8,6 @@
 [submodule "modules/libsamplerate"] 
 	path = modules/libsamplerate
 	url = https://github.com/rerdavies/libsamplerate.git
+[submodule "modules/minimp3"]
+	path = modules/minimp3
+	url = https://github.com/lieff/minimp3.git
