@@ -36,7 +36,9 @@
 #include <vector>
 #include <string>
 #include "FfmpegDecoderStream.hpp"
+#include "AudioDecoderStream.hpp"
 #include "../ControlDezipper.h"
+#include "LoopParameters.hpp"
 
 class Lv2AudioFileProcessorTest;
 
@@ -86,22 +88,6 @@ namespace toob
         DECLARE_JSON_MAP(Timebase);
     };
 
-    class LoopParameters
-    {
-        // double precision value are required!
-    public:
-        double start_ = 0;
-        bool loopEnable_ = false;
-        double loopStart_ = 0;
-        double loopEnd_ = 0;
-
-        bool isDefault() const
-        {
-            return start_ == 0 && !loopEnable_ && loopStart_ == 0 && loopEnd_ == 0;
-        }
-
-        DECLARE_JSON_MAP(LoopParameters);
-    };
     class ToobPlayerSettings
     {
     public:
@@ -116,6 +102,7 @@ namespace toob
         SmallLoop = 1, // one loop buffer.
         BigLoop = 2,  // streaming buffers
         BigStartSmallLoop = 3, // streaming buffers, then switch to a loop buffer.
+        AudioStream = 4 // simple continuous WAV stream 
     };
 
     LoopType GetLoopType(const LoopParameters &loopParameters, float sampleRate);
@@ -135,13 +122,14 @@ namespace toob
 
     struct LoopControlInfo
     {
-        LoopControlInfo(const LoopParameters &loopParameters, double sampleRate, double duration);
+        LoopControlInfo(bool isAudioStream,const LoopParameters &loopParameters, double sampleRate, double duration);
         LoopControlInfo(LoopControlInfo &&v) = default;
         LoopControlInfo &operator=(LoopControlInfo &&v) = default;
         LoopControlInfo() = default;
         LoopControlInfo(const LoopControlInfo &) = default;
         LoopControlInfo &operator=(const LoopControlInfo &) = default;
 
+        bool isAudioStream = false;
         LoopType loopType = LoopType::None;
         size_t loopStart = 0;
         size_t loopEnd = 0;
@@ -188,6 +176,8 @@ namespace toob
             size_t bufferSize);
         void Close();
 
+        void StartWavStream(const std::filesystem::path&filename, int channels,double sampleRate,const LoopParameters&loopParameters);        
+
         toob::AudioFileBuffer::ptr ReadLoopBuffer(
             const std::string &filename,
             int channels,
@@ -216,6 +206,7 @@ namespace toob
 
         double duration = 0.0;
 
+        toob::AudioDecoderStream::ptr wavDecoderStream;
         std::unique_ptr<toob::FfmpegDecoderStream> decoderStream;
         size_t lookaheadPosition = 0;
         std::unique_ptr<toob::FfmpegDecoderStream> nextDecoderStream;
@@ -278,6 +269,8 @@ namespace toob
         std::unique_ptr<pipedal::TemporaryFile> bgTemporaryFile;
         FILE *bgFile = nullptr;
         OutputFormat bgOutputFormat;
+
+        void fixStreamedLoopPosition();
 
     public:
         void Play();
@@ -344,6 +337,7 @@ namespace toob
         void OnUnderrunError();
 
         void OnFgCuePlaybackResponse(
+            bool isAudioStream,
             toob::AudioFileBuffer **buffers,
             size_t count,
             toob::AudioFileBuffer *loopBuffer,
@@ -375,6 +369,7 @@ namespace toob
     private:
         bool activated = false;
         bool loadRequested = true;
+        bool fgIsAudioStream = false;
 
         std::atomic<uint64_t> fgOperationId = 0;
         uint64_t bgOperationId = 0;

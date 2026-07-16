@@ -214,7 +214,7 @@ namespace toob
         /// @param end The end of samples to remove.
         void Erase(size_t start, size_t end);
 
-        /// @brief Insert zeroes
+        /// @brief Insert zeroes`
         /// @param start The position at which to insert zeroes.
         /// @param count The number of zeroes to insert.
         void InsertZeroes(size_t start, size_t count);

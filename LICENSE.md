@@ -1,3 +1,7 @@
+Spdx: MIT+Apache-2.0+BSD-3-Clause+Boost-1.0+ISC+Boehm-MIT+MPL-2.0+CC-BY-4.0+CC-BY-SA-4.0+LicenseRef-T3K
+
+
+
 © 2020-2026, Robin E. R. Davies  
   
 The MIT License
@@ -26,6 +30,31 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+Factory installed .nam model and Cab IR files found in the following directories are licensed under a T3K license. Permission has been granted to Robin Davies to distribute these files for use with PiPedal only. 
+
+    /var/pipedal/audio_uploads/NeuralAmpModesl/Factory Models
+    /var/pipedal/audio_uploads/CabIR/Factory IRs
+
+Please contact the original authors for permission to use these files for any other purpose.
+
+See the README.md files in each of these directories for more information about the 
+original authors and the source of these files.
+
+
+
+(c) 2dor (https://tone3000.com/t2dor)
+(c) amalgamaudio (https://tone3000.com/amalgamaudio)
+(c) kenazmusic (https://tone3000.com/kenazmusic)
+(c) outmodedelectronics (https://tone3000.com/outmodedelectronics)
+(c) scottcorgan (https://tone3000.com/scottcorgan)
+(c) tone3000 (https://tone3000.com/tone3000)
+
+T3K License (LicenseRef-T3K)
+
+Users may download and use the data file in software and publish the resulting outputs without royalties or restrictions. However, they may not upload, republish, or distribute the data file without the author's permission.
 
 ---
 

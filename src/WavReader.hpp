@@ -56,6 +56,7 @@ namespace toob
         };
 
         static AudioData Load(const std::filesystem::path &path);
+        static bool IsWavFile(const std::filesystem::path &path);
 
         void Open(const std::filesystem::path &path);
 
@@ -63,7 +64,11 @@ namespace toob
         uint32_t SampleRate() const { return m_sampleRate; }
         size_t NumberOfFrames() const;
 
+        void Seek(size_t frame);
+        size_t CurrentFrame() const { return currentFrame; }
+
         void Read(AudioData &audioData);
+        void Read(AudioData &audioData, size_t samples);
 
         std::vector<std::vector<float>> ReadData();
 
@@ -71,6 +76,8 @@ namespace toob
         ChannelMask GetChannelMask() const { return m_channelMask; }
 
     private:
+        bool IsWavFile_(const std::filesystem::path&path);
+        size_t currentFrame = (size_t)-1;
         void ReadInt24Data(float **channels, size_t offset, size_t length);
 
         template <typename T>
@@ -91,6 +98,7 @@ namespace toob
         uint16_t ReadUint16();
 
     private:
+
         uint32_t m_channels = 0;
         uint32_t m_sampleRate = 0;
         size_t m_frameSize = 0;
@@ -101,6 +109,7 @@ namespace toob
 
         size_t dataStart = 0;
         size_t dataEnd = 0;
+        size_t numberOfFrames = 0;
     };
 
     inline uint8_t WavReader::ReadUint8()

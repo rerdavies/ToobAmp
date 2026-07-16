@@ -47,22 +47,52 @@ using namespace pipedal;
 
 #pragma GCC diagnostic ignored "-Wunused-result" // GCC 12 bug.
 
+size_t FfmpegDecoderStream::currentFrame() const
+{
+    return currentFrame_;
+}
 
 void FfmpegDecoderStream::open(const std::filesystem::path &filePath, int channels, uint32_t sampleRate, double seekPosSeconds)
 {
-    openLoop(filePath,channels,sampleRate,(size_t)std::round(seekPosSeconds*sampleRate),0,0);
+    LoopParameters loopParameters;
+    loopParameters.start_ = seekPosSeconds;
+    loopParameters.loopEnable_ = false;
+    loopParameters.loopStart_ = 0;
+    loopParameters.loopEnd_ = 0;
+    openLoop(filePath, channels, sampleRate, loopParameters);
 }
 
 void FfmpegDecoderStream::openLoop(
-    const std::filesystem::path &filePath, 
-    int channels, 
-    uint32_t sampleRate, 
-    size_t startFrame,
-    size_t loopStartFrame,
-    size_t loopEndFrame)
+    const std::filesystem::path &filePath,
+    int channels,
+    uint32_t sampleRate,
+    const LoopParameters &loopParameters)
 {
-    this->channels = channels;
 
+    size_t startFrame;
+    size_t loopStartFrame = 0;
+    size_t loopEndFrame = 0;
+
+    startFrame = (size_t)(loopParameters.start_ * sampleRate);
+    if (loopParameters.loopEnable_)
+    {
+        loopStartFrame = (size_t)(loopParameters.loopStart_ * sampleRate);
+        loopEndFrame = (size_t)(loopParameters.loopStart_ * sampleRate);
+    }
+    if (loopStartFrame >= loopEndFrame)
+    {
+        loopStartFrame = loopEndFrame = 0;
+    }
+    else
+    {
+        if (startFrame > loopEndFrame)
+        {
+            startFrame = loopStartFrame;
+        }
+    }
+
+    this->channels = channels;
+    this->currentFrame_ = startFrame;
     // Requirements: fork the ffmpeg process, making sure that NO file handles (especially socket handlers)
     // are passed to the child process. The one socket handle that is passed in is the return pipe handle.
     // Standard I/O is redirected to /dev/null.
@@ -83,17 +113,16 @@ void FfmpegDecoderStream::openLoop(
 
     // seek to the position in the file.
     args.push_back("-ss");
-    args.push_back(std::to_string(startFrame/(double)sampleRate));
+    args.push_back(std::to_string(startFrame / (double)sampleRate));
 
-    if (loopStartFrame != loopEndFrame) 
+    if (loopStartFrame != loopEndFrame)
     {
-        /// -filter_complex "loop=loop=<num_loops>:size=<frame_count>:start=<start_frame>"        
+        /// -filter_complex "loop=loop=<num_loops>:size=<frame_count>:start=<start_frame>"
         args.push_back("-filter_complex");
-        std::string loopArgs = 
-            SS("loop=loop=-1:size=" << (loopEndFrame-loopStartFrame) 
-                << ":start=" << loopStartFrame);
+        std::string loopArgs =
+            SS("loop=loop=-1:size=" << (loopEndFrame - loopStartFrame)
+                                    << ":start=" << loopStartFrame);
         args.push_back(loopArgs);
-
     }
     args.push_back("-f");
     args.push_back("f32le");
@@ -104,7 +133,6 @@ void FfmpegDecoderStream::openLoop(
     args.push_back("-ar");
     args.push_back(std::to_string((int32_t)sampleRate));
     args.push_back("pipe:" + std::to_string(pipeFd[1]));
-
 
     std::vector<const char *> cArgv;
     for (auto &arg : args)
@@ -222,6 +250,7 @@ size_t FfmpegDecoderStream::read(float **buffers, size_t count)
             }
             offset += nRead / sizeof(float);
         }
+        currentFrame_ += count;
         return count;
     }
     else
@@ -253,6 +282,7 @@ size_t FfmpegDecoderStream::read(float **buffers, size_t count)
 
             offset += nRead / (sizeof(float) * 2);
         }
+        currentFrame_ += count;
         return count;
     }
 }
@@ -540,9 +570,12 @@ AudioFileMetadata::AudioFileMetadata(const std::filesystem::path &file)
     std::stringstream ss(json);
     json_reader reader(ss);
 
-    try {
+    try
+    {
         reader.read(&vt);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         throw std::runtime_error("Invalid metadata.");
     }
     if (!vt.is_object())
@@ -554,9 +587,12 @@ AudioFileMetadata::AudioFileMetadata(const std::filesystem::path &file)
     auto format = top->at("format").as_object();
 
     this->path = file;
-    try {
+    try
+    {
         this->duration = MetadataDouble(format->at("duration"), 0);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         throw std::runtime_error("Invalid file format.");
     }
     if (this->duration <= 0)
@@ -564,7 +600,8 @@ AudioFileMetadata::AudioFileMetadata(const std::filesystem::path &file)
         throw std::runtime_error("Invalid duration in metadata for file: " + file.string());
     }
 
-    try {
+    try
+    {
         auto tags = (*format)["tags"];
         if (tags.is_object())
         {
@@ -575,14 +612,16 @@ AudioFileMetadata::AudioFileMetadata(const std::filesystem::path &file)
             this->date = MetadataString(tags, {"DATE", "date"});
             this->year = MetadataString(tags, {"YEAR", "year"});
             this->track = MetadataString(tags, {
-                                                "track",
-                                                "TRACK",
-                                            });
+                                                   "track",
+                                                   "TRACK",
+                                               });
             this->disc = MetadataString(tags, {"disc", "DISC"});
 
             this->totalTracks = MetadataString(tags, {"TOTALTRACKS"});
         }
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         (void)e;
         // ignored.
     }
@@ -636,7 +675,7 @@ static std::mutex metadataCacheMutex;
 
 AudioFileMetadata toob::GetAudioFileMetadata(const std::filesystem::path &path)
 {
-    
+
     std::lock_guard lock{metadataCacheMutex};
     AudioCacheKey key{path};
     AudioFileMetadata result;
@@ -654,4 +693,3 @@ double toob::GetAudioFileDuration(const std::filesystem::path &path)
     AudioFileMetadata md = GetAudioFileMetadata(path);
     return md.getDuration();
 }
-

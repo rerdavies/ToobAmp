@@ -29,7 +29,8 @@
 #include <memory>
 #include "../util.hpp"
 
-#include "FfmpegDecoderStream.hpp"
+#include "AudioDecoderStream.hpp"
+#include "WavDecoderStream.hpp"
 
 #include "../LsNumerics/LsMath.hpp"
 
@@ -288,6 +289,7 @@ struct SetLoopParametersMessage : public BufferMessage
     struct ToobCuePlaybackResponseMessage : public BufferMessage
     {
         ToobCuePlaybackResponseMessage(
+            bool isAudioStream,
             uint64_t operationId,
             size_t seekPos,
             const LoopParameters &loopParameters,
@@ -312,6 +314,7 @@ struct SetLoopParametersMessage : public BufferMessage
             size = (size + 3) & (~3);
             strncpy(this->loopParameterJson, loopParameterJson, sizeof(this->loopParameterJson) - 1);
         }
+        bool isAudioStream;
         uint64_t operationId;
         size_t seekPos;
         double duration;
@@ -486,6 +489,7 @@ void Lv2AudioFileProcessor::Activate()
                         case MessageType::CuePlayback:
                         {
                             ToobCuePlaybackMessage *cueCmd = (ToobCuePlaybackMessage *)cmd;
+                            
                             bgCuePlayback(cueCmd->operationId, cueCmd->getFileName(), cueCmd->seekPos);
                             break;
                         }
@@ -924,6 +928,7 @@ void Lv2AudioFileProcessor::HandleMessages()
             }
 
             OnFgCuePlaybackResponse(
+                responseCommand->isAudioStream,
                 responseCommand->buffers,
                 responseCommand->bufferCount,
                 responseCommand->loopBuffer,
@@ -960,11 +965,28 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
     toob::AudioFileBufferPool *bufferPool)
 {
 
-    using clock_t = std::chrono::high_resolution_clock;
-
-    bufferPool->Reserve(PREROLL_BUFFERS + 1);
-
     toob::AudioFileBuffer *buffer = nullptr;
+
+    if (this->wavDecoderStream) {
+        if (!this->wavDecoderStream->eof())
+        {
+            auto buffer = bufferPool->TakeBuffer();
+            float *channelBuffers[2];
+
+            if (bufferPool->GetChannels() >= 2)
+            {
+                channelBuffers[0] = buffer->GetChannel(0);
+                channelBuffers[1] = buffer->GetChannel(1);
+            } else {
+                channelBuffers[0] = buffer->GetChannel(0);
+                channelBuffers[1] = nullptr;
+            }
+            buffer->SetFileOffset(wavDecoderStream->currentFrame());
+            this->wavDecoderStream->read(channelBuffers,bufferPool->GetBufferSize());
+            return buffer;
+        } 
+        return nullptr;
+    }
     if (!this->decoderStream && !useTestData)
     {
         // No decoder stream and no test data, so we can't read anything.
@@ -977,9 +999,6 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
 
         this->decoderStream.reset();
 
-#ifndef NDEBUG
-        auto start = clock_t::now();
-#endif
         if (useTestData)
         {
             decoderStreamOpen(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
@@ -995,15 +1014,6 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             this->lookaheadPosition = this->readPos;
             nextDecoderStream->open(this->filePath, this->channels, this->sampleRate, this->readPos / (double)this->sampleRate);
         }
-// print the time taken to open the decoder stream.
-#ifndef NDEBUG
-        auto end = clock_t::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-        if (duration > 500)
-        {
-            std::cerr << "Warning: Decoder stream open took " << duration << " ms for file: " << this->filePath << std::endl;
-        }
-#endif
     }
 
     try
@@ -1045,17 +1055,9 @@ toob::AudioFileBuffer *BgFileReader::NextBuffer(
             buffers[0] = buffer->GetChannel(0);
             buffers[1] = nullptr; // mono file, so we can just read the data directly.
         }
-        auto start = clock_t::now();
 
         size_t nRead = this->decoderStreamRead(buffers, thisTime);
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(clock_t::now() - start).count();
-
-        if (elapsed > 2000)
-        {
-            // xxx: DELETE ME.
-            std::cerr << "Warning: Decoder stream read took " << elapsed << " ms for file: " << this->filePath << std::endl;
-        }
         if (loopType == LoopType::BigLoop || loopType == LoopType::BigStartSmallLoop)
         {
             if (nRead < thisTime && nRead > 0)
@@ -1310,6 +1312,7 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         }
         bgReader.loopParameters = playerSettings.loopParameters_;
         bgReader.loopControlInfo = LoopControlInfo(
+            true,
             bgReader.loopParameters,
             this->sampleRate,
             duration);
@@ -1331,12 +1334,55 @@ void Lv2AudioFileProcessor::bgCuePlayback(
         auto loopType = bgReader.loopControlInfo.loopType;
 
         size_t startSample = (size_t)std::round(seekPosSeconds * this->sampleRate);
+        bool isAudioStream = false;
+
         ToobCuePlaybackResponseMessage responseCommand{
+            isAudioStream,
             operationId, 
             startSample, 
             bgReader.loopParameters, 
             duration, 
             bgReader.loopParameterJson.c_str()};
+
+
+        if (WavReader::IsWavFile(filename))
+        {
+            try {
+                bgReader.StartWavStream(filename, channels,sampleRate,bgReader.loopParameters);
+                isAudioStream = true;
+                responseCommand.isAudioStream = true;
+                for (size_t i = 0; i < PREROLL_BUFFERS; ++i)
+                {
+                    auto buffer = this->bgReadDecoderBuffer();
+                    if (buffer) {
+                        responseCommand.buffers[i] = buffer;
+                        responseCommand.bufferCount++;
+                    }
+                }
+                responseCommand.isAudioStream = true;
+                responseCommand.duration = duration;
+                if (operationId != fgOperationId)
+                {
+                    // cancelled!
+                    for (size_t i = 0; i < responseCommand.bufferCount; ++i)
+                    {
+                        if (responseCommand.buffers[i])
+                        {
+                            bufferPool->PutBuffer(responseCommand.buffers[i]);
+                        }
+                    }
+                    this->bgReader.Close();
+                    return;
+                }
+
+
+                this->fromBackgroundQueue.write_packet(sizeof(responseCommand), (uint8_t *)&responseCommand);
+                return;
+            } catch (const std::exception&)
+            {
+                // fall through, and use legacy ffmpeg reader.
+            }
+        }
 
         if (loopType == LoopType::SmallLoop ||
             loopType == LoopType::BigStartSmallLoop)
@@ -1517,9 +1563,10 @@ void Lv2AudioFileProcessor::OnFgNextPlayBufferResponse(uint64_t operationId, too
     }
 }
 
-LoopControlInfo::LoopControlInfo(const LoopParameters &loopParameters, double sampleRate, double duration)
+LoopControlInfo::LoopControlInfo(bool isAudioStream, const LoopParameters &loopParameters, double sampleRate, double duration)
 {
 
+    this->isAudioStream = isAudioStream;
     this->loopType = GetLoopType(loopParameters, sampleRate);
     this->start = (size_t)std::round(loopParameters.start_ * sampleRate);
     if (!loopParameters.loopEnable_)
@@ -1618,6 +1665,7 @@ void Lv2AudioFileProcessor::OnFgUpdateLoopParameters(const char * loopJson, doub
 }
 
 void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
+    bool isAudioStream,
     AudioFileBuffer **buffers,
     size_t count,
     AudioFileBuffer *loopBuffer_,
@@ -1627,6 +1675,7 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
     const char* loopParameterJson
 )
 {
+    this->fgIsAudioStream = isAudioStream;
     AudioFileBuffer::ptr loopBuffer;
     loopBuffer.attach(loopBuffer_);
 
@@ -1635,13 +1684,17 @@ void Lv2AudioFileProcessor::OnFgCuePlaybackResponse(
         this->state == ProcessorState::Playing)
     {
         this->fgLoopType = GetLoopType(loopParameters, this->sampleRate);
+        if (fgIsAudioStream)
+        {
+            this->fgLoopType = LoopType::AudioStream;
+        }
 
         fgResetPlaybackQueue();
         this->fgLoopBuffer = std::move(loopBuffer);
-        this->fgLoopControlInfo = LoopControlInfo(loopParameters, this->sampleRate, duration);
+        this->fgLoopControlInfo = LoopControlInfo(false,loopParameters, this->sampleRate, duration);
 
         fgLoopParameters = loopParameters;
-        fgLoopControlInfo = LoopControlInfo(loopParameters, this->sampleRate, duration);
+        fgLoopControlInfo = LoopControlInfo(isAudioStream,loopParameters, this->sampleRate, duration);
 
         this->playPosition = seekPos;
 
@@ -1710,15 +1763,26 @@ void Lv2AudioFileProcessor::OnFgRecordingStopped(const char *filename)
     CuePlayback(filename, 0, !playAfterRecording);
     playAfterRecording = false;
 }
+
+void Lv2AudioFileProcessor::fixStreamedLoopPosition()
+{
+    if (this->fgIsAudioStream && this->fgLoopControlInfo.loopStart != this->fgLoopControlInfo.loopEnd)
+    {
+        while (this->playPosition >= this->fgLoopControlInfo.loopEnd)
+        {
+            this->playPosition -= this->fgLoopControlInfo.loopEnd-this->fgLoopControlInfo.loopStart;
+        }
+    }
+
+}
 void Lv2AudioFileProcessor::Play(float *dst, size_t n_samples)
 {
     if (this->state == ProcessorState::Playing)
     {
-        if (this->fgLoopType == LoopType::None)
+        if (this->fgLoopType == LoopType::None || this->fgLoopType == LoopType::AudioStream)
         {
             if (!this->fgPlaybackQueue.empty())
             {
-                this->playPosition += n_samples;
 
                 auto buffer = this->fgPlaybackQueue.front();
                 float *playData = buffer->GetChannel(0);
@@ -1740,11 +1804,17 @@ void Lv2AudioFileProcessor::Play(float *dst, size_t n_samples)
                             break;
                         }
                         buffer = fgPlaybackQueue.front();
+                        if(this->fgIsAudioStream)
+                        {
+                            this->playPosition = buffer->GetFileOffset();
+                        }
                         playData = buffer->GetChannel(0);
 
                         fgRequestNextPlayBuffer();
                     }
                 }
+                fixStreamedLoopPosition();
+
             }
         }
         else if (fgLoopType == LoopType::SmallLoop)
@@ -1827,6 +1897,10 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
         while (ix < n_samples)
         {
             LoopType loopType = this->fgLoopType;
+            if (fgIsAudioStream)
+            {
+                loopType = LoopType::AudioStream;
+            }
             if (loopType == LoopType::BigStartSmallLoop)
             {
                 if (playPosition >= this->fgLoopControlInfo.loopStart)
@@ -1834,7 +1908,7 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                     loopType = LoopType::SmallLoop;
                 }
             }
-            if (loopType == LoopType::None)
+            if (loopType == LoopType::None || loopType == LoopType::AudioStream)
             {
                 if (this->fgPlaybackQueue.empty())
                 {
@@ -1866,6 +1940,10 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                                 break;
                             }
                             buffer = fgPlaybackQueue.front();
+                            if (this->fgIsAudioStream)
+                            {
+                                this->playPosition = buffer->GetFileOffset();
+                            }
                             playDataL = buffer->GetChannel(0);
                             playDataR = buffer->GetChannel(1);
 
@@ -1873,6 +1951,7 @@ void Lv2AudioFileProcessor::Play(float *dstL, float *dstR, size_t n_samples)
                         }
                     }
                 }
+                fixStreamedLoopPosition();
             }
             else if (loopType == LoopType::SmallLoop)
             {
@@ -2299,6 +2378,7 @@ void BgFileReader::Init(
 
     this->loopParameters = loopParameters_;
     this->loopControlInfo = LoopControlInfo(
+        false,
         loopParameters,
         sampleRate,
         duration);
@@ -2461,11 +2541,23 @@ void Lv2AudioFileProcessor::Play()
 
 void BgFileReader::Close()
 {
+    if (this->wavDecoderStream) 
+    {
+        this->wavDecoderStream->close();
+        this->wavDecoderStream.reset();
+    }
     if (this->decoderStream)
     {
         this->decoderStream->close();
         this->decoderStream.reset();
     }
+}
+
+void BgFileReader::StartWavStream(const std::filesystem::path&filename, int channels,double sampleRate,const LoopParameters&loopParameters)
+{
+    this->decoderStream.reset();
+    this->nextDecoderStream.reset();
+    this->wavDecoderStream = AudioDecoderStream::create(filename, channels,sampleRate,loopParameters);
 }
 
 void BgFileReader::Test_SetFileData(
@@ -2546,13 +2638,6 @@ JSON_MAP_BEGIN(Timebase)
 JSON_MAP_REFERENCE(Timebase, units)
 JSON_MAP_REFERENCE(Timebase, tempo)
 JSON_MAP_REFERENCE(Timebase, timeSignature)
-JSON_MAP_END()
-
-JSON_MAP_BEGIN(LoopParameters)
-JSON_MAP_REFERENCE(LoopParameters, start)
-JSON_MAP_REFERENCE(LoopParameters, loopEnable)
-JSON_MAP_REFERENCE(LoopParameters, loopStart)
-JSON_MAP_REFERENCE(LoopParameters, loopEnd)
 JSON_MAP_END()
 
 JSON_MAP_BEGIN(ToobPlayerSettings)

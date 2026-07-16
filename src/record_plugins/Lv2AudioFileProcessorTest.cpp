@@ -78,7 +78,7 @@ public:
             dLoopStart,
             dLoopEnd};
         double duration = dLoopEnd + (GetLoopBlendLength(sampleRate) + 5) / sampleRate;
-        LoopControlInfo controlInfo(loopParams, sampleRate, duration);
+        LoopControlInfo controlInfo(false,loopParams, sampleRate, duration);
 
         size_t length = size_t(std::round(duration * sampleRate));
 
@@ -335,7 +335,7 @@ public:
             dLoopStart,
             dLoopEnd};
         double duration = dLoopEnd + (GetLoopBlendLength(sampleRate) + 5) / sampleRate;
-        LoopControlInfo controlInfo(loopParams, sampleRate, duration);
+        LoopControlInfo controlInfo(false,loopParams, sampleRate, duration);
 
         size_t length = size_t(std::round(duration * sampleRate));
 

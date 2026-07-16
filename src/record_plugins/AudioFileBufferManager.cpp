@@ -114,14 +114,15 @@ void AudioFileBufferPool::PutBuffer(AudioFileBuffer *buffer)
 {
     if (buffer->refCount.load() != 1)
     {
-        throw std::runtime_error("AudioFileBufferPool::Trim: buffer has invalid ref count");
+        throw std::runtime_error("AudioFileBufferPool::Trim: PutBuffer has invalid ref count");
     }
 
     AudioFileBuffer *current = freeList.load(std::memory_order_relaxed);
     buffer->next = current;
     while (!freeList.compare_exchange_weak(buffer->next, buffer, std::memory_order_release, std::memory_order_relaxed))
     {
-        /**/;
+        current = freeList.load(std::memory_order_relaxed);
+        buffer->next = current;    
     }
     ++pooledCount;
 }

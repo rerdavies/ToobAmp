@@ -1,5 +1,5 @@
 /*
- *   Copyright (c) 2022 Robin E. R. Davies
+ *   Copyright (c) 2026 Robin E. R. Davies
  *   All rights reserved.
 
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -8,10 +8,10 @@
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
-
+ 
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
-
+ 
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -21,16 +21,15 @@
  *   SOFTWARE.
  */
 
-#pragma once
+#include "LoopParameters.hpp"
 
-#include "AudioData.hpp"
-#include <filesystem>
+using namespace toob;
 
-namespace toob {
 
-    class FlacReader {
-    public:
-        static bool IsFlacFile(const std::filesystem::path &path);
-        static AudioData Load(const std::filesystem::path &path);
-    };
-}
+JSON_MAP_BEGIN(LoopParameters)
+JSON_MAP_REFERENCE(LoopParameters, start)
+JSON_MAP_REFERENCE(LoopParameters, loopEnable)
+JSON_MAP_REFERENCE(LoopParameters, loopStart)
+JSON_MAP_REFERENCE(LoopParameters, loopEnd)
+JSON_MAP_END()
+

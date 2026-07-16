@@ -198,6 +198,11 @@ add_library(ToobAmpArch SHARED
     record_plugins/ToobRingBuffer.hpp
     record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
     record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
+    record_plugins/AudioDecoderStream.hpp record_plugins/AudioDecoderStream.cpp
+    record_plugins/AudioBufferDecoderStream.hpp record_plugins/AudioBufferDecoderStream.cpp
+    record_plugins/WavDecoderStream.hpp record_plugins/WavDecoderStream.cpp
+    record_plugins/ResamplerDecoderStream.hpp record_plugins/ResamplerDecoderStream.cpp
+    record_plugins/LoopParameters.cpp record_plugins/LoopParameters.hpp
     record_plugins/Lv2AudioFileProcessor.cpp record_plugins/Lv2AudioFileProcessor.hpp
 
     record_plugins/InputTrigger.hpp record_plugins/InputTrigger.cpp
@@ -1213,11 +1218,28 @@ add_executable(PlayerTest
     record_plugins/Lv2AudioFileProcessorTest.cpp
     record_plugins/AudioFileBufferManager.hpp record_plugins/AudioFileBufferManager.cpp
     record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
+    record_plugins/AudioDecoderStream.hpp record_plugins/AudioDecoderStream.cpp
+    record_plugins/ResamplerDecoderStream.hpp record_plugins/ResamplerDecoderStream.cpp
+    record_plugins/WavDecoderStream.hpp record_plugins/WavDecoderStream.cpp
+    record_plugins/AudioBufferDecoderStream.hpp record_plugins/AudioBufferDecoderStream.cpp
+    record_plugins/LoopParameters.cpp record_plugins/LoopParameters.hpp
     json.hpp json.cpp
     util.cpp util.hpp
     json_variant.hpp json_variant.cpp
     TemporaryFile.hpp TemporaryFile.cpp
+
+    WavReader.hpp
+    WavReader.cpp
+    FlacReader.hpp FlacReader.cpp
+    WavWriter.hpp
+    WavWriter.cpp
+    WavGuid.hpp
+    WavGuid.cpp
+    WavConstants.hpp WavConstants.cpp
+
 )
+
+target_link_libraries(PlayerTest PRIVATE ${FLAC_LIBS})
 
 add_test(PlayerTest PlayerTest)
 
