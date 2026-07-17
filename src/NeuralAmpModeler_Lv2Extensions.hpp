@@ -36,6 +36,8 @@ namespace toob::nam_impl {
 
     // offset 0: an integer with the following bits set.
     // Must match pipedal/vite/src/pipedal/ToobNamView.tsx class TOOB_NAM_METADATA_OFFSETS
+    constexpr size_t MAX_SLIMMABLE_SIZES = 20;
+
     enum TOOB_NAM_METADATA_OFFSETS {
         flags = 0,
         preset_version = 1,
@@ -46,8 +48,10 @@ namespace toob::nam_impl {
         has_slimmable_sizes = 6,
         current_model_weight = 7,
         model_type = 8,
+        slimmable_sizes_length = 9,
 
-        max_metadata_offset
+
+        max_metadata_offset = slimmable_sizes_length + 1 + MAX_SLIMMABLE_SIZES
     };
 
 

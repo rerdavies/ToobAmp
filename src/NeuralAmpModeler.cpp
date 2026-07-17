@@ -233,6 +233,10 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAMPath()
 {
     CheckValid();
+
+    // Avoid allocations on RT thread.
+    this->fgModelMetadata.slimmableSizes.reserve(nam_impl::MAX_SLIMMABLE_SIZES);
+
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);
 #if NAM_RMS_METER
@@ -450,6 +454,8 @@ void NeuralAmpModeler::SetModel()
         fgModelMetadata.hasSlimmableSizes = mNAM? mNAM->HasSlimmableSizes(): false;
         fgModelMetadata.model_type = (OutputModelType)(int)(mNAM->GetModelType());
         fgModelMetadata.model_weight = mNAM->GetModelWeight();
+        
+        fgModelMetadata.slimmableSizes = mNAM->GetSlimmableSizes();
 
         cCurrentModelWeight.SetValue(fgModelMetadata.model_weight);
         cModelType.SetValue((float)fgModelMetadata.model_type);
@@ -1524,6 +1530,11 @@ void NeuralAmpModeler::SendModelMetadataNotification()
 {
     using namespace toob::nam_impl;
 
+    size_t slimmableWeightsLength = fgModelMetadata.slimmableSizes.size();
+    if (slimmableWeightsLength > nam_impl::MAX_SLIMMABLE_SIZES)
+    {
+        slimmableWeightsLength = 0;
+    }
     std::array<float,TOOB_NAM_METADATA_OFFSETS::max_metadata_offset> values{};
 
     values[TOOB_NAM_METADATA_OFFSETS::flags] = fgModelMetadata.flags;
@@ -1535,6 +1546,13 @@ void NeuralAmpModeler::SendModelMetadataNotification()
     values[TOOB_NAM_METADATA_OFFSETS::has_slimmable_sizes] = fgModelMetadata.hasSlimmableSizes ? 1.0f:0.0f;
     values[TOOB_NAM_METADATA_OFFSETS::current_model_weight] = fgModelMetadata.model_weight;
     values[TOOB_NAM_METADATA_OFFSETS::model_type] = (float)(int)fgModelMetadata.model_type;
+    values[TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length] = (float)slimmableWeightsLength;
+    for (size_t i = 0; i < slimmableWeightsLength; ++i)
+    {
+        values[TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length+1+i] = fgModelMetadata.slimmableSizes[i];
 
-    this->PutPatchProperty(0, this->namUris.toob_nam__model_metadata, values.size(), values.data());
+    }
+    size_t metadataLength = TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length+1 + slimmableWeightsLength;
+
+    this->PutPatchProperty(0, this->namUris.toob_nam__model_metadata, metadataLength, values.data());
 }

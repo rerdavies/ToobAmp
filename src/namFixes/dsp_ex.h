@@ -48,6 +48,8 @@ namespace toob
         bool HasSlimmableSizes();
         void SetSlimmableSize(double value);
         void Prewarm();
+        const std::vector<float> GetSlimmableSizes() const;
+        void SetSlimmableSizes(const std::vector<float>&sizes);
 
     private:
         void loadMetadataProperty(const char*name, bool &hasValue, float &value);
@@ -67,6 +69,7 @@ namespace toob
         float modelInputLevelDBu = 0;
         bool hasModelOutputLevelDBu = false;
         float modelOutputLevelDBu = 0;
+        std::vector<float> slimmableSizes;
 
     };
 

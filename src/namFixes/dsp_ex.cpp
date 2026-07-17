@@ -74,8 +74,6 @@ namespace toob
         return this->modelType;
     }
 
-
-
     float NeuralAudioDsp::GetModelOutputLevelDBu()
     {
         return modelOutputLevelDBu;
@@ -116,7 +114,6 @@ namespace toob
         if (neuralAudioModel)
         {
 
-
             this->neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(neuralAudioModel);
             neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
             if (neuralAudioModel->HasQualityScaling())
@@ -127,14 +124,14 @@ namespace toob
 
             loadNeuralAudioMetadata();
 
-            #ifdef TOOB_OPTIMIZATION_FLAGS
+#ifdef TOOB_OPTIMIZATION_FLAGS
             std::cout << TOOB_OPTIMIZATION_FLAGS << " ";
-            #endif
-            std::cout << 
-                "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio A1");
+#endif
+            std::cout << "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio A1");
             if (neuralAudioModel->HasQualityScaling())
             {
-                std::cout << " A2 weight=" << modelWeight;;
+                std::cout << " A2 weight=" << modelWeight;
+                ;
             }
             std::cout << std::endl;
 
@@ -158,7 +155,7 @@ namespace toob
         }
     }
 
-    void NeuralAudioDsp::Prewarm() 
+    void NeuralAudioDsp::Prewarm()
     {
         if (neuralAudioModel)
         {
@@ -170,11 +167,10 @@ namespace toob
         if (neuralAudioModel)
         {
             neuralAudioModel->SetQualityScaleFactor(value);
-            
         }
     }
 
-    void NeuralAudioDsp::loadMetadataProperty(const char*name, bool &hasValue, float &value)
+    void NeuralAudioDsp::loadMetadataProperty(const char *name, bool &hasValue, float &value)
     {
         hasValue = false;
         std::string metadata = neuralAudioModel->GetMetadata(name);
@@ -182,9 +178,11 @@ namespace toob
         {
             return;
         }
-        try {
+        try
+        {
             value = std::stof(metadata);
-        } catch (const std::exception&e)
+        }
+        catch (const std::exception &e)
         {
             return;
         }
@@ -195,42 +193,50 @@ namespace toob
     {
         if (neuralAudioModel)
         {
-            loadMetadataProperty("gain",hasModelGainDb, modelGainDb);
-            loadMetadataProperty("loudness",hasModelLoudnessDB, modelLoudnessDB);
-            loadMetadataProperty("input_level_dbu",hasModelInputLevelDBu, modelInputLevelDBu);
-            loadMetadataProperty("output_level_dbu",hasModelOutputLevelDBu, modelOutputLevelDBu);
+            loadMetadataProperty("gain", hasModelGainDb, modelGainDb);
+            loadMetadataProperty("loudness", hasModelLoudnessDB, modelLoudnessDB);
+            loadMetadataProperty("input_level_dbu", hasModelInputLevelDBu, modelInputLevelDBu);
+            loadMetadataProperty("output_level_dbu", hasModelOutputLevelDBu, modelOutputLevelDBu);
 
             if (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::RTNeural)
             {
                 throw std::runtime_error("NeuralAudio::EModelLoadMode::RTNeural Not implemented.");
-            } else {
-                switch (neuralAudioModel->GetLoadMode()) {
-                    case NeuralAudio::EModelLoadMode::Internal:
-                        this->modelType = NamModelType::A1;
-                        break;
-                    case NeuralAudio::EModelLoadMode::NAMCore:
-                        this->modelType = NamModelType::A2;
-                        break;
-                    default:
-                        throw std::runtime_error("Unknown NeuralAudio model type");
+            }
+            else
+            {
+                switch (neuralAudioModel->GetLoadMode())
+                {
+                case NeuralAudio::EModelLoadMode::Internal:
+                    this->modelType = NamModelType::A1;
+                    break;
+                case NeuralAudio::EModelLoadMode::NAMCore:
+                    this->modelType = NamModelType::A2;
+                    break;
+                default:
+                    throw std::runtime_error("Unknown NeuralAudio model type");
                 }
-                this->modelType = neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? NamModelType::A2: NamModelType::A1;
+                this->modelType = neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? NamModelType::A2 : NamModelType::A1;
                 this->modelWeight = neuralAudioModel->GetQualityScaleFactor();
-                loadMetadataProperty("gain",hasModelGainDb, modelGainDb);
-                loadMetadataProperty("loudness",hasModelLoudnessDB, modelLoudnessDB);
-                loadMetadataProperty("input_level_dbu",hasModelInputLevelDBu, modelInputLevelDBu);
-                loadMetadataProperty("output_level_dbu",hasModelOutputLevelDBu, modelOutputLevelDBu);
+                loadMetadataProperty("gain", hasModelGainDb, modelGainDb);
+                loadMetadataProperty("loudness", hasModelLoudnessDB, modelLoudnessDB);
+                loadMetadataProperty("input_level_dbu", hasModelInputLevelDBu, modelInputLevelDBu);
+                loadMetadataProperty("output_level_dbu", hasModelOutputLevelDBu, modelOutputLevelDBu);
             }
             hasSlimmableSizes = neuralAudioModel->HasQualityScaling();
-
-
         }
-
     }
 
     bool NeuralAudioDsp::HasSlimmableSizes()
     {
         return hasSlimmableSizes;
+    }
+    const std::vector<float> NeuralAudioDsp::GetSlimmableSizes() const
+    {
+        return slimmableSizes;
+    }
+    void NeuralAudioDsp::SetSlimmableSizes(const std::vector<float> &sizes)
+    {
+        this->slimmableSizes = sizes;
     }
 
 }

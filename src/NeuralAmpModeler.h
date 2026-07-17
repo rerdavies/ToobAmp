@@ -72,7 +72,7 @@ namespace toob
         bool hasSlimmableSizes = false;
         float model_weight;
         OutputModelType model_type;
-
+        std::vector<float> slimmableSizes;
     };
 
 
