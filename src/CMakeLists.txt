@@ -12,6 +12,11 @@ set(LV2C_INCLUDE_DIRS
 include_directories(${PROJECT_SOURCE_DIR}/modules)
 
 
+find_package(PkgConfig REQUIRED)
+
+find_package(Catch2 QUIET)
+set(TOOB_CATCH_VERSION3 (Catch2_VERSION VERSION_GREATER_EQUAL "3.0.0"))
+    add_definitions(-DTOOB_USE_CATCH3)
 
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)

@@ -21,4 +21,10 @@
  *   SOFTWARE.
  */
 
+ #pragma once 
+
+ #ifdef TOOB_AMP_CATCH3
  #include <catch2/catch_all.hpp>
+ #else 
+ #include <catch2/catch.hpp>
+ #endif

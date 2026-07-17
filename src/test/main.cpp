@@ -21,10 +21,9 @@
  *   SOFTWARE.
  */
 
- #include "catch_include.hpp"
-
+ 
  #define CATCH_CONFIG_RUNNER
- #include <catch2/catch_all.hpp>
+ #include "catch_include.hpp"
 
  int main(int argc, char**argv) 
  {
