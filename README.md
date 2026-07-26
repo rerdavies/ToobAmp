@@ -259,7 +259,6 @@ Run the following commands to install prerequisites:
         libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev \
         libboost-iostreams-dev catch2 librsvg2-dev
 
-     Fi
 
 
 Clone the repository to your local machine.
