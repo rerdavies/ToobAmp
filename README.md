@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.3.84
+### v1.3.85
 
 The ToobAmp Project provides 28 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
@@ -64,15 +64,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.84/toobamp_1.3.84_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.84/toobamp_1.3.84_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.84/toobamp_1.3.84_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.85/toobamp_1.3.85_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.85/toobamp_1.3.85_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.85/toobamp_1.3.85_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.3.84_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.3.85_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`.
@@ -347,7 +347,7 @@ Note that both scripts run clean builds, so they will take a while to complete; 
 
 # Releases Notes
 
-### v1.3.84
+### v1.3.85
 - Eliminate underruns when playing back audio files (TooB Player, TooB Loopers)
 - Neural Amp Modeler: Rename Slim control to Quality control.
 - Add EMT 140 Plate Reverb file.
