@@ -26,6 +26,7 @@
 #include "X86ProcessorCheck.hpp"
 #include <string.h>
 #include <array>
+#include <cstdint>
 #include <stdexcept>
 
 
@@ -80,6 +81,20 @@ namespace
         bool avx512dq = false;
         bool avx512vl = false;
     };
+
+    // Read XCR0 via XGETBV to check which XSAVE state components the OS has enabled.
+    // Only call this when OSXSAVE is already known to be set (i.e. CR4.OSXSAVE=1),
+    // otherwise XGETBV will fault.
+    static uint64_t read_xcr0()
+    {
+#ifdef _MSC_VER
+        return _xgetbv(0);
+#else
+        uint32_t eax, edx;
+        __asm__ __volatile__("xgetbv" : "=a"(eax), "=d"(edx) : "c"(0));
+        return (static_cast<uint64_t>(edx) << 32) | eax;
+#endif
+    }
 }
 
 static CpuFeatures detect_cpu_features()
@@ -108,7 +123,17 @@ static CpuFeatures detect_cpu_features()
         f.f16c = (ecx >> 29) & 1;
         f.fma = (ecx >> 12) & 1;
         f.osxsave = (ecx >> 27) & 1;
-        f.avx = (ecx >> 28) & 1;
+        bool cpuid_avx = (ecx >> 28) & 1;
+
+        // AVX requires the OS to have enabled YMM state (XCR0 bits 1 and 2).
+        // OSXSAVE tells us XGETBV is safe to call; we must still verify XCR0.
+        if (f.osxsave && cpuid_avx)
+        {
+            uint64_t xcr0 = read_xcr0();
+            constexpr uint64_t XCR0_XMM = 1ULL << 1;
+            constexpr uint64_t XCR0_YMM = 1ULL << 2;
+            f.avx = (xcr0 & (XCR0_XMM | XCR0_YMM)) == (XCR0_XMM | XCR0_YMM);
+        }
 
         (void)edx; // SSE/SSE2 guaranteed by x86-64 baseline
     }
@@ -124,11 +149,26 @@ static CpuFeatures detect_cpu_features()
         f.bmi1 = (ebx >> 3) & 1;
         f.avx2 = (ebx >> 5) & 1;
         f.bmi2 = (ebx >> 8) & 1;
-        f.avx512f = (ebx >> 16) & 1;
-        f.avx512dq = (ebx >> 17) & 1;
-        f.avx512cd = (ebx >> 28) & 1;
-        f.avx512bw = (ebx >> 30) & 1;
-        f.avx512vl = (ebx >> 31) & 1;
+
+        // AVX-512 also requires the OS to have enabled opmask + ZMM state (XCR0 bits 5,6,7).
+        // Only check if AVX is already confirmed (which already validated OSXSAVE + XCR0 bits 1,2).
+        bool cpuid_avx512f = (ebx >> 16) & 1;
+        if (f.avx && cpuid_avx512f)
+        {
+            uint64_t xcr0 = read_xcr0();
+            constexpr uint64_t XCR0_OPMASK  = 1ULL << 5;
+            constexpr uint64_t XCR0_ZMM_HI  = 1ULL << 6;
+            constexpr uint64_t XCR0_HI16_ZMM = 1ULL << 7;
+            if ((xcr0 & (XCR0_OPMASK | XCR0_ZMM_HI | XCR0_HI16_ZMM)) ==
+                        (XCR0_OPMASK | XCR0_ZMM_HI | XCR0_HI16_ZMM))
+            {
+                f.avx512f  = true;
+                f.avx512dq = (ebx >> 17) & 1;
+                f.avx512cd = (ebx >> 28) & 1;
+                f.avx512bw = (ebx >> 30) & 1;
+                f.avx512vl = (ebx >> 31) & 1;
+            }
+        }
     }
 
     // --- Extended leaf 0x80000001: LAHF/SAHF, LZCNT ---
