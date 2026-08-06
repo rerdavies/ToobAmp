@@ -391,17 +391,16 @@ void NeuralAmpModeler::SetModel()
         {
             fgModelMetadata.input_level_dbu = 0;
         }
-        fgModelMetadata.flags = flags;
-
         if (mNAM->HasModelOutputLevelDBu())
         {
             flags |= TOOB_NAM_METADATA_FLAGS::has_output_level_dbu;
-            fgModelMetadata.output_level_dbu = mNAM->GetModelInputLevelDBu();
+            fgModelMetadata.output_level_dbu = mNAM->GetModelOutputLevelDBu();
         }
         else
         {
             fgModelMetadata.output_level_dbu = 0;
         }
+        fgModelMetadata.flags = flags;
 
         if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
         {
