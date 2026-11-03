@@ -426,10 +426,12 @@ void Lv2AudioFileProcessor::Activate()
         [this]()
         {
             try
-            {
+        {
                 bool quit = false;
                 SetThreadName("tply_bg");
-                SetThreadNice(-11);
+                
+                SetRegularThreadPriority(0,-10);
+                
                 std::vector<uint8_t> buffer(2048);
                 BufferMessage *cmd = (BufferMessage *)buffer.data();
                 while (!quit)
