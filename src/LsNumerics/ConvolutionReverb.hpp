@@ -882,7 +882,7 @@ namespace LsNumerics
             this->reverbMixDezipper.SetSampleRate(rate);
             this->directMixDezipper.SetSampleRate(rate);
             this->bypassDezipper.SetSampleRate(rate);
-            this->bypassDezipper.To(1.0f,0.0f);
+            this->bypassDezipper.To(1.0f, 0.0f);
         }
         void ResetDirectMix(float value)
         {
@@ -1011,15 +1011,18 @@ namespace LsNumerics
                     {
                         float bypassValue = bypassDezipper.Tick();
 
-                        float reverbInL = inputL[ix + i];
-                        float reverbInR = inputR[ix + i];
+                        float originalValueInL = inputL[ix + i];
+                        float originalValueInR = inputR[ix + i];
+                        float reverbInL = originalValueInL;
+                        float reverbInR = originalValueInR;
 
                         float reverbL, reverbR;
                         if (tails)
                         {
                             reverbInL *= bypassValue;
                             reverbInR *= bypassValue;
-                        } else if (!bypass)
+                        }
+                        else if (!bypass)
                         {
                             reverbInL = 0;
                             reverbInR = 0;
@@ -1028,25 +1031,23 @@ namespace LsNumerics
 
                         float directMix = directMixDezipper.Tick();
                         float reverbMix = reverbMixDezipper.Tick();
-                        float valueL = inputL[ix + i];
-                        float valueR = inputR[ix + i];
 
                         float returnValueL, returnValueR;
                         if (tails)
                         {
                             // cross-fade direct signal, tails are unmodified on bypass
                             float effectiveDirectMix = (1.0f - bypassValue) + bypassValue * directMix;
-                            returnValueL = valueL * effectiveDirectMix + (reverbL)*reverbMix;
-                            returnValueR = valueR * effectiveDirectMix + (reverbR)*reverbMix;
+                            returnValueL = originalValueInL * effectiveDirectMix + (reverbL)*reverbMix;
+                            returnValueR = originalValueInR * effectiveDirectMix + (reverbR)*reverbMix;
                         }
                         else
                         {
                             // cross-fade everything on bypass
-                            returnValueL = valueL * directMix + (reverbL)*reverbMix;
-                            returnValueR = valueR * directMix + (reverbR)*reverbMix;
+                            returnValueL = originalValueInL * directMix + (reverbL)*reverbMix;
+                            returnValueR = originalValueInR * directMix + (reverbR)*reverbMix;
                             float dryMix = 1.0 - bypassValue;
-                            returnValueL = dryMix * valueL + bypassValue * returnValueL;
-                            returnValueR = dryMix * valueR + bypassValue * returnValueR;
+                            returnValueL = dryMix * originalValueInL + bypassValue * returnValueL;
+                            returnValueR = dryMix * originalValueInR + bypassValue * returnValueR;
                         }
 
                         outputL[ix + i] = returnValueL;
@@ -1077,7 +1078,8 @@ namespace LsNumerics
                             {
                                 valueL *= bypassValue;
                                 valueR *= bypassValue;
-                            } else if (!bypass)
+                            }
+                            else if (!bypass)
                             {
                                 valueL = 0;
                                 valueR = 0;
@@ -1138,13 +1140,38 @@ namespace LsNumerics
                     size_t thisTime = remaining;
                     for (size_t i = 0; i < thisTime; ++i)
                     {
-                        float value = input[ix + i];
-                        float recirculationValue = feedbackDelay.Value() * feedbackScale;
-                        float input = Undenormalize(value + recirculationValue);
+                        float bypassValue = bypassDezipper.Tick();
 
-                        float reverb = convolution.TickUnsynchronized(input, 0);
+                        float inputValue = input[ix + i];
+
+                        float recirculationValue = feedbackDelay.Value() * feedbackScale;
+                        float reverbValue = Undenormalize(inputValue + recirculationValue);
+
+                        if (tails)
+                        {
+                            reverbValue *= bypassValue;
+                        }
+                        else if (!bypass)
+                        {
+                            reverbValue = 0;
+                        }
+
+                        float reverb = convolution.TickUnsynchronized(reverbValue, 0);
                         feedbackDelay.Put(reverb);
-                        float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+
+                        float returnValue;
+                        if (tails)
+                        {
+                            // crossfade direct level, and reverb unmodified when bypassing.
+                            float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
+                            returnValue = inputValue * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                        }
+                        else
+                        {
+                            // crossfade everything when bypassing.
+                            returnValue = inputValue * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                            returnValue = (1.0 - bypassValue) * inputValue + bypassValue * returnValue;
+                        }
                         output[ix + i] = returnValue;
                     }
                     ix += thisTime;
@@ -1164,13 +1191,37 @@ namespace LsNumerics
                         size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, thisTime);
                         for (size_t i = 0; i < nRead; ++i)
                         {
-                            float value = input[ix + i];
-                            float recirculationValue = feedbackDelay.Value() * feedbackScale;
-                            float input = Undenormalize(value + recirculationValue);
+                            float bypassValue = bypassDezipper.Tick();
+                            float inputValue = input[ix + i];
 
-                            float reverb = convolution.TickUnsynchronized(input, convolution.assemblyInputBuffer[i]);
+                            float recirculationValue = feedbackDelay.Value() * feedbackScale;
+                            float reverbInputValue = Undenormalize(inputValue + recirculationValue);
+
+                            if (tails)
+                            {
+                                reverbInputValue *= bypassValue;
+                            }
+                            else if (!bypass)
+                            {
+                                reverbInputValue = 0;
+                            }
+
+                            float reverb = convolution.TickUnsynchronized(reverbInputValue, convolution.assemblyInputBuffer[i]);
                             feedbackDelay.Put(reverb);
-                            float returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+
+                            float returnValue;
+                            if (tails)
+                            {
+                                // crossfade direct level, and reverb unmodified when bypassing.
+                                float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
+                                returnValue = inputValue * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                            }
+                            else
+                            {
+                                // crossfade everything when bypassing.
+                                returnValue = inputValue * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                                returnValue = (1.0 - bypassValue) * inputValue + bypassValue * returnValue;
+                            }
                             output[ix + i] = returnValue;
                         }
                         ix += nRead;
@@ -1189,31 +1240,32 @@ namespace LsNumerics
                     size_t thisTime = remaining;
                     for (size_t i = 0; i < thisTime; ++i)
                     {
-                        float value = input[ix + i];
+                        float inputValue = input[ix + i];
+                        float reverbInputValue = inputValue;
                         float bypassValue = bypassDezipper.Tick();
                         if (tails)
                         {
-                            value *= bypassValue;
-                        } else if (!bypass)
+                            reverbInputValue *= bypassValue;
+                        }
+                        else if (!bypass)
                         {
-                            value = 0;
+                            reverbInputValue = 0;
                         }
 
-                        float reverb = convolution.TickUnsynchronized(value, 0);
+                        float reverb = convolution.TickUnsynchronized(reverbInputValue, 0);
 
                         float returnValue;
                         if (tails)
                         {
-                            value = input[ix + i];
                             // crossfade direct level, and reverb unmodified when bypassing.
                             float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
-                            returnValue = value * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                            returnValue = inputValue * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
                         }
                         else
                         {
                             // crossfade everything when bypassing.
-                            returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
-                            returnValue = (1.0 - bypassValue) * value + bypassValue * returnValue;
+                            returnValue = inputValue * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                            returnValue = (1.0 - bypassValue) * inputValue + bypassValue * returnValue;
                         }
                         output[ix + i] = returnValue;
                     }
@@ -1234,33 +1286,34 @@ namespace LsNumerics
                         size_t nRead = convolution.assemblyQueue.Read(convolution.assemblyInputBuffer, thisTime);
                         for (size_t i = 0; i < nRead; ++i)
                         {
-                            float value = input[ix + i];
+                            float inputValue = input[ix + i];
+                            float reverbInputValue = inputValue;
                             float bypassValue = bypassDezipper.Tick();
-                            if (tails) 
+                            if (tails)
                             {
-                                value *= bypassValue;
-                            } else if (!bypass)
+                                reverbInputValue *= bypassValue;
+                            }
+                            else if (!bypass)
                             {
-                                value = 0;
+                                reverbInputValue = 0;
                             }
 
-                            float reverb = convolution.TickUnsynchronized(value, convolution.assemblyInputBuffer[i]);
+                            float reverb = convolution.TickUnsynchronized(reverbInputValue, convolution.assemblyInputBuffer[i]);
                             feedbackDelay.Put(reverb);
 
                             float returnValue;
                             if (tails)
                             {
-                                value = input[ix + i];
                                 // crossfade direct level, and reverb unmodified when bypassing.
                                 float effectiveDryMix = (1.0f - bypassValue) + bypassValue * directMixDezipper.Tick();
-                                returnValue = value * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
+                                returnValue = inputValue * effectiveDryMix + (reverb)*reverbMixDezipper.Tick();
                             }
                             else
                             {
                                 // crossfade everything when bypassing.
-                                returnValue = value * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
+                                returnValue = inputValue * directMixDezipper.Tick() + (reverb)*reverbMixDezipper.Tick();
 
-                                returnValue = (1.0 - bypassValue) * value + bypassValue * returnValue;
+                                returnValue = (1.0 - bypassValue) * inputValue + bypassValue * returnValue;
                             }
 
                             output[ix + i] = returnValue;
