@@ -244,9 +244,6 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case CabIrPortId::PREDELAY:
             this->pPredelayObsolete = (float *)data;
             break;
-        case CabIrPortId::NORMALIZATION_TYPE:
-            this->pNormalizationType = (const float *)data;
-            break;
         case CabIrPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
             if (this->pLoadingState)
@@ -344,15 +341,6 @@ void ToobConvolutionReverbBase::UpdateControls()
     {
         fgMixOptions.decay = *pDecay;
         mixOptionsChanged = true;
-    }
-    if (pNormalizationType != nullptr && pluginType == PluginType::CabIr)
-    {
-        int normType = (int)(*pNormalizationType);
-        if (fgMixOptions.normalizationType != normType)
-        {
-            fgMixOptions.normalizationType = normType;
-            mixOptionsChanged = true;
-        }
     }
     if (fgMixOptions.maxTime != *pTime)
     {
@@ -941,47 +929,6 @@ static void NormalizeConvolution(AudioData &data)
     }
 }
 
-static void PeakNormalizeConvolution(AudioData &data)
-{
-    if (HasDiracImpulse(data))
-    {
-        return;
-    }
-    size_t size = data.getSize();
-
-    double peakAmplitude = 0;
-    for (size_t c = 0; c < data.getChannelCount(); ++c)
-    {
-        auto &channel = data.getChannel(c);
-        for (size_t i = 0; i < size; ++i)
-        {
-            double absVal = std::abs((double)channel[i]);
-            if (absVal > peakAmplitude)
-            {
-                peakAmplitude = absVal;
-            }
-        }
-    }
-
-    if (peakAmplitude == 0)
-    {
-        return;
-    }
-
-    // -7dB attenuation to match perceived loudness of RMS normalization
-    constexpr double DB_REDUCTION = -7.0;
-    double attenuation = std::pow(10.0, DB_REDUCTION / 20.0);
-
-    float scale = (float)(attenuation / peakAmplitude);
-    for (size_t c = 0; c < data.getChannelCount(); ++c)
-    {
-        auto &channel = data.getChannel(c);
-        for (size_t i = 0; i < size; ++i)
-        {
-            channel[i] *= scale;
-        }
-    }
-}
 
 static void RemovePredelay(AudioData &audioData)
 {
@@ -1263,10 +1210,7 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
 
     if (pThis->pluginType == PluginType::CabIr)
     {
-        if (this->bgMixOptions.normalizationType == 1)
-            PeakNormalizeConvolution(data);
-        else
-            NormalizeConvolution(data);
+        NormalizeConvolution(data);
     }
     else
     {
