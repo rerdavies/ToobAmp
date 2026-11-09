@@ -7,7 +7,7 @@
    viewBox="0 0 135.46666 12.7"
    version="1.1"
    id="svg5"
-   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   inkscape:version="1.4.3 (1:1.4.3+202512261035+0d15f75042)"
    sodipodi:docname="InkscapeLogo.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -25,10 +25,10 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="4.7234968"
-     inkscape:cx="106.59476"
+     inkscape:cx="106.70061"
      inkscape:cy="29.533205"
-     inkscape:window-width="1867"
-     inkscape:window-height="1011"
+     inkscape:window-width="2192"
+     inkscape:window-height="1161"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -41,13 +41,13 @@
      id="layer1">
     <text
        xml:space="preserve"
-       style="font-style:italic;font-weight:bold;font-size:5.99722px;font-family:Timana;-inkscape-font-specification:'Timana Bold Italic';fill:#686868;stroke:#7f7f7f;stroke-width:0.285001;stop-color:#000000"
+       style="font-style:italic;font-weight:800;font-size:5.99722px;font-family:Roboto;-inkscape-font-specification:'Roboto, Ultra-Bold Italic';fill:#686868;stroke:#7f7f7f;stroke-width:0.285001;stop-color:#000000;font-stretch:normal;font-variant:normal;font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal"
        x="11.62471"
        y="9.1966686"
        id="text236"><tspan
          sodipodi:role="line"
          id="tspan234"
-         style="font-style:italic;font-variant:normal;font-weight:900;font-stretch:normal;font-size:5.99722px;font-family:Roboto;-inkscape-font-specification:'Roboto, Heavy Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#e0e0e0;fill-opacity:0.752941;stroke:none;stroke-width:0.285"
+         style="font-style:italic;font-variant:normal;font-weight:800;font-stretch:normal;font-size:5.99722003px;font-family:Roboto;-inkscape-font-specification:'Roboto, Ultra-Bold Italic';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-variant-east-asian:normal;fill:#e0e0e0;fill-opacity:0.752941;stroke:none;stroke-width:0.285"
          x="11.62471"
          y="9.1966686">TooB Phaser</tspan></text>
     <path

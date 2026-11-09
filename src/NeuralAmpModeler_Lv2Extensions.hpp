@@ -34,15 +34,24 @@ namespace toob::nam_impl {
 
     #define TOOB_NAM__MODEL_METADATA "http://two-play.com/plugins/toob-nam#model_metadata"
 
-    // offset 0: an integer with the folloing bits set.
+    // offset 0: an integer with the following bits set.
+    // Must match pipedal/vite/src/pipedal/ToobNamView.tsx class TOOB_NAM_METADATA_OFFSETS
+    constexpr size_t MAX_SLIMMABLE_SIZES = 20;
+
     enum TOOB_NAM_METADATA_OFFSETS {
         flags = 0,
-        preset_version,
-        loudness,
-        gain,
-        input_level_dbu,
-        output_level_dbu,
-        max_metadata_offset 
+        preset_version = 1,
+        loudness = 2,
+        gain = 3,
+        input_level_dbu = 4,
+        output_level_dbu = 5,
+        has_slimmable_sizes = 6,
+        current_model_weight = 7,
+        model_type = 8,
+        slimmable_sizes_length = 9,
+
+
+        max_metadata_offset = slimmable_sizes_length + 1 + MAX_SLIMMABLE_SIZES
     };
 
 

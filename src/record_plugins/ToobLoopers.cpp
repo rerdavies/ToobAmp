@@ -29,6 +29,8 @@
 #include <iostream>
 #include "FfmpegDecoderStream.hpp"
 
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+
 // using namespace lv2c::lv2_plugin;
 
 using namespace toob;
@@ -40,7 +42,6 @@ static constexpr float TRIGGER_FADE_IN_TIME = 0.001f;
 
 static REGISTRATION_DECLARATION PluginRegistration<ToobLooperFour> registration(ToobLooperFour::URI);
 
-constexpr char PREFERRED_PATH_SEPARATOR = std::filesystem::path::preferred_separator;
 
 namespace toob_looper_commands
 {
@@ -284,7 +285,7 @@ void ToobLooperFour::Activate()
         this->fromBackgroundQueue.write_packet(sizeof(errorCmd), (uint8_t*)&errorCmd);
     }
 
-    FinishedCommand finishedCommand;
+    FinishedCommand finishedCommand{};
     this->fromBackgroundQueue.write_packet(sizeof(FinishedCommand), (uint8_t*)&finishedCommand); });
 }
 
@@ -696,7 +697,12 @@ void ToobLooperFour::HandleTriggers()
 
 
         // recalculate just in case the length has changed.
-        loop_offset = (current_plugin_sample - time_zero) % loops[0].length;
+        if (has_time_zero && loops[0].length != 0)
+        {
+            loop_offset = (current_plugin_sample - time_zero) % loops[0].length;
+        } else {
+            loop_offset = 0;
+        }
 
         if (this->record2.IsTriggered())
         {

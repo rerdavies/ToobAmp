@@ -192,7 +192,6 @@ namespace toob
         Phase90Lfo lfo;
         float sampleRate;
         float feedback = 0;
-        float wetDry; // 0 = dry, 1 = wet
         float trim = 1;
         float zm1 = 0;
         float frequencyScale;

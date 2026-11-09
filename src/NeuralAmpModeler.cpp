@@ -39,6 +39,10 @@ SOFTWARE.
 #undef __ARM_NEON__
 #undef __AVX__
 #endif
+#ifndef NAM_SAMPLE_FLOAT
+#define NAM_SAMPLE_FLOAT 1
+#endif
+
 
 #include <Eigen/Core>
 #include <algorithm> // std::clamp
@@ -47,6 +51,8 @@ SOFTWARE.
 #include <iostream>
 #include <utility>
 #include <vector>
+#include <semaphore>
+#include <thread>
 #include "lv2ext/filedialog.h"
 #include "ss.hpp"
 #include <cfenv>
@@ -86,7 +92,24 @@ const int INPUT_LEVEL_MAX=10;
 
 const char NeuralAmpModeler::URI[] = "http://two-play.com/plugins/toob-nam";
 
-// Because intern Noisegate calculation is incorrect.
+static constexpr std::ptrdiff_t MAX_CONCURRENT_MODEL_LOADS = 4;
+
+static std::ptrdiff_t concurrentModelLoads()
+{
+    std::ptrdiff_t cpuCores = (std::ptrdiff_t)(std::thread::hardware_concurrency());
+    
+    // we want 1 concurrent loads for 4 cores. 
+    // we want maybe 4 concurrent loads for 12 or more cores. 
+
+    cpuCores = std::min(cpuCores/4,MAX_CONCURRENT_MODEL_LOADS);
+
+    if (cpuCores == 0) cpuCores = 1; // fallback if value is not well-defined
+    return (int)std::min(cpuCores, MAX_CONCURRENT_MODEL_LOADS);
+}
+
+static std::counting_semaphore<MAX_CONCURRENT_MODEL_LOADS> modelLoadSemaphore(concurrentModelLoads());
+
+// Because intern NoiseGate calculation is incorrect.
 static inline float ToNoiseGateThreshold(float db)
 {
     // *2 because Internal value is RMS^2
@@ -121,7 +144,7 @@ private:
 class NamFreeMessage : public NamMessage
 {
 public:
-    NamFreeMessage(ToobNamDsp *dsp)
+    NamFreeMessage(NeuralAudioDsp *dsp)
         : NamMessage(NamMessageType::FreeLoad),
           dsp(dsp)
     {
@@ -133,16 +156,18 @@ public:
     }
 
 private:
-    ToobNamDsp *dsp;
+    NeuralAudioDsp *dsp;
 };
 
 class NamLoadMessage : public NamMessage
 {
 protected:
-    NamLoadMessage(NamMessageType messageType, const char *modelFileName)
+    NamLoadMessage(NamMessageType messageType, const char *modelFileName,float modelWeight)
         : NamMessage(messageType)
     {
         SetFileName(modelFileName);
+        SetModelWeight(modelWeight);
+        
     }
 
     void SetFileName(const char *modelFileName)
@@ -154,22 +179,31 @@ protected:
             strcpy(this->modelFileName, modelFileName);
         }
     }
+    void SetModelWeight(float modelWeight)
+    {
+        this->modelWeight = modelWeight;
+    }
 
 public:
-    NamLoadMessage(const char *modelFileName)
+    NamLoadMessage(const char *modelFileName, float modelWeight)
         : NamMessage(NamMessageType::Load)
     {
         SetFileName(modelFileName);
+        SetModelWeight(modelWeight);
     }
     bool HasModel() const { return hasModel; }
     const char *ModelFileName() const
     {
         return hasModel ? modelFileName : nullptr;
     }
+    float ModelWeight() const {
+        return modelWeight;
+    }
 
 private:
     bool hasModel;
     char modelFileName[MAX_NAM_FILENAME + 1];
+    float modelWeight = -1;
 };
 
 class NamLoadResponseMessage : public NamLoadMessage
@@ -177,19 +211,20 @@ class NamLoadResponseMessage : public NamLoadMessage
 public:
     NamLoadResponseMessage(
         const char *modelFileName,
-        ToobNamDsp *modelObject)
-        : NamLoadMessage(NamMessageType::LoadResponse, modelFileName),
+        float modelWeight,
+        NeuralAudioDsp *modelObject)
+        : NamLoadMessage(NamMessageType::LoadResponse, modelFileName,modelWeight),
           modelObject(modelObject)
     {
     }
-    ToobNamDsp *modelObject;
+    NeuralAudioDsp *modelObject;
 };
 
 NeuralAmpModeler::NeuralAmpModeler(
     double rate,
     const char *bundle_path,
     const LV2_Feature *const *features)
-    : Lv2PluginWithState(rate, bundle_path, features),
+    : super(rate, bundle_path, features),
       rate(rate),
       mInputPointers(nullptr),
       mOutputPointers(nullptr),
@@ -197,6 +232,11 @@ NeuralAmpModeler::NeuralAmpModeler(
       mNAM(nullptr),
       mNAMPath()
 {
+    CheckValid();
+
+    // Avoid allocations on RT thread.
+    this->fgModelMetadata.slimmableSizes.reserve(nam_impl::MAX_SLIMMABLE_SIZES);
+
     backgroundProcessor.SetSampleRate(rate);
     backgroundProcessor.SetListener(this);
 #if NAM_RMS_METER
@@ -205,7 +245,9 @@ NeuralAmpModeler::NeuralAmpModeler(
 
     mNAMPath.reserve(MAX_NAM_FILENAME + 1);
 
-    urids.Initialize(*this);
+    CheckValid();
+    namUris.Initialize(*this);
+    CheckValid();
 
     this->mNoiseGateTrigger.AddListener(&mNoiseGateGain);
     // update gate output 15 times a second.
@@ -214,7 +256,7 @@ NeuralAmpModeler::NeuralAmpModeler(
     // frequecy response out latency
     // frequency response variables.
     constexpr double UPDATE_RATE = (1.0 / 15.0); // 15 times a second.
-    responseDelaySamplesMax = (int64_t)(UPDATE_RATE * rate);
+    throttleDelaySamples = (int64_t)(UPDATE_RATE * rate);
 
     this->toneStackFilter.SetSampleRate(rate);
     this->baxandallToneStack.SetSampleRate(rate);
@@ -227,7 +269,9 @@ void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
 {
     atom__Path = this_.MapURI(LV2_ATOM__Path);
     atom__String = this_.MapURI(LV2_ATOM__String);
-    nam__ModelFileName = this_.MapURI("http://two-play.com/plugins/toob-nam#modelFile");
+    atom__Object = this_.MapURI(LV2_ATOM__Object);
+    nam__ModelFile = this_.MapURI("http://two-play.com/plugins/toob-nam#modelFile");
+    nam__modelSize = this_.MapURI("http://two-play.com/plugins/toob-nam#modelSize");
     nam__FrequencyResponse = this_.MapURI("http://two-play.com/plugins/toob-nam#FrequencyResponse");
     patch = this_.MapURI(LV2_PATCH_URI);
     patch__Get = this_.MapURI(LV2_PATCH__Get);
@@ -235,8 +279,8 @@ void NeuralAmpModeler::Urids::Initialize(NeuralAmpModeler &this_)
     patch__property = this_.MapURI(LV2_PATCH__property);
     patch__value = this_.MapURI(LV2_PATCH__value);
     atom__URID = this_.MapURI(LV2_ATOM__URID);
-    atom__float = this_.MapURI(LV2_ATOM__Float);
-    atom__int = this_.MapURI(LV2_ATOM__Int);
+    atom__Float = this_.MapURI(LV2_ATOM__Float);
+    atom__Int = this_.MapURI(LV2_ATOM__Int);
     units__Frame = this_.MapURI(LV2_UNITS__frame);
     toob_nam__model_metadata = this_.MapURI(TOOB_NAM__MODEL_METADATA);
 }
@@ -321,19 +365,20 @@ NeuralAmpModeler::OnSaveLv2State(
         return LV2_State_Status::LV2_STATE_SUCCESS; // not-set => "". Avoids assuming that hosts can handle a "" path.
     }
     std::string abstractPath = this->UnmapFilename(features, this->mNAMPath.c_str());
-    store(handle, this->urids.nam__ModelFileName, abstractPath.c_str(), abstractPath.length() + 1, urids.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
+    store(handle, this->namUris.nam__ModelFile, abstractPath.c_str(), abstractPath.length() + 1, namUris.atom__Path, LV2_STATE_IS_POD | LV2_STATE_IS_PORTABLE);
     return LV2_State_Status::LV2_STATE_SUCCESS;
 }
 
-bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
+bool NeuralAmpModeler::LoadModel(const std::string &modelFileName,float modelWeight)
 {
     try
     {
         this->mNAMPath = modelFileName;
-        std::unique_ptr<ToobNamDsp> dspResult;
+        this->mRequestedModelWeight = modelWeight;
+        std::unique_ptr<NeuralAudioDsp> dspResult;
         if (modelFileName.length() != 0)
         {
-            dspResult = _GetNAM(modelFileName);
+            dspResult = GetNAM(modelFileName,modelWeight);
         }
         this->mNAM = std::move(dspResult);
 
@@ -344,6 +389,10 @@ bool NeuralAmpModeler::LoadModel(const std::string &modelFileName)
             LogError("%s\n", SS("can't load model " << fileNameOnly).c_str());
         }
         SetModel();
+        if (mNAM) {
+            SetForegoundModelWeight(mNAM->GetModelWeight());
+        }
+
         return true;
     }
     catch (const std::exception &e)
@@ -400,11 +449,20 @@ void NeuralAmpModeler::SetModel()
         {
             fgModelMetadata.output_level_dbu = 0;
         }
-        fgModelMetadata.flags = flags;
+        fgModelMetadata.hasSlimmableSizes = mNAM? mNAM->HasSlimmableSizes(): false;
+        fgModelMetadata.model_type = (OutputModelType)(int)(mNAM->GetModelType());
+        fgModelMetadata.model_weight = mNAM->GetModelWeight();
+        
+        fgModelMetadata.slimmableSizes = mNAM->GetSlimmableSizes();
+
+        cCurrentModelWeight.SetValue(fgModelMetadata.model_weight);
+        cModelType.SetValue((float)fgModelMetadata.model_type);
+        fgModelMetadata.model_weight = mNAM->GetModelWeight();
+        cCurrentModelWeight.SetValue(fgModelMetadata.model_weight);
 
         if (this->backgroundProcessorState != BackgroundProcessorState::ForegroundProcessing)
         {
-            ToobNamDsp *dsp = this->mNAM.release();
+            NeuralAudioDsp *dsp = this->mNAM.release();
             backgroundProcessor.fgSetModel(dsp, fgCalibrationSettings);
             this->backgroundProcessorState = BackgroundProcessorState::FirstBackgroundProcessingFrame;
             fgSendIx = 0;
@@ -413,6 +471,8 @@ void NeuralAmpModeler::SetModel()
     }
     else
     {
+        cModelType.SetValue((float)(OutputModelType::None));
+
         UpdateCalibrationFactors();
         fgModelMetadata = NamModelMetadata(); // reset to defaults.
 
@@ -432,20 +492,30 @@ NeuralAmpModeler::OnRestoreLv2State(
     const LV2_Feature *const *features)
 {
     std::string modelFileName;
+    //float modelFileWeight = 1.0f;
 
     {
         size_t size;
         uint32_t type;
         uint32_t flags;
-        const void *data = (*retrieve)(handle, urids.nam__ModelFileName, &size, &type, &flags);
+
+        const void *data = (*retrieve)(handle, namUris.nam__ModelFile, &size, &type, &flags);
         if (data)
         {
-            if (type != this->urids.atom__Path && type != this->urids.atom__String)
+            if (type != this->namUris.atom__Path && type != this->namUris.atom__String)
             {
                 return LV2_State_Status::LV2_STATE_ERR_BAD_TYPE;
             }
             modelFileName = MapFilename(features, (const char *)data, nullptr);
-            RequestLoad(modelFileName.c_str());
+        }
+        if (modelFileName.length() != 0)
+        {
+            float weight = -1;
+            if (this->isActivated)
+            {
+                weight = cQuality.GetValue();
+            }
+            RequestLoad(modelFileName.c_str(),weight); 
         }
     }
 
@@ -464,7 +534,7 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
     case NamMessageType::Load:
     {
         std::string dspFilename = "";
-        std::unique_ptr<ToobNamDsp> dspResult;
+        std::unique_ptr<NeuralAudioDsp> dspResult;
         std::string irFilename = "";
 
 #ifdef __clang__
@@ -478,8 +548,17 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
             std::filesystem::path filename = pLoadMessage->ModelFileName();
             try
             {
-
-                dspResult = _GetNAM(filename);
+                modelLoadSemaphore.acquire(); // limit the number of concurrent threads of execution.
+                try
+                {
+                    dspResult = GetNAM(filename,pLoadMessage->ModelWeight());
+                }
+                catch (...)
+                {
+                    modelLoadSemaphore.release();
+                    throw;
+                }
+                modelLoadSemaphore.release();
                 dspFilename = filename;
                 if (!dspResult)
                 {
@@ -491,9 +570,11 @@ LV2_Worker_Status NeuralAmpModeler::OnWork(
                 LogError("%s\n", SS("Can't load model " << filename.filename().replace_extension() << ".").c_str());
             }
         }
-        NamLoadResponseMessage reply{
+        NamLoadResponseMessage reply {
             dspFilename.c_str(),
-            dspResult.release()};
+            pLoadMessage->ModelWeight(),
+            dspResult.release()
+        };
         respond(handle, sizeof(reply), &reply);
     }
     break;
@@ -517,9 +598,9 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
     case NamMessageType::LoadResponse:
     {
         NamLoadResponseMessage *loadResponse = (NamLoadResponseMessage *)response;
-        ToobNamDsp *oldModel = this->mNAM.release();
+        NeuralAudioDsp *oldModel = this->mNAM.release();
 
-        this->mNAM = std::unique_ptr<ToobNamDsp>(loadResponse->modelObject);
+        this->mNAM = std::unique_ptr<NeuralAudioDsp>(loadResponse->modelObject);
         if (oldModel != nullptr)
         {
             const LV2_Worker_Schedule *schedule = this->GetLv2WorkerSchedule();
@@ -528,6 +609,8 @@ LV2_Worker_Status NeuralAmpModeler::OnWorkResponse(uint32_t size, const void *da
         }
 
         SetModel();
+        SetForegoundModelWeight(loadResponse->ModelWeight());
+        this->modelLoadOutstanding = false;
     }
     break;
     default:
@@ -553,6 +636,13 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
     case EParams::kOutputGain:
         cOutputGain.SetData(data);
         break;
+    case EParams::kModelWeight:
+        cQuality.SetData(data);
+        break;
+    case EParams::kCurrentModelWeight:
+        cCurrentModelWeight.SetData(data);
+        break;
+
     case EParams::kNoiseGateThreshold:
         cNoiseGateThreshold.SetData(data);
         break;
@@ -587,14 +677,19 @@ void NeuralAmpModeler::ConnectPort(uint32_t port, void *data)
         cOutputCalibrationMode.SetData(data);
         break;
 
+    case EParams::kModelType:
+        cModelType.SetData(data);
+        break;
+
+
     // case EParams::kOutNorm:
     //     cOutNorm.SetData(data);
     //     break;
     case EParams::kAudioIn:
-        audioIn = (const float *)data;
+        lv2AudioIn = (const float *)data;
         break;
     case EParams::kAudioOut:
-        audioOut = (float *)data;
+        lv2AudioOut = (float *)data;
         break;
     case EParams::kControlIn:
         controlIn = (LV2_Atom_Sequence *)data;
@@ -646,7 +741,8 @@ void NeuralAmpModeler::Activate()
         this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
     }
 
-    LoadModel(this->mNAMPath);
+    this->mRequestedModelWeight = cQuality.GetValue();
+    LoadModel(this->mNAMPath,this->mRequestedModelWeight);
 }
 void NeuralAmpModeler::Run(uint32_t n_samples)
 {
@@ -658,7 +754,7 @@ void NeuralAmpModeler::Run(uint32_t n_samples)
     if (requestFileUpdate)
     {
         requestFileUpdate = false;
-        this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
+        this->PutPatchPropertyPath(0, namUris.nam__ModelFile, mNAMPath.c_str());
     }
     if (requestModelMetdataNotification)
     {
@@ -751,7 +847,6 @@ void NeuralAmpModeler::UpdateNoiseGateParams()
 void NeuralAmpModeler::ProcessBlock(int nFrames)
 {
 
-    constexpr size_t numChannelsInternal = 1;
     const size_t numFrames = (size_t)nFrames;
 
     // Disable floating point denormals
@@ -768,6 +863,26 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
             this->backgroundProcessor.fgSetCalibrationSettings(fgCalibrationSettings);
         }
     }
+    if (cQuality.HasChanged() || this->qualityUpdateDelaySamples != 0)
+    {
+        if (qualityUpdateDelaySamples == 0) // throttle request rate!
+        {
+            RequestLoad(mNAMPath.c_str(),cQuality.GetValue());
+            qualityUpdateDelaySamples = throttleDelaySamples;
+        } else {
+            this->qualityUpdateDelaySamples -= nFrames;
+            if (this->qualityUpdateDelaySamples < 0)
+            {
+                this->qualityUpdateDelaySamples = 0;
+                RequestLoad(mNAMPath.c_str(),cQuality.GetValue());
+            }
+
+        }
+
+    }
+    if (this->modelRequestPending && !this->modelLoadOutstanding) {
+        RequestLoad(mNAMPath.c_str(),mRequestedModelWeight);
+    }
 
     if (cBass.HasChanged() || cMid.HasChanged() || cTreble.HasChanged() || cToneStackType.HasChanged())
     {
@@ -775,41 +890,48 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         // generate a throttled patch_Set
         if (responseDelaySamples == 0)
         {
-            responseDelaySamples = responseDelaySamplesMax;
+            responseDelaySamples = throttleDelaySamples;
         }
     }
     if (cBuffer.HasChanged())
     {
         HandleBufferChange();
     }
-
-    // Input is collapsed to mono in preparation for the NAM.
-    this->_ProcessInput(&this->audioIn, numFrames, 1, 1);
-
-    // Noise gate trigger
-    nam_float_t **triggerOutput = mInputPointers;
     if (cNoiseGateThreshold.HasChanged())
     {
         UpdateNoiseGateParams();
     }
-    float noiseGateOut = 1;
-    if (noiseGateActive)
-    {
-        triggerOutput = this->mNoiseGateTrigger.Process(mInputPointers, 1, numFrames);
-        noiseGateOut = (float)(this->mNoiseGateTrigger.GetGainReduction()[0][0]);
-    }
 
-    nam_float_t **toneStackOutput = triggerOutput;
+    // Copy lv2 input to our own working buffer so that we can modify audio data.
+    {
+        const float * restrict pIn = this->lv2AudioIn;
+        float *restrict pOut = this->mInputPointers[0];
+
+        size_t n = (size_t)nFrames;
+        for (size_t i = 0; i < n; ++i)
+        {
+            pOut[i] = pIn[i];
+        }
+    }
+    // Input is collapsed to mono in preparation for the NAM.
+
+    this->ApplyNoiseGate(numFrames);
+    this->ApplyInputTrim(numFrames);
+
+    // Noise gate trigger
+
+    nam_float_t **toneStackOutput = mInputPointers;
 
     switch (this->toneStackType)
     {
+
     case ToneStackType::Bassman:
     case ToneStackType::Jcm8000:
-        toneStackFilter.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        toneStackFilter.Process(nFrames, mInputPointers[0], mToneStackPointer);
         toneStackOutput = &this->mToneStackPointer;
         break;
     case ToneStackType::Baxandall:
-        baxandallToneStack.Process(nFrames, triggerOutput[0], mToneStackPointer);
+        baxandallToneStack.Process(nFrames, mInputPointers[0], mToneStackPointer);
         toneStackOutput = &this->mToneStackPointer;
         break;
     case ToneStackType::Bypass:
@@ -818,22 +940,18 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
 
     ProcessNam(toneStackOutput[0], this->mOutputPointers[0], nFrames);
 
-    // Apply the noise gate
-    nam_float_t **gateGainOutput = noiseGateActive
-                                       ? this->mNoiseGateGain.Process(this->mOutputPointers, numChannelsInternal, numFrames)
-                                       : this->mOutputPointers;
 
-    // Let's get outta here
-    // This is where we exit mono for whatever the output requires.
-    this->_ProcessOutput(gateGainOutput, &(this->audioOut), numFrames, 1, 1);
-    // * Output of input leveling (inputs -> mInputPointers),
-    // * Output of output leveling (mOutputPointers -> outputs)
+    this->ApplyOutputTrim(numFrames);
 
-    this->gateOutputUpdateCount += numFrames;
-    if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
+
+    // Copy processed output to lv2 audio buffers.
     {
-        this->gateOutputUpdateCount = 0;
-        this->cGateOutput.SetValue(1 - noiseGateOut);
+        const float * restrict pIn = this->mOutputPointerMemory[0];
+        float *restrict pOut = this->lv2AudioOut;
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pOut[i] = pIn[i];
+        }
     }
 
     if (responseDelaySamples != 0)
@@ -851,11 +969,6 @@ void NeuralAmpModeler::ProcessBlock(int nFrames)
         responseDelaySamples = 0;
         WriteFrequencyResponse();
     }
-    if (sendFileName)
-    {
-        sendFileName = false;
-        this->PutPatchPropertyPath(0, urids.nam__ModelFileName, mNAMPath.c_str());
-    }
     // restore previous floating point state
     LsNumerics::restore_denorms(fp_state);
 }
@@ -869,6 +982,88 @@ void NeuralAmpModeler::OnIdle()
 }
 
 // Private methods ============================================================
+
+
+inline void NeuralAmpModeler::ApplyNoiseGate(const size_t numFrames)
+{
+    float noiseGateOut = 0;
+    if (noiseGateActive)
+    {
+        this->mNoiseGateTrigger.Process(mInputPointers, 1, numFrames);
+
+        const float * restrict pGateValues = this->mNoiseGateTrigger.GetGainReduction()[0].data();
+        float * restrict pData = mInputPointers[0];
+        // apply noise gate BEFORE nam.
+        for (size_t i = 0; i < numFrames; ++i)
+        {
+            pData[i] *= pGateValues[i];
+        }
+        noiseGateOut = pGateValues[0] == 0 ? 0.0f: 1.01f;
+    }
+
+    this->gateOutputUpdateCount += numFrames;
+    if (this->gateOutputUpdateCount >= this->gateOutputUpdateRate)
+    {
+        this->gateOutputUpdateCount = 0;
+        this->cGateOutput.SetValue(1 - noiseGateOut);
+    }
+
+}
+
+inline void NeuralAmpModeler::ApplyOutputTrim(size_t nFrames)
+{
+    const float gain = this->cOutputGain.GetAf();
+    float *pData = this->mOutputPointers[0];
+    for (size_t s = 0; s < nFrames; s++) 
+    {
+        pData[s] *= gain;
+    }
+
+}
+
+
+inline void NeuralAmpModeler::ApplyInputTrim(const size_t nFrames)
+{
+    const double gain = this->cInputGain.GetAf();
+
+    float *pAudioBuffer = this->mInputPointers[0];
+
+    float vuMagnitude = this->vuValue;
+    for (size_t i = 0; i < nFrames; ++i)
+    {
+        float v = pAudioBuffer[i] * gain;
+
+        pAudioBuffer[i] = v;
+        float vAbs = std::fabs(v);
+        if (vAbs > vuMagnitude) 
+        {
+            vuMagnitude = vAbs;
+        }
+    }
+    this->vuValue = vuMagnitude;
+
+    this->vuSampleCount += nFrames;
+    if (this->vuSampleCount >= this->vuMaxSampleCount)
+    {
+        float vuDb;
+        if (this->vuValue == 0)
+        {
+            vuDb = INPUT_LEVEL_MIN;
+        }
+        else
+        {
+            vuDb = Af2Db(this->vuValue);
+            if (vuDb > INPUT_LEVEL_MAX)
+                vuDb = INPUT_LEVEL_MAX;
+            if (vuDb < INPUT_LEVEL_MIN)
+                vuDb = INPUT_LEVEL_MIN;
+        }
+        cInputLevelOut.SetValue(vuDb);
+        this->vuSampleCount = 0;
+        this->vuValue = 0;
+    }
+}
+
 
 void NeuralAmpModeler::_FallbackDSP(nam_float_t **inputs, nam_float_t **outputs, const size_t numChannels,
                                     const size_t numFrames)
@@ -895,14 +1090,15 @@ void NeuralAmpModeler::_FallbackDSP(const nam_float_t *input, nam_float_t *outpu
     }
 }
 
-std::unique_ptr<ToobNamDsp> NeuralAmpModeler::_GetNAM(const std::string &modelPath)
+std::unique_ptr<NeuralAudioDsp> NeuralAmpModeler::GetNAM(const std::string &modelPath, float modelWeight)
 {
     if (modelPath.length() == 0)
     {
         return nullptr;
     }
     auto dspPath = std::filesystem::path(modelPath);
-    std::unique_ptr<ToobNamDsp> nam = get_dsp_ex(dspPath,
+    std::unique_ptr<NeuralAudioDsp> nam = get_dsp_ex(dspPath,
+                                                modelWeight,
                                                  (uint32_t)getRate(),
                                                  (int)(this->GetBuffSizeOptions().minBlockLength),
                                                  (int)(this->GetBuffSizeOptions().maxBlockLength));
@@ -957,112 +1153,30 @@ void NeuralAmpModeler::_PrepareIOPointers(const size_t numChannels)
     this->mOutputPointers = numChannels == 0 ? nullptr : &(mOutputPointerMemory[0]);
 }
 
-void NeuralAmpModeler::_ProcessInput(const float_t **inputs, const size_t nFrames, const size_t nChansIn,
-                                     const size_t nChansOut)
-{
-    // We'll assume that the main processing is mono for now. We'll handle dual amps later.
-    // See also: this->mNUM_INTERNAL_CHANNELS
-    if (nChansOut != 1)
-    {
-        std::stringstream ss;
-        ss << "Expected mono output, but " << nChansOut << " output channels are requested!";
-        throw std::runtime_error(ss.str());
-    }
-
-    // On the standalone, we can probably assume that the user has plugged into only one input and they expect it to be
-    // carried straight through. Don't apply any division over nCahnsIn because we're just "catching anything out there."
-    // However, in a DAW, it's probably something providing stereo, and we want to take the average in order to avoid
-    // doubling the loudness.
-    const double gain = this->cInputGain.GetAf() / nChansIn;
-
-    // Assume _PrepareBuffers() was already called
-    if (nChansIn > 0)
-    {
-        for (size_t s = 0; s < nFrames; s++)
-        {
-            this->mInputArray[0][s] = gain * inputs[0][s];
-        }
-    }
-    for (size_t c = 1; c < nChansIn; c++)
-    {
-        for (size_t s = 0; s < nFrames; s++)
-        {
-            this->mInputArray[0][s] += gain * inputs[c][s];
-        }
-    }
-#if NAM_RMS_METER
-    cInputLevelOut.Tick(this->mInputArray[0].data(),nFrames);
-#else
-    float vuValue = this->vuValue;
-    for (size_t i = 0; i < nFrames; ++i)
-    {
-        float v = std::abs(this->mInputArray[0][i]);
-        if (v > vuValue)
-            vuValue = v;
-    }
-    this->vuValue = vuValue;
-    this->vuSampleCount += nFrames;
-    if (this->vuSampleCount >= this->vuMaxSampleCount)
-    {
-        float vuDb;
-        if (this->vuValue == 0)
-        {
-            vuDb = INPUT_LEVEL_MIN;
-        }
-        else
-        {
-            vuDb = Af2Db(this->vuValue);
-            if (vuDb > INPUT_LEVEL_MAX)
-                vuDb = INPUT_LEVEL_MAX;
-            if (vuDb < INPUT_LEVEL_MIN)
-                vuDb = INPUT_LEVEL_MIN;
-        }
-        cInputLevelOut.SetValue(vuDb);
-        this->vuSampleCount = 0;
-        this->vuValue = 0;
-    }
-#endif
-}
-
-void NeuralAmpModeler::_ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames,
-                                      const size_t nChansIn, const size_t nChansOut)
-{
-    const float gain = this->cOutputGain.GetAf();
-    // Assume _PrepareBuffers() was already called
-    if (nChansIn != 1)
-        throw std::runtime_error("Plugin is supposed to process in mono.");
-    // Broadcast the internal mono stream to all output channels.
-    const size_t cin = 0;
-    for (size_t cout = 0; cout < nChansOut; cout++)
-        for (size_t s = 0; s < nFrames; s++)
-#ifdef APP_API // Ensure valid output to interface
-            outputs[cout][s] = std::clamp(gain * inputs[cin][s], -1.0, 1.0);
-#else // In a DAW, other things may come next and should be able to handle large
-      // values.
-            outputs[cout][s] = gain * inputs[cin][s];
-#endif
-}
 
 void NeuralAmpModeler::OnPatchSet(LV2_URID propertyUrid, const LV2_Atom *value)
 {
 
-    if (propertyUrid == urids.nam__ModelFileName && (value->type == urids.atom__Path || value->type == urids.atom__String))
+    if (propertyUrid == namUris.nam__ModelFile && (value->type == namUris.atom__Path || value->type == namUris.atom__String))
     {
         const char *modelFileName = ((const char *)value) + sizeof(LV2_Atom);
-        RequestLoad(modelFileName);
+        if (strcmp(this->mNAMPath.c_str(),modelFileName) != 0)
+        {
+            RequestLoad(modelFileName, cQuality.GetValue());
+        }
     }
 }
 void NeuralAmpModeler::OnPatchGet(LV2_URID propertyUrid)
 {
-    if (propertyUrid == this->urids.nam__ModelFileName)
+    if (propertyUrid == this->namUris.nam__ModelFile)
     {
-        this->sendFileName = true;
+        this->requestFileUpdate = true;
     }
-    else if (propertyUrid == this->urids.nam__FrequencyResponse)
+    else if (propertyUrid == this->namUris.nam__FrequencyResponse)
     {
         this->responseGet = true;
     }
-    else if (propertyUrid == this->urids.toob_nam__model_metadata)
+    else if (propertyUrid == this->namUris.toob_nam__model_metadata)
     {
         this->requestModelMetdataNotification = true;
     }
@@ -1095,14 +1209,14 @@ void NeuralAmpModeler::WriteFrequencyResponse()
     lv2_atom_forge_frame_time(&outputForge, 0);
 
     LV2_Atom_Forge_Frame objectFrame;
-    lv2_atom_forge_object(&outputForge, &objectFrame, 0, urids.patch__Set);
+    lv2_atom_forge_object(&outputForge, &objectFrame, 0, namUris.patch__Set);
 
-    lv2_atom_forge_key(&outputForge, urids.patch__property);
-    lv2_atom_forge_urid(&outputForge, urids.nam__FrequencyResponse);
-    lv2_atom_forge_key(&outputForge, urids.patch__value);
+    lv2_atom_forge_key(&outputForge, namUris.patch__property);
+    lv2_atom_forge_urid(&outputForge, namUris.nam__FrequencyResponse);
+    lv2_atom_forge_key(&outputForge, namUris.patch__value);
 
     LV2_Atom_Forge_Frame vectorFrame;
-    lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), urids.atom__float);
+    lv2_atom_forge_vector_head(&outputForge, &vectorFrame, sizeof(float), namUris.atom__Float);
     if (this->toneStackType == ToneStackType::Baxandall)
     {
         lv2_atom_forge_float(&outputForge, 30.0f);
@@ -1127,25 +1241,35 @@ void NeuralAmpModeler::WriteFrequencyResponse()
     lv2_atom_forge_pop(&outputForge, &objectFrame);
 }
 
-void NeuralAmpModeler::RequestLoad(const char *fileName)
+void NeuralAmpModeler::RequestLoad(const char *fileName, float modelWeight)
 {
+    this->qualityUpdateDelaySamples = 0;
+
     this->mNAMPath = fileName;
-    this->sendFileName = true;
+    this->mRequestedModelWeight = modelWeight;
+    this->requestFileUpdate = true;
     if (!this->isActivated)
     {
         // will be picked up in Activate.
         this->mNAMPath = fileName;
-        this->sendFileName = true;
+        this->mRequestedModelWeight = modelWeight;
+        this->requestFileUpdate = true;
+        this->qualityUpdateDelaySamples = 0;
         return;
     }
 
     const LV2_Worker_Schedule *schedule = GetLv2WorkerSchedule();
+    this->mNAMPath = fileName;
+    mRequestedModelWeight = modelWeight;
+    this->requestFileUpdate = true;
     if (schedule)
     {
-        this->mNAMPath = fileName;
-        this->sendFileName = true;
-
-        NamLoadMessage loadMessage(fileName);
+        if (modelLoadOutstanding) {
+            modelRequestPending = true;
+            return;
+        }
+        modelLoadOutstanding = true;
+        NamLoadMessage loadMessage(fileName,modelWeight);
 
         schedule->schedule_work(
             schedule->handle,
@@ -1153,7 +1277,7 @@ void NeuralAmpModeler::RequestLoad(const char *fileName)
     }
     else
     {
-        LoadModel(fileName); // do it on the foreground.
+        LoadModel(mNAMPath,mRequestedModelWeight); // do it on the foreground.
     }
 }
 
@@ -1226,9 +1350,9 @@ void NeuralAmpModeler::HandleBackgroundProcessorEvents()
     backgroundProcessor.fgProcessMessage(false);
 }
 
-void NeuralAmpModeler::onStopBackgroundProcessingReply(ToobNamDsp *dsp)
+void NeuralAmpModeler::onStopBackgroundProcessingReply(NeuralAudioDsp *dsp)
 {
-    this->mNAM = std::unique_ptr<ToobNamDsp>(dsp); // re-attach to a unique_ptr!
+    this->mNAM = std::unique_ptr<NeuralAudioDsp>(dsp); // re-attach to a unique_ptr!
     UpdateCalibrationFactors();
     this->backgroundProcessorState = BackgroundProcessorState::ForegroundProcessing;
 }
@@ -1238,6 +1362,7 @@ void NeuralAmpModeler::onBackgroundProcessingComplete()
 void NeuralAmpModeler::onSamplesOut(uint64_t instanceId, float *data, size_t length)
 {
 }
+
 
 void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output, size_t numFrames)
 {
@@ -1250,12 +1375,14 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
         {
             for (size_t i = 0; i < numFrames; ++i)
             {
-                input[i] *= fgInputVolume;
+                input[i] *= fgCalibratedInputVolume;
             }
+
             mNAM->Process(const_cast<float *>(input), output, numFrames);
+
             for (size_t i = 0; i < numFrames; ++i)
             {
-                output[i] *= fgOutputVolume;
+                output[i] *= fgCalibratedOutputVolume;
             }
         }
         else
@@ -1370,19 +1497,19 @@ void NeuralAmpModeler::ProcessNam(float *restrict input, float *restrict output,
     }
 }
 
-void NeuralAmpModeler::SetModelVolumes_()
+void NeuralAmpModeler::SetModelVolumes()
 {
     using namespace nam_impl;
     if (mNAM)
     {
         NamVolumeAdjustments adjustments = CalculateNamVolumeAdjustments(mNAM.get(), fgCalibrationSettings);
-        fgInputVolume = adjustments.input;
-        fgOutputVolume = adjustments.output;
+        fgCalibratedInputVolume = adjustments.input;
+        fgCalibratedOutputVolume = adjustments.output;
     }
     else
     {
-        fgInputVolume = 0.0;
-        fgOutputVolume = 0.0;
+        fgCalibratedInputVolume = 0.0;
+        fgCalibratedOutputVolume = 0.0;
     }
 }
 
@@ -1394,15 +1521,19 @@ void NeuralAmpModeler::UpdateCalibrationFactors()
     settings.calibrationDbu = cCalibrationValue.GetValue();
     fgCalibrationSettings = settings;
     fgCalibrationFactors = nam_impl::CalculateNamVolumeAdjustments(mNAM.get(), settings);
-    SetModelVolumes_();
+    SetModelVolumes();
 }
 
 void NeuralAmpModeler::SendModelMetadataNotification()
 {
     using namespace toob::nam_impl;
 
-    std::array<float, (size_t)(TOOB_NAM_METADATA_OFFSETS::max_metadata_offset)>
-        values;
+    size_t slimmableWeightsLength = fgModelMetadata.slimmableSizes.size();
+    if (slimmableWeightsLength > nam_impl::MAX_SLIMMABLE_SIZES)
+    {
+        slimmableWeightsLength = 0;
+    }
+    std::array<float,TOOB_NAM_METADATA_OFFSETS::max_metadata_offset> values{};
 
     values[TOOB_NAM_METADATA_OFFSETS::flags] = fgModelMetadata.flags;
     values[TOOB_NAM_METADATA_OFFSETS::preset_version] = cPresetVersion.GetValue();
@@ -1410,6 +1541,16 @@ void NeuralAmpModeler::SendModelMetadataNotification()
     values[TOOB_NAM_METADATA_OFFSETS::loudness] = fgModelMetadata.loudness;
     values[TOOB_NAM_METADATA_OFFSETS::input_level_dbu] = fgModelMetadata.input_level_dbu;
     values[TOOB_NAM_METADATA_OFFSETS::output_level_dbu] = fgModelMetadata.output_level_dbu;
+    values[TOOB_NAM_METADATA_OFFSETS::has_slimmable_sizes] = fgModelMetadata.hasSlimmableSizes ? 1.0f:0.0f;
+    values[TOOB_NAM_METADATA_OFFSETS::current_model_weight] = fgModelMetadata.model_weight;
+    values[TOOB_NAM_METADATA_OFFSETS::model_type] = (float)(int)fgModelMetadata.model_type;
+    values[TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length] = (float)slimmableWeightsLength;
+    for (size_t i = 0; i < slimmableWeightsLength; ++i)
+    {
+        values[TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length+1+i] = fgModelMetadata.slimmableSizes[i];
 
-    this->PutPatchProperty(0, this->urids.toob_nam__model_metadata, values.size(), (const float *)values.data());
+    }
+    size_t metadataLength = TOOB_NAM_METADATA_OFFSETS::slimmable_sizes_length+1 + slimmableWeightsLength;
+
+    this->PutPatchProperty(0, this->namUris.toob_nam__model_metadata, metadataLength, values.data());
 }

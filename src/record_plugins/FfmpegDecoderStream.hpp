@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <vector>
+#include "AudioDecoderStream.hpp"
 
 namespace toob
 {
@@ -35,19 +36,19 @@ namespace toob
     {
     public:
         ~FfmpegDecoderStream();
-        void open(const std::filesystem::path &file, int channels, uint32_t sampleRate, double seekPosSeconds = 0.0);
-        void openLoop(
+        virtual void open(const std::filesystem::path &file, int channels, uint32_t sampleRate, double seekPosSeconds = 0.0) ;
+        virtual void openLoop(
             const std::filesystem::path &file, 
             int channels, 
             uint32_t sampleRate, 
-            size_t start, 
-            size_t loopStart, size_t loopEnd
-        );
-        size_t read(float **buffers, size_t frames);
-        void close();
-        bool eof() const { return pipefd == -1; }
-
+            const LoopParameters&loopParameters
+        ) ;
+        virtual size_t read(float **buffers, size_t frames) ;
+        virtual void close() ;
+        virtual bool eof() const  { return pipefd == -1; }
+        size_t currentFrame() const;
     private:
+        size_t currentFrame_ = 0;
         int channels = 0;
         int pipefd = -1;
         int pidChild = -1;

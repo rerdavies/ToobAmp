@@ -69,7 +69,7 @@ inputStage:filterGroup
         lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
 
         mod:brand "TooB";
-        mod:label "TooB Input";
+        mod:label "Input";
         lv2:requiredFeature urid:map ;
         lv2:optionalFeature lv2:hardRTCapable;
         

@@ -1,0 +1,64 @@
+        "loudness": -20.334060668945312,
+        "gain": 0.6754317862888829,
+        "input_level_dbu": 15,
+        "output_level_dbu": 14,
+        "name": "GBSN G200 I Edge BAL CAB",
+
+           yy: Model loudness: -20.3341 inputLevelDBU: 15 outputLevelDBU: 14 calibrationDBU: -6
+           xxy: Calibration: in = -15 out = -3.66594 (Calibrated Normalized)
+           xxy: Calibration: in = -15 out = -26 (Calibrated/Calibrated)
+           xxy: Calibration: in = -15 out = -6 (Calibrated/Raw)
+         Vu in: -5 out: -17 (Calibrated/Normalized)
+         Vu in: -5 out: -40 (Calibrated/Calibrated)
+         Vu in: -5 out: -20 (Calibrated/Raw)
+
+       "loudness": -18.912500381469727,
+        "gain": 0.8300411462223473,
+        "name": "Marshall - JCM800 KKS (TS9) HG [18dBu]",
+        "modeled_by": "kenazmusic",
+
+            yyy: Model loudness: -18.9125 inputLevelDBU: -1 outputLevelDBU: -1 calibrationDBU: 0
+            xxy: Calibration: in = 6 out = -5.0875 (Normalized)
+            xxy: Calibration: in = 6 out = -6 (Raw)
+
+            VU in: -6 out: -13dB (Normalized)
+               in: -6 out: -12dB (Raw)
+
+
+        "loudness": -21.536787033081055,
+        "gain": 0.5175531988221134,
+        "name": "M160 MIDDLE - T 5, I 3, M 9",
+        "modeled_by": "tone3000",
+
+            yyy: Model loudness: -21.5368 inputLevelDBU: -1 outputLevelDBU: -1 calibrationDBU: 0
+            xxy: Calibration: in = 6 out = -2.46321 (Normalized)
+            xxy: Calibration: in = 6 out = -6 (Raw)
+            Vu in: -6 Vu out: -12 (Normalized)
+            Vu in: -6 dbU, out: -15 (Raw)
+
+        Peavey 6505
+        "loudness": -22.792980194091797,
+        "gain": 0.7899743734236654,
+        "input_level_dbu": 11.5,
+        "name": "FR 6505 1992 Ld Pr-4 B-6 M-4 T-7 Po-1 R-7 P-8 G12-EVH SM57c CL7603",
+        "modeled_by": "outmodedelectronics",
+
+            yyy: Model loudness: -22.793 inputLevelDBU: 11.5 outputLevelDBU: -1 calibrationDBU: -6
+            xxy: Calibration: in = -11.5 out = -1.20702 (Calibrated / Normalized)
+            xxy: Calibration: in = -11.5 out = -6 (Calibrated / Raw)
+
+            Vu in: -6 Vu out: -8 (Calibrated / Normalized)
+            Vu in: -6 Vu out: -13 (Calibrated / Raw)
+
+
+       "loudness": -21.536787033081055,
+        "gain": 0.5175531988221134,
+        "name": "M160 MIDDLE - T 5, I 3, M 9",
+        "modeled_by": "tone3000",
+
+        yyy: Model loudness: -21.5368 inputLevelDBU: -1 outputLevelDBU: -1 calibrationDBU: 0
+        xxy: Calibration: in = 6 out = -2.46321 (Normalized)
+        xxy: Calibration: in = 6 out = -6 (Raw)
+
+        Vu in: -6 out: -12 (Normalized)
+        Vu in: -6 out: -15 (Raw)

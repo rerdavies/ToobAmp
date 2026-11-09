@@ -111,6 +111,8 @@ namespace toob
         ~AudioFileBuffer();
 
     public:
+        size_t GetFileOffset() const { return fileOffset; }
+        void SetFileOffset(size_t fileOffset) { this->fileOffset = fileOffset;}
         using ptr = ToobPtr<AudioFileBuffer>;
         static ptr Create(size_t channels, size_t bufferSize);
 
@@ -126,6 +128,7 @@ namespace toob
         const float *GetChannel(size_t channel) const { return data_[channel].data(); }
 
     private:
+        size_t fileOffset = 0;
         friend class AudioFileBufferPool;
         AudioFileBuffer* next = nullptr;
         std::atomic<uint64_t> refCount;

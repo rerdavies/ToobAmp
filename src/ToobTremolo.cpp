@@ -20,7 +20,6 @@
 #include "ToobTremolo.hpp"
 #include "LsNumerics/Denorms.hpp"
 
-#pragma GCC optimize ("O0") 
  
 using namespace LsNumerics;
 

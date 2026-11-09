@@ -138,7 +138,7 @@ TooB Parametric EQ provides a flexible 4-band parametric studio EQ that is up th
                 pg:group parametric_eq:filterGroup;
 
                 lv2:default 21.000 ;
-                lv2:minimum 3.000 ;
+                lv2:minimum 1.000 ;
                 lv2:maximum 21.000 ;
                 lv2:portProperty epp:logarithmic;
                 units:unit units:khz;

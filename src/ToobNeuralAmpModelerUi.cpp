@@ -48,8 +48,8 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(689,372), // default window size.
-    Lv2cSize(470,800),
+    Lv2cSize(689,552), // default window size.
+    Lv2cSize(689,552),
     LOGO_SVG
     )
 {

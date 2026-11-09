@@ -52,7 +52,7 @@ namespace Iir {
  *  y[n] = (b0/a0)*x[n] + (b1/a0)*x[n-1] + (b2/a0)*x[n-2]
  *                      - (a1/a0)*y[n-1] - (a2/a0)*y[n-2]  
  **/
-	class DllExport DirectFormI
+	class  DirectFormI
 	{
 	public:
 	DirectFormI ()
@@ -99,7 +99,7 @@ namespace Iir {
  *  y(n) = (b0/a0)*v[n] + (b1/a0)*v[n-1] + (b2/a0)*v[n-2]
  *
  **/
-	class DllExport DirectFormII
+	class  DirectFormII
 	{
 	public:
 	DirectFormII ()
@@ -133,7 +133,7 @@ namespace Iir {
 
 //------------------------------------------------------------------------------
 	
-	class DllExport TransposedDirectFormII
+	class  TransposedDirectFormII
 	{
 	public:
 	TransposedDirectFormII ()

@@ -217,7 +217,6 @@ namespace toob
 				}
 
 			private:
-				uint64_t currentSampleFrame = 0;
 				uint64_t filterWindowLengthSamples = 0;
 				struct PitchHistoryEntry
 				{

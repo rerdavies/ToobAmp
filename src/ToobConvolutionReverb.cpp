@@ -23,7 +23,6 @@
 #include "ToobConvolutionReverb.h"
 #include "lv2ext/filedialog.h"
 #include "LsNumerics/Denorms.hpp"
-
 #include "db.h"
 #include "ss.hpp"
 #include <thread>
@@ -245,9 +244,6 @@ void ToobConvolutionReverbBase::ConnectPort(uint32_t port, void *data)
         case CabIrPortId::PREDELAY:
             this->pPredelayObsolete = (float *)data;
             break;
-        case CabIrPortId::NORMALIZATION_TYPE:
-            this->pNormalizationType = (const float *)data;
-            break;
         case CabIrPortId::LOADING_STATE:
             this->pLoadingState = (float *)data;
             if (this->pLoadingState)
@@ -345,15 +341,6 @@ void ToobConvolutionReverbBase::UpdateControls()
     {
         fgMixOptions.decay = *pDecay;
         mixOptionsChanged = true;
-    }
-    if (pNormalizationType != nullptr && pluginType == PluginType::CabIr)
-    {
-        int normType = (int)(*pNormalizationType);
-        if (fgMixOptions.normalizationType != normType)
-        {
-            fgMixOptions.normalizationType = normType;
-            mixOptionsChanged = true;
-        }
     }
     if (fgMixOptions.maxTime != *pTime)
     {
@@ -471,7 +458,7 @@ void ToobConvolutionReverbBase::Run(uint32_t n_samples)
             if ((!pConvolutionReverb) || (!pConvolutionReverb->IsDezipping()))
             {
                 preChangeVolumeZip = false;
-                loadWorker.Tick();
+                loadWorker.Tick(n_samples);
             }
         }
         if (pConvolutionReverb)
@@ -662,13 +649,19 @@ ToobConvolutionReverbBase::LoadWorker::LoadWorker(Lv2Plugin *pPlugin)
 
 void ToobConvolutionReverbBase::LoadWorker::Initialize(size_t sampleRate, ToobConvolutionReverbBase *pReverb)
 {
+    constexpr double MAX_UPDATE_RATE_MS = 1000/15;
+    this->throttleRate = (int64_t)(MAX_UPDATE_RATE_MS*sampleRate/1000.0);
+
     this->sampleRate = sampleRate;
     size_t bufferSize = pReverb->GetBuffSizeOptions().nominalBlockLength;
     if (bufferSize == 0 || bufferSize == (size_t)-1)
         bufferSize = 256;
     if (bufferSize > 1024)
         bufferSize = 1024;
-
+    if (bufferSize < 64)
+    {
+        bufferSize = 64;
+    }
     this->audioBufferSize = bufferSize;
     this->pReverb = pReverb;
 }
@@ -936,47 +929,6 @@ static void NormalizeConvolution(AudioData &data)
     }
 }
 
-static void PeakNormalizeConvolution(AudioData &data)
-{
-    if (HasDiracImpulse(data))
-    {
-        return;
-    }
-    size_t size = data.getSize();
-
-    double peakAmplitude = 0;
-    for (size_t c = 0; c < data.getChannelCount(); ++c)
-    {
-        auto &channel = data.getChannel(c);
-        for (size_t i = 0; i < size; ++i)
-        {
-            double absVal = std::abs((double)channel[i]);
-            if (absVal > peakAmplitude)
-            {
-                peakAmplitude = absVal;
-            }
-        }
-    }
-
-    if (peakAmplitude == 0)
-    {
-        return;
-    }
-
-    // -7dB attenuation to match perceived loudness of RMS normalization
-    constexpr double DB_REDUCTION = -7.0;
-    double attenuation = std::pow(10.0, DB_REDUCTION / 20.0);
-
-    float scale = (float)(attenuation / peakAmplitude);
-    for (size_t c = 0; c < data.getChannelCount(); ++c)
-    {
-        auto &channel = data.getChannel(c);
-        for (size_t i = 0; i < size; ++i)
-        {
-            channel[i] *= scale;
-        }
-    }
-}
 
 static void RemovePredelay(AudioData &audioData)
 {
@@ -1258,10 +1210,7 @@ AudioData ToobConvolutionReverbBase::LoadWorker::LoadFile(const std::filesystem:
 
     if (pThis->pluginType == PluginType::CabIr)
     {
-        if (this->bgMixOptions.normalizationType == 1)
-            PeakNormalizeConvolution(data);
-        else
-            NormalizeConvolution(data);
+        NormalizeConvolution(data);
     }
     else
     {
@@ -1343,7 +1292,7 @@ void ToobConvolutionReverbBase::LoadWorker::OnWork()
         this->tailScale = 0;
 
         // Ignore old maxTime parameter. Just truncate anthing over 30 seconds.
-        size_t maxSize = (size_t)std::ceil(30 * pReverb->getSampleRate());
+        size_t maxSize = (size_t)std::ceil(20 * pReverb->getSampleRate());
         if (maxSize < data.getSize())
         {
             data.setSize(maxSize);
@@ -1523,7 +1472,7 @@ void ToobConvolutionReverbBase::PublishResourceFiles(
     LV2_FileBrowser_Status status;
     if (IsConvolutionReverb())
     {
-        constexpr int RESOURCE_VERSION = 2;
+        constexpr int RESOURCE_VERSION = 3;
         status = fileBrowserFiles->publish_resource_files(fileBrowserFiles->handle, RESOURCE_VERSION, "impulseFiles/reverb", "ReverbImpulseFiles");
     }
     else

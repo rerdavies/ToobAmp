@@ -1,6 +1,6 @@
 # ToobAmp LV2 Guitar Amp Plugins
 
-### v1.2.75
+### v1.3.86
 
 The ToobAmp Project provides 28 high-quality LV2 audio plugins designed for use as guitar effects. The set of plugins provides a
 no-nonsense, foundation set of effects pedals to get you started. The plugins are primarily designed for use
@@ -64,15 +64,15 @@ with other Debian-based Linux distributions.
 
 Downloads:
 
-* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.75/toobamp_1.2.75_arm64.deb)
-* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.75/toobamp_1.2.75_arm64.deb)
-* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.2.75/toobamp_1.2.75_amd64.deb)
+* [Rasberry PI OS 64-bit Bookworm or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.86/toobamp_1.3.86_arm64.deb)
+* [Ubuntu 22.04 or later (ARM 64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.86/toobamp_1.3.86_arm64.deb)
+* [Ubuntu 22.04 or later (x64/amd64)](https://github.com/rerdavies/ToobAmp/releases/download/v1.3.86/toobamp_1.3.86_amd64.deb)
 
 Download the appropriate package for your sytems. Run the following shell commands to install the packages:
 
     sudo apt update
     cd ~/Downloads
-    sudo apt-get install  ./toobamp_1.2.75_arm64.deb   # adjust as appropropriate
+    sudo apt-get install  ./toobamp_1.3.86_arm64.deb   # adjust as appropropriate
     
 Note that you MUST use `apt-get`, and NOT `apt` to install ToobAmp, becaue `apt` will not correctly install dependencies. You can safely ignore the permission warning
 given by `apt-get`.
@@ -259,7 +259,6 @@ Run the following commands to install prerequisites:
         libcairo2-dev libpango1.0-dev catch2 librsvg2-dev liblilv-dev  libxrandr-dev \
         libboost-iostreams-dev catch2 librsvg2-dev
 
-     Fi
 
 
 Clone the repository to your local machine.
@@ -298,6 +297,9 @@ To build the debian package, for debug or personal use, run
 
     ./makePackage
 
+but see instructions below for building actual release packages, which require multi-step CMake builds.
+
+
 See the Release Builds section below for information about building publishable package.
 
 Please relocate components, and package information if you're going to permanently fork ToobAmp to ensure that
@@ -307,21 +309,111 @@ If you are building the plugins for use with a host other than PiPedal, you shou
 
     https://rerdavies.github.io/pipedal/RTThreadPriority.html
 
+#### CMake Build Options
+
+ToobAmp provides a number of CMake build options that can be used to customize the build. The most important of these are:
+
+- `TOOB_AMD_OPTIMIZATIONS`: Defaults to `AVX'. Values are:
+    - `AVX512`: Build with AVX-512 optimizations. Not recommended. Yeilds degraded performance on a AMD processors, and many Intel processors as well.
+    - `AVX`: Build with AVX optimizations. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with AVX support.
+    - `SSE42`: Build with SSE4.2 optimizations enabled. Not recommended. Does not provide significant performance improvements over `DEFAULT`.
+    - `DEFAULT`: Build with default x86-64 optimizations. Provides compatibility with all x86-64 machines, but does not provide the performance benefits of AVX optimizations.
+
+- `TOOB_AARCH_OPTIMIZATIONS`: Defaults to `A72`. Values are:
+    - `A72`: Build with optimizations for ARM A72 processors. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with ARM A72 processors (Raspberry Pi 4).
+    - `A76`: Build with optimizations for ARM A76 processors. Provides major performance improvements for TooB Neural Amp Modeler, and other plugins, on machines with ARM A76 processors (Raspberry Pi 5).
+    - `DEFAULT`: Build with default ARM64 optimizations. Provides compatibility with all ARM64 machines, but does not provide the performance benefits of A72 or A76 optimizations. 
+
+
+- `TOOBAMP_PERMISSIVE_COMPILE`: Defaults to `OFF`. When set to `OFF`, all compiler warnings are treated as errors (GCC -Werror option). This is recommended for development builds. If you are building for unofficial platforms or compilers, you may need to turn this ON in order to allow builds to succeed.
+
+- `TOOB_BUILD_UI`: Defaults to `ON`. When set to `ON`, builds native X11/Cairo UI plugin. When set to OFF, TooB Amp is built with only default LV2 user interface. Disabling UI builds, significantly improves compile times during development. 
+
+- `TOOB_MULTI_ARCH_BUILD`: Defaults to `OFF`. When set to `ON`, builds and packages provide runtime dual-version optimized versions of TooB dynamic library. Use of this option is complicated. Just use the build-march.sh and build-march-x64.sh scripts described below to make dual-binary packages. 
+
 
 #### Release Builds
 
 The ARM64 Release build of ToobAmp contain binaries that are optimized for either ARM A72 (Raspberry Pi 4), or ARM A76 (Raspberry Pi 5). The 
 release build procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full ARM64 release package, run 
 
-    ./build-march.sh
+    ./build-march-aarch64.sh
 
-To build the AMD64/x64 release package, run 
+The AMD64 Release build of ToobAmp contain binaries that are optimized for either x86_64_v3 (Processors with AVX support), and x864_64_v1 (all x86_64 processors). The x64 procedure builds both binaries, and the correct .so is loaded at runtime. CMake does not support building for multiple platforms from a single build. To build the full x86_64/AMD64 release package, run 
 
-    ./build-amd64.sh
+    ./build-march-x64.sh
 
 Note that both scripts run clean builds, so they will take a while to complete; and both scripts leave the state of the CMake build directory in a state that is not suitable for development builds. You should run `./config.sh` (or Ctrl+Shift+P/"CMake: delete cache and reconfigure", from Visual Studio Code) after running either of the release build scripts to get back to a state where you can do development builds. 
 
 # Releases Notes
+
+### v1.3.86
+- Toob File Player: Prevent audio xruns when loading files.
+- Toob Convolution  Reverb (mono): Fix no direct signal when bypassed with tails disabled.
+
+### v1.3.85
+- Eliminate underruns when playing back audio files (TooB Player, TooB Loopers)
+- Neural Amp Modeler: Rename Slim control to Quality control.
+- Add EMT 140 Plate Reverb file.
+
+### v1.3.83
+
+- TooB Warmer: Overdrive plugin that provides a warm slow-breakup overdrive effect. Great for adding additional warmth to clean amp models, and acoustic guitar signals. See the plugin Info dialog for more details on how to use this plugin.
+- TooB Spectrum Analyzer: A new Range control, better DFT-windowing to reduce spectral leakage, better rendering of the spectrum results in PiPedal. 
+
+### v1.3.82
+
+- TooB Multi-Tap Delay: Fix crash in mono plugin; fix Bypass not working; de-zip bypass.
+
+### v1.3.81
+
+Added TooB Multi-Tap Delay plugin.
+
+
+- Toob Cab IR: Revert normalization of IR files to previous behavior (power normalization), which prevents breaking changes for IR files whose contents have been normalized to 0dBFS peak.
+
+
+### v1.3.80
+
+Bug fix: 
+
+- Toob Cab IR: Revert normalization of IR files to previous behavior (power normalization), which prevents breaking changes for IR files whose contents have been normalized to 0dBFS peak.
+
+### v1.3.79
+
+Minor fixes and tweaks
+
+- Consistently shortened MOD plugin names (the "short" name of the plugin. e.g. "Chorus" instead of "Toob CE-2").
+- Update TooB NAM info dialog for NAM A2 models.
+- TooB NAM noise gate is now entirely before the model. 
+- Removed stray debug messages.
+- Decreased the minimum value of TooB Parametric EQ's  high cut filter to 1Khz, to allow common EQ shaping trick for high-gain amp models.
+
+### v1.3.78
+
+New in this release
+
+- TooB Neural Amp Modeler:  supports NAM A2 models.
+
+- AVX Optimizations for x86-64 machines, providing major performance improvements for TooB Neural Amp Modeler, and other plugins.
+
+- New TooB Tone plugin: a simple one-knob tone control.
+
+Bug Fixes
+
+- TooB Cab IR does not normalize IR files. 
+
+
+### v1.2.77
+- Fixes for ALSA crashes when using TooB Cab IR, or TooB Convolution Reverb with buffer sizes smaller than 64 samples.
+- Minor layout adjustments for Native UI layouts.
+- Preliminary support for Neural Amp Modeler A2 models (alpha state, pending final general release of upstream NAM A2 models).
+
+### v1.2.76
+- Fixes for X11-Wayland Native UI. 
+- TooB Tone parameter tweaks.
+
+
 ### v1.2.75
 - Added TooB Tone plugin -- a simple one-knob tone control.
 

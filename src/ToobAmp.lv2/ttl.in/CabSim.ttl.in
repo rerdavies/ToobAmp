@@ -53,7 +53,7 @@ toob:frequencyResponseVector
     lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
 
     mod:brand "TooB";
-    mod:label "TooB CabSim";
+    mod:label "Cab Simulator";
     lv2:requiredFeature urid:map ;
     lv2:optionalFeature lv2:hardRTCapable;
     pipedal_patch:readable 

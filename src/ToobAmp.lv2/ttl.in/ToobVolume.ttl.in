@@ -49,7 +49,7 @@ stereophonic signal.
 """ ;
 
         mod:brand "TooB";
-        mod:label "TooB Volume";
+        mod:label "Volume";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port

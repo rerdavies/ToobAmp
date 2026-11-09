@@ -113,6 +113,14 @@ namespace toob
             void Reset();
             void UpdateControls(
                 );
+            void UpdateControls(
+                    RangedDbInputPort &Trim,
+                    RangedInputPort &Gain,
+                    RangedInputPort &LoCut,
+                    RangedInputPort &HiCut,
+                    RangedInputPort &Bias,
+                    RangedInputPort &Shape
+                );
 
             float GetVu() {
                 float tMin = peakMin;

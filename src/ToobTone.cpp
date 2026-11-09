@@ -53,22 +53,20 @@ void ToobTone::UpdateGain()
 void ToobTone::UpdateFilter()
 {
     float value = tone.GetValue();
-    constexpr float FC_LOW_SHELF = 580;
-    constexpr float FC_HIGH_SHELF = 1000;
-    constexpr float FC_LOW_GAIN_ADJUSTMENT_DB = -17;  // empirically measured on actual clean guitar signal @ +20dB low shelf
-    constexpr float FC_HIGH_GAIN_ADJUSTMENT_DB = -14; // empirically measured on actual clean guitar siganl @ +20dB high shelf
-
-    float db = value * 20;
-    if (db < 0)
+    if (value < 0)
     {
-        shelvingFilter.SetLowShelf(-db, FC_LOW_SHELF);
-        this->filterGainDb = -db * (FC_LOW_GAIN_ADJUSTMENT_DB / 20.0);
+        constexpr float LOW_BOOST = 20;
+        float db = value * LOW_BOOST;
+        shelvingFilter.SetLowShelf(-db, this->lowFc.GetValue());
+        this->filterGainDb = -db * (this->lowBoost.GetDb() / LOW_BOOST);
         this->filterGain = Db2AF(filterGainDb, -120);
     }
     else
     {
-        shelvingFilter.SetHighShelf(db, FC_HIGH_SHELF);
-        this->filterGainDb = db * (FC_HIGH_GAIN_ADJUSTMENT_DB / 20.0);
+        constexpr float HIGH_BOOST = 15;
+        float db = value * HIGH_BOOST;
+        shelvingFilter.SetHighShelf(db, this->highFc.GetValue());
+        this->filterGainDb = db * (this->highBoost.GetDb() / HIGH_BOOST);
         this->filterGain = Db2AF(filterGainDb, -120);
     }
     if (isStereo)
@@ -96,7 +94,11 @@ void ToobTone::Run(uint32_t n_samples)
 
     HandleEvents(this->controlIn.Get());
 
-    if (this->tone.HasChanged())
+    if (this->tone.HasChanged() || 
+        this->lowFc.HasChanged() || this->lowBoost.HasChanged() ||
+        this->highFc.HasChanged() || this->highBoost.HasChanged()
+
+    )
     {
         UpdateFilter();
     }

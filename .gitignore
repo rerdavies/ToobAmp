@@ -3,6 +3,7 @@
 /.vscode
 /build
 /build-a76
+/build-avx
 /fftplans
 /t.txt
 /tmp.txt

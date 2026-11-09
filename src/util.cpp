@@ -30,6 +30,7 @@
 #include <mutex>
 #include <fstream>
 #include <fcntl.h>
+#include <sys/resource.h>
 #include <unistd.h>
 
 using namespace toob;
@@ -143,6 +144,36 @@ int toob::SetRtThreadPriority(int schedPriority)
 #endif
 
     return 0;
+}
+
+int toob::SetRegularThreadPriority(int threadPriority, int nice /*= 0*/)
+{
+    const int schedPolicy = SCHED_OTHER;
+    const int priorityMin = sched_get_priority_min(schedPolicy);
+    const int priorityMax = sched_get_priority_max(schedPolicy);
+    if (priorityMin < 0 || priorityMax < 0)
+    {
+        throw std::logic_error(SS("Unable to get SCHED_OTHER priority range: " << strerror(errno)));
+    }
+    if (threadPriority < priorityMin || threadPriority > priorityMax)
+    {
+        throw std::logic_error(SS("Priority not allowed for SCHED_OTHER. Requested: " << threadPriority
+                                  << ", allowed: " << priorityMin << "-" << priorityMax << "."));
+    }
+
+    sched_param schedParam{};
+    schedParam.sched_priority = threadPriority;
+    if (sched_setscheduler(0, schedPolicy, &schedParam) < 0)
+    {
+        throw std::logic_error(SS("Unable to set SCHED_OTHER policy: " << strerror(errno)));
+    }
+    if (setpriority(PRIO_PROCESS, 0, nice) < 0)
+    {
+        throw std::logic_error(SS("Unable to set thread nice value: " << strerror(errno)));
+    }
+
+    return 0;
+
 }
 
 

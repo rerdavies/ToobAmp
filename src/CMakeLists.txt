@@ -9,7 +9,14 @@ set(LV2C_INCLUDE_DIRS
     ${PROJECT_SOURCE_DIR}/modules/lv2cairo/src/lv2_plugin/include
 )
 
+include_directories(${PROJECT_SOURCE_DIR}/modules)
 
+
+find_package(PkgConfig REQUIRED)
+
+find_package(Catch2 QUIET)
+set(TOOB_CATCH_VERSION3 (Catch2_VERSION VERSION_GREATER_EQUAL "3.0.0"))
+    add_definitions(-DTOOB_USE_CATCH3)
 
 set(CMAKE_MODULE_PATH ${PROJECT_BINARY_DIR}/modules/lv2cairo)
 #find_package(Lv2c REQUIRED)
@@ -31,6 +38,8 @@ else()
     find_package(Boost REQUIRED COMPONENTS iostreams)
 endif()
 
+find_package(Catch2 REQUIRED)
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -48,71 +57,96 @@ set(FLAC_LIBS FLAC++.a FLAC.a ogg.a)
 
 
 
+
+
 message(STATUS "src: CMAKE_CXX_COMPILER_ID: ${CMAKE_CXX_COMPILER_ID}")
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 
-    if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-        # if (A76_OPTIMIZATION)
-        #     message(STATUS "src: Using Cortex-A76 optimizations.")
-        #     set(CXX_ARCH_FLAGS "-mcpu=cortex-a76 -mtune=cortex-a76 -DEIGEN_DEFAULT_L1_CACHE_SIZE=65536" ) # HUGE% compared to no option# raspberry pi 4. cortex-a76
-        # else()
-        #     message(STATUS "src: Using Cortex-A72 optimizations.")
-        #     set(CXX_ARCH_FLAGS "-mcpu=cortex-a72 -mtune=cortex-a72  -DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # -5% compared to no option# raspberry pi 4. cortex-a76
-        # endif()
-        #set(CXX_ARCH_FLAGS "-DEIGEN_DEFAULT_L1_CACHE_SIZE=32768" ) # 
-    else()
-        # MMX, SSE, SSE2 are enabled by default.
-
-        # Minimum architecture for AVX: May exclude pentium4 mini-pcs, and core2 machines.
-        # set(CXX_ARCH_FLAGS "-march=sandybridge -mtune=sandybridge" )  
-    endif()
-
+    set(TOOBAMP_GCC_ERROR_CONFIG)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-        set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder ") # --param=max-vartrack-size=400000
+        set(TOOBAMP_GCC_ERROR_CONFIG "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder" 
+          "-Wno-deprecated-enum-enum-conversion")
     else() # if GCC
-        set(GCC_EXTRA_FLAGS "-Wno-psabi -Wall -pedantic -Wno-reorder -Wno-restrict ") # --param=max-vartrack-size=400000
+        set(TOOBAMP_GCC_ERROR_CONFIG "-Wno-psabi" "-Wall" "-pedantic" "-Wno-reorder"
+            "-Wno-restrict" "-Wno-deprecated-enum-enum-conversion")
+    endif()
+    if(!TOOBAMP_PERMISSIVE_COMPILE)
+        set(TOOBAMP_GCC_ERROR_CONFIG ${TOOBAMP_GCC_ERROR_CONFIG} "-Werror")
+    endif()
+        
+
+    set(TOOBAMP_CXX_FLAGS_RELEASE ${CXX_ARCH_FLAGS} "-fvisibility=hidden")
+    set(TOOBAMP_CXX_FLAGS_RELWITHDEBINFO "-DRELWITHDEBINFO --fvisibility=hidden")
+    set(TOOBAMP_CXX_FLAGS_DEBUG "")
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_RELEASE})
+    elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_RELWITHDEBINFO})
+    elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS_DEBUG})
     endif()
 
-    if(WARNINGS_ARE_ERRORS)
-        set(GCC_EXTRA_FLAGS "-Werror ${GCC_EXTRA_FLAGS}")
-    endif()
-
-    set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden")
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -D_GLIBCXX_DEBUG ${CXX_ARCH_FLAGS}")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-Ofast -DNDEBUG -DRELWITHDEBINFO -g ${CXX_ARCH_FLAGS} -flto=auto -fno-fat-lto-objects -fvisibility=hidden ")
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    endif()
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_EXTRA_FLAGS}")
-
-
+    set(TOOBAMP_CXX_FLAGS ${TOOBAMP_CXX_FLAGS} ${TOOBAMP_GCC_ERROR_CONFIG})
 endif()
 
-message(STATUS "src: CMAKE_DEB_HOST_ARCH: ${CMAKE_DEB_HOST_ARCH}")
-message(STATUS "src: CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-message(STATUS "src: CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+message(STATUS "TOOBAMP_CXX_FLAGS: ${TOOBAMP_CXX_FLAGS}")
 
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_definitions("DEBUG")
+if(USE_NEURAL_MODELER_NAM_CORE)
+    set(NAM_SOURCES
+        namFixes/NoiseGate.cpp
+        namFixes/NoiseGate.h
+        namFixes/NamDSP.cpp
+        namFixes/NamDSP.h
+        namFixes/dsp_ex.cpp namFixes/dsp_ex.h
+
+    )
+else()
+
+    set(NAM_SOURCES
+        namFixes/NoiseGate.cpp
+        namFixes/NoiseGate.h
+        namFixes/NamDSP.cpp
+        namFixes/NamDSP.h
+        namFixes/dsp_ex.cpp namFixes/dsp_ex.h
+
+
+        ../modules/NeuralAmpModelerCore/NAM/model_config.h
+        ../modules/NeuralAmpModelerCore/NAM/slimmable.h
+        ../modules/NeuralAmpModelerCore/NAM/conv1d.h
+        ../modules/NeuralAmpModelerCore/NAM/film.h
+        ../modules/NeuralAmpModelerCore/NAM/get_dsp.cpp
+        ../modules/NeuralAmpModelerCore/NAM/ring_buffer.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/detail.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/model.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/a2_fast.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/slimmable.cpp
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/model.h
+        ../modules/NeuralAmpModelerCore/NAM/wavenet/params.h
+        ../modules/NeuralAmpModelerCore/NAM/lstm.h
+        ../modules/NeuralAmpModelerCore/NAM/util.h
+        ../modules/NeuralAmpModelerCore/NAM/gating_activations.h
+        ../modules/NeuralAmpModelerCore/NAM/dsp.cpp
+        ../modules/NeuralAmpModelerCore/NAM/convnet.h
+        ../modules/NeuralAmpModelerCore/NAM/conv1d.cpp
+        ../modules/NeuralAmpModelerCore/NAM/container.h
+        ../modules/NeuralAmpModelerCore/NAM/convnet.cpp
+        ../modules/NeuralAmpModelerCore/NAM/registry.h
+        ../modules/NeuralAmpModelerCore/NAM/ring_buffer.h
+        ../modules/NeuralAmpModelerCore/NAM/container.cpp
+        ../modules/NeuralAmpModelerCore/NAM/util.cpp
+        ../modules/NeuralAmpModelerCore/NAM/activations.cpp
+        ../modules/NeuralAmpModelerCore/NAM/version.h
+        ../modules/NeuralAmpModelerCore/NAM/dsp.h
+        ../modules/NeuralAmpModelerCore/NAM/activations.h
+        ../modules/NeuralAmpModelerCore/NAM/lstm.cpp
+        ../modules/NeuralAmpModelerCore/NAM/get_dsp.h
+    )
 endif()
-
-
-
-set(NAM_SOURCES
-    namFixes/NoiseGate.cpp
-    namFixes/NoiseGate.h
-    namFixes/NamDSP.cpp
-    namFixes/NamDSP.h
-    namFixes/dsp_ex.cpp namFixes/dsp_ex.h
-    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.cpp
-    # ../modules/NeuralAmpModelerCore/dsp/RecursiveLinearFilter.h
-    # ../modules/NeuralAmpModelerCore/dsp/Resample.h
-    # ../modules/NeuralAmpModelerCore/dsp/wav.cpp
-    # ../modules/NeuralAmpModelerCore/dsp/wav.h
-
-)
 
 # disable vartracking for TubeStageApproximation to avoid insane compile times.
 set_source_files_properties(LsNumerics/TubeStageApproximation.cpp PROPERTIES COMPILE_FLAGS "-fno-var-tracking ")
@@ -124,11 +158,26 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 add_library(ToobAmpArch SHARED
     ${NAM_SOURCES}
 
+    X86ProcessorCheck.hpp X86ProcessorCheck.cpp 
+
     ${CMAKE_CURRENT_BINARY_DIR}/ToobNoiseGateInfo.hpp
     ToobNoiseGate.cpp ToobNoiseGate.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMix.cpp ToobMix.hpp
+
+    #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+    #ToobCompressor.cpp ToobCompressor.hpp
+
+    #OtaCompressor.cpp OtaCompressor.hpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+    ToobMultiEcho.cpp ToobMultiEcho.hpp
+
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+    ToobWarmer.cpp ToobWarmer.hpp
+
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
     ToobTremolo.cpp ToobTremolo.hpp
@@ -158,6 +207,11 @@ add_library(ToobAmpArch SHARED
     record_plugins/ToobRingBuffer.hpp
     record_plugins/AudioFileBufferManager.cpp record_plugins/AudioFileBufferManager.hpp
     record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
+    record_plugins/AudioDecoderStream.hpp record_plugins/AudioDecoderStream.cpp
+    record_plugins/AudioBufferDecoderStream.hpp record_plugins/AudioBufferDecoderStream.cpp
+    record_plugins/WavDecoderStream.hpp record_plugins/WavDecoderStream.cpp
+    record_plugins/ResamplerDecoderStream.hpp record_plugins/ResamplerDecoderStream.cpp
+    record_plugins/LoopParameters.cpp record_plugins/LoopParameters.hpp
     record_plugins/Lv2AudioFileProcessor.cpp record_plugins/Lv2AudioFileProcessor.hpp
 
     record_plugins/InputTrigger.hpp record_plugins/InputTrigger.cpp
@@ -179,6 +233,8 @@ add_library(ToobAmpArch SHARED
     lv2ext/filedialog.h
 
     FlacReader.cpp FlacReader.hpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
     LsNumerics/SectionExecutionTrace.hpp LsNumerics/SectionExecutionTrace.cpp
     util.hpp util.cpp
     SvgPathWriter.hpp
@@ -240,14 +296,14 @@ add_library(ToobAmpArch SHARED
     NamTonestack/tonestack_dsp.cpp NamTonestack/tonestack_dsp.h
     NamTonestack/ToneStack.cpp NamTonestack/ToneStack.h
     NamTonestack/RecursiveLinearFilter.cpp NamTonestack/RecursiveLinearFilter.h
-    Toob3BandEq.cpp Toob3BandEq.h 
+    Toob3BandEq.cpp Toob3BandEq.h
 
     Filters/PeakingFilter2.cpp Filters/PeakingFilter2.h
     Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
     ParametricEq.cpp ParametricEq.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobParametricEqInfo.hpp
-    ToobParametricEq.cpp ToobParametricEq.h 
+    ToobParametricEq.cpp ToobParametricEq.h
 
     NoiseGate.cpp NoiseGate.h
     GainStage.cpp GainStage.h
@@ -316,14 +372,20 @@ add_library(ToobAmpArch SHARED
     LsNumerics/PitchDetector.cpp
 
 )
-
+# Eigen headers give deprecated-enum-enum-conversion error with GCC 12 and 13. 
+target_compile_options(ToobAmpArch
+    PUBLIC
+    ${TOOBAMP_CXX_FLAGS}
+)
 
 if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
-    if(A76_OPTIMIZATION)
+    if(TOOB_AARCH_OPTIMIZATIONS STREQUAL "A76")
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a76")
     else()
         set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp-a72")
     endif()
+elseif(CMAKE_DEB_HOST_ARCH STREQUAL "amd64")
+    set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME ${TOOBAMP_SO_VERSIONED_OUTPUT_NAME})
 else()
     set_target_properties(ToobAmpArch PROPERTIES OUTPUT_NAME "ToobAmp")
 endif()
@@ -482,6 +544,80 @@ add_custom_command(
     DEPENDS
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
     ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMix.ttl
+    generate_lv2c_plugin_info
+)
+
+if (NO)
+    configure_file(ToobAmp.lv2/ttl.in/ToobCompressor.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl)
+
+    add_custom_command(
+        OUTPUT ToobCompressorInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+        COMMAND generate_lv2c_plugin_info
+        http://two-play.com/plugins/toob-compressor
+        --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+        --out ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+        --class ToobCompressorInfo
+        --namespace compressor_plugin
+        --ui-base-class ToobCompressorUiBase
+        --plugin-base-class ToobCompressorBase
+        DEPENDS
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl
+        generate_lv2c_plugin_info
+    )
+endif()
+
+
+configure_file(ToobAmp.lv2/ttl.in/ToobWarmer.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobWarmer.ttl)
+
+add_custom_command(
+    OUTPUT ToobWarmerInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-warmer
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+    --class ToobWarmerInfo
+    --namespace warmer_plugin
+    --ui-base-class ToobWarmerUiBase
+    --plugin-base-class ToobWarmerBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobWarmer.ttl
+    generate_lv2c_plugin_info
+)
+
+
+configure_file(ToobAmp.lv2/ttl.in/ToobMultiEcho.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEcho.ttl)
+configure_file(ToobAmp.lv2/ttl.in/ToobMultiEchoStereo.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEchoStereo.ttl)
+
+add_custom_command(
+    OUTPUT ToobMultiEchoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-multi-echo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+    --class ToobMultiEchoInfo
+    --namespace multi_echo_plugin
+    --ui-base-class ToobMultiEchoUiBase
+    --plugin-base-class ToobMultiEchoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEcho.ttl
+    generate_lv2c_plugin_info
+)
+add_custom_command(
+    OUTPUT ToobMultiEchoStereoInfo.hpp # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND generate_lv2c_plugin_info
+    http://two-play.com/plugins/toob-multi-echo-stereo
+    --ttl ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/
+    --out ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+    --class ToobMultiEchoStereoInfo
+    --namespace multi_echo_plugin
+    --ui-base-class ToobMultiEchoStereoUiBase
+    --plugin-base-class ToobMultiEchoStereoBase
+    DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/manifest.ttl
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobMultiEchoStereo.ttl
     generate_lv2c_plugin_info
 )
 
@@ -889,6 +1025,18 @@ if(TOOB_BUILD_UI)
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMixUi.cpp
 
+        #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+        #ToobCompressorUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
+        ToobMultiEchoUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
+        ToobMultiEchoStereoUi.cpp
+
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobWarmerInfo.hpp
+        ToobWarmerUi.cpp
+
         ${CMAKE_CURRENT_BINARY_DIR}/ToobTremoloInfo.hpp
         ToobTremoloUi.cpp
 
@@ -1009,9 +1157,9 @@ if(TOOB_BUILD_UI)
     )
 
     install(TARGETS ToobAmpUI
-    LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
-    PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-)
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    )
 
 endif()
 # Requires update of wavnet_t.hpp to synch with latest NAM Core fork.
@@ -1081,11 +1229,30 @@ add_executable(PlayerTest
     record_plugins/Lv2AudioFileProcessorTest.cpp
     record_plugins/AudioFileBufferManager.hpp record_plugins/AudioFileBufferManager.cpp
     record_plugins/FfmpegDecoderStream.hpp record_plugins/FfmpegDecoderStream.cpp
+    record_plugins/AudioDecoderStream.hpp record_plugins/AudioDecoderStream.cpp
+    record_plugins/ResamplerDecoderStream.hpp record_plugins/ResamplerDecoderStream.cpp
+    record_plugins/WavDecoderStream.hpp record_plugins/WavDecoderStream.cpp
+    record_plugins/AudioBufferDecoderStream.hpp record_plugins/AudioBufferDecoderStream.cpp
+    record_plugins/LoopParameters.cpp record_plugins/LoopParameters.hpp
     json.hpp json.cpp
     util.cpp util.hpp
     json_variant.hpp json_variant.cpp
     TemporaryFile.hpp TemporaryFile.cpp
+
+    WavReader.hpp
+    WavReader.cpp
+    FlacReader.hpp FlacReader.cpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
+    WavWriter.hpp
+    WavWriter.cpp
+    WavGuid.hpp
+    WavGuid.cpp
+    WavConstants.hpp WavConstants.cpp
+
 )
+
+target_link_libraries(PlayerTest PRIVATE ${FLAC_LIBS})
 
 add_test(PlayerTest PlayerTest)
 
@@ -1207,7 +1374,7 @@ add_executable(Ce2ChorusTest
 
     LsNumerics/InterpolatingDelay.cpp LsNumerics/InterpolatingDelay.hpp
     LsNumerics/LsMath.hpp LsNumerics/LsMath.cpp
-    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter
+    Filters/ChebyshevDownsamplingFilter.cpp Filters/ChebyshevDownsamplingFilter.h
     iir/Biquad.cpp
     iir/Biquad.h
     iir/Cascade.h
@@ -1256,6 +1423,9 @@ add_executable(PitchDetectorTest
     LsNumerics/PitchDetectorTest.cpp
     LsNumerics/LsMath.cpp LsNumerics/LsMath.hpp
     FlacReader.cpp FlacReader.hpp
+    Mp3Reader.hpp Mp3Reader.cpp
+    minimp3_impl.cpp
+
     WavGuid.cpp
 )
 target_link_libraries(PitchDetectorTest ${FLAC_LIBS})
@@ -1264,32 +1434,6 @@ add_test(PitchDetectorTest PitchDetectorTest)
 
 
 add_test(LinkageTest linkageTest)
-
-# add_executable(ProfileNeuralAmpModeler 
-#     ProfileNeuralAmpModeler.cpp
-#     CommandLineParser.hpp
-# ) 
-
-
-# Can't access ToobAmp.so exports anymore. Use the pipedal plugin profiling tool instead.
-# target_include_directories(ProfileNeuralAmpModeler PRIVATE
-# ../modules/NeuralAmpModelerCore/Dependencies/eigen
-# ../modules/NeuralAmpModelerCore/Dependencies/nlohmann
-# ../modules    
-# )
-
-# if(PROFILER)
-#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE  ToobAmp profiler ${FLAC_LIBS})
-#     target_compile_definitions(ProfileNeuralAmpModeler PRIVATE "WITHGPERFTOOLS")    
-# else()
-#     target_link_libraries(ProfileNeuralAmpModeler PRIVATE ToobAmp ${FLAC_LIBS})
-# endif()
-
-
-
-# set_target_properties(ToobAmp PROPERTIES VERSION ${PROJECT_VERSION})
-
-# set_target_properties(ToobAmp PROPERTIES SOVERSION 0)
 
 
 
@@ -1304,6 +1448,20 @@ if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     set_target_properties(ToobAmpArchShim PROPERTIES OUTPUT_NAME "ToobAmp")
     set_target_properties(ToobAmpArchShim PROPERTIES PREFIX "")
 endif()
+
+
+if(CMAKE_DEB_HOST_ARCH STREQUAL "amd64")
+
+    add_library(ToobAmpArchShim SHARED
+        lv2-shim-amd64.cpp
+        X86ProcessorCheck.cpp X86ProcessorCheck.hpp
+    )
+
+
+    set_target_properties(ToobAmpArchShim PROPERTIES OUTPUT_NAME "ToobAmp")
+    set_target_properties(ToobAmpArchShim PROPERTIES PREFIX "")
+endif()
+
 
 
 
@@ -1330,10 +1488,22 @@ if(CMAKE_DEB_HOST_ARCH STREQUAL "arm64")
     endif()
 
 else()
-    install(TARGETS ToobAmpArch
+    install(TARGETS ToobAmpArchShim
         LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2
         PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
     )
+    install(TARGETS ToobAmpArch
+        LIBRARY DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+        PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+
+    )
+    if(TOOB_MULTI_ARCH_BUILD)
+        # Previously built with AVX optimizations. See build-march-x64.sh.
+        install(FILES ${PROJECT_SOURCE_DIR}/build-avx/src/ToobAmp-x86-64-avx.so
+            DESTINATION /usr/lib/lv2/ToobAmp.lv2/bin
+            PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+        )
+    endif()
 endif()
 
 add_executable(VactrolTest
@@ -1341,7 +1511,7 @@ add_executable(VactrolTest
     VactrolTest.cpp
     LsNumerics/Vactrol.hpp
     VactrolDsp.hpp
-)    
+)
 
 add_executable(BufferPoolTest
     BufferPoolTest.cpp
@@ -1439,4 +1609,31 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/modules/lv2cairo/resources/ DESTINATION 
 install(FILES ${PROJECT_SOURCE_DIR}/MPL-2.0.md DESTINATION /usr/lib/lv2/ToobAmp.lv2)
 
 
-# TODO: Add tests if needed.
+# Tests
+
+
+
+add_executable(toobAmpTest
+    test/main.cpp
+    test/ToobCompressorTests.cpp
+    OtaCompressor.cpp OtaCompressor.hpp
+
+    Filters/AudioFilter2.cpp Filters/AudioFilter2.h
+    Filters/AudioFilter3.cpp Filters/AudioFilter3.h
+    Filters/LowPassFilter.cpp Filters/LowPassFilter.h
+    Filters/HighPassFilter.cpp Filters/HighPassFilter.h
+    Filters/ShelvingFilter.cpp Filters/ShelvingFilter.h
+    Filters/AudioFilter.cpp Filters/AudioFilter.h
+
+)
+
+target_link_libraries(toobAmpTest PRIVATE Catch2::Catch2)
+
+if(Catch2_VERSION_MAJOR EQUAL 2)
+    target_compile_definitions(toobAmpTest PRIVATE TOOB_AMP_CATCH2)
+    
+elseif(Catch2_VERSION_MAJOR EQUAL 3)
+    target_compile_definitions(toobAmpTest PRIVATE TOOB_AMP_CATCH3)
+else()
+    message(FATAL_ERROR "Unsupported Catch2 version: ${Catch2_VERSION}")
+endif()

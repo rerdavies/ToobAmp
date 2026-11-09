@@ -38,6 +38,7 @@ namespace toob
 
     int SetRtThreadPriority(int threadPriority);
     int SetThreadNice(int niceness);
+    int SetRegularThreadPriority(int threadPriority, int nice = 0);
 
     std::filesystem::path TemporaryFilename(const std::string &prefix = "", const std::string&extension = ".tmp");
 

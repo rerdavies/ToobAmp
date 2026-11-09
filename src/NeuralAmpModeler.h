@@ -61,12 +61,18 @@ namespace toob
 {
 
 
+    enum class OutputModelType { None=0, A1=1,A2=2, AidaX = 3, Other = 4};
+
     struct NamModelMetadata {
         int32_t flags = 0;
         float loudness = 0;
         float gain = 0;
         float input_level_dbu = 0;
         float output_level_dbu = 0;
+        bool hasSlimmableSizes = false;
+        float model_weight;
+        OutputModelType model_type;
+        std::vector<float> slimmableSizes;
     };
 
 
@@ -102,6 +108,7 @@ namespace toob
         {
             kInputGain = 0,
             kInputLevelOut,
+            kModelWeight, 
             kOutputGain,
             kNoiseGateThreshold,
             kGateOut,
@@ -118,12 +125,15 @@ namespace toob
 
             kPresetVersion,
 
+            kModelType,  
+            kCurrentModelWeight, 
+
             kAudioIn,
             kAudioOut,
             kControlIn,
             kControlOut
         };
-        bool LoadModel(const std::string&filename); // (for tests)
+        bool LoadModel(const std::string&filename, float modelWeight = 1.0f); // (for tests)
 
     private:
         bool requestModelMetdataNotification = false;
@@ -131,10 +141,12 @@ namespace toob
         struct Urids
         {
             void Initialize(NeuralAmpModeler &this_);
-            uint32_t nam__ModelFileName;
+            uint32_t nam__ModelFile;
+            uint32_t nam__modelSize;
             uint32_t nam__FrequencyResponse;
             uint32_t atom__Path;
             uint32_t atom__String;
+            uint32_t atom__Object;
 
 			LV2_URID patch;
 			LV2_URID patch__Get;
@@ -142,8 +154,8 @@ namespace toob
 			LV2_URID patch__property;
 			LV2_URID patch__value;
 			LV2_URID atom__URID;
-			LV2_URID atom__float;
-			LV2_URID atom__int;
+			LV2_URID atom__Float;
+			LV2_URID atom__Int;
 			LV2_URID units__Frame;
             LV2_URID toob_nam__model_metadata;
 
@@ -152,7 +164,7 @@ namespace toob
 
 
 
-        Urids urids;
+        Urids namUris;
 
         enum class BackgroundProcessorState {
             ForegroundProcessing,
@@ -171,12 +183,12 @@ namespace toob
         size_t fgSendIx = 0;
         size_t fgReturnIx = 0;
 
-        virtual void onStopBackgroundProcessingReply(ToobNamDsp *dsp) override;
+        virtual void onStopBackgroundProcessingReply(NeuralAudioDsp *dsp) override;
         virtual void onBackgroundProcessingComplete() override;
         virtual void onSamplesOut(uint64_t instanceId,float *data, size_t length) override;
 
 
-        void SetModelVolumes_();
+        void SetModelVolumes();
         void SendModelMetadataNotification();
         bool frameSizeErrorGiven = false;
 
@@ -231,13 +243,14 @@ namespace toob
         double rate = 44100;
         std::string bundle_path;
 
-        float fgInputVolume = 1.0;
-        float fgOutputVolume = 1.0;
+        float fgCalibratedInputVolume = 1.0;
+        float fgCalibratedOutputVolume = 1.0;
 
         //const int kNumPresets = 1;
 
         RangedDbInputPort cInputGain{-40, 40};
         RangedDbInputPort cOutputGain{-40, 40};
+        RangedInputPort cQuality{0,1};
         #if NAM_RMS_METER
         RmsMeterPort cInputLevelOut;
         #else
@@ -254,8 +267,12 @@ namespace toob
         BooleanInputPort cInputCalibrationMode;
         enum class OutputCalbrationMode { Normalized=0,Calibrated=1,Raw=2};
         EnumeratedInputPort cOutputCalibrationMode { 3};
+
         RangedInputPort cCalibrationValue { -40,+40}; 
         RangedInputPort cPresetVersion { 0, 1000};
+
+        OutputPort cModelType {(float)OutputModelType::None};
+        OutputPort cCurrentModelWeight {0};
 
         enum ToneStackType {
             Bassman = 0, // matches enum values in .ttl file.
@@ -267,8 +284,6 @@ namespace toob
 		ToneStackFilter toneStackFilter;
 		BaxandallToneStack baxandallToneStack;
 
-        float inputCalibrationFactor = 1.0f;
-        float outputCalbrationFactor = 1.0f;
         
         void UpdateCalibrationFactors();
 
@@ -278,8 +293,8 @@ namespace toob
 
         bool noiseGateActive = false;
         OutputPort cGateOutput;
-        const float *audioIn = nullptr;
-        float *audioOut = nullptr;
+        const float *lv2AudioIn = nullptr;
+        float *lv2AudioOut = nullptr;
         LV2_Atom_Sequence *controlIn = nullptr;
         LV2_Atom_Sequence *controlOut = nullptr;
 
@@ -288,19 +303,22 @@ namespace toob
         bool isActivated = false;
         bool requestFileUpdate = true;
 
+        bool modelRequestPending = false;
+        bool modelLoadOutstanding = false;
+
 
         FilterResponse filterResponse;
 
         bool responseGet = false;
-        bool sendFileName = false;
-        int64_t responseDelaySamplesMax = 0;
+        int64_t throttleDelaySamples = 0;
         int64_t responseDelaySamples = 0;
+        int64_t qualityUpdateDelaySamples = 0;
 
     private:
         void HandleBackgroundProcessorEvents();
 
         void HandleBufferChange();
-        void RequestLoad(const char *fileName);
+        void RequestLoad(const char *fileName,float modelWeight);
         // Update tone stack filter designs.
         void UpdateToneStack();
         // Write frequency response for UI.
@@ -320,21 +338,18 @@ namespace toob
         size_t _GetBufferNumFrames() const;
         // Gets a new Neural Amp Model
         // Throws an exception on error.
-        std::unique_ptr<ToobNamDsp> _GetNAM(const std::string &dspFile);
+        std::unique_ptr<NeuralAudioDsp> GetNAM(const std::string &dspFile, float modelWeight);
 
         bool _HaveModel() const { return this->mNAM != nullptr; };
         // Prepare the input & output buffers
         void _PrepareBuffers(const size_t numFrames);
         // Manage pointers
         void _PrepareIOPointers(const size_t nChans);
-        // Copy the input buffer to the object, applying input level.
-        // :param nChansIn: In from external
-        // :param nChansOut: Out to the internal of the ToobNamDsp routine
-        void _ProcessInput(const float_t **input, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
-        // Copy the output to the output buffer, applying output level.
-        // :param nChansIn: In from internal
-        // :param nChansOut: Out to external
-        void _ProcessOutput(nam_float_t **inputs, float_t **outputs, const size_t nFrames, const size_t nChansIn, const size_t nChansOut);
+
+        void ApplyNoiseGate(const size_t nFrames);
+
+        void ApplyInputTrim(const size_t nFrames);
+        void ApplyOutputTrim(size_t nFrames);
 
         // Member data
 
@@ -359,13 +374,20 @@ namespace toob
         dsp::noise_gate::Gain mNoiseGateGain;
 
         // The Neural Amp Model (NAM) actually being used:
-        std::unique_ptr<ToobNamDsp> mNAM;
+        std::unique_ptr<NeuralAudioDsp> mNAM;
+        float mNamModelWeight;
+        void SetForegoundModelWeight(float weight) {
+            mNamModelWeight = weight;
+            cCurrentModelWeight.SetValue(weight);
+        }
         nam_impl::NamCalibrationSettings fgCalibrationSettings;
         nam_impl::NamVolumeAdjustments fgCalibrationFactors;
         NamModelMetadata fgModelMetadata;
 
+
         // Path to model's config.json or model.nam
         std::string mNAMPath;
+        float mRequestedModelWeight = -1;
 
         std::unordered_map<std::string, double> mNAMParams = {{"Input", 0.0}, {"Output", 0.0}};
     };

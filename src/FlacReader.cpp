@@ -24,6 +24,9 @@
 #include "FlacReader.hpp"
 #include <FLAC++/decoder.h>
 #include <stdexcept>
+#include <fstream>
+#include <cstdint>
+#include <cstring>
 #include "ss.hpp"
 
 using namespace FLAC;
@@ -161,6 +164,20 @@ namespace toob
 
         AudioData &audioData;
     };
+
+
+bool FlacReader::IsFlacFile(const std::filesystem::path &path)
+{
+    // FLAC files begin with the 4-byte marker "fLaC"
+    static constexpr uint8_t FLAC_MAGIC[4] = { 0x66, 0x4C, 0x61, 0x43 };
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return false;
+    uint8_t header[4];
+    f.read(reinterpret_cast<char*>(header), 4);
+    if (f.gcount() < 4) return false;
+    return std::memcmp(header, FLAC_MAGIC, 4) == 0;
+}
+
 
     /*static*/ AudioData FlacReader::Load(const std::filesystem::path &path)
     {

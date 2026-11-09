@@ -45,7 +45,7 @@ static char hex(int v)
     return (char)('A' + v - 10);
 }
 
-void json_writer::throw_encoding_error()
+[[noreturn]] void json_writer::throw_encoding_error()
 {
     throw std::invalid_argument("Invalid UTF-8 character sequence");
 }

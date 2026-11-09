@@ -32,7 +32,6 @@ using namespace LsNumerics;
 
 //static constexpr double OCTAVE_THRESHOLD = 0.5;
 
-static constexpr int WINDOW_PERIODS_REQUIRED = 4;
 
 static inline double abs2(const std::complex<double> &c)
 {
@@ -953,26 +952,26 @@ float fs22050_bias_table[] {
     BIAS_ENTRY(922,  -0.0007,   0.0000),
 };
 
-static constexpr double BIAS_TABLE_MIN = 40;
-static constexpr double BIAS_TABLE_MAX = 922;
+// static constexpr double BIAS_TABLE_MIN = 40;
+// static constexpr double BIAS_TABLE_MAX = 922;
 
 //Max error:1204.8104 cents (42.0000 Hz)
 //Min error: -1.4490 cents (62.0000 Hz)
 
-static inline double debias(double frequency,float*biasTable)
-{
+// static inline double debias(double frequency,float*biasTable)
+// {
 
-    if (frequency <= BIAS_TABLE_MIN) return 0;
-    if (frequency >= BIAS_TABLE_MAX-0.01) return 0;
-    double x = (frequency-BIAS_TABLE_MIN)*0.5;
-    size_t ix = (size_t)std::floor(x);
-    double blend = x-ix;
-    double v0 = biasTable[ix];
-    double v1 = biasTable[ix+1];
+//     if (frequency <= BIAS_TABLE_MIN) return 0;
+//     if (frequency >= BIAS_TABLE_MAX-0.01) return 0;
+//     double x = (frequency-BIAS_TABLE_MIN)*0.5;
+//     size_t ix = (size_t)std::floor(x);
+//     double blend = x-ix;
+//     double v0 = biasTable[ix];
+//     double v1 = biasTable[ix+1];
 
-    double scale = blend*v1+ (1-blend)*v0;
-    return frequency*scale;
-}
+//     double scale = blend*v1+ (1-blend)*v0;
+//     return frequency*scale;
+// }
 
 
 double PitchDetector::debias(double frequency)

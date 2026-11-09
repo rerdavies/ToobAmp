@@ -46,14 +46,14 @@ namespace Iir {
 /**
  * Holds coefficients for a cascade of second order sections.
  **/
-        class DllExport Cascade
+        class  Cascade
         {
         public:
         
         /**
          * Pointer to an array of Biquads
          **/
-        struct DllExport Storage
+        struct  Storage
         {
                 /**
                  * Copy-constructor which receives the pointer to the Biquad array and the number of Biquads
@@ -123,7 +123,7 @@ namespace Iir {
  * with its coefficients.
  **/
         template <int MaxStages,class StateType>
-        class DllExport CascadeStages {
+        class  CascadeStages {
         public:
         /**
          * Resets all biquads (i.e. the delay lines but not the coefficients)

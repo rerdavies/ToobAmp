@@ -1,7 +1,7 @@
 /*
 MIT License
 
-Copyright (c) 2025 Robin E. R. Davies
+Copyright (c) 2026 Robin E. R. Davies
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -100,6 +100,7 @@ void findArchEntryPoint()
     std::filesystem::path libPath = dl_info.dli_fname;
     libPath = libPath.parent_path() / "bin" / soName;
     if (!std::filesystem::exists(libPath)) {
+        libPath = dl_info.dli_fname;
         libPath = libPath.parent_path() / "bin" / "ToobAmp-a72.so";
     }
 
@@ -107,13 +108,13 @@ void findArchEntryPoint()
     dlHandle = dlopen(libPath.c_str(), RTLD_LAZY);
     if (!dlHandle)
     {
-        std::cerr << "Cannot load library: " << dlerror() << std::endl;
+        std::cout << "Cannot load library: " << dlerror() << std::endl;
         return;
     }
     arch_lv2_descriptor = (EntryPointT *)dlsym(dlHandle, "lv2_descriptor");
     if (!arch_lv2_descriptor)
     {
-        std::cerr << "Cannot find symbol: " << dlerror() << std::endl;
+        std::cout << "Cannot find symbol: " << dlerror() << std::endl;
         dlclose(dlHandle);
         dlHandle = nullptr;
         return;

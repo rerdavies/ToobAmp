@@ -30,6 +30,7 @@ namespace toob {
 
     class FlacReader {
     public:
+        static bool IsFlacFile(const std::filesystem::path &path);
         static AudioData Load(const std::filesystem::path &path);
     };
 }

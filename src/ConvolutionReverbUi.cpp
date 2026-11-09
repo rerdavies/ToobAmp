@@ -47,7 +47,7 @@ public:
 PLUGIN_CLASS::PLUGIN_CLASS() 
 : super(
     PLUGIN_INFO_CLASS::Create(),
-    Lv2cSize(848,208), // default window size.
+    Lv2cSize(648,318), // default window size.
     Lv2cSize(470,800),
     "ConvolutionReverbLogo.svg"
     )

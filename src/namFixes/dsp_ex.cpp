@@ -17,43 +17,228 @@
 #include <mutex>
 
 #include "dsp_ex.h"
-#include "json.hpp"
-// #include "NAM/lstm.h"
-// #include "NAM/convnet.h"
-// #include "NAM/wavenet.h"
-// #include "wavenet_t.h"
 #include <stdexcept>
 #include <iostream>
 #include <stdexcept>
 
+bool DEBUG_FORCE_NAM_MODEL = false;
 
 namespace toob
 {
-    namespace {
+    namespace
+    {
         static std::mutex ndspMutex;
-
     };
-    std::unique_ptr<ToobNamDsp> get_dsp_ex(
+
+    bool NeuralAudioDsp::HasModelGainDB()
+    {
+        return hasModelGainDb;
+    }
+
+    float NeuralAudioDsp::GetModelGainDB()
+    {
+        return modelGainDb;
+    }
+
+    bool NeuralAudioDsp::HasModelLoudnessDB()
+    {
+        return hasModelLoudnessDB;
+    }
+
+    float NeuralAudioDsp::GetModelLoudnessDB()
+    {
+        return modelLoudnessDB;
+    }
+
+    bool NeuralAudioDsp::HasModelInputLevelDBu()
+    {
+        return hasModelInputLevelDBu;
+    }
+
+    float NeuralAudioDsp::GetModelInputLevelDBu()
+    {
+        return modelInputLevelDBu;
+    }
+
+    bool NeuralAudioDsp::HasModelOutputLevelDBu()
+    {
+        return hasModelOutputLevelDBu;
+    }
+
+    float NeuralAudioDsp::GetModelWeight()
+    {
+        return this->modelWeight;
+    }
+    NamModelType NeuralAudioDsp::GetModelType()
+    {
+        return this->modelType;
+    }
+
+    float NeuralAudioDsp::GetModelOutputLevelDBu()
+    {
+        return modelOutputLevelDBu;
+    }
+
+    std::unique_ptr<NeuralAudioDsp> get_dsp_ex(
         const std::filesystem::path config_filename,
+        float modelWeight,
         uint32_t sampleRate,
         int minBlockSize,
         int maxBlockSize)
     {
+        return std::make_unique<NeuralAudioDsp>(
+            config_filename,
+            modelWeight,
+            sampleRate,
+            minBlockSize,
+            maxBlockSize
+
+        );
+    }
+
+    NeuralAudioDsp::NeuralAudioDsp(
+        const std::filesystem::path &config_filename,
+        float modelWeight,
+        uint32_t sampleRate,
+        int minBlockSize,
+        int maxBlockSize)
+    {
+
         {
-            std::lock_guard lock {ndspMutex};
-            NeuralAudio::NeuralModel::SetDefaultMaxAudioBufferSize(maxBlockSize);   
+            std::lock_guard lock{ndspMutex};
+            NeuralAudio::NeuralModel::SetDefaultMaxAudioBufferSize(maxBlockSize);
+            NeuralAudio::NeuralModel::SetDefaultQualityScaleFactor(-1.0f);
         }
 
-
-        ToobNamDsp *model = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
-        if (model) 
+        ::NeuralAudio::NeuralModel *neuralAudioModel = NeuralAudio::NeuralModel::CreateFromFile(config_filename);
+        if (neuralAudioModel)
         {
-            model->SetAudioInputLevelDBu(0);
+
+            this->neuralAudioModel = std::unique_ptr<::NeuralAudio::NeuralModel>(neuralAudioModel);
+            neuralAudioModel->SetAudioInputLevelDBu(0); // use our own normalization adjustments.
+            if (neuralAudioModel->HasQualityScaling())
+            {
+                neuralAudioModel->SetQualityScaleFactor(modelWeight);
+            }
+            neuralAudioModel->Prewarm();
+
+            loadNeuralAudioMetadata();
+
+#ifdef TOOB_OPTIMIZATION_FLAGS
+            std::cout << TOOB_OPTIMIZATION_FLAGS << " ";
+#endif
+#ifndef NDEBUG
+            std::cout << "Load mode: " << (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? "NAM Core" : "NeuralAudio A1");
+#endif
+            if (neuralAudioModel->HasQualityScaling())
+            {
+                std::cout << " A2 weight=" << modelWeight;
+                ;
+            }
+            std::cout << std::endl;
+
+            return;
         }
+        throw std::runtime_error("Invalid file format, or unsupported version.");
+    }
 
-        return std::unique_ptr<ToobNamDsp>(model);
+    void NeuralAudioDsp::Process(const float *input, float *output, size_t numSamples)
+    {
+        if (neuralAudioModel)
+        {
+            neuralAudioModel->Process(const_cast<float *>(input), output, numSamples);
+        }
+        else
+        {
+            for (size_t i = 0; i < numSamples; ++i)
+            {
+                output[i] = 0;
+            }
+        }
+    }
 
+    void NeuralAudioDsp::Prewarm()
+    {
+        if (neuralAudioModel)
+        {
+            neuralAudioModel->Prewarm();
+        }
+    }
+    void NeuralAudioDsp::SetSlimmableSize(double value)
+    {
+        if (neuralAudioModel)
+        {
+            neuralAudioModel->SetQualityScaleFactor(value);
+        }
+    }
+
+    void NeuralAudioDsp::loadMetadataProperty(const char *name, bool &hasValue, float &value)
+    {
+        hasValue = false;
+        std::string metadata = neuralAudioModel->GetMetadata(name);
+        if (metadata.empty())
+        {
+            return;
+        }
+        try
+        {
+            value = std::stof(metadata);
+        }
+        catch (const std::exception &e)
+        {
+            return;
+        }
+        hasValue = true;
+    }
+
+    void NeuralAudioDsp::loadNeuralAudioMetadata()
+    {
+        if (neuralAudioModel)
+        {
+            loadMetadataProperty("gain", hasModelGainDb, modelGainDb);
+            loadMetadataProperty("loudness", hasModelLoudnessDB, modelLoudnessDB);
+            loadMetadataProperty("input_level_dbu", hasModelInputLevelDBu, modelInputLevelDBu);
+            loadMetadataProperty("output_level_dbu", hasModelOutputLevelDBu, modelOutputLevelDBu);
+
+            if (neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::RTNeural)
+            {
+                throw std::runtime_error("NeuralAudio::EModelLoadMode::RTNeural Not implemented.");
+            }
+            else
+            {
+                switch (neuralAudioModel->GetLoadMode())
+                {
+                case NeuralAudio::EModelLoadMode::Internal:
+                    this->modelType = NamModelType::A1;
+                    break;
+                case NeuralAudio::EModelLoadMode::NAMCore:
+                    this->modelType = NamModelType::A2;
+                    break;
+                default:
+                    throw std::runtime_error("Unknown NeuralAudio model type");
+                }
+                this->modelType = neuralAudioModel->GetLoadMode() == NeuralAudio::EModelLoadMode::NAMCore ? NamModelType::A2 : NamModelType::A1;
+                this->modelWeight = neuralAudioModel->GetQualityScaleFactor();
+                loadMetadataProperty("gain", hasModelGainDb, modelGainDb);
+                loadMetadataProperty("loudness", hasModelLoudnessDB, modelLoudnessDB);
+                loadMetadataProperty("input_level_dbu", hasModelInputLevelDBu, modelInputLevelDBu);
+                loadMetadataProperty("output_level_dbu", hasModelOutputLevelDBu, modelOutputLevelDBu);
+            }
+            hasSlimmableSizes = neuralAudioModel->HasQualityScaling();
+        }
+    }
+
+    bool NeuralAudioDsp::HasSlimmableSizes()
+    {
+        return hasSlimmableSizes;
+    }
+    const std::vector<float> NeuralAudioDsp::GetSlimmableSizes() const
+    {
+        return slimmableSizes;
+    }
+    void NeuralAudioDsp::SetSlimmableSizes(const std::vector<float> &sizes)
+    {
+        this->slimmableSizes = sizes;
     }
 
 }
-
