@@ -22,6 +22,8 @@
 @prefix urid: <http://lv2plug.in/ns/ext/urid#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
+@prefix pipedal_ui: <http://github.com/rerdavies/pipedal/ui#> .
+
 
 <http://two-play.com/rerdavies#me>
 	a foaf:Person ;
@@ -31,9 +33,9 @@
 
 <http://two-play.com/plugins/toob-compressor>
         a lv2:Plugin ,
-                lv2:MixerPlugin ;
-                doap:name "TooB Compressor" ,
-                "TooB Compressor"@en-gb 
+                lv2:CompressorPlugin ;
+                doap:name "TooB OTA Compressor" ,
+                "TooB OTA Compressor"@en-gb 
                 ;
         uiext:ui <http://two-play.com/plugins/toob-compressor-ui> ;
         doap:license <https://rerdavies.github.io/pipedal/LicenseToobAmp> ;
@@ -41,15 +43,15 @@
         lv2:minorVersion 0 ;
         lv2:microVersion ${CMAKE_PROJECT_VERSION_PATCH} ;
         rdfs:comment """
-Compressor control.
+TooB OTA Compressor is a digital emulation of an MXR Dynacomp or Ross Compressor.
 
-TooB Compressor operates on a monophonic signal. Use the TooB Mix plugin to set compressor levels on a 
-stereophonic signal.
+Use the Trim control to gain-stage compressor input to peak at approximately 0dBU. 
+
 
 """ ;
 
         mod:brand "TooB";
-        mod:label "Compressor";
+        mod:label "OTA Compressor";
         lv2:optionalFeature lv2:hardRTCapable;
 
         lv2:port
@@ -74,60 +76,79 @@ stereophonic signal.
                 
         ],  
         [
-                a lv2:InputPort ,
+                a lv2:OutputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 1 ;
-                lv2:symbol "sensitivity" ;
-                lv2:name "Sensitivity";
-
-                lv2:default 0.0 ;
-                lv2:minimum -40.0 ;
-                lv2:maximum 40.0 ; 
+                lv2:symbol "trimOut" ;
+                lv2:name "";
+                pipedal_ui:vuTargetRange 9.0;
+                lv2:default -20.0 ;
+                lv2:minimum -20.0 ;
+                lv2:maximum 20.0 ;    
                 units:unit units:db ;
-                lv2:scalePoint    
-                [
-                        rdfs:label "-INF" ;
-                        rdf:value -60.0
-                ];
-                rdfs:comment "Envelope Sensitivity";
-                
-        ],  
+        ],
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 2 ;
-                lv2:symbol "release" ;
-                lv2:name "Release Rate";
+                lv2:symbol "attack" ;
+                lv2:name "Attack";
 
-                lv2:default 350.0 ;
-                lv2:minimum 5.000 ;
-                lv2:maximum 1000.0 ; 
+                lv2:default 2.0 ;
+                lv2:minimum 0.5 ;
+                lv2:maximum 10.0 ; 
                 units:unit units:ms ;
                 lv2:portProperty epp:logarithmic;
-                rdfs:comment "Release Rate";
-                
+                rdfs:comment "Envelope attack time.";
         ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
                 lv2:index 3 ;
+                lv2:symbol "release" ;
+                lv2:name "Release";
+
+                lv2:default 350.0 ;
+                lv2:minimum 5.000 ;
+                lv2:maximum 1000.0 ; 
+                units:unit units:ms ;
+                lv2:portProperty epp:logarithmic;
+                rdfs:comment "Envelope release time.";
+                
+        ],  
+        [
+                a lv2:OutputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 4 ;
+                lv2:symbol "compressorEnvelope" ;
+                lv2:name "Envelope";
+                lv2:default 1.0 ;
+                lv2:minimum 0.0 ;
+                lv2:maximum 100.0 ;    
+        ],
+        [
+                a lv2:InputPort ,
+                lv2:ControlPort ;
+
+                lv2:index 5 ;
                 lv2:symbol "dryWet" ;
                 lv2:name "Dry/Wet";
 
                 lv2:default 1.0 ;
                 lv2:minimum 0 ;
                 lv2:maximum 1 ; 
-                rdfs:comment "Envelope Sensitivity";
+                rdfs:comment "Dry/Wet mix.";
                 
         ],  
         [
                 a lv2:InputPort ,
                 lv2:ControlPort ;
 
-                lv2:index 4 ;
+                lv2:index 6 ;
                 lv2:symbol "output" ;
                 lv2:name "Output";
 
@@ -146,28 +167,28 @@ stereophonic signal.
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 5;
+                lv2:index 7;
                 lv2:symbol "inL" ;
                 lv2:name "In L"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 6 ;
+                lv2:index 8 ;
                 lv2:symbol "outL" ;
                 lv2:name "Out L"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:InputPort ;
-                lv2:index 7 ;
+                lv2:index 9 ;
                 lv2:symbol "inR" ;
                 lv2:name "In R"
         ],
         [
                 a lv2:AudioPort ,
                         lv2:OutputPort ;
-                lv2:index 8 ;
+                lv2:index 10 ;
                 lv2:symbol "outR" ;
                 lv2:name "Out R"
         ]

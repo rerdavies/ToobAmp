@@ -25,12 +25,21 @@
 #include <filesystem>
 #include <memory>
 #include "ToobCompressorInfo.hpp"
+#include "DbDezipper.h"
 #include "ControlDezipper.h"
 
 using namespace lv2c::lv2_plugin;
 using namespace compressor_plugin;
 using namespace toob;
 
+
+
+// help intellisense disambiguate between conflicting declarations.
+#include "InputPort.h"
+namespace compressor_plugin{
+    using RangedDbInputPort = toob::RangedDbInputPort;
+    using RangedInputPort = toob::RangedInputPort;
+};
 
 #include "OtaCompressor.hpp"
 using namespace ota_compressor;
@@ -61,7 +70,22 @@ protected:
 
 	virtual void Activate() override;
 	virtual void Deactivate() override;
+
+
 private:
+    void CaptureVu(float valueL, float valueR);
+    void CaptureVu(float value);
+    float vuValue = 0;
+    uint32_t vuSampleCount = 0;
+    uint32_t vuMaxSampleCount = 1;
+
+
+    void UpdateControls();
+    DbDezipper trimDezipper;
+    DbDezipper outputDezipper;
+    ControlDezipper dryWetDezipper;
+
+
     OtaCompressor compressor;
 };
 

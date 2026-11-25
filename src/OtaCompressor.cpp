@@ -24,9 +24,10 @@
 
 #include "OtaCompressor.hpp"
 #include "LsNumerics/LsMath.hpp"
+#include <stdexcept>
+#include "ss.hpp"
 
 using namespace ota_compressor;
-
 
 void OtaInputStage::Initialize(double sampleRate)
 {
@@ -36,7 +37,7 @@ void OtaInputStage::Initialize(double sampleRate)
     Reset();
 }
 
-void OtaInputStage::Reset() 
+void OtaInputStage::Reset()
 {
     this->lowCut.Reset();
 }
@@ -46,46 +47,49 @@ void OtaInputStage::SetTrimDb(float db)
     if (db <= -120.0)
     {
         this->trim = 0;
-    } else {
+    }
+    else
+    {
         constexpr const float INPUT_VOLTAGE = 0.7;
-        constexpr const float OUTPUT_VOLTAGE = (2.4-0.62)/2;
+        constexpr const float OUTPUT_VOLTAGE = (2.4 - 0.62) / 2;
 
-        this->trim = Db2Af(db) * (OUTPUT_VOLTAGE/INPUT_VOLTAGE);
+        this->trim = Db2Af(db) * (OUTPUT_VOLTAGE / INPUT_VOLTAGE);
     }
 }
 
-        void Initialize(double sampleRate);
-        void Reset();
-
-void CompressorEnvelope::UpdateControls(double attackTime, double sensitivity)
+void CompressorEnvelope::UpdateControls(double attackTime, double releaseTime)
 {
-  
+    this->attackTime = std::max(attackTime, 1E-4);
+    this->releaseTime = std::max(releaseTime, 1E-3);
+
+    attackStep = DEFAULT_VOLTAGE / (this->attackTime * sampleRate * ATTACK_REFERENCE_EXCESS);
+    releaseCoefficient = 1.0 - std::exp(-1.0 / (this->releaseTime * sampleRate));
+}
+
+double CompressorEnvelope::Update(double excess)
+{
+    // C5 recharges through R3 toward the supply voltage; Q4/Q5 drain it in proportion to the
+    // amount by which the signal exceeds their turn-on voltage.
+    if (excess < 0) throw std::runtime_error(SS("Invalid excess: " <<excess));
+    double v = vEnvelope + (DEFAULT_VOLTAGE - vEnvelope) * releaseCoefficient - attackStep * excess;
+    vEnvelope = std::clamp(v, 0.0, DEFAULT_VOLTAGE);
+    return vEnvelope;
 }
 
 double CompressorEnvelope::Tick(double value)
 {
-    float dv = 0;;
-    if (value > DIODE_DROP_VOLTAGE) 
-    {
-        dv = value-DIODE_DROP_VOLTAGE;
-    } else if (value < -DIODE_DROP_VOLTAGE) 
-    {
-        dv = -DIODE_DROP_VOLTAGE-value;
-    }
-    double result = (vEnvelope +attackRate*dv)*releaseRate;
-    if (result > DEFAULT_VOLTAGE) {
-        result = DEFAULT_VOLTAGE;
-    }
-    return result;
-}
-inline double CompressorEnvelope::Tick(const StereoResult&input)
-{
-    return Tick((input.left+input.right)*0.5);
+    return Update(Excess(value));
 }
 
-
-void CompressorEnvelope::Initialize(double sampleRate) 
+double CompressorEnvelope::Tick(const StereoResult &input)
 {
+    return Update(0.73 * (Excess(input.left) + Excess(input.right)));
+}
+
+void CompressorEnvelope::Initialize(double sampleRate)
+{
+    this->sampleRate = sampleRate;
+    UpdateControls(attackTime, releaseTime);
     Reset();
 }
 
@@ -94,17 +98,22 @@ void CompressorEnvelope::Reset()
     vEnvelope = DEFAULT_VOLTAGE;
 }
 
+void OtaStage::SetSensitivity(double sensitivity)
+{
+    this->sensitivity = std::clamp(sensitivity, 0.0, 1.0);
+    double rangeDb = MIN_RANGE_DB + (MAX_RANGE_DB - MIN_RANGE_DB) * this->sensitivity;
+    this->gainRange = std::pow(10.0, rangeDb / 20.0) - 1.0;
+}
+
 void OtaEmphasisStage::Initialize(double sampleRate)
 {
-    constexpr float INPUT_DB = -20;
-    constexpr float MID_DB = -36;
-    constexpr float SHELF_DB = -22;
+    // SPICE responses were measured with a -20dB input and are expressed as absolute output level.
+    constexpr double INPUT_DB = -20;
+    constexpr double PASSBAND_DB = -39.373;
 
-    lowCut.SetSampleRate(sampleRate);
-    lowCut.SetCutoffFrequency(30.0);
-    shelf.SetSampleRate(sampleRate);
-    shelf.SetHighShelf((SHELF_DB-MID_DB)/2,3000);
-    gain = Db2Af(MID_DB-INPUT_DB);
+    lowCut.SetHighPass(sampleRate, 30.0, 0.6);
+    shelf.SetHighShelf(sampleRate, SHELF_FREQUENCY, SHELF_Q, SHELF_DB);
+    gain = std::pow(10.0, (PASSBAND_DB - INPUT_DB) / 20.0);
     Reset();
 }
 
@@ -113,39 +122,110 @@ void OtaEmphasisStage::Reset()
     lowCut.Reset();
     shelf.Reset();
 }
-void OtaCompressor::Initialize(double sampleRate)
+
+void OtaOutputStage::Initialize(double sampleRate)
 {
+    constexpr double ROLLOFF_FREQUENCY = 8500;
+    constexpr double DC_BLOCK_FREQUENCY = 10;
+    constexpr double BUTTERWORTH_Q = 0.7071;
+
+    deEmphasis.SetHighShelf(sampleRate, OtaEmphasisStage::SHELF_FREQUENCY, OtaEmphasisStage::SHELF_Q, -OtaEmphasisStage::SHELF_DB);
+    // 4th-order Butterworth.
+    lowPass1.SetLowPass(sampleRate, ROLLOFF_FREQUENCY, 0.5412);
+    lowPass2.SetLowPass(sampleRate, ROLLOFF_FREQUENCY, 1.3066);
+    dcBlock.SetHighPass(sampleRate, DC_BLOCK_FREQUENCY, BUTTERWORTH_Q);
+    Reset();
+}
+
+void OtaOutputStage::Reset()
+{
+    deEmphasis.Reset();
+    lowPass1.Reset();
+    lowPass2.Reset();
+    dcBlock.Reset();
+}
+
+void OtaCompressor::Initialize(double baseSampleRate)
+{
+    double sampleRate = baseSampleRate*SUPERSAMPLING_RATE;
     inputStage.Initialize(sampleRate);
     emphasisStage.Initialize(sampleRate);
     otaStage.Initialize(sampleRate);
+    outputStage.Initialize(sampleRate);
     compressorEnvelope.Initialize(sampleRate);
+    compressorEnvelope.UpdateControls(attackTime, releaseTime);
+    Reset();
 }
 
-void OtaCompressor::Reset() {
+void OtaCompressor::Reset()
+{
     inputStage.Reset();
     emphasisStage.Reset();
     otaStage.Reset();
+    outputStage.Reset();
     compressorEnvelope.Reset();
+    envelopeVoltage = CompressorEnvelope::DEFAULT_VOLTAGE;
+    upsampler.Reset();
+    downsampler.Reset();
 }
 
-
-float OtaCompressor::Tick(float value)
+inline float OtaCompressor::TickSupersampled(float value)
 {
-    auto v1 = inputStage.Tick(value);
-    auto v2 = emphasisStage.Tick(v1);
-    auto v3 = otaStage.Tick(v2, this->otaGain);
-    this->otaGain = compressorEnvelope.Tick(v3);
-    return (float)v3;
+    double v1 = inputStage.Tick((double)value);
+    double v2 = emphasisStage.Tick(v1);
+    double v3 = otaStage.Tick(v2, envelopeVoltage);
+    double v4 = outputStage.Tick(v3);
+    // The gain applied to the next sample is determined by the output of this one.
+    this->envelopeVoltage = compressorEnvelope.Tick(v4);
+    return (float)(v4)*this->outputAdjustment;
 }
 
-inline StereoResult OtaCompressor::Tick(float left, float right)
+inline StereoResult OtaCompressor::TickSupersampled(float left, float right)
 {
     auto v1 = inputStage.Tick(StereoResult{(double)left, (double)right});
     auto v2 = emphasisStage.Tick(v1);
-    auto v3 = otaStage.Tick(v2, this->otaGain);
-    this->otaGain = compressorEnvelope.Tick(v3);
-    return v3;
+    auto v3 = otaStage.Tick(v2, envelopeVoltage);
+    auto v4 = outputStage.Tick(v3);
+    this->envelopeVoltage = compressorEnvelope.Tick(v4);
+    v4.left *= outputAdjustment;
+    v4.right *= outputAdjustment;
+    // {
+    //     static size_t count = 0;
+    //     static size_t limit = 10000;
+    //     if (count++ >= limit)
+    //     {
+    //         count = 0;
+    //         std::cout << "VEnv: " << compressorEnvelope.Voltage() << std::endl;
+    //     }
+    // }
+    return v4;
+}
 
+float OtaCompressor::Tick(float value)
+{
+    upsampler.TickInput(value);
+    for (size_t i = 0; i < SUPERSAMPLING_RATE; ++i)
+    {
+        float supersampledResult = TickSupersampled(upsampler.TickOutput());
+        downsampler.TickInput(supersampledResult);
+    }
+    return downsampler.TickOutput();
+}
 
+StereoResult OtaCompressor::Tick(float valueL, float valueR)
+{
+    upsampler.TickInput(valueL);
+    upsamplerR.TickInput(valueR);
+
+    for (size_t i = 0; i < SUPERSAMPLING_RATE; ++i)
+    {
+        auto supersampledResult = TickSupersampled(
+            upsampler.TickOutput(),
+            upsamplerR.TickOutput()
+        );
+        downsampler.TickInput(supersampledResult.left);
+        downsamplerR.TickInput(supersampledResult.right);
+    }
+    return StereoResult{ downsampler.TickOutput(),downsamplerR.TickOutput()};
 }
 

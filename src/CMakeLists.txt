@@ -157,6 +157,7 @@ set_source_files_properties(NeuralAmpModeler.cpp PROPERTIES COMPILE_FLAGS "-Wno-
 
 add_library(ToobAmpArch SHARED
     ${NAM_SOURCES}
+    LsNumerics/PowerOfTwoResampler.hpp
 
     X86ProcessorCheck.hpp X86ProcessorCheck.cpp 
 
@@ -166,10 +167,10 @@ add_library(ToobAmpArch SHARED
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
     ToobMix.cpp ToobMix.hpp
 
-    #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
-    #ToobCompressor.cpp ToobCompressor.hpp
+    ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+    ToobCompressor.cpp ToobCompressor.hpp
 
-    #OtaCompressor.cpp OtaCompressor.hpp
+    OtaCompressor.cpp OtaCompressor.hpp
 
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
     ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoStereoInfo.hpp
@@ -547,7 +548,7 @@ add_custom_command(
     generate_lv2c_plugin_info
 )
 
-if (NO)
+if (YES)
     configure_file(ToobAmp.lv2/ttl.in/ToobCompressor.ttl.in ${CMAKE_CURRENT_BINARY_DIR}/ToobAmp.lv2/ToobCompressor.ttl)
 
     add_custom_command(
@@ -1025,8 +1026,8 @@ if(TOOB_BUILD_UI)
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMixInfo.hpp
         ToobMixUi.cpp
 
-        #${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
-        #ToobCompressorUi.cpp
+        ${CMAKE_CURRENT_BINARY_DIR}/ToobCompressorInfo.hpp
+        ToobCompressorUi.cpp
 
         ${CMAKE_CURRENT_BINARY_DIR}/ToobMultiEchoInfo.hpp
         ToobMultiEchoUi.cpp
@@ -1185,6 +1186,14 @@ add_executable(FftTest
 )
 
 add_test(FftTest FftTest)
+
+add_executable(PowerOfTwoResamplerTest
+    LsNumerics/PowerOfTwoResampler.hpp
+    LsNumerics/PowerOfTwoResamplerTest.cpp
+    TestAssert.hpp
+)
+
+add_test(PowerOfTwoResamplerTest PowerOfTwoResamplerTest)
 
 add_executable(ResamplerTest
     LsNumerics/MotorolaResampler.hpp

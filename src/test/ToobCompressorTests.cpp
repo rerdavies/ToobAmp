@@ -195,7 +195,74 @@ TEST_CASE("ToobCompressor", "[ToobCompressor]")
         }
         REQUIRE(result);
     }
+    SECTION("OtaWaveshaper")
+    {
+        // Unity slope near zero.
+        REQUIRE(float_equal(OtaStage::Waveshape(0.001), 0.001, 1e-5));
+        REQUIRE(float_equal(OtaStage::Waveshape(-0.001), -0.001, 1e-5));
+        // Asymmetric saturation.
+        REQUIRE(OtaStage::Waveshape(100) < OtaStage::POSITIVE_CLIP_VOLTAGE);
+        REQUIRE(OtaStage::Waveshape(100) > 0.95 * OtaStage::POSITIVE_CLIP_VOLTAGE);
+        REQUIRE(float_equal(OtaStage::Waveshape(-100), -OtaStage::NEGATIVE_CLIP_VOLTAGE, 1e-3));
+        // Monotonic.
+        double last = OtaStage::Waveshape(-10);
+        for (double x = -10; x < 10; x += 0.01)
+        {
+            double y = OtaStage::Waveshape(x);
+            REQUIRE(y >= last);
+            last = y;
+        }
+    }
     SECTION("OtaCompressor")
     {
+        auto run = [](float dbvPP, float f, float sensitivity, float seconds, std::vector<float> &output)
+        {
+            OtaCompressor compressor;
+            compressor.Initialize(DEFAULT_SAMPLE_RATE);
+            compressor.SetSensitivity(sensitivity);
+            std::vector<float> input = MakeSinWave(DEFAULT_SAMPLE_RATE, seconds, f, 0.5f * Db2Af(dbvPP));
+            output.resize(input.size());
+            for (size_t i = 0; i < input.size(); ++i)
+            {
+                output[i] = compressor.Tick(input[i]);
+            }
+        };
+        std::vector<float> output;
+
+        // Sustained output level is regulated over a wide range of input levels.
+        float lastPeak = 0;
+        for (float dbvPP : {-36.0f, -24.0f, -12.0f})
+        {
+            run(dbvPP, 480, 1.0, 0.5, output);
+            float peak = VectorMax(output, output.size() * 9 / 10, output.size());
+            REQUIRE(peak > 0.15);
+            REQUIRE(peak < 0.5);
+            if (lastPeak != 0)
+            {
+                REQUIRE(Af2Db(peak / lastPeak) < 2.0);
+            }
+            lastPeak = peak;
+        }
+
+        // Onset of a loud signal overdrives the OTA, and then settles.
+        run(-12, 480, 1.0, 0.5, output);
+        size_t t10ms = (size_t)(DEFAULT_SAMPLE_RATE * 0.01);
+        float onsetPeak = VectorMax(output, 0, t10ms);
+        float settledPeak = VectorMax(output, output.size() * 9 / 10, output.size());
+        REQUIRE(onsetPeak > 1.0);
+        REQUIRE(onsetPeak < 2.5);
+        REQUIRE(settledPeak < 0.5);
+
+        // Lower sensitivity produces less onset overdrive.
+        run(-12, 480, 0.0, 0.5, output);
+        REQUIRE(VectorMax(output, 0, t10ms) < onsetPeak * 0.6);
+
+        // Output is bounded and free of NaNs on extreme input.
+        run(20, 1000, 1.0, 0.2, output);
+        for (float v : output)
+        {
+            REQUIRE(std::isfinite(v));
+            REQUIRE(std::abs(v) < 3.0);
+        }
     }
 }
